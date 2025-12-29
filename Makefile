@@ -186,19 +186,18 @@ smoke-test: ## Validate Bun, Svelte, and Tauri integration
 	@echo "Starting smoke test..."
 	@echo "1. Starting Bun server on localhost:3000..."
 	@cd api && bun run server.ts &
-	BUN_PID=$$!
 	@sleep 2
 	@echo "2. Starting Vite dev server..."
 	@npm run dev &
-	VITE_PID=$$!
 	@sleep 2
-	@echo "3. Checking health endpoint..."
-	@curl -f http://localhost:3000/health || (echo "Smoke test FAILED" && kill $BUN_PID $VITE_PID 2>/dev/null; exit 1)
-	@echo "4. Checking Vite server..."
-	@curl -f http://localhost:5173 || (echo "Smoke test FAILED" && kill $BUN_PID $VITE_PID 2>/dev/null; exit 1)
+	@echo "3. Checking Bun health endpoint..."
+	@curl -f http://localhost:3000/health || (echo "Smoke test FAILED (Bun health check)" && pkill -f "bun.*server.ts" 2>/dev/null; pkill -f "vite.*dev" 2>/dev/null; exit 1)
+	@echo "4. Checking Vite dev server..."
+	@curl -f http://localhost:1420 || (echo "Smoke test FAILED (Vite check)" && pkill -f "bun.*server.ts" 2>/dev/null; pkill -f "vite.*dev" 2>/dev/null; exit 1)
 	@echo "5. All services started successfully"
 	@echo "6. Shutting down test services..."
-	@kill $BUN_PID $VITE_PID 2>/dev/null
+	@pkill -f "bun.*server.ts" 2>/dev/null || true
+	@pkill -f "vite.*dev" 2>/dev/null || true
 	@echo "Smoke test PASSED"
 
 # Installation
