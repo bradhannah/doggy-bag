@@ -5,13 +5,12 @@
       "name": "Debug Bun Backend (localhost:3000)",
       "type": "node",
       "request": "launch",
-      "runtimeExecutable": "/usr/local/bin/bun",
+      "runtimeExecutable": "~/.bun/bin/bun",
       "program": "${workspaceFolder}/api/server.ts",
       "cwd": "${workspaceFolder}/api",
       "runtimeArgs": ["--inspect"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
       "restart": true,
       "env": {
         "NODE_ENV": "development"
