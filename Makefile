@@ -250,12 +250,14 @@ install-all: ## Install all dependencies
 install-bun: ## Install Bun backend dependencies
 	@$(MAKE) check-prereqs
 ifeq ($(BUN_EXISTS),no)
-	@echo "ERROR: Bun is not installed. Run 'make install-prereqs' or 'make install-bun-manual'."
-	@exit 1
-endif
+		@echo "ERROR: Bun is not installed. Run 'make install-prereqs' or 'make install-bun-manual'."
+		@exit 1
+	endif
 	@echo "Installing Bun dependencies (api/)..."
 	@cd api && bun install
+	@echo "✓ Bun dependencies installed"
 
 install-npm: ## Install npm dependencies (frontend, Tauri, tools)
 	@echo "Installing npm dependencies..."
 	@npm install
+	@echo "✓ npm dependencies installed"
