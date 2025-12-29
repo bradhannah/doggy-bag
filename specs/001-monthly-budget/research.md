@@ -259,27 +259,38 @@ This document captures technical decisions made during the planning phase for th
 
 ## Testing Decisions
 
-### Test Runner: Bun Test Runner
+### Test Runner: Bun (Backend) + Jest (Frontend) + Playwright (E2E)
 
-**Decision**: Use Bun's built-in test runner for backend
+**Decision**: Use Bun test runner for backend, Jest for frontend unit/integration tests, Playwright for end-to-end tests
 
 **Rationale**:
-- Constitution principle XVI: Bun runtime with native TypeScript support
-- Single runtime for both backend and testing
-- Fast test execution
-- Type-safe tests (TypeScript)
+- Constitution principle XVI: Bun runtime for backend with native TypeScript support
+- Constitution principle XI: Automated testing with clear expectations
+- Jest is mature ecosystem for Svelte/Vite frontend testing
+- Playwright is modern E2E framework with cross-browser support
+- Separation allows using right tool for each testing concern
 
 **Implementation Approach**:
-- Use `bun test` command
-- Test files: `api/tests/unit/`, `api/tests/integration/`, `api/tests/contract/`
-- Contract tests verify API behavior per OpenAPI spec
-- Integration tests verify data persistence, calculation logic, undo functionality
-- Unit tests verify models, services, utilities
+- **Backend Tests**: Use `bun test` command
+  - Test files: `api/tests/unit/`, `api/tests/integration/`, `api/tests/contract/`
+  - Contract tests verify API behavior per OpenAPI spec
+  - Integration tests verify data persistence, calculation logic, undo functionality
+  - Unit tests verify models, services, utilities
+- **Frontend Unit/Integration Tests**: Use Jest with Svelte Testing Library
+  - Test files: `src/tests/unit/`, `src/tests/integration/`
+  - Unit tests verify Svelte components in isolation
+  - Integration tests verify component interactions and store behavior
+- **E2E Tests**: Use Playwright
+  - Test files: `tests/e2e/`
+  - Full user journey tests (onboarding, bill management, "leftover" calculation)
+  - Cross-browser testing (Chromium, Firefox, WebKit)
+- **Test Coverage**: Aim for 80%+ coverage on critical paths (bills, incomes, payments, "leftover" calculation)
+- **Makefile Target**: `make test` runs all test suites (Bun + Jest + Playwright)
 
 **Alternatives Considered**:
-- Jest: Rejected (not Bun native, additional dependency)
-- Vitest: Rejected (not Bun native, additional dependency)
-- Mocha/Chai: Rejected (additional dependencies, not Bun native)
+- Bun for all tests: Rejected (Jest has better Svelte/Vite integration, Playwright has better E2E support)
+- Vitest: Rejected (Jest ecosystem is more mature for Svelte)
+- Cypress: Rejected (Playwright has better cross-browser support and faster test execution)
 
 ---
 

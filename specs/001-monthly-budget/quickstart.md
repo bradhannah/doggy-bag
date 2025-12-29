@@ -195,17 +195,23 @@ make build
 # Run backend tests (Bun test runner)
 bun test
 
-# Run frontend tests
-bun test
-
 # Run contract tests
-bun test --contract
+bun test api/tests/contract/
 
 # Run integration tests
-bun test --integration
+bun test api/tests/integration/
 
-# Run all tests
-bun test --all
+# Run unit tests
+bun test api/tests/unit/
+
+# Run frontend tests (Jest)
+npm test
+
+# Run E2E tests (Playwright)
+npx playwright test
+
+# Run all tests (Makefile)
+make test
 ```
 
 ---

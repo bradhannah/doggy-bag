@@ -391,30 +391,62 @@ The app will feature a configurable color scheme with a default palette. Colors 
 ### Default Color Scheme
 
 **Background**:
-- Main background: [TO BE FILLED IN BY USER]
-- Secondary background: [TO BE FILLED IN BY USER]
+- Main background: #1a1a2e (dark blue-gray for dark mode)
+- Secondary background: #16213e (slightly lighter dark blue-gray)
 
 **Text**:
-- Primary text: [TO BE FILLED IN BY USER]
-- Secondary text: [TO BE FILLED IN BY USER]
-
+- Primary text: #e0e0e0 (off-white for readability on dark)
+- Secondary text: #a0a0a0 (muted gray for less important text)
 **Accents**:
 - Primary accent color: [TO BE FILLED IN BY USER]
-- Secondary accent color: [TO BE FILLED IN BY USER]
-
+- Secondary accent color: #f59e0b (amber/yellow - for expected-to-change fields)
 **Indicators**:
 - Surplus (positive "leftover"): [TO BE FILLED IN BY USER]
-- Deficit (negative "leftover"): [TO BE FILLED IN BY USER]
-
+- Deficit (negative "leftover"): #ef4444 (red)
 **Sections**:
-- Bills section: [TO BE FILLED IN BY USER]
-- Income section: [TO BE FILLED IN BY USER]
-- Variable expenses section: [TO BE FILLED IN BY USER]
-- Free-flowing expenses section: [TO BE FILLED IN BY USER]
-
-**Note**: These colors are defaults but should be configurable. Do not get distracted by color customization early - focus on getting the MVP working first. Colors can be refined later.
+- Bills section: #3b82f6 (blue)
+- Income section: #8b5cf6 (purple)
+- Variable expenses section: #ec4899 (pink)
+**Note**: This is the default dark mode color scheme. Colors should be configurable in future versions. Do not get distracted by color customization early - focus on getting MVP working first. Colors can be refined later.
 
 ---
+
+
+## Error Handling Strategy
+
+The app will use a conservative error handling approach to prevent data corruption:
+
+### Error Handling Principles
+
+- **Fail Hard, Fail Fast**: At first sign of an error, the app should stop rather than continue and potentially corrupt data
+- **Verbose Logging (Initially)**: During development, log detailed error information to help diagnose issues
+- **Error Storage**: Store errors in a log file (data/errors.log) for AI agents to read and analyze
+- **User-Facing Messages**: Display clear, actionable error messages to users (e.g., "Failed to save payment source. Please try again.")
+- **No Silent Failures**: Never silently ignore errors - always inform the user and log the issue
+
+### Error Logging
+
+- Error logs stored in: data/errors.log
+- Log entry format: [timestamp] [error_type] [context] [message]
+- Include full stack traces for debugging
+- Rotate logs when file size exceeds 10MB (keep last 10 logs)
+
+### Example Error Flow
+
+1. User clicks "Save Bill" button
+2. Backend validates bill data
+3. Validation fails (e.g., name is blank)
+4. **Fail Fast**: Stop save operation immediately
+5. **Verbose Log**: Log error with full context to data/errors.log
+6. **User Message**: Display inline error "Bill name is required"
+7. **No Corruption**: Original data remains intact, no partial saves
+
+### Testing Approach
+
+- **Unit Tests**: Jest for unit testing (isolated components, services, utilities)
+- **Integration Tests**: Jest for integration testing (API endpoints, data flow)
+- **E2E Tests**: Playwright for end-to-end testing (full user journeys)
+- **Test Coverage**: Aim for 80%+ code coverage for critical paths (bills, incomes, payments, "leftover" calculation)
 
 ## Success Criteria *(mandatory)*
 

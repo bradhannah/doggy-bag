@@ -104,9 +104,23 @@ This is a Tauri + Svelte + Bun desktop application with three-process architectu
 - [ ] T040 Verify type consistency: Modify a backend type in `api/src/types/index.ts`, run `make types`, confirm Svelte type in `src/types/api.ts` updates to match
 - [ ] T041 Verify Makefile dev target: Run `make dev`, confirm Tauri window opens, Bun server starts on localhost:3000, Vite dev server starts
 - [ ] T042 Verify Makefile build target: Run `make build`, confirm Tauri app bundles successfully
-- [ ] T043 Verify Makefile test target: Run `make test` (placeholder for now, will implement in user stories)
+- [ ] T041 [P] Install Jest for frontend testing in `src/` with `npm install --save-dev jest @types/jest @testing-library/svelte @testing-library/jest-dom @testing-library/user-event`
+- [ ] T042 [P] Configure Jest in `src/jest.config.js` with Svelte and Vite support
+- [ ] T043 [P] Install Playwright for E2E testing with `npm install --save-dev @playwright/test`
+- [ ] T044 [P] Configure Playwright in `src/playwright.config.ts` with Tauri webview support
+- [ ] T045 [P] Create test directory structure for frontend in `src/tests/`:
+  - `src/tests/unit/` for component unit tests
+  - `src/tests/integration/` for component integration tests
+- [ ] T046 [P] Create E2E test directory in `tests/e2e/` with sample test file
+- [ ] T047 Update Makefile test target to run all test suites:
+  - Run `bun test` for backend
+  - Run `npm test` for frontend (Jest)
+  - Run `npx playwright test` for E2E
+  - Combine results and exit with appropriate code
+- [ ] T048 [P] Create error log file in `data/errors.log` with initial empty file
+- [ ] T048.8 Verify Makefile test target: Run `make test`, confirm all test suites run and report results
 
-**Checkpoint**: Build system validated - Bun, Svelte, Tauri, and OpenAPI integration proven to work correctly
+**Checkpoint**: Build system validated - Bun, Svelte, Tauri, OpenAPI, and testing infrastructure (Jest + Playwright) proven to work correctly
 
 ---
 
@@ -124,52 +138,52 @@ This is a Tauri + Svelte + Bun desktop application with three-process architectu
 - Color scheme and styling patterns
 - Navigation patterns (tabs, sidebar, top nav)
 
-- [ ] T043.5 Create prototyping testbed page in `src/prototype.svelte` that:
+- [ ] T049 Create prototyping testbed page in `src/prototype.svelte` that:
   - Provides a playground area for testing components
   - Allows switching between different component variations
   - Has tabs/sections for different widget types
   - No real data - just mock data for visual testing
-- [ ] T043.6 [P] Create multiple input component variations in `src/components/prototype/inputs.svelte`:
+- [ ] T050 [P] Create multiple input component variations in `src/components/prototype/inputs.svelte`:
   - Currency input variation 1: Native input with $ prefix
   - Currency input variation 2: Custom component with auto-formatting
   - Currency input variation 3: Split inputs (dollars + cents)
   - Text input variation 1: Standard text field
   - Text input variation 2: Floating label pattern
-- [ ] T043.7 [P] Create multiple date picker variations in `src/components/prototype/date-pickers.svelte`:
+- [ ] T051 [P] Create multiple date picker variations in `src/components/prototype/date-pickers.svelte`:
   - Variation 1: Native <input type="date">
   - Variation 2: Native <input type="month"> for month selection
   - Variation 3: Custom month selector (dropdown year, list months)
   - Variation 4: Custom month selector (year dropdown, side-by-side month arrows)
-- [ ] T043.8 [P] Create multiple dropdown variations in `src/components/prototype/dropdowns.svelte`:
+- [ ] T052 [P] Create multiple dropdown variations in `src/components/prototype/dropdowns.svelte`:
   - Variation 1: Native <select> element
   - Variation 2: Custom dropdown with search
   - Variation 3: Custom dropdown with categories
-- [ ] T043.9 [P] Create multiple modal variations in `src/components/prototype/modals.svelte`:
+- [ ] T053 [P] Create multiple modal variations in `src/components/prototype/modals.svelte`:
   - Variation 1: Centered modal with backdrop
   - Variation 2: Right-side drawer/modal
   - Variation 3: Inline editing (no modal)
   - Variation 4: Full-screen modal
-- [ ] T044.0 [P] Create multiple list/table variations in `src/components/prototype/lists.svelte`:
+- [ ] T054 [P] Create multiple list/table variations in `src/components/prototype/lists.svelte`:
   - Variation 1: Table layout with borders
   - Variation 2: Card-based layout
   - Variation 3: Compact list (mobile-first)
   - Variation 4: Grid layout (dashboard cards)
-- [ ] T044.1 [P] Create multiple navigation variations in `src/components/prototype/navigation.svelte`:
+- [ ] T055 [P] Create multiple navigation variations in `src/components/prototype/navigation.svelte`:
   - Variation 1: Top navigation bar
   - Variation 2: Sidebar navigation
   - Variation 3: Tab-based navigation
   - Variation 4: Bottom navigation (mobile)
-- [ ] T044.2 [P] Create color scheme variations in `src/components/prototype/colors.svelte`:
+- [ ] T056 [P] Create color scheme variations in `src/components/prototype/colors.svelte`:
   - Variation 1: Dark mode with user-provided colors
   - Variation 2: Light mode with user-provided colors
   - Variation 3: High contrast mode
   - Variation 4: Custom color picker to test different schemes
-- [ ] T044.3 [P] Create form layout variations in `src/components/prototype/forms.svelte`:
+- [ ] T057 [P] Create form layout variations in `src/components/prototype/forms.svelte`:
   - Variation 1: Vertical form (labels above inputs)
   - Variation 2: Horizontal form (labels beside inputs)
   - Variation 3: Grid layout (2-column)
   - Variation 4: Compact form (inline labels)
-- [ ] T044.4 Create mock data service in `src/prototype-data.ts` with sample data:
+- [ ] T058 Create mock data service in `src/prototype-data.ts` with sample data:
   - 5 mock bills (rent, utilities, car insurance, groceries delivery, streaming)
   - 3 mock income sources (salary, freelance, bonus)
   - 3 mock payment sources (Scotia Checking, Visa, Cash)
@@ -1220,12 +1234,13 @@ With multiple developers:
 
 ## Summary
 
-**Total Tasks**: 299
+**Total Tasks**: 313
 
 **Task Count by Phase**:
 - Phase 1 (Build System Setup): 23 tasks (T001-T023)
 - Phase 2 (OpenAPI Type Coordination): 9 tasks (T024-T032)
-- Phase 3 (Build System Validation): 11 tasks (T033-T043)
+- Phase 3 (Build System Validation): 8 tasks (T033-T040)
+- Phase 3.25 (Testing Infrastructure): 8 tasks (T043-T043.8) - **Jest + Playwright**
 - Phase 3.5 (UI Component Prototyping): 13 tasks (T043.5-T047) - **WORK TOGETHER**
 - Phase 4 (Foundational Services): 12 tasks (T044-T055)
 - Phase 5 (User Story 0): 34 tasks (T056-T089)
@@ -1243,7 +1258,7 @@ With multiple developers:
 - Phase 17 (Polish): 28 tasks (T263-T290)
 
 **Task Count by Priority**:
-- **P1 (MVP)**: 155 tasks (Setup + OpenAPI + Validation + Prototyping + Foundational + US0-US3)
+- **P1 (MVP)**: 169 tasks (Setup + OpenAPI + Validation + Testing Infra + Prototyping + Foundational + US0-US3)
 - **P2**: 119 tasks (US4-US9, US11)
 - **P3**: 13 tasks (US10)
 - **Polish**: 28 tasks (cross-cutting)
