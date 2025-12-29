@@ -1,0 +1,318 @@
+{
+	"openapi": "3.0.0",
+	"components": {
+		"examples": {},
+		"headers": {},
+		"parameters": {},
+		"requestBodies": {},
+		"responses": {},
+		"schemas": {
+			"HealthResponse": {
+				"properties": {
+					"status": {
+						"type": "string"
+					},
+					"timestamp": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"status",
+					"timestamp"
+				],
+				"type": "object",
+				"additionalProperties": false
+			}
+		},
+		"securitySchemes": {}
+	},
+	"info": {
+		"title": "BudgetForFun API",
+		"version": "1.0.0",
+		"description": "BudgetForFun API Documentation",
+		"license": {
+			"name": "MIT"
+		},
+		"contact": {
+			"name": "BudgetForFun Team"
+		}
+	},
+	"paths": {
+		"/payment-sources": {
+			"get": {
+				"operationId": "GetPaymentSources",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"data": {
+											"items": {},
+											"type": "array"
+										},
+										"message": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"data",
+										"message",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"501": {
+						"description": "Not Implemented"
+					}
+				},
+				"tags": [
+					"Payment Sources"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreatePaymentSource",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"201": {
+						"description": "Created"
+					},
+					"400": {
+						"description": "Bad Request"
+					},
+					"501": {
+						"description": "Not Implemented"
+					}
+				},
+				"tags": [
+					"Payment Sources"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/incomes": {
+			"get": {
+				"operationId": "GetIncomes",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"data": {
+											"items": {},
+											"type": "array"
+										},
+										"message": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"data",
+										"message",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"501": {
+						"description": "Not Implemented"
+					}
+				},
+				"tags": [
+					"Incomes"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateIncome",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"201": {
+						"description": "Created"
+					},
+					"400": {
+						"description": "Bad Request"
+					},
+					"501": {
+						"description": "Not Implemented"
+					}
+				},
+				"tags": [
+					"Incomes"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/health": {
+			"get": {
+				"operationId": "GetHealth",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HealthResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Health"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/bills": {
+			"get": {
+				"operationId": "GetBills",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"data": {
+											"items": {},
+											"type": "array"
+										},
+										"message": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"data",
+										"message",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"501": {
+						"description": "Not Implemented"
+					}
+				},
+				"tags": [
+					"Bills"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateBill",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"201": {
+						"description": "Created"
+					},
+					"400": {
+						"description": "Bad Request"
+					},
+					"501": {
+						"description": "Not Implemented"
+					}
+				},
+				"tags": [
+					"Bills"
+				],
+				"security": [],
+				"parameters": []
+			}
+		}
+	},
+	"servers": [
+		{
+			"url": "/api"
+		}
+	]
+}

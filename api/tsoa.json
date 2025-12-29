@@ -1,0 +1,27 @@
+{
+  "entryFile": "./server.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["./src/controllers/**/*Controller.ts"],
+  "spec": {
+    "outputDirectory": "./openapi",
+    "specVersion": 3,
+    "specFileMerged": "openapi.yaml",
+    "specMerging": "recursive",
+    "entryFile": "./server.ts",
+    "basePath": "/api",
+    "description": "BudgetForFun API Documentation",
+    "name": "BudgetForFun API",
+    "version": "1.0.0",
+    "license": "MIT",
+    "contact": {
+      "name": "BudgetForFun Team"
+    }
+  },
+  "routes": {
+    "routesDir": "./dist"
+  },
+  "ignore": ["**/node_modules/**"],
+  "authentication": {
+    "enabled": false
+  }
+}

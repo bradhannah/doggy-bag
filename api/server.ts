@@ -1,52 +1,49 @@
 // Bun HTTP Server for BudgetForFun
 // Handles backend API for IPC communication with Tauri frontend
 // Runs on localhost:3000
+// Uses tsoa controllers with Bun bridge for routing
 
 import { serve } from 'bun';
+import { routes } from './src/routes';
 
 const PORT = 3000;
-
-// Health check endpoint
-const healthHandler = () => {
-  return new Response(JSON.stringify({ status: 'ok' }), {
-    headers: { 'Content-Type': 'application/json' },
-    status: 200
-  });
-};
-
-// 404 handler for unknown routes
-const notFoundHandler = () => {
-  return new Response(JSON.stringify({ error: 'Not Found' }), {
-    headers: { 'Content-Type': 'application/json' },
-    status: 404
-  });
-};
-
-// Error handler for server errors
-const errorHandler = () => {
-  return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-    headers: { 'Content-Type': 'application/json' },
-    status: 500
-  });
-};
 
 // Start server
 const server = serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
-
-    // Health check
-    if (url.pathname === '/health') {
-      return healthHandler();
+    const path = url.pathname;
+    
+    console.log(`Request: ${req.method} ${path}`);
+    
+    // Find matching route (support both /health and /api/health)
+    for (const [routePath, route] of routes.entries()) {
+      if ((path === `/api/${routePath}` || path === routePath) && req.method === route.method) {
+        try {
+          return await route.handler(req);
+        } catch (error) {
+          console.error('Server error:', error);
+          return new Response(
+            JSON.stringify({ 
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            }),
+            { 
+              headers: { 'Content-Type': 'application/json' },
+              status: error instanceof Error && 'status' in error 
+                ? (error as any).status 
+                : 500
+            }
+          );
+        }
+      }
     }
-
-    // Unknown route
-    return notFoundHandler();
-  },
-  error(request) {
-    console.error('Server error:', request.error);
-    return errorHandler();
+    
+    // 404 for unknown routes
+    return new Response(JSON.stringify({ error: 'Not Found' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 404
+    });
   }
 });
 

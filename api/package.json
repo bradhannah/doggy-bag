@@ -6,9 +6,13 @@
   "scripts": {
     "server": "bun run server.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@tsoa/runtime": "^7.0.0-alpha.0",
+    "tsoa": "^7.0.0-alpha.0"
+  },
   "devDependencies": {
+    "@types/bun": "^1.3.5",
     "bun-types": "latest",
-    "@types/bun": "latest"
+    "typescript": "^5.9.3"
   }
 }
