@@ -28,9 +28,7 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
-  },
-  // 4. proxy API requests to Bun backend on localhost:3000
-  server: {
+    // 4. proxy API requests to Bun backend on localhost:3000
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

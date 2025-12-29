@@ -16,7 +16,7 @@ help: ## Show this help message
 	@echo "  make types     Generate OpenAPI spec and Svelte types"
 	@echo ""
 	@echo "Installation Targets:"
-	@echo "  make install-prereqs  Install Bun via official script"
+	@echo "  make install-prereqs  Check and install prerequisites (Bun, Rust, Node.js, TypeScript)"
 	@echo "  make install-dev      Install all development dependencies"
 	@echo "  make install-all      Install all dependencies (Bun + npm)"
 	@echo ""
@@ -32,10 +32,44 @@ help: ## Show this help message
 	@echo "  make format    Format all files with Prettier"
 
 # Installation
-install-prereqs: ## Install Bun via official script
-	@echo "Checking if Bun is installed..."
+install-prereqs: ## Check and install all prerequisites (Bun, Rust, Node.js, TypeScript)
+	@echo "Checking prerequisites..."
+	@echo ""
+	@$(MAKE) check-rust
+	@$(MAKE) check-node
+	@$(MAKE) check-bun
+	@$(MAKE) check-typescript
+	@echo ""
+	@echo "✓ All prerequisites checked"
+
+check-rust: ## Check if Rust is installed
+	@echo "Checking Rust..."
+	@if command -v rustc >/dev/null 2>&1 && command -v cargo >/dev/null 2>&1; then \
+		echo "✓ Rust is installed"; \
+	else \
+		echo "✗ Rust is NOT installed"; \
+		echo ""; \
+		echo "To install Rust, run:"; \
+		echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; \
+		echo ""; \
+		echo "After installation, restart your terminal and run: source ~/.cargo/env"; \
+	fi
+
+check-node: ## Check if Node.js is installed
+	@echo "Checking Node.js..."
+	@if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then \
+		echo "✓ Node.js ($(shell node --version)) and npm ($(shell npm --version)) are installed"; \
+	else \
+		echo "✗ Node.js is NOT installed"; \
+		echo ""; \
+		echo "To install Node.js, visit: https://nodejs.org/"; \
+		echo "Or use nvm: https://github.com/nvm-sh/nvm"; \
+	fi
+
+check-bun: ## Check if Bun is installed
+	@echo "Checking Bun..."
 	@if command -v bun >/dev/null 2>&1; then \
-		echo "✓ Bun is already installed"; \
+		echo "✓ Bun ($(shell bun --version)) is installed"; \
 	else \
 		echo "Installing Bun via official script..."; \
 		curl -fsSL https://bun.sh/install | bash; \
@@ -46,11 +80,24 @@ install-prereqs: ## Install Bun via official script
 		echo "Alternatively, refresh your shell: exec $$SHELL"; \
 	fi
 
+check-typescript: ## Check if TypeScript is installed
+	@echo "Checking TypeScript..."
+	@if command -v tsc >/dev/null 2>&1; then \
+		echo "✓ TypeScript ($(shell tsc --version)) is installed"; \
+	else \
+		echo "✗ TypeScript is NOT installed globally"; \
+		echo ""; \
+		echo "To install TypeScript globally, run:"; \
+		echo "  npm install -g typescript"; \
+	fi
+
 # Development
 dev: ## Start all services (Tauri + Bun + Vite)
-	@echo "Starting all services in background..."
-	@make start-bun & \
-	@make start-vite & \
+	@$(MAKE) check-prereqs
+	@echo "Starting Bun backend server in background..."
+	@$(MAKE) start-bun &
+	@sleep 2
+	@echo "Starting Tauri (which will start Vite)..."
 	@npm run tauri dev
 	@wait
 
@@ -62,8 +109,18 @@ start-vite: ## Start Vite dev server
 	@echo "Starting Vite dev server..."
 	@npm run dev
 
+check-prereqs: ## Quick check that all prerequisites are installed
+	@echo "Checking prerequisites..."
+	@command -v rustc >/dev/null 2>&1 || (echo "ERROR: Rust is not installed. Run 'make install-prereqs'." && exit 1)
+	@command -v cargo >/dev/null 2>&1 || (echo "ERROR: Cargo is not installed. Run 'make install-prereqs'." && exit 1)
+	@command -v node >/dev/null 2>&1 || (echo "ERROR: Node.js is not installed. Run 'make install-prereqs'." && exit 1)
+	@command -v bun >/dev/null 2>&1 || (echo "ERROR: Bun is not installed. Run 'make install-prereqs'." && exit 1)
+	@command -v tsc >/dev/null 2>&1 || (echo "ERROR: TypeScript is not installed. Run 'npm install -g typescript'." && exit 1)
+	@echo "✓ All prerequisites installed"
+
 # Build
 build: ## Build Tauri application for current platform
+	@$(MAKE) check-prereqs
 	@echo "Building Tauri application..."
 	@npm run build
 
@@ -78,6 +135,7 @@ clean: ## Remove build artifacts and temporary files
 
 # Type generation
 types: ## Generate OpenAPI spec and Svelte types
+	@$(MAKE) check-prereqs
 	@echo "Generating OpenAPI spec from backend types..."
 	@cd api && bun run scripts/generate-openapi.ts
 	@echo "Generating Svelte types from OpenAPI spec..."
@@ -145,15 +203,14 @@ smoke-test: ## Validate Bun, Svelte, and Tauri integration
 
 # Installation
 install-dev: ## Install all development dependencies
+	@$(MAKE) check-typescript
 	@echo "Installing development dependencies..."
 	@make install-bun
 	@make install-npm
 	@echo "Development dependencies installed"
 
-install-all: ## Install all dependencies
-	@make install-bun
-	@make install-npm
-	@echo "All dependencies installed"
+install-all: ## Install all dependencies (same as install-dev)
+	@$(MAKE) install-dev
 
 install-bun: ## Install Bun backend dependencies
 	@echo "Installing Bun dependencies (api/)..."

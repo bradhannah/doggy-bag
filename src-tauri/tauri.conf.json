@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.bradhannah.budgetforfun",
   "build": {
-    "beforeDevCommand": "make dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "make build",
     "beforeBundleCommand": "make build",
