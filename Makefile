@@ -17,14 +17,13 @@ endif
 # Check for required tools
 BUN_EXISTS := $(shell command -v bun >/dev/null 2>&1 && echo "yes" || echo "no")
 NODE_EXISTS := $(shell command -v node >/dev/null 2>&1 && echo "yes" || echo "no")
-BREW_EXISTS := $(shell command -v brew >/dev/null 2>&1 && echo "yes" || echo "no")
 
 # Default target
 help: ## Show this help message
 	@echo "BudgetForFun Makefile - Build Automation"
 	@echo ""
 	@echo "Prerequisites:"
-	@echo "  make install-prereqs    Check and install missing tools (Bun, Node.js, Homebrew on macOS)"
+	@echo "  make install-prereqs    Install missing tools (Bun, Node.js, Homebrew on macOS)"
 	@echo ""
 	@echo "Development Targets:"
 	@echo "  make dev       Start all services (Tauri + Bun + Vite)"
@@ -54,59 +53,56 @@ install-prereqs: ## Check and install missing tools (Bun, Node.js, Homebrew on m
 	@echo "Checking prerequisites..."
 	@$(MAKE) check-prereqs
 	@$(MAKE) install-missing-tools
+	@echo ""
+	@echo "Prerequisites check complete"
 
 check-prereqs: ## Check which prerequisites are installed
 	@echo "Platform: $(UNAME_S)"
 	@echo "Bun installed: $(BUN_EXISTS)"
 	@echo "Node.js installed: $(NODE_EXISTS)"
-ifeq ($(IS_MAC),yes)
-	@echo "Homebrew installed: $(BREW_EXISTS)"
-endif
-	@echo ""
-ifeq ($(BUN_EXISTS),yes)
-	@echo "✓ Bun is installed"
-else
-	@echo "✗ Bun is NOT installed - run 'make install-prereqs' to install"
-endif
-ifeq ($(NODE_EXISTS),yes)
-	@echo "✓ Node.js is installed"
-else
-	@echo "✗ Node.js is NOT installed - run 'make install-prereqs' to install"
-endif
 
 install-missing-tools: ## Install missing prerequisite tools
 ifeq ($(IS_MAC),yes)
-ifeq ($(BUN_EXISTS),no)
-	@echo "Installing Bun via Homebrew..."
-	@brew install bun
-	@echo "Bun installed successfully"
-	@echo ""
-	@echo "Please close and reopen your terminal to use Bun"
-else
-ifeq ($(NODE_EXISTS),no)
-	@echo "Installing Node.js via Homebrew..."
-	@brew install node
-	@echo "Node.js installed successfully"
-	@echo ""
-	@echo "Please close and reopen your terminal to use Node.js"
-endif
-else
-	@echo "To install Bun on Linux: curl -fsSL https://bun.sh/install | bash"
-	@echo "To install Node.js on Linux: Use your package manager (apt, yum, dnf, etc.)"
-	@echo "For Windows installation, see: https://bun.sh/docs/installation"
+	@if [ "$(BUN_EXISTS)" = "no" ]; then \
+		echo "Installing Bun via Homebrew..."; \
+		brew install bun; \
+		echo "✓ Bun installed successfully"; \
+		echo ""; \
+		echo "Please close and reopen your terminal to use Bun"; \
+	fi
+	@if [ "$(NODE_EXISTS)" = "no" ]; then \
+		echo "Installing Node.js via Homebrew..."; \
+		brew install node; \
+		echo "✓ Node.js installed successfully"; \
+		echo ""; \
+		echo "Please close and reopen your terminal to use Node.js"; \
+	fi
+else ifeq ($(UNAME_S),Linux)
+	@if [ "$(BUN_EXISTS)" = "no" ]; then \
+		echo "To install Bun on Linux:"; \
+		echo "  curl -fsSL https://bun.sh/install | bash"; \
+	fi
+	@if [ "$(NODE_EXISTS)" = "no" ]; then \
+		echo "To install Node.js on Linux: Use your package manager"; \
+		echo "  apt, yum, dnf, etc."; \
+	fi
+else ifeq ($(OS),Windows_NT)
+	@echo "For Windows installation, see:"
+	@echo "  Bun: https://bun.sh/docs/installation"
+	@echo "  Node.js: https://nodejs.org/"
 endif
 
 # Development
 dev: ## Start all services (Tauri + Bun + Vite)
 	@$(MAKE) check-prereqs
-ifeq ($(BUN_EXISTS),no)
-	@echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."
-	@exit 1
-endif
+	@if [ "$(BUN_EXISTS)" = "no" ]; then \
+		echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."; \
+		exit 1; \
+	fi
 	@echo "Starting all services in background..."
-	@$(MAKE) start-bun & \
-	$(MAKE) start-vite & \
-	npm run tauri dev
+	@$(MAKE) start-bun &
+	@$(MAKE) start-vite &
+	@npm run tauri dev
 	@wait
 
 start-bun: ## Start Bun backend server on localhost:3000
@@ -185,18 +181,18 @@ format: ## Format all files with Prettier
 # Smoke test (build system validation)
 smoke-test: ## Validate Bun, Svelte, and Tauri integration
 	@$(MAKE) check-prereqs
-ifeq ($(BUN_EXISTS),no)
-	@echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."
-	@exit 1
-endif
+	@if [ "$(BUN_EXISTS)" = "no" ]; then \
+		echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."; \
+		exit 1; \
+	fi
 	@echo "Starting smoke test..."
 	@echo "1. Starting Bun server on localhost:3000..."
 	@cd api && bun run server.ts &
-	BUN_PID=$!
+	BUN_PID=$$!
 	@sleep 2
 	@echo "2. Starting Vite dev server..."
 	@npm run dev &
-	VITE_PID=$!
+	VITE_PID=$$!
 	@sleep 2
 	@echo "3. Checking health endpoint..."
 	@curl -f http://localhost:3000/health || (echo "Smoke test FAILED" && kill $BUN_PID $VITE_PID 2>/dev/null; exit 1)
@@ -210,35 +206,24 @@ endif
 # Installation
 install-dev: ## Install all development dependencies
 	@$(MAKE) check-prereqs
-ifeq ($(BUN_EXISTS),no)
-	@echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."
-	@exit 1
-endif
-	@echo "Installing development dependencies..."
 	@$(MAKE) install-bun
 	@$(MAKE) install-npm
 	@echo "Development dependencies installed"
 
 install-all: ## Install all dependencies
 	@$(MAKE) check-prereqs
-	@$(MAKE) install-prereqs
-	@$(MAKE) install-dev
+	@$(MAKE) install-bun
+	@$(MAKE) install-npm
 	@echo "All dependencies installed"
 
 install-bun: ## Install Bun backend dependencies
-	@$(MAKE) check-prereqs
-ifeq ($(BUN_EXISTS),no)
-	@echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."
-	@exit 1
-endif
+	@if [ "$(BUN_EXISTS)" = "no" ]; then \
+		echo "ERROR: Bun is not installed. Run 'make install-prereqs' to install."; \
+		exit 1; \
+	fi
 	@echo "Installing Bun dependencies (api/)..."
 	@cd api && bun install
 
 install-npm: ## Install npm dependencies (frontend, Tauri, tools)
-	@$(MAKE) check-prereqs
-ifeq ($(NODE_EXISTS),no)
-	@echo "ERROR: Node.js is not installed. Run 'make install-prereqs' to install."
-	@exit 1
-endif
 	@echo "Installing npm dependencies..."
 	@npm install
