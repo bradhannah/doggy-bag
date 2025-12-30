@@ -1,0 +1,58 @@
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Housing",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554402",
+    "name": "Utilities",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554403",
+    "name": "Food & Groceries",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554404",
+    "name": "Transportation",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554405",
+    "name": "Insurance",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554406",
+    "name": "Entertainment",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554407",
+    "name": "Healthcare",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554408",
+    "name": "Other",
+    "is_predefined": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  }
+]

@@ -1,6 +1,6 @@
 # BudgetForFun Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-29
+Auto-generated from all feature plans. Last updated: 2025-12-30
 
 ## Active Technologies
 
@@ -47,17 +47,34 @@ tests/
   - Bundle size issue: Bun sidecar NOT bundled in production (to stay under 10MB limit)
   - TODO: Document compression strategy or alternative bundling approach
 
-- Phase 4: Foundational Services - COMPLETE
-  - Storage Service (api/src/services/storage.ts)
-  - Validation Service (api/src/services/validation.ts)
-  - Payment Sources Service (api/src/services/payment-sources-service.ts)
-  - Bills Service (api/src/services/bills-service.ts)
-  - Incomes Service (api/src/services/incomes-service.ts)
-  - Categories Service (api/src/services/categories-service.ts)
-  - Months Service (api/src/services/months-service.ts)
-  - Backup Service (api/src/services/backup-service.ts)
-  - Undo Service (api/src/services/undo-service.ts)
-  - Leftover Service (api/src/services/leftover-service.ts)
-  - Auto-Save Service (api/src/services/auto-save.ts)
+ - Phase 4: Foundational Services - COMPLETE (2025-12-30)
+   - Storage Service (api/src/services/storage.ts) - File I/O with Bun promises API
+   - Validation Service (api/src/services/validation.ts) - Data integrity checks for all entities
+   - Payment Sources Service (api/src/services/payment-sources-service.ts) - CRUD operations
+   - Bills Service (api/src/services/bills-service.ts) - CRUD operations with validation
+   - Incomes Service (api/src/services/incomes-service.ts) - CRUD operations with validation
+   - Categories Service (api/src/services/categories-service.ts) - CRUD operations with validation
+   - Months Service (api/src/services/months-service.ts) - Generate and manage monthly budget data
+   - Backup Service (api/src/services/backup-service.ts) - Export/backup and restore functionality
+   - Undo Service (api/src/services/undo-service.ts) - 5-entry undo stack management
+   - Leftover Service (api/src/services/leftover-service.ts) - Calculate "leftover at end of month"
+   - Auto-Save Service (api/src/services/auto-save.ts) - Debounced auto-save mechanism
+   
+   - Utilities (api/src/utils/):
+     - errors.ts - Standardized error types (ValidationError, NotFoundError, StorageError, ConflictError)
+     - formatters.ts - Currency and date formatting ($X,XXX.XX, YYYY-MM-DD)
+     - validators.ts - Input validation helpers (required, length, amount, UUID, enum)
+     - billing-period.ts - Billing period calculations (monthly, bi-weekly, weekly, semi-annually)
+     - logger.ts - Centralized logging utility (debug, info, warn, error levels)
+   
+   - Models (api/src/models/):
+     - bill.ts, income.ts, payment-source.ts, category.ts, expense.ts, monthly-data.ts, undo.ts
+   
+   - Entity Files (data/entities/):
+     - bills.json (empty array)
+     - incomes.json (empty array)
+     - categories.json (8 pre-defined categories)
+     - payment-sources.json (empty array)
+     - undo.json (empty array)
 
 <!-- MANUAL ADDITIONS END -->

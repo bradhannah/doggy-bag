@@ -1,8 +1,7 @@
-// Placeholder for utility exports
-// Utilities will be implemented in Phase 4 (Foundational Services)
+// Utility exports
 
+export * from './errors';
 export * from './formatters';
 export * from './validators';
 export * from './billing-period';
-export * from './errors';
 export * from './logger';

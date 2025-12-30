@@ -6,26 +6,21 @@ import type {
   Bill,
   Income,
   PaymentSource,
-  Category 
+  Category,
+  ValidationResult 
 } from '../types';
 
 export interface BackupService {
   exportBackup(): Promise<BackupFileData>;
   importBackup(data: BackupFileData): Promise<void>;
-  
-  validateBackup(data: ValidationResult;
-}
-
-export interface BackupService {
-  exportBackup(): Promise<BackupFileData>;
-  importBackup(data: BackupFileData): Promise<void>;
-  validateBackup(data: ValidationResult;
+  validateBackup(data: BackupFileData): ValidationResult;
 }
 
 export class BackupServiceImpl implements BackupService {
+  private static instance: BackupServiceImpl | null = null;
   private storage: StorageService;
   
-  export BackupService getInstance(): BackupService {
+  public static getInstance(): BackupService {
     if (!BackupServiceImpl.instance) {
       BackupServiceImpl.instance = new BackupServiceImpl();
     }
@@ -36,11 +31,10 @@ export class BackupServiceImpl implements BackupService {
     this.storage = StorageService.getInstance();
   }
 
-  exportBackup(): Promise<BackupFileData> {
+  public async exportBackup(): Promise<BackupFileData> {
     console.log('[BackupService] Exporting backup...');
     
     try {
-      // Load all entities
       const [bills, incomes, paymentSources, categories] = await Promise.all([
         this.storage.readJSON<Bill[]>('data/entities/bills.json') || [],
         this.storage.readJSON<Income[]>('data/entities/incomes.json') || [],
@@ -48,17 +42,15 @@ export class BackupServiceImpl implements BackupService {
         this.storage.readJSON<Category[]>('data/entities/categories.json') || []
       ]);
       
-      // Create backup data structure
       const now = new Date().toISOString();
       const backupData: BackupFileData = {
         export_date: now,
-        bills: bills,
-        incomes,
-        payment_sources,
-        categories
+        bills: bills || [],
+        incomes: incomes || [],
+        payment_sources: paymentSources || [],
+        categories: categories || []
       };
       
-      // Write backup file
       await this.storage.writeJSON('data/budgetforfun-backup.json', backupData);
       
       console.log('[BackupService] Export completed');
@@ -69,21 +61,18 @@ export class BackupServiceImpl implements BackupService {
     }
   }
   
-  async importBackup(data: BackupFileData): Promise<void> {
+  public async importBackup(data: BackupFileData): Promise<void> {
     console.log('[BackupService] Importing backup...');
     
     try {
-      // Validate backup structure
       const validation = this.validateBackup(data);
       if (!validation.isValid) {
-        throw new Error('Invalid backup data: ' + validation.errors.join(', ''));
+        throw new Error('Invalid backup data: ' + validation.errors.join(', '));
       }
       
-      // Load existing backup if exists
       const existing = await this.storage.readJSON<BackupFileData>('data/budgetforfun-backup.json');
       
       if (existing) {
-        // Overwrite existing backup
         const now = new Date().toISOString();
         const updatedBackupData = {
           export_date: now,
@@ -93,9 +82,8 @@ export class BackupServiceImpl implements BackupService {
         await this.storage.writeJSON('data/budgetforfun-backup.json', updatedBackupData);
         console.log('[BackupService] Backup imported and merged');
       } else {
-        // Create new backup
         const now = new Date().toISOString();
-        const newBackupData: {
+        const newBackupData: BackupFileData = {
           export_date: now,
           bills: [],
           incomes: [],
@@ -113,7 +101,7 @@ export class BackupServiceImpl implements BackupService {
     }
   }
   
-  validateBackup(data: BackupFileData): ValidationResult {
+  public validateBackup(data: BackupFileData): ValidationResult {
     const errors: string[] = [];
     
     if (!data.export_date) {
