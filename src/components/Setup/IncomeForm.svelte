@@ -8,15 +8,16 @@
    */
   import { createIncome, updateIncome } from '../../stores/incomes';
   import { paymentSourcesStore } from '../../stores/payment-sources';
+  import { success, error as showError } from '../../stores/toast';
   import type { Income, IncomeData } from '../../stores/incomes';
 
   export let editingItem: Income | null = null;
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
 
-  // Form state
+  // Form state - amount is stored in dollars for user input
   let name = editingItem?.name || '';
-  let amount = editingItem?.amount || 0;
+  let amountDollars = editingItem ? (editingItem.amount / 100).toFixed(2) : '';
   let billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually' = editingItem?.billing_period || 'monthly';
   let start_date = editingItem?.start_date || '';
   let payment_source_id = editingItem?.payment_source_id || '';
@@ -38,7 +39,7 @@
   // Reset form when editingItem changes
   $: if (editingItem) {
     name = editingItem.name;
-    amount = editingItem.amount;
+    amountDollars = (editingItem.amount / 100).toFixed(2);
     billing_period = editingItem.billing_period;
     start_date = editingItem.start_date || '';
     payment_source_id = editingItem.payment_source_id;
@@ -48,8 +49,10 @@
     recurrence_day = editingItem.recurrence_day || 0;
   }
 
-  function formatAmount(cents: number): string {
-    return '$' + (cents / 100).toFixed(2);
+  // Convert dollars to cents
+  function dollarsToCents(dollars: string): number {
+    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
+    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   async function handleSubmit() {
@@ -58,6 +61,13 @@
       error = 'Name is required';
       return;
     }
+    
+    const amountCents = dollarsToCents(amountDollars);
+    if (amountCents < 100) {
+      error = 'Amount must be at least $1.00';
+      return;
+    }
+    
     if (!payment_source_id) {
       error = 'Payment source is required';
       return;
@@ -73,7 +83,7 @@
     try {
       const incomeData: IncomeData = {
         name,
-        amount,
+        amount: amountCents,
         billing_period,
         payment_source_id
       };
@@ -95,12 +105,15 @@
 
       if (editingItem) {
         await updateIncome(editingItem.id, incomeData);
+        success(`Income "${name}" updated`);
       } else {
         await createIncome(incomeData);
+        success(`Income "${name}" added`);
       }
       onSave();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save income';
+      showError(error);
     } finally {
       saving = false;
     }
@@ -134,20 +147,19 @@
   </div>
 
   <div class="form-group">
-    <label for="income-amount">Amount (in cents)</label>
-    <input
-      id="income-amount"
-      type="number"
-      bind:value={amount}
-      min="1"
-      step="1"
-      placeholder="e.g., 500000 for $5,000.00"
-      required
-      disabled={saving || !hasPaymentSources}
-    />
-    <div class="amount-preview">
-      {formatAmount(amount)}
+    <label for="income-amount">Amount</label>
+    <div class="amount-input-wrapper">
+      <span class="currency-prefix">$</span>
+      <input
+        id="income-amount"
+        type="text"
+        bind:value={amountDollars}
+        placeholder="0.00"
+        required
+        disabled={saving || !hasPaymentSources}
+      />
     </div>
+    <div class="help-text">Minimum $1.00</div>
   </div>
 
   <div class="form-group">
@@ -301,10 +313,23 @@
     cursor: not-allowed;
   }
 
-  .amount-preview {
-    font-size: 13px;
+  .amount-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .currency-prefix {
+    position: absolute;
+    left: 12px;
     color: #888;
-    margin-top: 4px;
+    font-size: 15px;
+    pointer-events: none;
+  }
+
+  .amount-input-wrapper input {
+    padding-left: 28px;
+    width: 100%;
   }
 
   .help-text {

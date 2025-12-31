@@ -7,16 +7,17 @@
    * @prop onCancel - Callback to close form without saving
    */
   import { createPaymentSource, updatePaymentSource } from '../../stores/payment-sources';
+  import { success, error as showError } from '../../stores/toast';
   import type { PaymentSource } from '../../stores/payment-sources';
 
   export let editingItem: PaymentSource | null = null;
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
 
-  // Form state
+  // Form state - balance is stored in dollars for user input
   let name = editingItem?.name || '';
   let type: 'bank_account' | 'credit_card' | 'cash' = editingItem?.type || 'bank_account';
-  let balance = editingItem?.balance || 0;
+  let balanceDollars = editingItem ? (editingItem.balance / 100).toFixed(2) : '0.00';
   let error = '';
   let saving = false;
 
@@ -24,11 +25,13 @@
   $: if (editingItem) {
     name = editingItem.name;
     type = editingItem.type;
-    balance = editingItem.balance;
+    balanceDollars = (editingItem.balance / 100).toFixed(2);
   }
 
-  function formatAmount(cents: number): string {
-    return '$' + (cents / 100).toFixed(2);
+  // Convert dollars to cents
+  function dollarsToCents(dollars: string): number {
+    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
+    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   async function handleSubmit() {
@@ -41,15 +44,20 @@
     saving = true;
     error = '';
 
+    const balanceCents = dollarsToCents(balanceDollars);
+
     try {
       if (editingItem) {
-        await updatePaymentSource(editingItem.id, { name, type, balance });
+        await updatePaymentSource(editingItem.id, { name, type, balance: balanceCents });
+        success(`Payment source "${name}" updated`);
       } else {
-        await createPaymentSource({ name, type, balance });
+        await createPaymentSource({ name, type, balance: balanceCents });
+        success(`Payment source "${name}" added`);
       }
       onSave();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save payment source';
+      showError(error);
     } finally {
       saving = false;
     }
@@ -83,20 +91,19 @@
   </div>
 
   <div class="form-group">
-    <label for="ps-balance">Current Balance (in cents)</label>
-    <input
-      id="ps-balance"
-      type="number"
-      bind:value={balance}
-      min="0"
-      step="1"
-      placeholder="e.g., 150000 for $1,500.00"
-      required
-      disabled={saving}
-    />
-    <div class="amount-preview">
-      {formatAmount(balance)}
+    <label for="ps-balance">Current Balance</label>
+    <div class="amount-input-wrapper">
+      <span class="currency-prefix">$</span>
+      <input
+        id="ps-balance"
+        type="text"
+        bind:value={balanceDollars}
+        placeholder="0.00"
+        required
+        disabled={saving}
+      />
     </div>
+    <div class="help-text">For credit cards, enter balance owed as positive</div>
   </div>
 
   <div class="form-actions">
@@ -154,9 +161,28 @@
     cursor: not-allowed;
   }
 
-  .amount-preview {
-    font-size: 13px;
+  .amount-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .currency-prefix {
+    position: absolute;
+    left: 12px;
     color: #888;
+    font-size: 15px;
+    pointer-events: none;
+  }
+
+  .amount-input-wrapper input {
+    padding-left: 28px;
+    width: 100%;
+  }
+
+  .help-text {
+    font-size: 12px;
+    color: #24c8db;
     margin-top: 4px;
   }
 

@@ -3,6 +3,7 @@
   import type { VariableExpense } from '../../stores/months';
   import type { PaymentSource } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
+  import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   
   export let expenses: VariableExpense[] = [];
   export let month: string;
@@ -22,7 +23,24 @@
   let error = '';
   
   // Delete confirmation state
-  let confirmDeleteId: string | null = null;
+  let showDeleteConfirm = false;
+  let expenseToDelete: VariableExpense | null = null;
+  
+  function confirmDeleteExpense(expense: VariableExpense) {
+    expenseToDelete = expense;
+    showDeleteConfirm = true;
+  }
+  
+  function cancelDeleteExpense() {
+    showDeleteConfirm = false;
+    expenseToDelete = null;
+  }
+  
+  async function handleConfirmDelete() {
+    if (expenseToDelete) {
+      await deleteExpense(expenseToDelete.id);
+    }
+  }
   
   // Helper to get payment source name
   function getPaymentSourceName(id: string | undefined): string | null {
@@ -146,7 +164,8 @@
         throw new Error(data.error || 'Failed to delete expense');
       }
       
-      confirmDeleteId = null;
+      showDeleteConfirm = false;
+      expenseToDelete = null;
       dispatch('refresh');
       success('Expense deleted');
     } catch (err) {
@@ -232,20 +251,24 @@
             <span class="expense-amount">{formatCurrency(expense.amount)}</span>
           </div>
           <div class="expense-actions">
-            {#if confirmDeleteId === expense.id}
-              <span class="confirm-text">Delete?</span>
-              <button class="confirm-yes" on:click={() => deleteExpense(expense.id)}>Yes</button>
-              <button class="confirm-no" on:click={() => confirmDeleteId = null}>No</button>
-            {:else}
               <button class="edit-btn" on:click={() => openEditForm(expense)}>Edit</button>
-              <button class="delete-btn" on:click={() => confirmDeleteId = expense.id}>Delete</button>
-            {/if}
+              <button class="delete-btn" on:click={() => confirmDeleteExpense(expense)}>Delete</button>
           </div>
         </li>
       {/each}
     </ul>
   {/if}
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<ConfirmDialog
+  open={showDeleteConfirm}
+  title="Delete Expense"
+  message="Are you sure you want to delete '{expenseToDelete?.name}'? This action cannot be undone."
+  confirmText="Delete"
+  on:confirm={handleConfirmDelete}
+  on:cancel={cancelDeleteExpense}
+/>
 
 <style>
   .expenses-card {
@@ -491,30 +514,6 @@
   .delete-btn:hover {
     border-color: #f87171;
     color: #f87171;
-  }
-  
-  .confirm-text {
-    color: #f87171;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-  
-  .confirm-yes, .confirm-no {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    border: none;
-  }
-  
-  .confirm-yes {
-    background: #f87171;
-    color: #000;
-  }
-  
-  .confirm-no {
-    background: #333355;
-    color: #e4e4e7;
   }
   
   .loading-text, .empty-text {

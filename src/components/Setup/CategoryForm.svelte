@@ -8,6 +8,7 @@
    */
   import { createCategory, updateCategory } from '../../stores/categories';
   import type { Category } from '../../stores/categories';
+  import { success, error as showError } from '../../stores/toast';
 
   export let editingItem: Category | null = null;
   export let onSave: () => void = () => {};
@@ -45,12 +46,16 @@
     try {
       if (editingItem) {
         await updateCategory(editingItem.id, { name });
+        success('Category updated');
       } else {
         await createCategory({ name });
+        success('Category created');
       }
       onSave();
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to save category';
+      const msg = e instanceof Error ? e.message : 'Failed to save category';
+      error = msg;
+      showError(msg);
     } finally {
       saving = false;
     }

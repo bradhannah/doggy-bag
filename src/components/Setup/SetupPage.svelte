@@ -6,6 +6,7 @@
   import { billsStore, loadBills, deleteBill, activeBillsWithContribution, totalFixedCosts, calculateMonthlyContribution as calculateBillContribution } from '../../stores/bills';
   import { incomesStore, loadIncomes, deleteIncome, activeIncomesWithContribution, totalMonthlyIncome, calculateMonthlyContribution as calculateIncomeContribution } from '../../stores/incomes';
   import { categoriesStore, loadCategories, deleteCategory } from '../../stores/categories';
+  import { success, error as showError } from '../../stores/toast';
   
   // Components
   import Drawer from './Drawer.svelte';
@@ -18,6 +19,7 @@
   import CategoryForm from './CategoryForm.svelte';
   import CategoryView from './CategoryView.svelte';
   import LoadDefaultsButton from '../shared/LoadDefaultsButton.svelte';
+  import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   
   // Types
   import type { PaymentSource } from '../../stores/payment-sources';
@@ -43,7 +45,8 @@
   let editingCategory: Category | null = null;
 
   // Delete confirmation state
-  let deleteConfirmId: string | null = null;
+  let showDeleteConfirm = false;
+  let itemToDelete: { id: string; name: string } | null = null;
 
   // Tab definitions
   const tabs: { id: TabId; label: string }[] = [
@@ -174,20 +177,43 @@
       switch (activeTab) {
         case 'payment-sources':
           await deletePaymentSource(id);
+          success('Payment source deleted');
           break;
         case 'bills':
           await deleteBill(id);
+          success('Bill deleted');
           break;
         case 'incomes':
           await deleteIncome(id);
+          success('Income deleted');
           break;
         case 'categories':
           await deleteCategory(id);
+          success('Category deleted');
           break;
       }
-      deleteConfirmId = null;
+      showDeleteConfirm = false;
+      itemToDelete = null;
     } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Delete failed';
+      showError(msg);
       console.error('Delete failed:', e);
+    }
+  }
+
+  function confirmDelete(item: { id: string; name: string }) {
+    itemToDelete = item;
+    showDeleteConfirm = true;
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
+    itemToDelete = null;
+  }
+
+  async function handleConfirmDelete() {
+    if (itemToDelete) {
+      await handleDelete(itemToDelete.id);
     }
   }
 
@@ -219,7 +245,7 @@
         <button
           class="tab-button"
           class:active={activeTab === tab.id}
-          on:click={() => { activeTab = tab.id; deleteConfirmId = null; }}
+          on:click={() => { activeTab = tab.id; cancelDelete(); }}
         >
           {tab.label}
         </button>
@@ -272,14 +298,8 @@
                   {formatAmount(ps.balance)}
                 </div>
                 <div class="card-actions" on:click|stopPropagation>
-                  {#if deleteConfirmId === ps.id}
-                    <span class="confirm-text">Delete?</span>
-                    <button class="btn-small btn-danger" on:click={() => handleDelete(ps.id)}>Yes</button>
-                    <button class="btn-small btn-secondary" on:click={() => deleteConfirmId = null}>No</button>
-                  {:else}
                     <button class="btn-small btn-secondary" on:click={() => openEditDrawer(ps)}>Edit</button>
-                    <button class="btn-small btn-danger" on:click={() => deleteConfirmId = ps.id}>Delete</button>
-                  {/if}
+                    <button class="btn-small btn-danger" on:click={() => confirmDelete({ id: ps.id, name: ps.name })}>Delete</button>
                 </div>
               </div>
             {/each}
@@ -308,14 +328,8 @@
                   {formatAmount(bill.monthlyContribution)}/mo
                 </div>
                 <div class="card-actions" on:click|stopPropagation>
-                  {#if deleteConfirmId === bill.id}
-                    <span class="confirm-text">Delete?</span>
-                    <button class="btn-small btn-danger" on:click={() => handleDelete(bill.id)}>Yes</button>
-                    <button class="btn-small btn-secondary" on:click={() => deleteConfirmId = null}>No</button>
-                  {:else}
                     <button class="btn-small btn-secondary" on:click={() => openEditDrawer(bill)}>Edit</button>
-                    <button class="btn-small btn-danger" on:click={() => deleteConfirmId = bill.id}>Delete</button>
-                  {/if}
+                    <button class="btn-small btn-danger" on:click={() => confirmDelete({ id: bill.id, name: bill.name })}>Delete</button>
                 </div>
               </div>
             {/each}
@@ -349,14 +363,8 @@
                   {formatAmount(income.monthlyContribution)}/mo
                 </div>
                 <div class="card-actions" on:click|stopPropagation>
-                  {#if deleteConfirmId === income.id}
-                    <span class="confirm-text">Delete?</span>
-                    <button class="btn-small btn-danger" on:click={() => handleDelete(income.id)}>Yes</button>
-                    <button class="btn-small btn-secondary" on:click={() => deleteConfirmId = null}>No</button>
-                  {:else}
                     <button class="btn-small btn-secondary" on:click={() => openEditDrawer(income)}>Edit</button>
-                    <button class="btn-small btn-danger" on:click={() => deleteConfirmId = income.id}>Delete</button>
-                  {/if}
+                    <button class="btn-small btn-danger" on:click={() => confirmDelete({ id: income.id, name: income.name })}>Delete</button>
                 </div>
               </div>
             {/each}
@@ -389,13 +397,9 @@
                 <div class="card-actions" on:click|stopPropagation>
                   {#if category.is_predefined}
                     <span class="card-meta">Cannot modify predefined categories</span>
-                  {:else if deleteConfirmId === category.id}
-                    <span class="confirm-text">Delete?</span>
-                    <button class="btn-small btn-danger" on:click={() => handleDelete(category.id)}>Yes</button>
-                    <button class="btn-small btn-secondary" on:click={() => deleteConfirmId = null}>No</button>
                   {:else}
                     <button class="btn-small btn-secondary" on:click={() => openEditDrawer(category)}>Edit</button>
-                    <button class="btn-small btn-danger" on:click={() => deleteConfirmId = category.id}>Delete</button>
+                    <button class="btn-small btn-danger" on:click={() => confirmDelete({ id: category.id, name: category.name })}>Delete</button>
                   {/if}
                 </div>
               </div>
@@ -446,6 +450,16 @@
       {/if}
     {/if}
   </Drawer>
+
+  <!-- Delete Confirmation Dialog -->
+  <ConfirmDialog
+    open={showDeleteConfirm}
+    title="Delete {getTabSingular(activeTab)}"
+    message="Are you sure you want to delete '{itemToDelete?.name}'? This action cannot be undone."
+    confirmText="Delete"
+    on:confirm={handleConfirmDelete}
+    on:cancel={cancelDelete}
+  />
 </div>
 
 <style>
@@ -699,12 +713,6 @@
 
   .btn-danger:hover {
     background: #cc3333;
-  }
-
-  .confirm-text {
-    font-size: 13px;
-    color: #ff4444;
-    font-weight: 500;
   }
 
   /* Mobile responsive */
