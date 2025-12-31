@@ -28,5 +28,69 @@
     "created_at": "2025-12-30T17:53:44.450Z",
     "updated_at": "2025-12-30T17:53:44.450Z",
     "is_active": true
+  },
+  {
+    "name": "Bi-Weekly Paycheck Deduction",
+    "amount": 50000,
+    "billing_period": "bi_weekly",
+    "start_date": "2025-01-03",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "c9fc9c03-aeb3-448c-b2ad",
+    "created_at": "2025-12-31T14:08:20.217Z",
+    "updated_at": "2025-12-31T14:08:20.217Z",
+    "is_active": true
+  },
+  {
+    "name": "Weekly Allowance",
+    "amount": 10000,
+    "billing_period": "weekly",
+    "start_date": "2025-01-06",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "24dbe637-9826-4346-898d",
+    "created_at": "2025-12-31T14:08:59.666Z",
+    "updated_at": "2025-12-31T14:08:59.666Z",
+    "is_active": true
+  },
+  {
+    "name": "Monthly Rent",
+    "amount": 150000,
+    "billing_period": "monthly",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "3aee7c42-545d-4996-af20",
+    "created_at": "2025-12-31T14:09:12.331Z",
+    "updated_at": "2025-12-31T14:09:12.331Z",
+    "is_active": true
+  },
+  {
+    "name": "Bi-Weekly Test",
+    "amount": 10000,
+    "billing_period": "bi_weekly",
+    "start_date": "2025-01-03",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "2c87df1f-06a7-49ea-8666",
+    "created_at": "2025-12-31T14:17:42.546Z",
+    "updated_at": "2025-12-31T14:17:42.546Z",
+    "is_active": true
+  },
+  {
+    "name": "Monthly Test",
+    "amount": 50000,
+    "billing_period": "monthly",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "fa02ef5d-f064-47bb-ae1e",
+    "created_at": "2025-12-31T14:17:42.560Z",
+    "updated_at": "2025-12-31T14:17:42.560Z",
+    "is_active": true
+  },
+  {
+    "name": "Proxy Test",
+    "amount": 10000,
+    "billing_period": "bi_weekly",
+    "start_date": "2025-01-03",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "27e70674-78db-4159-83a5",
+    "created_at": "2025-12-31T14:17:49.481Z",
+    "updated_at": "2025-12-31T14:17:49.481Z",
+    "is_active": true
   }
 ]

@@ -28,6 +28,7 @@ export interface ValidationService {
   validateAmount(amount: number): boolean;
   validateBillingPeriod(period: string): boolean;
   validatePaymentSourceType(type: string): boolean;
+  validateDate(dateStr: string): boolean;
 }
 
 export class ValidationServiceImpl implements ValidationService {
@@ -68,6 +69,15 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Billing period must be: monthly, bi_weekly, weekly, or semi_annually');
     }
     
+    // Require start_date for non-monthly billing periods
+    if (bill.billing_period && bill.billing_period !== 'monthly') {
+      if (!bill.start_date) {
+        errors.push('Start date is required for bi-weekly, weekly, and semi-annual billing periods');
+      } else if (!this.validateDate(bill.start_date)) {
+        errors.push('Start date must be a valid date in YYYY-MM-DD format');
+      }
+    }
+    
     if (!bill.payment_source_id) {
       errors.push('Payment source ID is required');
     }
@@ -101,9 +111,18 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Billing period must be: monthly, bi_weekly, weekly, or semi_annually');
     }
     
+    // Require start_date for non-monthly billing periods
+    if (income.billing_period && income.billing_period !== 'monthly') {
+      if (!income.start_date) {
+        errors.push('Start date is required for bi-weekly, weekly, and semi-annual billing periods');
+      } else if (!this.validateDate(income.start_date)) {
+        errors.push('Start date must be a valid date in YYYY-MM-DD format');
+      }
+    }
+    
     if (!income.payment_source_id) {
       errors.push('Payment source ID is required');
-    } else if (!this.validateID(income.payment_source_id)) {
+    } else if (income.payment_source_id && !this.validateID(income.payment_source_id)) {
       errors.push('Payment source ID must be a valid UUID');
     }
     
@@ -124,7 +143,7 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Name cannot exceed 100 characters');
     }
     
-    if (!['bank_account', 'credit_card', 'cash'].includes(source.type)) {
+    if (!source.type || !['bank_account', 'credit_card', 'cash'].includes(source.type)) {
       errors.push('Payment source type must be: bank_account, credit_card, or cash');
     }
     
@@ -171,5 +190,17 @@ export class ValidationServiceImpl implements ValidationService {
   
   validatePaymentSourceType(type: string): boolean {
     return ['bank_account', 'credit_card', 'cash'].includes(type);
+  }
+  
+  validateDate(dateStr: string): boolean {
+    // Check format YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateStr)) {
+      return false;
+    }
+    
+    // Check if it's a valid date
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime());
   }
 }

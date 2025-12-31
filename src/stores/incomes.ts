@@ -6,6 +6,7 @@ export interface Income {
   name: string;
   amount: number;
   billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
+  start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
   payment_source_id: string;
   is_active: boolean;
   created_at: string;
@@ -16,6 +17,7 @@ export interface IncomeData {
   name: string;
   amount: number;
   billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
+  start_date?: string;
   payment_source_id: string;
 }
 

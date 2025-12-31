@@ -1,1 +1,64 @@
-[]
+[
+  {
+    "name": "Rent",
+    "amount": 150000,
+    "billing_period": "monthly",
+    "payment_source_id": "9bc1461b-8cf3-49e6-87f5-1972fd4b02de",
+    "id": "098b435a-d218-4374-ad24",
+    "created_at": "2025-12-30T18:26:11.520Z",
+    "updated_at": "2025-12-30T18:26:11.520Z",
+    "is_active": true
+  },
+  {
+    "name": "Electric",
+    "amount": 12500,
+    "billing_period": "monthly",
+    "payment_source_id": "9bc1461b-8cf3-49e6-87f5-1972fd4b02de",
+    "id": "36491e18-e6d3-4e08-af2d",
+    "created_at": "2025-12-30T18:26:19.061Z",
+    "updated_at": "2025-12-30T18:26:19.061Z",
+    "is_active": true
+  },
+  {
+    "name": "Internet",
+    "amount": 7500,
+    "billing_period": "monthly",
+    "payment_source_id": "9bc1461b-8cf3-49e6-87f5-1972fd4b02de",
+    "id": "e0db652f-23e2-4c11-b8ca",
+    "created_at": "2025-12-30T18:26:19.069Z",
+    "updated_at": "2025-12-30T18:26:19.069Z",
+    "is_active": true
+  },
+  {
+    "name": "Mortgage",
+    "amount": 2222,
+    "billing_period": "bi_weekly",
+    "payment_source_id": "9064f880-eb6d-40f5-953e-3316ce65792a",
+    "id": "d1e97da2-dca8-4c03-9a3f",
+    "created_at": "2025-12-31T13:55:51.296Z",
+    "updated_at": "2025-12-31T13:55:51.296Z",
+    "is_active": true
+  },
+  {
+    "name": "Test Bi-Weekly",
+    "amount": 50000,
+    "billing_period": "bi_weekly",
+    "start_date": "2025-01-03",
+    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
+    "id": "60420d23-dbcf-4abf-9de3",
+    "created_at": "2025-12-31T14:16:21.615Z",
+    "updated_at": "2025-12-31T14:16:21.615Z",
+    "is_active": true
+  },
+  {
+    "name": "bit weekly",
+    "amount": 111,
+    "billing_period": "bi_weekly",
+    "payment_source_id": "9064f880-eb6d-40f5-953e-3316ce65792a",
+    "start_date": "2025-12-10",
+    "id": "9bd21970-5809-4f1d-a9bd",
+    "created_at": "2025-12-31T14:20:20.285Z",
+    "updated_at": "2025-12-31T14:20:20.285Z",
+    "is_active": true
+  }
+]

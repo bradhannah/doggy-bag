@@ -10,6 +10,8 @@ export interface BillInstance {
   month: string;
   amount: number;
   is_default: boolean;
+  name: string;
+  billing_period: string;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +22,8 @@ export interface IncomeInstance {
   month: string;
   amount: number;
   is_default: boolean;
+  name: string;
+  billing_period: string;
   created_at: string;
   updated_at: string;
 }
@@ -113,12 +117,27 @@ function createMonthsStore() {
         } else if (!response.ok) {
           throw new Error('Failed to load monthly data');
         } else {
-          const data = await response.json();
-          update(state => ({
-            ...state,
-            data: data as MonthlyData,
-            loading: false
-          }));
+          // Month exists - sync to add any missing bills/incomes
+          const syncResponse = await fetch(`/api/months/${month}/sync`, {
+            method: 'POST'
+          });
+          
+          if (syncResponse.ok) {
+            const data = await syncResponse.json();
+            update(state => ({
+              ...state,
+              data: data as MonthlyData,
+              loading: false
+            }));
+          } else {
+            // Sync failed, just use the original data
+            const data = await response.json();
+            update(state => ({
+              ...state,
+              data: data as MonthlyData,
+              loading: false
+            }));
+          }
         }
       } catch (error) {
         update(state => ({
@@ -171,3 +190,6 @@ export const netWorth = derived(monthsStore, ($store) => $store.data?.summary?.n
 // Bill and income instances
 export const billInstances = derived(monthsStore, ($store) => $store.data?.bill_instances || []);
 export const incomeInstances = derived(monthsStore, ($store) => $store.data?.income_instances || []);
+
+// Variable expenses
+export const variableExpenses = derived(monthsStore, ($store) => $store.data?.variable_expenses || []);

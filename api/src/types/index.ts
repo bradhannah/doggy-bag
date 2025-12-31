@@ -27,6 +27,7 @@ interface Bill {
   name: string;
   amount: number;
   billing_period: BillingPeriod;
+  start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
   payment_source_id: string;
   category_id?: string;
   is_active: boolean;
@@ -49,6 +50,7 @@ interface Income {
   name: string;
   amount: number;
   billing_period: BillingPeriod;
+  start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
   payment_source_id: string;
   is_active: boolean;
   created_at: string;

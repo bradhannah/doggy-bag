@@ -27,7 +27,11 @@ const corsResponse = (body: string | object, status = 200) => {
   );
 };
 
-// Route matching function - handles patterns like /api/months/:month/summary
+// Route matching function - handles patterns with path params
+// Supports patterns like:
+//   /api/months -> matches /api/months/2025-01
+//   /api/months/summary -> matches /api/months/2025-01/summary  
+//   /api/months/expenses -> matches /api/months/2025-01/expenses, /api/months/2025-01/expenses/UUID
 function matchRoute(requestPath: string, routePath: string, hasPathParam: boolean): boolean {
   if (!hasPathParam) {
     return requestPath === routePath;
@@ -37,47 +41,123 @@ function matchRoute(requestPath: string, routePath: string, hasPathParam: boolea
   const requestSegments = requestPath.split('/').filter(Boolean);
   const routeSegments = routePath.split('/').filter(Boolean);
   
-  // Must have exactly one more segment in request than in route (the path param)
-  if (requestSegments.length !== routeSegments.length + 1) {
+  // Request must have at least as many segments as the route (can have more for path params)
+  if (requestSegments.length < routeSegments.length) {
     return false;
   }
   
-  // Case 1: Simple path param at end
-  // Route: /api/months -> matches /api/months/2025-01
-  // All route segments must match request segments in order
-  let allPrefixMatch = true;
-  for (let i = 0; i < routeSegments.length; i++) {
-    if (routeSegments[i] !== requestSegments[i]) {
-      allPrefixMatch = false;
-      break;
+  // For routes ending in a resource type (like /expenses), we allow:
+  // - Exact match with path param: /api/months/2025-01/expenses
+  // - Match with additional ID param: /api/months/2025-01/expenses/UUID
+  
+  // Build expected pattern: for each route segment, check if it matches
+  // Allow one "wildcard" position for path params
+  
+  // Strategy: Match static segments, skip one dynamic segment per gap in length
+  const extraSegments = requestSegments.length - routeSegments.length;
+  
+  if (extraSegments === 0) {
+    // Exact length match - all segments must match exactly
+    for (let i = 0; i < routeSegments.length; i++) {
+      if (routeSegments[i] !== requestSegments[i]) {
+        return false;
+      }
     }
-  }
-  if (allPrefixMatch) {
     return true;
   }
   
-  // Case 2: Path param in middle
-  // Route: /api/months/summary -> matches /api/months/2025-01/summary
-  // First N-1 route segments match first N-1 request segments, then param, then last matches
-  // Route segments: [api, months, summary] -> first 2 match, param, last matches
-  // Request segments: [api, months, 2025-01, summary]
-  
-  const lastRouteSegment = routeSegments[routeSegments.length - 1];
-  const lastRequestSegment = requestSegments[requestSegments.length - 1];
-  
-  // Last segments must match
-  if (lastRouteSegment !== lastRequestSegment) {
-    return false;
-  }
-  
-  // All segments before the last route segment must match corresponding request segments
-  for (let i = 0; i < routeSegments.length - 1; i++) {
-    if (routeSegments[i] !== requestSegments[i]) {
-      return false;
+  if (extraSegments === 1) {
+    // One extra segment - can be at the end OR in the middle
+    // Case 1: Extra at end (e.g., /api/months -> /api/months/2025-01)
+    let allPrefixMatch = true;
+    for (let i = 0; i < routeSegments.length; i++) {
+      if (routeSegments[i] !== requestSegments[i]) {
+        allPrefixMatch = false;
+        break;
+      }
+    }
+    if (allPrefixMatch) return true;
+    
+    // Case 2: Extra in middle (e.g., /api/months/summary -> /api/months/2025-01/summary)
+    const lastRouteSegment = routeSegments[routeSegments.length - 1];
+    const lastRequestSegment = requestSegments[requestSegments.length - 1];
+    if (lastRouteSegment === lastRequestSegment) {
+      for (let i = 0; i < routeSegments.length - 1; i++) {
+        if (routeSegments[i] !== requestSegments[i]) {
+          return false;
+        }
+      }
+      return true;
     }
   }
   
-  return true;
+  if (extraSegments === 2) {
+    // Two extra segments - can be:
+    // Case 1: month in middle, ID at end
+    //   e.g., /api/months/expenses -> /api/months/2025-01/expenses/UUID
+    //   Route: [api, months, expenses]
+    //   Request: [api, months, 2025-01, expenses, UUID]
+    // Case 2: month in middle, ID before last segment
+    //   e.g., /api/months/bills/reset -> /api/months/2025-01/bills/UUID/reset
+    //   Route: [api, months, bills, reset]
+    //   Request: [api, months, 2025-01, bills, UUID, reset]
+    
+    // Try Case 1 first: route's last segment matches request's second-to-last
+    const lastRouteSegment = routeSegments[routeSegments.length - 1];
+    const secondToLastRequestSegment = requestSegments[requestSegments.length - 2];
+    
+    if (lastRouteSegment === secondToLastRequestSegment) {
+      // Check prefix matches (all segments before the last route segment)
+      for (let i = 0; i < routeSegments.length - 1; i++) {
+        if (routeSegments[i] !== requestSegments[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    // Try Case 2: route's last segment matches request's last, and second-to-last matches
+    const lastRequestSegment = requestSegments[requestSegments.length - 1];
+    const secondToLastRouteSegment = routeSegments[routeSegments.length - 2];
+    const thirdToLastRequestSegment = requestSegments[requestSegments.length - 3];
+    
+    if (lastRouteSegment === lastRequestSegment && secondToLastRouteSegment === thirdToLastRequestSegment) {
+      // Check prefix matches (all segments before the second-to-last route segment)
+      for (let i = 0; i < routeSegments.length - 2; i++) {
+        if (routeSegments[i] !== requestSegments[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+  
+  if (extraSegments === 3) {
+    // Three extra segments - month, id, and action (like reset)
+    // e.g., /api/months/bills/reset -> /api/months/2025-01/bills/UUID/reset
+    // Route: [api, months, bills, reset]
+    // Request: [api, months, 2025-01, bills, UUID, reset]
+    
+    // Check if route's last segment matches request's last segment
+    const lastRouteSegment = routeSegments[routeSegments.length - 1];
+    const lastRequestSegment = requestSegments[requestSegments.length - 1];
+    
+    // Check if route's second-to-last matches request's third-to-last
+    const secondToLastRouteSegment = routeSegments[routeSegments.length - 2];
+    const thirdToLastRequestSegment = requestSegments[requestSegments.length - 3];
+    
+    if (lastRouteSegment === lastRequestSegment && secondToLastRouteSegment === thirdToLastRequestSegment) {
+      // Check prefix matches (all segments before the second-to-last route segment)
+      for (let i = 0; i < routeSegments.length - 2; i++) {
+        if (routeSegments[i] !== requestSegments[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 // Start server

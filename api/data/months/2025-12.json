@@ -1,6 +1,61 @@
 {
   "month": "2025-12",
-  "bill_instances": [],
+  "bill_instances": [
+    {
+      "id": "15fa5a02-a509-4f20-bdba-6dfaf9a39acc",
+      "bill_id": "098b435a-d218-4374-ad24",
+      "month": "2025-12",
+      "amount": 150000,
+      "is_default": true,
+      "created_at": "2025-12-31T14:15:13.143Z",
+      "updated_at": "2025-12-31T14:15:13.143Z"
+    },
+    {
+      "id": "2e2b8198-f65f-4e1d-ad12-350f4436ecdd",
+      "bill_id": "36491e18-e6d3-4e08-af2d",
+      "month": "2025-12",
+      "amount": 12500,
+      "is_default": true,
+      "created_at": "2025-12-31T14:15:13.143Z",
+      "updated_at": "2025-12-31T14:15:13.143Z"
+    },
+    {
+      "id": "e78b4244-b9a9-4cef-9fb6-11315a5d8f6f",
+      "bill_id": "e0db652f-23e2-4c11-b8ca",
+      "month": "2025-12",
+      "amount": 7500,
+      "is_default": true,
+      "created_at": "2025-12-31T14:15:13.143Z",
+      "updated_at": "2025-12-31T14:15:13.143Z"
+    },
+    {
+      "id": "1587a96e-f6a7-44b9-9243-c42157566d22",
+      "bill_id": "d1e97da2-dca8-4c03-9a3f",
+      "month": "2025-12",
+      "amount": 4814,
+      "is_default": true,
+      "created_at": "2025-12-31T14:15:13.143Z",
+      "updated_at": "2025-12-31T14:15:13.143Z"
+    },
+    {
+      "id": "f4d515a3-ec20-4e78-a505-e4f47b1ee4d9",
+      "bill_id": "60420d23-dbcf-4abf-9de3",
+      "month": "2025-12",
+      "amount": 100000,
+      "is_default": true,
+      "created_at": "2025-12-31T14:19:56.905Z",
+      "updated_at": "2025-12-31T14:19:56.905Z"
+    },
+    {
+      "id": "ae939218-c135-4545-94e7-bef87309f331",
+      "bill_id": "9bd21970-5809-4f1d-a9bd",
+      "month": "2025-12",
+      "amount": 222,
+      "is_default": true,
+      "created_at": "2025-12-31T14:20:39.788Z",
+      "updated_at": "2025-12-31T14:20:39.788Z"
+    }
+  ],
   "income_instances": [
     {
       "id": "5ca731f5-c4c4-46bb-bfc7-9ef21083c018",
@@ -10,11 +65,57 @@
       "is_default": true,
       "created_at": "2025-12-30T18:08:31.732Z",
       "updated_at": "2025-12-30T18:08:31.732Z"
+    },
+    {
+      "id": "f0a99ce0-4fcd-4601-8aba-8bcb116f4883",
+      "income_id": "1e2fcfde-1d16-48f0-91dd-43ed",
+      "month": "2025-12",
+      "amount": 866667,
+      "is_default": true,
+      "created_at": "2025-12-31T14:15:13.143Z",
+      "updated_at": "2025-12-31T14:15:13.143Z"
+    },
+    {
+      "id": "8c590aec-91c1-4baf-822d-bf1764589753",
+      "income_id": "c2ba8932-2a55-47b5-a533-4c95",
+      "month": "2025-12",
+      "amount": 7222,
+      "is_default": true,
+      "created_at": "2025-12-31T14:15:13.143Z",
+      "updated_at": "2025-12-31T14:15:13.143Z"
+    },
+    {
+      "id": "80547f81-64ae-4af2-ba93-412ea577c84c",
+      "income_id": "9ce3f55c-6f57-4238-bbd3-48dd",
+      "month": "2025-12",
+      "amount": 555,
+      "is_default": true,
+      "created_at": "2025-12-31T14:20:59.335Z",
+      "updated_at": "2025-12-31T14:20:59.335Z"
     }
   ],
-  "variable_expenses": [],
+  "variable_expenses": [
+    {
+      "id": "e96cb669-f727-4f4a-8e5b-0390ad1ee271",
+      "name": "Food",
+      "amount": 10000,
+      "payment_source_id": "",
+      "month": "2025-12",
+      "created_at": "2025-12-30T18:21:59.593Z",
+      "updated_at": "2025-12-30T18:21:59.593Z"
+    },
+    {
+      "id": "3f51f988-6c89-4f07-80b8-94542f44ef09",
+      "name": "ooof",
+      "amount": 1111100,
+      "payment_source_id": "",
+      "month": "2025-12",
+      "created_at": "2025-12-30T18:22:10.876Z",
+      "updated_at": "2025-12-30T18:22:10.876Z"
+    }
+  ],
   "free_flowing_expenses": [],
   "bank_balances": {},
   "created_at": "2025-12-30T18:08:31.732Z",
-  "updated_at": "2025-12-30T18:08:31.732Z"
+  "updated_at": "2025-12-31T14:20:59.335Z"
 }

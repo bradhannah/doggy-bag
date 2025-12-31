@@ -11,6 +11,7 @@
   let name = '';
   let amount = 0;
   let billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually' = 'monthly';
+  let start_date = '';
   let payment_source_id = '';
 
   let error = '';
@@ -26,17 +27,32 @@
       error = 'Payment source is required';
       return;
     }
+    
+    // Validate start_date for non-monthly billing periods
+    if (billing_period !== 'monthly' && !start_date) {
+      error = 'Start date is required for bi-weekly, weekly, and semi-annual billing';
+      return;
+    }
 
     try {
+      const billData = {
+        name,
+        amount,
+        billing_period,
+        payment_source_id,
+        ...(billing_period !== 'monthly' && start_date ? { start_date } : {})
+      };
+      
       if (editingId) {
-        await updateBill(editingId, { name, amount, billing_period, payment_source_id });
+        await updateBill(editingId, billData);
         editingId = null;
       } else {
-        await createBill({ name, amount, billing_period, payment_source_id });
+        await createBill(billData);
       }
       name = '';
       amount = 0;
       billing_period = 'monthly';
+      start_date = '';
       payment_source_id = '';
       error = '';
     } catch (e) {
@@ -49,6 +65,7 @@
     name = bill.name;
     amount = bill.amount;
     billing_period = bill.billing_period;
+    start_date = bill.start_date || '';
     payment_source_id = bill.payment_source_id;
     error = '';
   }
@@ -58,6 +75,7 @@
     name = '';
     amount = 0;
     billing_period = 'monthly';
+    start_date = '';
     payment_source_id = '';
     error = '';
   }
@@ -122,6 +140,27 @@
       </select>
     </div>
 
+    {#if billing_period !== 'monthly'}
+      <div class="form-group">
+        <label for="start_date">First Payment Date</label>
+        <input
+          id="start_date"
+          type="date"
+          bind:value={start_date}
+          required
+        />
+        <div class="help-text">
+          {#if billing_period === 'bi_weekly'}
+            Bills will occur every 2 weeks from this date
+          {:else if billing_period === 'weekly'}
+            Bills will occur every week from this date
+          {:else if billing_period === 'semi_annually'}
+            Bills will occur every 6 months from this date
+          {/if}
+        </div>
+      </div>
+    {/if}
+
     <div class="form-group">
       <label for="payment_source_id">Payment Source</label>
       <select id="payment_source_id" bind:value={payment_source_id} required>
@@ -167,6 +206,9 @@
               <span class="item-name">{bill.name}</span>
               <span class="item-period">{bill.billing_period.replace('_', '-')}</span>
             </div>
+            {#if bill.start_date && bill.billing_period !== 'monthly'}
+              <div class="item-start-date">Starts: {bill.start_date}</div>
+            {/if}
             <div class="item-amount">
               {formatAmount(bill.amount)}
             </div>
@@ -244,6 +286,12 @@
     margin-top: 4px;
   }
 
+  .help-text {
+    font-size: 12px;
+    color: #24c8db;
+    margin-top: 4px;
+  }
+
   .form-actions {
     display: flex;
     gap: 12px;
@@ -318,6 +366,11 @@
     font-size: 18px;
     font-weight: bold;
     color: #ff6b6b;
+  }
+
+  .item-start-date {
+    font-size: 12px;
+    color: #888;
   }
 
   .item-actions {

@@ -22,7 +22,9 @@ export const apiClient = {
     });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || `POST ${path} failed: ${response.statusText}`);
+      const message = error.message || error.error || `POST ${path} failed: ${response.statusText}`;
+      const details = error.details ? `: ${error.details.join(', ')}` : '';
+      throw new Error(message + details);
     }
     return response.json();
   },
@@ -35,7 +37,9 @@ export const apiClient = {
     });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || `PUT ${path}/${id} failed: ${response.statusText}`);
+      const message = error.message || error.error || `PUT ${path}/${id} failed: ${response.statusText}`;
+      const details = error.details ? `: ${error.details.join(', ')}` : '';
+      throw new Error(message + details);
     }
     return response.json();
   },

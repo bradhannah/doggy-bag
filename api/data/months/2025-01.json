@@ -1,0 +1,85 @@
+{
+  "month": "2025-01",
+  "bill_instances": [
+    {
+      "id": "34fe2eb8-e2aa-43cb-a809-9ad4877be34f",
+      "bill_id": "098b435a-d218-4374-ad24",
+      "month": "2025-01",
+      "amount": 150000,
+      "is_default": true,
+      "created_at": "2025-12-30T18:26:23.030Z",
+      "updated_at": "2025-12-30T18:26:23.030Z"
+    },
+    {
+      "id": "31ee99e3-b36e-4977-bc0d-3b4ab5befa30",
+      "bill_id": "36491e18-e6d3-4e08-af2d",
+      "month": "2025-01",
+      "amount": 12500,
+      "is_default": true,
+      "created_at": "2025-12-30T18:26:23.030Z",
+      "updated_at": "2025-12-30T18:26:23.030Z"
+    },
+    {
+      "id": "83a0571a-46b4-40c1-aa62-87acf227c065",
+      "bill_id": "e0db652f-23e2-4c11-b8ca",
+      "month": "2025-01",
+      "amount": 7500,
+      "is_default": true,
+      "created_at": "2025-12-30T18:26:23.030Z",
+      "updated_at": "2025-12-30T18:26:23.030Z"
+    }
+  ],
+  "income_instances": [
+    {
+      "id": "55c2ad0e-3fbf-48cd-95ec-504f2a863883",
+      "income_id": "fa6ee3d9-11ba-4016-aee2-4d57",
+      "month": "2025-01",
+      "amount": 1112222,
+      "is_default": true,
+      "created_at": "2025-12-30T18:26:23.030Z",
+      "updated_at": "2025-12-30T18:26:23.030Z"
+    },
+    {
+      "id": "7bb40f63-73b5-4096-86a8-4d52fffa1b27",
+      "income_id": "1e2fcfde-1d16-48f0-91dd-43ed",
+      "month": "2025-01",
+      "amount": 866667,
+      "is_default": true,
+      "created_at": "2025-12-30T18:26:23.030Z",
+      "updated_at": "2025-12-30T18:26:23.030Z"
+    }
+  ],
+  "variable_expenses": [
+    {
+      "id": "ad940ffe-bd1d-46d5-b8d9-b18316ae6473",
+      "name": "Groceries",
+      "amount": 15000,
+      "payment_source_id": "",
+      "month": "2025-01",
+      "created_at": "2025-12-30T18:26:28.218Z",
+      "updated_at": "2025-12-30T18:26:28.218Z"
+    },
+    {
+      "id": "58195d75-199f-483c-962c-049450436ab2",
+      "name": "Gas",
+      "amount": 8500,
+      "payment_source_id": "",
+      "month": "2025-01",
+      "created_at": "2025-12-30T18:26:33.511Z",
+      "updated_at": "2025-12-30T18:26:33.511Z"
+    },
+    {
+      "id": "23535572-f974-4301-a423-95d6f2858479",
+      "name": "Coffee",
+      "amount": 500,
+      "payment_source_id": "9bc1461b-8cf3-49e6-87f5-1972fd4b02de",
+      "month": "2025-01",
+      "created_at": "2025-12-30T18:28:30.754Z",
+      "updated_at": "2025-12-30T18:28:30.754Z"
+    }
+  ],
+  "free_flowing_expenses": [],
+  "bank_balances": {},
+  "created_at": "2025-12-30T18:26:23.030Z",
+  "updated_at": "2025-12-30T18:28:30.754Z"
+}

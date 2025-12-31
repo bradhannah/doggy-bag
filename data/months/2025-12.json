@@ -27,6 +27,15 @@
       "is_default": true,
       "created_at": "2025-12-30T18:08:02.928Z",
       "updated_at": "2025-12-30T18:08:02.928Z"
+    },
+    {
+      "id": "e20cb593-5096-4e6c-bd79-b976aaeb0c6c",
+      "bill_id": "c9fc9c03-aeb3-448c-b2ad",
+      "month": "2025-12",
+      "amount": 100000,
+      "is_default": true,
+      "created_at": "2025-12-31T14:08:39.374Z",
+      "updated_at": "2025-12-31T14:08:39.374Z"
     }
   ],
   "income_instances": [
@@ -49,9 +58,19 @@
       "updated_at": "2025-12-30T18:08:02.928Z"
     }
   ],
-  "variable_expenses": [],
+  "variable_expenses": [
+    {
+      "id": "30e28b84-d913-46ed-b708-f8e6e702b75b",
+      "name": "Coffee",
+      "amount": 2500,
+      "payment_source_id": "",
+      "month": "2025-12",
+      "created_at": "2025-12-30T18:18:23.576Z",
+      "updated_at": "2025-12-30T18:18:23.576Z"
+    }
+  ],
   "free_flowing_expenses": [],
   "bank_balances": {},
   "created_at": "2025-12-30T18:08:02.928Z",
-  "updated_at": "2025-12-30T18:08:02.928Z"
+  "updated_at": "2025-12-31T14:08:39.374Z"
 }

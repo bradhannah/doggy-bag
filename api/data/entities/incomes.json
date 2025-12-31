@@ -8,5 +8,36 @@
     "created_at": "2025-12-30T17:47:56.829Z",
     "updated_at": "2025-12-30T17:47:56.829Z",
     "is_active": true
+  },
+  {
+    "name": "Salary",
+    "amount": 400000,
+    "billing_period": "bi_weekly",
+    "payment_source_id": "9bc1461b-8cf3-49e6-87f5-1972fd4b02de",
+    "id": "1e2fcfde-1d16-48f0-91dd-43ed",
+    "created_at": "2025-12-30T18:26:19.078Z",
+    "updated_at": "2025-12-30T18:26:19.078Z",
+    "is_active": true
+  },
+  {
+    "name": "AWS",
+    "amount": 3333,
+    "billing_period": "bi_weekly",
+    "payment_source_id": "9064f880-eb6d-40f5-953e-3316ce65792a",
+    "id": "c2ba8932-2a55-47b5-a533-4c95",
+    "created_at": "2025-12-31T01:01:24.886Z",
+    "updated_at": "2025-12-31T01:01:24.886Z",
+    "is_active": true
+  },
+  {
+    "name": "Aaaa",
+    "amount": 111,
+    "billing_period": "weekly",
+    "payment_source_id": "9064f880-eb6d-40f5-953e-3316ce65792a",
+    "start_date": "2025-12-02",
+    "id": "9ce3f55c-6f57-4238-bbd3-48dd",
+    "created_at": "2025-12-31T14:20:57.088Z",
+    "updated_at": "2025-12-31T14:20:57.088Z",
+    "is_active": true
   }
 ]

@@ -29,9 +29,24 @@ import {
 import {
   createMonthsHandlerGET,
   createMonthsHandlerGenerate,
+  createMonthsHandlerSync,
   createMonthsHandlerUpdateBalances,
   createMonthsHandlerSummary
 } from './handlers/months.handlers';
+
+import {
+  createExpensesHandlerGET,
+  createExpensesHandlerPOST,
+  createExpensesHandlerPUT,
+  createExpensesHandlerDELETE
+} from './handlers/expenses.handlers';
+
+import {
+  createBillInstanceHandlerPUT,
+  createBillInstanceHandlerReset,
+  createIncomeInstanceHandlerPUT,
+  createIncomeInstanceHandlerReset
+} from './handlers/instances.handlers';
 
 // Route definition type
 interface RouteDefinition {
@@ -67,7 +82,22 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   
   // Months - routes with sub-paths (generate, bank-balances, summary) first for proper matching
   { path: '/api/months/generate', definition: { method: 'POST', handler: createMonthsHandlerGenerate(), hasPathParam: true } },
+  { path: '/api/months/sync', definition: { method: 'POST', handler: createMonthsHandlerSync(), hasPathParam: true } },
   { path: '/api/months/bank-balances', definition: { method: 'PUT', handler: createMonthsHandlerUpdateBalances(), hasPathParam: true } },
   { path: '/api/months/summary', definition: { method: 'GET', handler: createMonthsHandlerSummary(), hasPathParam: true } },
+  
+  // Bill instances - must come before expenses for proper matching
+  { path: '/api/months/bills/reset', definition: { method: 'POST', handler: createBillInstanceHandlerReset(), hasPathParam: true } },
+  { path: '/api/months/bills', definition: { method: 'PUT', handler: createBillInstanceHandlerPUT(), hasPathParam: true } },
+  
+  // Income instances
+  { path: '/api/months/incomes/reset', definition: { method: 'POST', handler: createIncomeInstanceHandlerReset(), hasPathParam: true } },
+  { path: '/api/months/incomes', definition: { method: 'PUT', handler: createIncomeInstanceHandlerPUT(), hasPathParam: true } },
+  
+  // Variable expenses
+  { path: '/api/months/expenses', definition: { method: 'GET', handler: createExpensesHandlerGET(), hasPathParam: true } },
+  { path: '/api/months/expenses', definition: { method: 'POST', handler: createExpensesHandlerPOST(), hasPathParam: true } },
+  { path: '/api/months/expenses', definition: { method: 'PUT', handler: createExpensesHandlerPUT(), hasPathParam: true } },
+  { path: '/api/months/expenses', definition: { method: 'DELETE', handler: createExpensesHandlerDELETE(), hasPathParam: true } },
   { path: '/api/months', definition: { method: 'GET', handler: createMonthsHandlerGET(), hasPathParam: true } },
 ];
