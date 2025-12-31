@@ -61,7 +61,7 @@ export function createBillInstanceHandlerPUT() {
       }
       
       // Get enriched instance with bill name
-      const bill = await billsService.getById(instance.bill_id);
+      const bill = instance.bill_id ? await billsService.getById(instance.bill_id) : null;
       const enrichedInstance = {
         ...instance,
         name: bill?.name || 'Unknown Bill',
@@ -123,7 +123,7 @@ export function createBillInstanceHandlerReset() {
       }
       
       // Get enriched instance with bill name
-      const bill = await billsService.getById(instance.bill_id);
+      const bill = instance.bill_id ? await billsService.getById(instance.bill_id) : null;
       const enrichedInstance = {
         ...instance,
         name: bill?.name || 'Unknown Bill',
@@ -194,7 +194,7 @@ export function createIncomeInstanceHandlerPUT() {
       }
       
       // Get enriched instance with income name
-      const income = await incomesService.getById(instance.income_id);
+      const income = instance.income_id ? await incomesService.getById(instance.income_id) : null;
       const enrichedInstance = {
         ...instance,
         name: income?.name || 'Unknown Income',
@@ -256,7 +256,7 @@ export function createIncomeInstanceHandlerReset() {
       }
       
       // Get enriched instance with income name
-      const income = await incomesService.getById(instance.income_id);
+      const income = instance.income_id ? await incomesService.getById(instance.income_id) : null;
       const enrichedInstance = {
         ...instance,
         name: income?.name || 'Unknown Income',
@@ -318,7 +318,7 @@ export function createBillInstanceHandlerTogglePaid() {
       }
       
       // Get enriched instance with bill name
-      const bill = await billsService.getById(instance.bill_id);
+      const bill = instance.bill_id ? await billsService.getById(instance.bill_id) : null;
       const enrichedInstance = {
         ...instance,
         name: bill?.name || 'Unknown Bill',
@@ -380,7 +380,7 @@ export function createIncomeInstanceHandlerTogglePaid() {
       }
       
       // Get enriched instance with income name
-      const income = await incomesService.getById(instance.income_id);
+      const income = instance.income_id ? await incomesService.getById(instance.income_id) : null;
       const enrichedInstance = {
         ...instance,
         name: income?.name || 'Unknown Income',

@@ -31,20 +31,20 @@ async function enrichMonthlyData(monthlyData: MonthlyData) {
   
   // Enrich bill instances with bill details
   const enrichedBillInstances = monthlyData.bill_instances.map(instance => {
-    const bill = billsMap.get(instance.bill_id);
+    const bill = instance.bill_id ? billsMap.get(instance.bill_id) : null;
     return {
       ...instance,
-      name: bill?.name || 'Unknown Bill',
+      name: instance.name || bill?.name || 'Unknown Bill',
       billing_period: bill?.billing_period || 'monthly'
     };
   });
   
   // Enrich income instances with income details
   const enrichedIncomeInstances = monthlyData.income_instances.map(instance => {
-    const income = incomesMap.get(instance.income_id);
+    const income = instance.income_id ? incomesMap.get(instance.income_id) : null;
     return {
       ...instance,
-      name: income?.name || 'Unknown Income',
+      name: instance.name || income?.name || 'Unknown Income',
       billing_period: income?.billing_period || 'monthly'
     };
   });

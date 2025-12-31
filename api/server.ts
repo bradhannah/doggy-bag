@@ -133,19 +133,41 @@ function matchRoute(requestPath: string, routePath: string, hasPathParam: boolea
   }
   
   if (extraSegments === 3) {
-    // Three extra segments - month, id, and action (like reset)
-    // e.g., /api/months/bills/reset -> /api/months/2025-01/bills/UUID/reset
-    // Route: [api, months, bills, reset]
-    // Request: [api, months, 2025-01, bills, UUID, reset]
+    // Three extra segments - multiple patterns:
+    // Pattern A: month + billId + paymentId
+    //   e.g., /api/months/bills/payments -> /api/months/2025-01/bills/UUID/payments/PAYMENT-UUID
+    //   Route: [api, months, bills, payments]
+    //   Request: [api, months, 2025-01, bills, UUID, payments, PAYMENT-UUID]
+    //   Match when route's last segment matches request's second-to-last
+    // Pattern B: month + id + action
+    //   e.g., /api/months/bills/reset -> /api/months/2025-01/bills/UUID/reset
+    //   Route: [api, months, bills, reset]
+    //   Request: [api, months, 2025-01, bills, UUID, reset]
+    //   Match when route's last segment matches request's last segment
     
-    // Check if route's last segment matches request's last segment
     const lastRouteSegment = routeSegments[routeSegments.length - 1];
     const lastRequestSegment = requestSegments[requestSegments.length - 1];
-    
-    // Check if route's second-to-last matches request's third-to-last
+    const secondToLastRequestSegment = requestSegments[requestSegments.length - 2];
     const secondToLastRouteSegment = routeSegments[routeSegments.length - 2];
-    const thirdToLastRequestSegment = requestSegments[requestSegments.length - 3];
     
+    // Pattern A: route's last matches request's second-to-last (paymentId at end)
+    if (lastRouteSegment === secondToLastRequestSegment) {
+      // Check: route[2] should match request[3] (bills/incomes)
+      const thirdRouteSegment = routeSegments[2];
+      const fourthRequestSegment = requestSegments[3];
+      if (thirdRouteSegment === fourthRequestSegment) {
+        // Check prefix matches
+        for (let i = 0; i < 2; i++) {
+          if (routeSegments[i] !== requestSegments[i]) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+    
+    // Pattern B: route's last matches request's last, and route's second-to-last matches request's third-to-last
+    const thirdToLastRequestSegment = requestSegments[requestSegments.length - 3];
     if (lastRouteSegment === lastRequestSegment && secondToLastRouteSegment === thirdToLastRequestSegment) {
       // Check prefix matches (all segments before the second-to-last route segment)
       for (let i = 0; i < routeSegments.length - 2; i++) {

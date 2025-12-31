@@ -13,6 +13,7 @@ export interface Bill {
   recurrence_day?: number;    // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   category_id?: string;
+  due_day?: number;           // Day of month when due (1-31, optional)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -32,6 +33,7 @@ export interface BillData {
   recurrence_day?: number;
   payment_source_id: string;
   category_id?: string;
+  due_day?: number;           // Day of month when due (1-31, optional)
 }
 
 // Billing period multipliers (average instances per month)

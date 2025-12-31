@@ -60,6 +60,15 @@ import {
 
 import { createSeedDefaultsHandler } from './handlers/seed.handlers';
 
+import { createDetailedViewHandler } from './handlers/detailed-view.handlers';
+
+import {
+  createAddPaymentHandler,
+  createUpdatePaymentHandler,
+  createDeletePaymentHandler,
+  createGetPaymentsHandler
+} from './handlers/payments.handlers';
+
 import {
   createUndoHandlerGET,
   createUndoHandlerPOST,
@@ -126,13 +135,18 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   // Months list - must come before specific month routes
   { path: '/api/months', definition: { method: 'GET', handler: createMonthsHandlerList() } },
   
-  // Months - routes with sub-paths (generate, bank-balances, summary) first for proper matching
+  // Months - routes with sub-paths (generate, bank-balances, summary, detailed) first for proper matching
+  { path: '/api/months/detailed', definition: { method: 'GET', handler: createDetailedViewHandler(), hasPathParam: true } },
   { path: '/api/months/generate', definition: { method: 'POST', handler: createMonthsHandlerGenerate(), hasPathParam: true } },
   { path: '/api/months/sync', definition: { method: 'POST', handler: createMonthsHandlerSync(), hasPathParam: true } },
   { path: '/api/months/bank-balances', definition: { method: 'PUT', handler: createMonthsHandlerUpdateBalances(), hasPathParam: true } },
   { path: '/api/months/summary', definition: { method: 'GET', handler: createMonthsHandlerSummary(), hasPathParam: true } },
   
   // Bill instances - must come before expenses for proper matching
+  { path: '/api/months/bills/payments', definition: { method: 'GET', handler: createGetPaymentsHandler(), hasPathParam: true } },
+  { path: '/api/months/bills/payments', definition: { method: 'POST', handler: createAddPaymentHandler(), hasPathParam: true } },
+  { path: '/api/months/bills/payments', definition: { method: 'PUT', handler: createUpdatePaymentHandler(), hasPathParam: true } },
+  { path: '/api/months/bills/payments', definition: { method: 'DELETE', handler: createDeletePaymentHandler(), hasPathParam: true } },
   { path: '/api/months/bills/reset', definition: { method: 'POST', handler: createBillInstanceHandlerReset(), hasPathParam: true } },
   { path: '/api/months/bills/paid', definition: { method: 'POST', handler: createBillInstanceHandlerTogglePaid(), hasPathParam: true } },
   { path: '/api/months/bills', definition: { method: 'PUT', handler: createBillInstanceHandlerPUT(), hasPathParam: true } },

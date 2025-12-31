@@ -6,7 +6,9 @@ import type {
   Bill, 
   Income, 
   PaymentSource, 
-  Category, 
+  Category,
+  CategoryType,
+  Payment,
   BillInstance, 
   IncomeInstance, 
   VariableExpense, 
@@ -29,6 +31,9 @@ export interface ValidationService {
   validateBillingPeriod(period: string): boolean;
   validatePaymentSourceType(type: string): boolean;
   validateDate(dateStr: string): boolean;
+  validateDueDay(dueDay: number | undefined): boolean;
+  validateHexColor(color: string): boolean;
+  validateCategoryType(type: string): boolean;
 }
 
 export class ValidationServiceImpl implements ValidationService {
@@ -222,10 +227,59 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Name cannot exceed 100 characters');
     }
     
+    // Validate sort_order (NEW for 002-detailed-monthly-view)
+    if (category.sort_order !== undefined && category.sort_order < 0) {
+      errors.push('sort_order must be >= 0');
+    }
+    
+    // Validate color - must be valid hex format (#RGB or #RRGGBB)
+    if (category.color !== undefined) {
+      const hexColorRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+      if (!hexColorRegex.test(category.color)) {
+        errors.push('color must be valid hex format (#RGB or #RRGGBB)');
+      }
+    }
+    
+    // Validate type - must be 'bill' or 'income'
+    if (category.type !== undefined) {
+      if (!['bill', 'income'].includes(category.type)) {
+        errors.push("type must be 'bill' or 'income'");
+      }
+    }
+    
     return {
       isValid: errors.length === 0,
       errors
     };
+  }
+  
+  /**
+   * Validate due_day field for Bill/Income (1-31)
+   * @param dueDay - Day of month when bill/income is due
+   * @returns true if valid or undefined, false if invalid
+   */
+  validateDueDay(dueDay: number | undefined): boolean {
+    if (dueDay === undefined) return true;
+    return Number.isInteger(dueDay) && dueDay >= 1 && dueDay <= 31;
+  }
+  
+  /**
+   * Validate hex color string
+   * @param color - Hex color string (#RGB or #RRGGBB)
+   * @returns true if valid
+   */
+  validateHexColor(color: string): boolean {
+    const hexColorRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+    return hexColorRegex.test(color);
+  }
+  
+  /**
+   * Validate category type
+   * @param type - Category type
+   * @returns true if valid
+   */
+  validateCategoryType(type: string): boolean {
+    return ['bill', 'income'].includes(type);
   }
   
   validateID(id: string): boolean {

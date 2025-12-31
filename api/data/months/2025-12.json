@@ -6,25 +6,37 @@
       "bill_id": "098b435a-d218-4374-ad24",
       "month": "2025-12",
       "amount": 150000,
-      "is_default": true,
+      "expected_amount": 150000,
+      "payments": [],
+      "is_default": false,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:15:13.143Z",
-      "updated_at": "2025-12-31T14:15:13.143Z"
+      "updated_at": "2025-12-31T22:01:36.700Z"
     },
     {
       "id": "2e2b8198-f65f-4e1d-ad12-350f4436ecdd",
       "bill_id": "36491e18-e6d3-4e08-af2d",
       "month": "2025-12",
       "amount": 12500,
-      "is_default": true,
+      "expected_amount": 12500,
+      "payments": [],
+      "is_default": false,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:15:13.143Z",
-      "updated_at": "2025-12-31T14:15:13.143Z"
+      "updated_at": "2025-12-31T22:17:43.398Z"
     },
     {
       "id": "e78b4244-b9a9-4cef-9fb6-11315a5d8f6f",
       "bill_id": "e0db652f-23e2-4c11-b8ca",
       "month": "2025-12",
       "amount": 7500,
+      "expected_amount": 7500,
+      "payments": [],
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:15:13.143Z",
       "updated_at": "2025-12-31T14:15:13.143Z"
     },
@@ -33,7 +45,11 @@
       "bill_id": "d1e97da2-dca8-4c03-9a3f",
       "month": "2025-12",
       "amount": 4814,
+      "expected_amount": 4814,
+      "payments": [],
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:15:13.143Z",
       "updated_at": "2025-12-31T14:15:13.143Z"
     },
@@ -42,7 +58,11 @@
       "bill_id": "60420d23-dbcf-4abf-9de3",
       "month": "2025-12",
       "amount": 100000,
+      "expected_amount": 100000,
+      "payments": [],
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:19:56.905Z",
       "updated_at": "2025-12-31T14:19:56.905Z"
     },
@@ -51,10 +71,26 @@
       "bill_id": "9bd21970-5809-4f1d-a9bd",
       "month": "2025-12",
       "amount": 222,
-      "is_default": true,
+      "expected_amount": 222,
+      "payments": [
+        {
+          "id": "9e22e2be-50ba-4927-ac89-4bd5bca4dc72",
+          "amount": 150,
+          "date": "2025-12-16",
+          "created_at": "2025-12-31T22:05:16.057Z"
+        },
+        {
+          "id": "e560444b-aea7-43ec-a1ea-972425bcf3a0",
+          "amount": 122,
+          "date": "2025-12-20",
+          "created_at": "2025-12-31T22:05:22.176Z"
+        }
+      ],
+      "is_default": false,
+      "is_paid": true,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:20:39.788Z",
-      "updated_at": "2025-12-31T18:20:04.936Z",
-      "is_paid": false
+      "updated_at": "2025-12-31T22:07:08.574Z"
     }
   ],
   "income_instances": [
@@ -63,7 +99,10 @@
       "income_id": "fa6ee3d9-11ba-4016-aee2-4d57",
       "month": "2025-12",
       "amount": 1112222,
+      "expected_amount": 1112222,
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-30T18:08:31.732Z",
       "updated_at": "2025-12-30T18:08:31.732Z"
     },
@@ -72,7 +111,10 @@
       "income_id": "1e2fcfde-1d16-48f0-91dd-43ed",
       "month": "2025-12",
       "amount": 866667,
+      "expected_amount": 866667,
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:15:13.143Z",
       "updated_at": "2025-12-31T14:15:13.143Z"
     },
@@ -81,7 +123,10 @@
       "income_id": "c2ba8932-2a55-47b5-a533-4c95",
       "month": "2025-12",
       "amount": 7222,
+      "expected_amount": 7222,
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:15:13.143Z",
       "updated_at": "2025-12-31T14:15:13.143Z"
     },
@@ -90,7 +135,10 @@
       "income_id": "9ce3f55c-6f57-4238-bbd3-48dd",
       "month": "2025-12",
       "amount": 555,
+      "expected_amount": 555,
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:20:59.335Z",
       "updated_at": "2025-12-31T14:20:59.335Z"
     },
@@ -99,7 +147,10 @@
       "income_id": "cbcede64-d826-4ccc-8bf5-4cc8",
       "month": "2025-12",
       "amount": 0,
+      "expected_amount": 0,
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T15:29:16.561Z",
       "updated_at": "2025-12-31T15:29:16.561Z"
     },
@@ -108,7 +159,10 @@
       "income_id": "cc46a8f9-9e2b-46d1-a7ff-438a",
       "month": "2025-12",
       "amount": 11111,
+      "expected_amount": 11111,
       "is_default": true,
+      "is_paid": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T16:13:49.286Z",
       "updated_at": "2025-12-31T16:13:49.286Z"
     }
@@ -136,5 +190,5 @@
   "free_flowing_expenses": [],
   "bank_balances": {},
   "created_at": "2025-12-30T18:08:31.732Z",
-  "updated_at": "2025-12-31T18:20:04.936Z"
+  "updated_at": "2025-12-31T22:01:36.700Z"
 }

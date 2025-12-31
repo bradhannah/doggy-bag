@@ -12,6 +12,7 @@ export interface Income {
   recurrence_week?: number;   // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
   recurrence_day?: number;    // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
+  due_day?: number;           // Day of month when expected (1-31, optional)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -30,6 +31,7 @@ export interface IncomeData {
   recurrence_week?: number;
   recurrence_day?: number;
   payment_source_id: string;
+  due_day?: number;           // Day of month when expected (1-31, optional)
 }
 
 // Billing period multipliers (average instances per month)

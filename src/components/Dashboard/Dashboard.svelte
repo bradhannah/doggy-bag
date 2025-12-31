@@ -63,7 +63,17 @@
 
 <div class="dashboard">
   <header class="dashboard-header">
-    <h1>Dashboard</h1>
+    <div class="header-left">
+      <h1>Dashboard</h1>
+      {#if $currentMonth}
+        <a href="/month/{$currentMonth}" class="view-details-link">
+          View Details
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      {/if}
+    </div>
     <MonthSelector />
   </header>
   
@@ -145,6 +155,32 @@
     font-weight: 700;
     color: #e4e4e7;
     margin: 0;
+  }
+  
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .view-details-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: rgba(36, 200, 219, 0.1);
+    border: 1px solid rgba(36, 200, 219, 0.3);
+    border-radius: 6px;
+    color: #24c8db;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .view-details-link:hover {
+    background: rgba(36, 200, 219, 0.2);
+    border-color: #24c8db;
   }
   
   .dashboard-content {

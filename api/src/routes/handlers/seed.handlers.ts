@@ -3,17 +3,44 @@
 import { PaymentSourcesServiceImpl } from '../../services/payment-sources-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
+import { CategoriesServiceImpl } from '../../services/categories-service';
+import type { CategoryType } from '../../types';
 
 // Service instances
 const paymentSourcesService = new PaymentSourcesServiceImpl();
 const billsService = new BillsServiceImpl();
 const incomesService = new IncomesServiceImpl();
+const categoriesService = new CategoriesServiceImpl();
 
 // Default payment sources
 const DEFAULT_PAYMENT_SOURCES = [
   { name: 'Main Checking', type: 'bank_account' as const, balance: 500000 }, // $5,000
   { name: 'Credit Card', type: 'credit_card' as const, balance: -120000 },   // -$1,200 debt
   { name: 'Cash', type: 'cash' as const, balance: 30000 }                    // $300
+];
+
+// Default bill categories (with sort_order and color for 002-detailed-monthly-view)
+const DEFAULT_BILL_CATEGORIES = [
+  { name: 'Home', sort_order: 0, color: '#3b82f6', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Debt', sort_order: 1, color: '#ef4444', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Utilities', sort_order: 2, color: '#f59e0b', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Streaming', sort_order: 3, color: '#8b5cf6', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Transportation', sort_order: 4, color: '#10b981', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Entertainment', sort_order: 5, color: '#ec4899', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Insurance', sort_order: 6, color: '#06b6d4', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Subscriptions', sort_order: 7, color: '#6366f1', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Variable', sort_order: 8, color: '#f97316', type: 'bill' as CategoryType, is_predefined: true },
+  { name: 'Ad-hoc', sort_order: 9, color: '#64748b', type: 'bill' as CategoryType, is_predefined: true }
+];
+
+// Default income categories (NEW for 002-detailed-monthly-view)
+const DEFAULT_INCOME_CATEGORIES = [
+  { name: 'Salary', sort_order: 0, color: '#10b981', type: 'income' as CategoryType, is_predefined: true },
+  { name: 'Freelance/Contract', sort_order: 1, color: '#8b5cf6', type: 'income' as CategoryType, is_predefined: true },
+  { name: 'Investment', sort_order: 2, color: '#3b82f6', type: 'income' as CategoryType, is_predefined: true },
+  { name: 'Government', sort_order: 3, color: '#f59e0b', type: 'income' as CategoryType, is_predefined: true },
+  { name: 'Other', sort_order: 4, color: '#64748b', type: 'income' as CategoryType, is_predefined: true },
+  { name: 'Ad-hoc', sort_order: 5, color: '#ec4899', type: 'income' as CategoryType, is_predefined: true }
 ];
 
 // Default bills (amounts in cents)
@@ -39,6 +66,7 @@ interface SeedResult {
     paymentSources: number;
     bills: number;
     incomes: number;
+    categories: number;
   };
 }
 
@@ -49,18 +77,35 @@ export function createSeedDefaultsHandler() {
       const existingPaymentSources = await paymentSourcesService.getAll();
       const existingBills = await billsService.getAll();
       const existingIncomes = await incomesService.getAll();
+      const existingCategories = await categoriesService.getAll();
 
       // Only seed if ALL entity types are empty
       if (existingPaymentSources.length > 0 || existingBills.length > 0 || existingIncomes.length > 0) {
         const result: SeedResult = {
           seeded: false,
           message: 'Data already exists. Clear existing data before seeding defaults.',
-          created: { paymentSources: 0, bills: 0, incomes: 0 }
+          created: { paymentSources: 0, bills: 0, incomes: 0, categories: 0 }
         };
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      // Create categories first (needed for bill/income assignment later)
+      let categoriesCreated = 0;
+      if (existingCategories.length === 0) {
+        // Create bill categories
+        for (const cat of DEFAULT_BILL_CATEGORIES) {
+          await categoriesService.create(cat);
+          categoriesCreated++;
+        }
+        // Create income categories
+        for (const cat of DEFAULT_INCOME_CATEGORIES) {
+          await categoriesService.create(cat);
+          categoriesCreated++;
+        }
+        console.log(`[SeedHandler] Created ${categoriesCreated} default categories`);
       }
 
       // Create payment sources and track their IDs
@@ -99,7 +144,8 @@ export function createSeedDefaultsHandler() {
         created: {
           paymentSources: DEFAULT_PAYMENT_SOURCES.length,
           bills: DEFAULT_BILLS.length,
-          incomes: DEFAULT_INCOMES.length
+          incomes: DEFAULT_INCOMES.length,
+          categories: categoriesCreated
         }
       };
 

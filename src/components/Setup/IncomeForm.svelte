@@ -29,6 +29,9 @@
   let recurrence_week = editingItem?.recurrence_week || 1;
   let recurrence_day = editingItem?.recurrence_day || 0;
   
+  // Due date (optional)
+  let due_day: number | '' = editingItem?.due_day || '';
+  
   let error = '';
   let saving = false;
 
@@ -47,6 +50,7 @@
     day_of_month = editingItem.day_of_month || 1;
     recurrence_week = editingItem.recurrence_week || 1;
     recurrence_day = editingItem.recurrence_day || 0;
+    due_day = editingItem.due_day || '';
   }
 
   // Convert dollars to cents
@@ -101,6 +105,11 @@
           incomeData.recurrence_week = recurrence_week;
           incomeData.recurrence_day = recurrence_day;
         }
+      }
+      
+      // Add due_day if specified
+      if (due_day !== '' && typeof due_day === 'number') {
+        incomeData.due_day = due_day;
       }
 
       if (editingItem) {
@@ -248,6 +257,17 @@
         <option value={ps.id}>{ps.name}</option>
       {/each}
     </select>
+  </div>
+
+  <div class="form-group">
+    <label for="income-due-day">Expected Day (Optional)</label>
+    <select id="income-due-day" bind:value={due_day} disabled={saving || !hasPaymentSources}>
+      <option value="">-- No expected date --</option>
+      {#each Array.from({length: 31}, (_, i) => i + 1) as day}
+        <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
+      {/each}
+    </select>
+    <div class="help-text">Used to track if income is late in the monthly view</div>
   </div>
 
   <div class="form-actions">

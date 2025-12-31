@@ -16,6 +16,12 @@ import type {
   Income 
 } from '../types';
 import { getMonthlyInstanceCount, calculateActualMonthlyAmount } from '../utils/billing-period';
+import { 
+  migrateBillInstance, 
+  migrateIncomeInstance,
+  needsBillInstanceMigration,
+  needsIncomeInstanceMigration 
+} from '../utils/migration';
 
 // Summary for a single month in the list
 export interface MonthSummary {
@@ -66,6 +72,40 @@ export class MonthsServiceImpl implements MonthsService {
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
     try {
       const data = await this.storage.readJSON<MonthlyData>(`data/months/${month}.json`);
+      
+      if (!data) return null;
+      
+      // Apply migration to instances if needed (002-detailed-monthly-view)
+      let needsSave = false;
+      
+      // Migrate bill instances
+      const migratedBillInstances = data.bill_instances.map((bi: any) => {
+        if (needsBillInstanceMigration(bi)) {
+          needsSave = true;
+          return migrateBillInstance(bi);
+        }
+        return bi as BillInstance;
+      });
+      
+      // Migrate income instances
+      const migratedIncomeInstances = data.income_instances.map((ii: any) => {
+        if (needsIncomeInstanceMigration(ii)) {
+          needsSave = true;
+          return migrateIncomeInstance(ii);
+        }
+        return ii as IncomeInstance;
+      });
+      
+      // Update data with migrated instances
+      data.bill_instances = migratedBillInstances;
+      data.income_instances = migratedIncomeInstances;
+      
+      // Persist migrated data if changes were made
+      if (needsSave) {
+        await this.storage.writeJSON(`data/months/${month}.json`, data);
+        console.log(`[MonthsService] Migrated instances for ${month} to new schema`);
+      }
+      
       return data;
     } catch (error) {
       console.error('[MonthsService] Failed to load monthly data:', error);
@@ -146,8 +186,13 @@ export class MonthsServiceImpl implements MonthsService {
           bill_id: bill.id,
           month,
           amount,
+          expected_amount: amount,       // NEW: Same as amount for new instances
+          actual_amount: undefined,      // NEW: No actual entered yet
+          payments: [],                  // NEW: Empty payments array
           is_default: true,
           is_paid: false,
+          is_adhoc: false,               // NEW: Not ad-hoc (linked to bill)
+          due_date: undefined,           // NEW: Will be calculated from bill.due_day if present
           created_at: now,
           updated_at: now
         });
@@ -170,8 +215,12 @@ export class MonthsServiceImpl implements MonthsService {
           income_id: income.id,
           month,
           amount,
+          expected_amount: amount,       // NEW: Same as amount for new instances
+          actual_amount: undefined,      // NEW: No actual entered yet
           is_default: true,
           is_paid: false,
+          is_adhoc: false,               // NEW: Not ad-hoc (linked to income)
+          due_date: undefined,           // NEW: Will be calculated from income.due_day if present
           created_at: now,
           updated_at: now
         });
@@ -233,8 +282,13 @@ export class MonthsServiceImpl implements MonthsService {
           bill_id: bill.id,
           month,
           amount,
+          expected_amount: amount,       // NEW: Same as amount for new instances
+          actual_amount: undefined,      // NEW: No actual entered yet
+          payments: [],                  // NEW: Empty payments array
           is_default: true,
           is_paid: false,
+          is_adhoc: false,               // NEW: Not ad-hoc (linked to bill)
+          due_date: undefined,           // NEW: Will be calculated from bill.due_day if present
           created_at: now,
           updated_at: now
         });
@@ -261,8 +315,12 @@ export class MonthsServiceImpl implements MonthsService {
           income_id: income.id,
           month,
           amount,
+          expected_amount: amount,       // NEW: Same as amount for new instances
+          actual_amount: undefined,      // NEW: No actual entered yet
           is_default: true,
           is_paid: false,
+          is_adhoc: false,               // NEW: Not ad-hoc (linked to income)
+          due_date: undefined,           // NEW: Will be calculated from income.due_day if present
           created_at: now,
           updated_at: now
         });
@@ -406,6 +464,12 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Get the original bill to calculate default amount
       const billId = data.bill_instances[index].bill_id;
+      
+      // Ad-hoc bills (bill_id is null) cannot be reset to default
+      if (!billId) {
+        throw new Error('Cannot reset ad-hoc bill instance - no default bill reference');
+      }
+      
       const bill = await this.billsService.getById(billId);
       
       if (!bill) {
@@ -424,7 +488,11 @@ export class MonthsServiceImpl implements MonthsService {
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         amount: defaultAmount,
+        expected_amount: defaultAmount,
+        actual_amount: undefined,
+        payments: [],
         is_default: true,
+        is_paid: false,
         updated_at: now
       };
       data.updated_at = now;
@@ -451,6 +519,12 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Get the original income to calculate default amount
       const incomeId = data.income_instances[index].income_id;
+      
+      // Ad-hoc incomes (income_id is null) cannot be reset to default
+      if (!incomeId) {
+        throw new Error('Cannot reset ad-hoc income instance - no default income reference');
+      }
+      
       const income = await this.incomesService.getById(incomeId);
       
       if (!income) {
@@ -469,7 +543,10 @@ export class MonthsServiceImpl implements MonthsService {
       data.income_instances[index] = {
         ...data.income_instances[index],
         amount: defaultAmount,
+        expected_amount: defaultAmount,
+        actual_amount: undefined,
         is_default: true,
+        is_paid: false,
         updated_at: now
       };
       data.updated_at = now;
