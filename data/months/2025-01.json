@@ -8,7 +8,8 @@
       "amount": 150000,
       "is_default": true,
       "created_at": "2025-12-30T18:00:10.427Z",
-      "updated_at": "2025-12-31T01:25:36.108Z"
+      "updated_at": "2025-12-31T18:13:51.684Z",
+      "is_paid": false
     },
     {
       "id": "4e971eff-0517-4382-90e4-689c0e2ec10e",
@@ -106,7 +107,9 @@
     }
   ],
   "free_flowing_expenses": [],
-  "bank_balances": {},
+  "bank_balances": {
+    "test-source-id": 50000
+  },
   "created_at": "2025-12-30T18:00:10.427Z",
-  "updated_at": "2025-12-31T14:17:42.569Z"
+  "updated_at": "2025-12-31T18:13:51.684Z"
 }

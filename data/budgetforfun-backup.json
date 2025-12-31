@@ -1,0 +1,198 @@
+{
+  "export_date": "2025-12-31T18:11:17.911Z",
+  "bills": [
+    {
+      "name": "Rent/Mortgage",
+      "amount": 150000,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "4c6c2ad3-9715-47af-a218",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Electric",
+      "amount": 12500,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "9453914f-7a58-48ea-a084",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Internet",
+      "amount": 7500,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "ce16e568-21c9-4163-b681",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Car Insurance",
+      "amount": 15000,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "9728e779-4148-4d29-8362",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Streaming Services",
+      "amount": 4500,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "e4945825-351e-4275-ac8d",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Phone",
+      "amount": 8500,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "2c681351-d71c-47ea-8baa",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Test Monthly Bill",
+      "amount": 10000,
+      "billing_period": "monthly",
+      "day_of_month": 15,
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "be13909b-5637-4089-a437",
+      "created_at": "2025-12-31T15:40:18.503Z",
+      "updated_at": "2025-12-31T15:40:18.503Z",
+      "is_active": true
+    },
+    {
+      "name": "Test Nth Weekday Bill",
+      "amount": 5000,
+      "billing_period": "monthly",
+      "recurrence_week": 2,
+      "recurrence_day": 6,
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "85145651-7e84-4f39-a9ba",
+      "created_at": "2025-12-31T15:40:26.079Z",
+      "updated_at": "2025-12-31T15:40:26.079Z",
+      "is_active": true
+    }
+  ],
+  "incomes": [
+    {
+      "name": "Salary",
+      "amount": 250000,
+      "billing_period": "bi_weekly",
+      "start_date": "2025-01-03",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "dc7b5303-ca61-44a7-ba43-4bd5",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Side Gig",
+      "amount": 50000,
+      "billing_period": "monthly",
+      "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "id": "67470f89-a9cc-48ef-a723-4c83",
+      "created_at": "2025-12-31T15:20:51.626Z",
+      "updated_at": "2025-12-31T15:20:51.626Z",
+      "is_active": true
+    }
+  ],
+  "payment_sources": [
+    {
+      "name": "Main Checking",
+      "type": "bank_account",
+      "balance": 500000,
+      "id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+      "created_at": "2025-12-31T15:20:51.624Z",
+      "updated_at": "2025-12-31T15:20:51.624Z",
+      "is_active": true
+    },
+    {
+      "name": "Credit Card",
+      "type": "credit_card",
+      "balance": -120000,
+      "id": "33554e8b-5a40-48d2-b16b-0dda55685494",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    },
+    {
+      "name": "Cash",
+      "type": "cash",
+      "balance": 30000,
+      "id": "b73ecba8-3be0-4a5f-9888-c78628334466",
+      "created_at": "2025-12-31T15:20:51.625Z",
+      "updated_at": "2025-12-31T15:20:51.625Z",
+      "is_active": true
+    }
+  ],
+  "categories": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "name": "Housing",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554402",
+      "name": "Utilities",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554403",
+      "name": "Food & Groceries",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554404",
+      "name": "Transportation",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554405",
+      "name": "Insurance",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554406",
+      "name": "Entertainment",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554407",
+      "name": "Healthcare",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-4466554408",
+      "name": "Other",
+      "is_predefined": true,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}

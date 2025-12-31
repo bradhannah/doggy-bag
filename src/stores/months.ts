@@ -10,6 +10,7 @@ export interface BillInstance {
   month: string;
   amount: number;
   is_default: boolean;
+  is_paid?: boolean;
   name: string;
   billing_period: string;
   created_at: string;
@@ -22,6 +23,7 @@ export interface IncomeInstance {
   month: string;
   amount: number;
   is_default: boolean;
+  is_paid?: boolean;
   name: string;
   billing_period: string;
   created_at: string;
@@ -167,6 +169,35 @@ function createMonthsStore() {
       }
     },
 
+    async updateBankBalances(month: string, balances: Record<string, number>): Promise<void> {
+      try {
+        const response = await fetch(`/api/months/${month}/bank-balances`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(balances)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update bank balances');
+        }
+
+        const data = await response.json();
+        update(state => ({
+          ...state,
+          data: {
+            ...state.data,
+            ...data,
+            bank_balances: balances
+          } as MonthlyData
+        }));
+      } catch (error) {
+        console.error('Failed to update bank balances:', error);
+        throw error;
+      }
+    },
+
     reset() {
       set(initialState);
     }
@@ -195,3 +226,6 @@ export const incomeInstances = derived(monthsStore, ($store) => $store.data?.inc
 
 // Variable expenses
 export const variableExpenses = derived(monthsStore, ($store) => $store.data?.variable_expenses || []);
+
+// Bank balances for current month
+export const bankBalances = derived(monthsStore, ($store) => $store.data?.bank_balances || {});

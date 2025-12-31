@@ -100,6 +100,31 @@
     }
   }
   
+  async function togglePaid(id: string, currentPaid: boolean) {
+    saving = true;
+    error = '';
+    
+    try {
+      const response = await fetch(`http://localhost:3000/api/months/${month}/incomes/${id}/paid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to toggle paid');
+      }
+      
+      dispatch('refresh');
+      success(currentPaid ? 'Income marked as unpaid' : 'Income marked as received');
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unknown error';
+      showError(error);
+    } finally {
+      saving = false;
+    }
+  }
+  
   function handleKeydown(event: KeyboardEvent, id: string) {
     if (event.key === 'Enter') {
       saveEdit(id);
@@ -124,7 +149,7 @@
   {:else}
     <ul class="incomes-list">
       {#each incomes as income (income.id)}
-        <li class="income-item" class:editing={editingId === income.id} class:modified={!income.is_default}>
+        <li class="income-item" class:editing={editingId === income.id} class:modified={!income.is_default} class:paid={income.is_paid}>
           {#if editingId === income.id}
             <div class="edit-row">
               <span class="income-name">{income.name}</span>
@@ -154,12 +179,28 @@
           {:else}
             <div class="income-info">
               <div class="income-details">
-                <span class="income-name">{income.name}</span>
+                <button 
+                  class="paid-checkbox"
+                  class:checked={income.is_paid}
+                  on:click={() => togglePaid(income.id, income.is_paid ?? false)}
+                  disabled={saving}
+                  title={income.is_paid ? 'Mark as not received' : 'Mark as received'}
+                >
+                  {#if income.is_paid}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12L10 17L20 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  {/if}
+                </button>
+                <span class="income-name" class:paid-text={income.is_paid}>{income.name}</span>
                 {#if !income.is_default}
                   <span class="modified-badge">modified</span>
                 {/if}
+                {#if income.is_paid}
+                  <span class="paid-badge">received</span>
+                {/if}
               </div>
-              <span class="income-amount">{formatCurrency(income.amount)}</span>
+              <span class="income-amount" class:paid-text={income.is_paid}>{formatCurrency(income.amount)}</span>
             </div>
             <div class="income-actions">
               <button class="edit-btn" on:click={() => startEdit(income)}>Edit</button>
@@ -231,6 +272,55 @@
   
   .income-item.modified {
     border-left: 3px solid #f59e0b;
+  }
+  
+  .income-item.paid {
+    background: rgba(74, 222, 128, 0.05);
+  }
+  
+  .paid-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid #555;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+    color: #000;
+    flex-shrink: 0;
+  }
+  
+  .paid-checkbox:hover:not(:disabled) {
+    border-color: #4ade80;
+  }
+  
+  .paid-checkbox.checked {
+    background: #4ade80;
+    border-color: #4ade80;
+  }
+  
+  .paid-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .paid-text {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+  
+  .paid-badge {
+    font-size: 0.625rem;
+    padding: 2px 6px;
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
   }
   
   .income-info {

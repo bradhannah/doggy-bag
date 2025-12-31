@@ -46,6 +46,10 @@ export interface MonthsService {
   updateIncomeInstance(month: string, instanceId: string, amount: number): Promise<IncomeInstance | null>;
   resetBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
   resetIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null>;
+  
+  // Mark as paid methods
+  toggleBillInstancePaid(month: string, instanceId: string): Promise<BillInstance | null>;
+  toggleIncomeInstancePaid(month: string, instanceId: string): Promise<IncomeInstance | null>;
 }
 
 export class MonthsServiceImpl implements MonthsService {
@@ -143,6 +147,7 @@ export class MonthsServiceImpl implements MonthsService {
           month,
           amount,
           is_default: true,
+          is_paid: false,
           created_at: now,
           updated_at: now
         });
@@ -166,6 +171,7 @@ export class MonthsServiceImpl implements MonthsService {
           month,
           amount,
           is_default: true,
+          is_paid: false,
           created_at: now,
           updated_at: now
         });
@@ -228,6 +234,7 @@ export class MonthsServiceImpl implements MonthsService {
           month,
           amount,
           is_default: true,
+          is_paid: false,
           created_at: now,
           updated_at: now
         });
@@ -255,6 +262,7 @@ export class MonthsServiceImpl implements MonthsService {
           month,
           amount,
           is_default: true,
+          is_paid: false,
           created_at: now,
           updated_at: now
         });
@@ -470,6 +478,64 @@ export class MonthsServiceImpl implements MonthsService {
       return data.income_instances[index];
     } catch (error) {
       console.error('[MonthsService] Failed to reset income instance:', error);
+      throw error;
+    }
+  }
+  
+  public async toggleBillInstancePaid(month: string, instanceId: string): Promise<BillInstance | null> {
+    try {
+      const data = await this.getMonthlyData(month);
+      if (!data) {
+        throw new Error(`Monthly data for ${month} not found`);
+      }
+      
+      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+      if (index === -1) {
+        return null;
+      }
+      
+      const now = new Date().toISOString();
+      const currentPaid = data.bill_instances[index].is_paid ?? false;
+      data.bill_instances[index] = {
+        ...data.bill_instances[index],
+        is_paid: !currentPaid,
+        updated_at: now
+      };
+      data.updated_at = now;
+      
+      await this.saveMonthlyData(month, data);
+      return data.bill_instances[index];
+    } catch (error) {
+      console.error('[MonthsService] Failed to toggle bill instance paid:', error);
+      throw error;
+    }
+  }
+  
+  public async toggleIncomeInstancePaid(month: string, instanceId: string): Promise<IncomeInstance | null> {
+    try {
+      const data = await this.getMonthlyData(month);
+      if (!data) {
+        throw new Error(`Monthly data for ${month} not found`);
+      }
+      
+      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+      if (index === -1) {
+        return null;
+      }
+      
+      const now = new Date().toISOString();
+      const currentPaid = data.income_instances[index].is_paid ?? false;
+      data.income_instances[index] = {
+        ...data.income_instances[index],
+        is_paid: !currentPaid,
+        updated_at: now
+      };
+      data.updated_at = now;
+      
+      await this.saveMonthlyData(month, data);
+      return data.income_instances[index];
+    } catch (error) {
+      console.error('[MonthsService] Failed to toggle income instance paid:', error);
       throw error;
     }
   }

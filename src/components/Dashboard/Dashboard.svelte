@@ -19,7 +19,8 @@
     totalCreditDebt,
     billInstances,
     incomeInstances,
-    variableExpenses
+    variableExpenses,
+    bankBalances
   } from '../../stores/months';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   
@@ -39,6 +40,18 @@
   function handleRefresh() {
     if ($currentMonth) {
       monthsStore.loadMonth($currentMonth);
+    }
+  }
+  
+  // Handle bank balance updates
+  async function handleUpdateBalances(event: CustomEvent<{ balances: Record<string, number> }>) {
+    if ($currentMonth) {
+      try {
+        await monthsStore.updateBankBalances($currentMonth, event.detail.balances);
+        handleRefresh();
+      } catch (error) {
+        console.error('Failed to update balances:', error);
+      }
     }
   }
   
@@ -70,10 +83,11 @@
     
     <section class="payment-sources-section">
       <PaymentSourcesCard
-        totalCash={$totalCash}
-        totalCreditDebt={$totalCreditDebt}
-        netWorth={$netWorth}
+        paymentSources={$paymentSources}
+        bankBalances={$bankBalances}
+        month={$currentMonth}
         loading={$monthlyLoading}
+        on:updateBalances={handleUpdateBalances}
       />
     </section>
     

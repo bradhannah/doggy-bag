@@ -7,19 +7,65 @@
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
-## Format: `[ID] [P?] [Story] Description`
+---
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US0, US1, US2)
-- Include exact file paths in descriptions
+## Implementation Status Summary (Last Updated: 2025-12-31)
 
-## Path Conventions
+### Completed Phases
 
-This is a Tauri + Svelte + Bun desktop application with three-process architecture:
-- `src-tauri/`: Rust backend for Tauri (desktop shell)
-- `api/`: Bun HTTP backend for IPC (internal communication)
-- `src/`: Svelte frontend
-- `data/`: Local JSON file storage
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1: Build System Setup | COMPLETE | Tauri + Svelte + Bun architecture working |
+| Phase 2: OpenAPI Type Coordination | COMPLETE | tsoa, openapi-typescript, openapi-fetch integrated |
+| Phase 3: Build System Validation | COMPLETE | Sidecar setup, production build tested |
+| Phase 3.5: UI Component Prototyping | COMPLETE | All decisions documented in prototyping-decisions.md |
+| Phase 4: Foundational Services | COMPLETE | All services implemented |
+
+### Completed User Stories
+
+| User Story | Status | Notes |
+|------------|--------|-------|
+| US0: First-Time Setup | COMPLETE | Setup page with tabs for Bills/Incomes/Payment Sources |
+| US1: Set Up Monthly Bills | COMPLETE | CRUD operations, billing periods working |
+| US2: Track Monthly Income | COMPLETE | CRUD operations, billing periods working |
+| US3: Calculate Monthly Surplus | COMPLETE | Dashboard with leftover calculation |
+| US4: Track Variable Expenses | COMPLETE | Expenses CRUD in monthly data |
+| US5: Manage Payment Sources | COMPLETE | CRUD operations with balance tracking |
+| US6: Generate Month With Flexible Editing | COMPLETE | Month generation, instance editing |
+| US7: View Month-by-Month Breakdown | COMPLETE | Month navigation and data isolation |
+| US8: Manage Bill Categories | COMPLETE | 8 pre-defined categories, custom categories |
+| US9: Undo Changes | COMPLETE | 5-entry undo stack with Ctrl+Z shortcut |
+| US10: Backup/Restore | COMPLETE | Export/Import with validation |
+| US11: Free-Flowing Expenses (as Variable) | COMPLETE | Combined with variable expenses |
+
+### Recently Completed Features (This Session)
+
+1. **Backup/Restore API & UI**
+   - `api/src/routes/handlers/backup.handlers.ts` - GET/POST /api/backup, POST /api/backup/validate
+   - `src/components/Navigation.svelte` - Export/Import buttons in sidebar
+
+2. **Mark as Paid for Bill/Income Instances**
+   - Added `is_paid` field to BillInstance and IncomeInstance types
+   - `api/src/services/months-service.ts` - toggleBillInstancePaid/toggleIncomeInstancePaid methods
+   - `api/src/routes/handlers/instances.handlers.ts` - POST /api/months/:month/bills/:id/paid, POST /api/months/:month/incomes/:id/paid
+   - `src/components/Dashboard/BillsCard.svelte` - Checkbox to mark bills as paid
+   - `src/components/Dashboard/IncomesCard.svelte` - Checkbox to mark incomes as received
+
+3. **Per-Month Bank Balance Editing**
+   - `src/stores/months.ts` - updateBankBalances and bankBalances derived store
+   - `src/components/Dashboard/PaymentSourcesCard.svelte` - Editable per-month balances
+
+4. **Keyboard Shortcuts**
+   - Ctrl+Z / Cmd+Z for undo
+   - Escape to close drawers
+   - Enter to submit forms
+
+### Remaining/Optional Polish Tasks
+
+- [ ] Responsive design for mobile/tablet
+- [ ] Accessibility improvements (ARIA, screen reader labels)
+- [ ] Performance optimization (lazy loading, memoization)
+- [ ] E2E tests with Playwright
 
 ---
 

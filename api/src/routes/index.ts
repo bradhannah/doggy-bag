@@ -45,8 +45,10 @@ import {
 import {
   createBillInstanceHandlerPUT,
   createBillInstanceHandlerReset,
+  createBillInstanceHandlerTogglePaid,
   createIncomeInstanceHandlerPUT,
-  createIncomeInstanceHandlerReset
+  createIncomeInstanceHandlerReset,
+  createIncomeInstanceHandlerTogglePaid
 } from './handlers/instances.handlers';
 
 import {
@@ -57,6 +59,18 @@ import {
 } from './handlers/categories.handlers';
 
 import { createSeedDefaultsHandler } from './handlers/seed.handlers';
+
+import {
+  createUndoHandlerGET,
+  createUndoHandlerPOST,
+  createUndoHandlerDELETE
+} from './handlers/undo.handlers';
+
+import {
+  createBackupHandlerGET,
+  createBackupHandlerPOST,
+  createBackupHandlerValidate
+} from './handlers/backup.handlers';
 
 // Route definition type
 interface RouteDefinition {
@@ -74,6 +88,16 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   
   // Seed Defaults
   { path: '/api/seed-defaults', definition: { method: 'POST', handler: createSeedDefaultsHandler() } },
+  
+  // Undo
+  { path: '/api/undo', definition: { method: 'GET', handler: createUndoHandlerGET() } },
+  { path: '/api/undo', definition: { method: 'POST', handler: createUndoHandlerPOST() } },
+  { path: '/api/undo', definition: { method: 'DELETE', handler: createUndoHandlerDELETE() } },
+  
+  // Backup
+  { path: '/api/backup', definition: { method: 'GET', handler: createBackupHandlerGET() } },
+  { path: '/api/backup', definition: { method: 'POST', handler: createBackupHandlerPOST() } },
+  { path: '/api/backup/validate', definition: { method: 'POST', handler: createBackupHandlerValidate() } },
   
   // Categories
   { path: '/api/categories', definition: { method: 'GET', handler: createCategoriesHandlerGET() } },
@@ -110,10 +134,12 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   
   // Bill instances - must come before expenses for proper matching
   { path: '/api/months/bills/reset', definition: { method: 'POST', handler: createBillInstanceHandlerReset(), hasPathParam: true } },
+  { path: '/api/months/bills/paid', definition: { method: 'POST', handler: createBillInstanceHandlerTogglePaid(), hasPathParam: true } },
   { path: '/api/months/bills', definition: { method: 'PUT', handler: createBillInstanceHandlerPUT(), hasPathParam: true } },
   
   // Income instances
   { path: '/api/months/incomes/reset', definition: { method: 'POST', handler: createIncomeInstanceHandlerReset(), hasPathParam: true } },
+  { path: '/api/months/incomes/paid', definition: { method: 'POST', handler: createIncomeInstanceHandlerTogglePaid(), hasPathParam: true } },
   { path: '/api/months/incomes', definition: { method: 'PUT', handler: createIncomeInstanceHandlerPUT(), hasPathParam: true } },
   
   // Variable expenses

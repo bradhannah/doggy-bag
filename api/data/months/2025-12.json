@@ -53,7 +53,8 @@
       "amount": 222,
       "is_default": true,
       "created_at": "2025-12-31T14:20:39.788Z",
-      "updated_at": "2025-12-31T14:20:39.788Z"
+      "updated_at": "2025-12-31T18:20:04.936Z",
+      "is_paid": false
     }
   ],
   "income_instances": [
@@ -135,5 +136,5 @@
   "free_flowing_expenses": [],
   "bank_balances": {},
   "created_at": "2025-12-30T18:08:31.732Z",
-  "updated_at": "2025-12-31T16:13:49.286Z"
+  "updated_at": "2025-12-31T18:20:04.936Z"
 }

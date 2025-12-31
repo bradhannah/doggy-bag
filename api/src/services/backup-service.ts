@@ -71,31 +71,15 @@ export class BackupServiceImpl implements BackupService {
         throw new Error('Invalid backup data: ' + validation.errors.join(', '));
       }
       
-      const existing = await this.storage.readJSON<BackupFileData>('data/budgetforfun-backup.json');
+      // Restore data to actual entity files
+      await Promise.all([
+        this.storage.writeJSON('data/entities/bills.json', data.bills || []),
+        this.storage.writeJSON('data/entities/incomes.json', data.incomes || []),
+        this.storage.writeJSON('data/entities/payment-sources.json', data.payment_sources || []),
+        this.storage.writeJSON('data/entities/categories.json', data.categories || [])
+      ]);
       
-      if (existing) {
-        const now = new Date().toISOString();
-        const updatedBackupData = {
-          export_date: now,
-          ...existing,
-          ...data
-        };
-        await this.storage.writeJSON('data/budgetforfun-backup.json', updatedBackupData);
-        console.log('[BackupService] Backup imported and merged');
-      } else {
-        const now = new Date().toISOString();
-        const newBackupData: BackupFileData = {
-          export_date: now,
-          bills: [],
-          incomes: [],
-          payment_sources: [],
-          categories: []
-        };
-        await this.storage.writeJSON('data/budgetforfun-backup.json', newBackupData);
-        console.log('[BackupService] New backup created');
-      }
-      
-      console.log('[BackupService] Import completed');
+      console.log('[BackupService] Import completed - restored all entities');
     } catch (error) {
       console.error('[BackupService] Import failed:', error);
       throw error;

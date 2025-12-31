@@ -1,17 +1,51 @@
 <script lang="ts">
   /**
-   * PaymentSourcesCard - Shows payment source totals on the Dashboard
+   * PaymentSourcesCard - Shows payment sources with editable balances
    * 
-   * @prop totalCash - Sum of positive balances (bank accounts, cash)
-   * @prop totalCreditDebt - Sum of credit card balances (shown as positive debt)
-   * @prop netWorth - totalCash - totalCreditDebt
+   * @prop paymentSources - List of all payment sources
+   * @prop bankBalances - Per-month balance overrides (from monthly data)
+   * @prop month - Current month (YYYY-MM)
    * @prop loading - Whether data is still loading
+   * @prop onUpdateBalances - Callback when balances are updated
    */
+  import { createEventDispatcher } from 'svelte';
+  import type { PaymentSource } from '../../stores/payment-sources';
   
-  export let totalCash: number = 0;
-  export let totalCreditDebt: number = 0;
-  export let netWorth: number = 0;
+  export let paymentSources: PaymentSource[] = [];
+  export let bankBalances: Record<string, number> = {};
+  export let month: string = '';
   export let loading: boolean = false;
+  
+  const dispatch = createEventDispatcher();
+  
+  // Editing state
+  let editingId: string | null = null;
+  let editValue: string = '';
+  
+  // Get effective balance for a payment source
+  // Use per-month override if available, otherwise use the source's current balance
+  function getEffectiveBalance(source: PaymentSource): number {
+    if (bankBalances[source.id] !== undefined) {
+      return bankBalances[source.id];
+    }
+    return source.balance;
+  }
+  
+  // Calculate totals from effective balances
+  $: effectiveBalances = paymentSources.map(ps => ({
+    ...ps,
+    effectiveBalance: getEffectiveBalance(ps)
+  }));
+  
+  $: totalCash = effectiveBalances
+    .filter(ps => ps.type === 'bank_account' || ps.type === 'cash')
+    .reduce((sum, ps) => sum + ps.effectiveBalance, 0);
+    
+  $: totalCreditDebt = effectiveBalances
+    .filter(ps => ps.type === 'credit_card')
+    .reduce((sum, ps) => sum + ps.effectiveBalance, 0);
+    
+  $: netWorth = totalCash - totalCreditDebt;
   
   // Format amount in cents to dollars
   function formatCurrency(cents: number): string {
@@ -22,11 +56,74 @@
       minimumFractionDigits: 2
     }).format(dollars);
   }
+  
+  // Parse currency input to cents
+  function parseCurrency(value: string): number {
+    const cleaned = value.replace(/[^0-9.-]/g, '');
+    const dollars = parseFloat(cleaned) || 0;
+    return Math.round(dollars * 100);
+  }
+  
+  // Start editing a balance
+  function startEdit(source: PaymentSource) {
+    editingId = source.id;
+    const balance = getEffectiveBalance(source);
+    editValue = (balance / 100).toFixed(2);
+  }
+  
+  // Save edited balance
+  async function saveEdit(source: PaymentSource) {
+    const newBalance = parseCurrency(editValue);
+    const newBalances = { ...bankBalances, [source.id]: newBalance };
+    
+    dispatch('updateBalances', { balances: newBalances });
+    editingId = null;
+  }
+  
+  // Cancel editing
+  function cancelEdit() {
+    editingId = null;
+    editValue = '';
+  }
+  
+  // Handle keyboard events
+  function handleKeydown(event: KeyboardEvent, source: PaymentSource) {
+    if (event.key === 'Enter') {
+      saveEdit(source);
+    } else if (event.key === 'Escape') {
+      cancelEdit();
+    }
+  }
+  
+  // Get icon for payment source type
+  function getTypeIcon(type: string) {
+    switch (type) {
+      case 'bank_account':
+        return '🏦';
+      case 'credit_card':
+        return '💳';
+      case 'cash':
+        return '💵';
+      default:
+        return '💰';
+    }
+  }
+  
+  // Check if balance has been customized for this month
+  function isCustomized(source: PaymentSource): boolean {
+    return bankBalances[source.id] !== undefined;
+  }
 </script>
 
 <div class="payment-sources-card">
-  <h3 class="card-title">Payment Sources</h3>
+  <h3 class="card-title">
+    Payment Sources
+    {#if month}
+      <span class="month-label">({month})</span>
+    {/if}
+  </h3>
   
+  <!-- Summary Totals -->
   <div class="totals-grid">
     <div class="total-item cash">
       <div class="item-icon">
@@ -84,6 +181,55 @@
       </div>
     </div>
   </div>
+  
+  <!-- Individual Payment Sources -->
+  {#if paymentSources.length > 0}
+    <div class="sources-list">
+      <div class="list-header">
+        <span>Account</span>
+        <span>Balance</span>
+      </div>
+      
+      {#each paymentSources as source (source.id)}
+        <div class="source-row" class:customized={isCustomized(source)}>
+          <div class="source-info">
+            <span class="source-icon">{getTypeIcon(source.type)}</span>
+            <span class="source-name">{source.name}</span>
+            {#if isCustomized(source)}
+              <span class="customized-badge" title="Balance set for this month">*</span>
+            {/if}
+          </div>
+          
+          <div class="source-balance">
+            {#if editingId === source.id}
+              <div class="edit-container">
+                <span class="currency-prefix">$</span>
+                <input
+                  type="text"
+                  bind:value={editValue}
+                  on:keydown={(e) => handleKeydown(e, source)}
+                  on:blur={() => saveEdit(source)}
+                  class="balance-input"
+                  autofocus
+                />
+              </div>
+            {:else}
+              <button 
+                class="balance-button"
+                class:debt={source.type === 'credit_card'}
+                on:click={() => startEdit(source)}
+                title="Click to edit balance for this month"
+              >
+                {formatCurrency(getEffectiveBalance(source))}
+              </button>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {:else if !loading}
+    <p class="empty-message">No payment sources set up yet. Add them in Setup.</p>
+  {/if}
 </div>
 
 <style>
@@ -101,12 +247,23 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .month-label {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: normal;
+    text-transform: none;
   }
   
   .totals-grid {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-bottom: 20px;
   }
   
   .total-item {
@@ -175,5 +332,120 @@
   
   .networth.negative .item-value {
     color: #f87171;
+  }
+  
+  /* Individual sources list */
+  .sources-list {
+    border-top: 1px solid #333355;
+    padding-top: 16px;
+  }
+  
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px 8px 8px;
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .source-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 8px;
+    border-radius: 6px;
+    transition: background-color 0.15s;
+  }
+  
+  .source-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  
+  .source-row.customized {
+    background: rgba(36, 200, 219, 0.05);
+  }
+  
+  .source-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .source-icon {
+    font-size: 1rem;
+  }
+  
+  .source-name {
+    font-size: 0.875rem;
+    color: #e4e4e7;
+  }
+  
+  .customized-badge {
+    color: #24c8db;
+    font-weight: bold;
+    font-size: 0.75rem;
+  }
+  
+  .source-balance {
+    display: flex;
+    align-items: center;
+  }
+  
+  .balance-button {
+    background: none;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4ade80;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  
+  .balance-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #444466;
+  }
+  
+  .balance-button.debt {
+    color: #f87171;
+  }
+  
+  .edit-container {
+    display: flex;
+    align-items: center;
+    background: #0f0f1a;
+    border: 1px solid #24c8db;
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+  
+  .currency-prefix {
+    color: #888;
+    font-size: 0.875rem;
+    margin-right: 2px;
+  }
+  
+  .balance-input {
+    width: 80px;
+    background: transparent;
+    border: none;
+    color: #e4e4e7;
+    font-size: 0.875rem;
+    font-family: inherit;
+    text-align: right;
+    outline: none;
+  }
+  
+  .empty-message {
+    color: #666;
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 16px;
+    margin: 0;
   }
 </style>

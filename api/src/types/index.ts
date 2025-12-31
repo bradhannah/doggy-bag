@@ -45,6 +45,7 @@ interface BillInstance {
   month: string;
   amount: number;
   is_default: boolean;
+  is_paid: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -71,6 +72,7 @@ interface IncomeInstance {
   month: string;
   amount: number;
   is_default: boolean;
+  is_paid: boolean;
   created_at: string;
   updated_at: string;
 }
