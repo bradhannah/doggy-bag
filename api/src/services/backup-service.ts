@@ -43,13 +43,25 @@ export class BackupServiceImpl implements BackupService {
         this.storage.readJSON<Category[]>('data/entities/categories.json') || []
       ]);
       
+      // Load all month files
+      const monthFiles = await this.storage.listFiles('data/months');
+      const monthData = await Promise.all(
+        monthFiles
+          .filter(f => f.endsWith('.json') && f !== '.gitkeep')
+          .map(async f => {
+            const data = await this.storage.readJSON<any>(`data/months/${f}`);
+            return data;
+          })
+      );
+      
       const now = new Date().toISOString();
       const backupData: BackupFileData = {
         export_date: now,
         bills: bills || [],
         incomes: incomes || [],
         payment_sources: paymentSources || [],
-        categories: categories || []
+        categories: categories || [],
+        months: monthData.filter(Boolean)
       };
       
       await this.storage.writeJSON('data/budgetforfun-backup.json', backupData);

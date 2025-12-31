@@ -1,5 +1,3 @@
-import type { BunRequest } from '../../../server';
-
 export function createHealthHandler() {
   return async () => {
     return new Response(JSON.stringify({ 

@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-12-30
 
 ## Active Technologies
+- TypeScript (strict mode), Svelte 4.x, Bun 1.x + Svelte, Tauri, Bun HTTP server, existing API routes (002-detailed-monthly-view)
+- Local JSON files (data/entities/, data/months/) (002-detailed-monthly-view)
 
 - (001-monthly-budget)
 
@@ -26,13 +28,12 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 002-detailed-monthly-view: Added TypeScript (strict mode), Svelte 4.x, Bun 1.x + Svelte, Tauri, Bun HTTP server, existing API routes
 
 - 001-monthly-budget: Added
 - 002: OpenAPI type coordination (tsoa, openapi-typescript, openapi-fetch)
-- 003: Build system validation (sidecar setup, production build)
 
 <!-- MANUAL ADDITIONS START -->
-- Phase 2 Complete: End-to-end type coordination working
   - Backend types (api/src/types/index.ts)
   - tsoa controllers (api/src/controllers/*.ts)
   - OpenAPI spec generation (api/openapi/swagger.json)
@@ -40,7 +41,6 @@ tests/
   - Type-safe API client (src/lib/api/client.ts)
   - Smoke test validation (scripts/smoke-test.sh)
 
-- Phase 3 Complete: Build system validation
   - Sidecar downloaded: Bun binary (57MB) for macOS ARM64
   - Rust sidecar command (start_bun_sidecar) implemented
   - Tauri config (externalBin enabled)
