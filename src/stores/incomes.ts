@@ -7,10 +7,18 @@ export interface Income {
   amount: number;
   billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
   start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
+  // For monthly billing: specify EITHER day_of_month OR (recurrence_week + recurrence_day)
+  day_of_month?: number;      // 1-31 (use 31 for "last day of month")
+  recurrence_week?: number;   // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
+  recurrence_day?: number;    // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface IncomeWithContribution extends Income {
+  monthlyContribution: number;
 }
 
 export interface IncomeData {
@@ -18,7 +26,26 @@ export interface IncomeData {
   amount: number;
   billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
   start_date?: string;
+  day_of_month?: number;
+  recurrence_week?: number;
+  recurrence_day?: number;
   payment_source_id: string;
+}
+
+// Billing period multipliers (average instances per month)
+const BILLING_PERIOD_MULTIPLIERS: Record<string, number> = {
+  monthly: 1,
+  bi_weekly: 2.16666667,  // 26 times per year / 12 months
+  weekly: 4.33333333,     // 52 times per year / 12 months
+  semi_annually: 0.16666667  // 2 times per year / 12 months
+};
+
+/**
+ * Calculate monthly contribution for an income based on its billing period
+ */
+export function calculateMonthlyContribution(amount: number, billingPeriod: string): number {
+  const multiplier = BILLING_PERIOD_MULTIPLIERS[billingPeriod] || 1;
+  return Math.round(amount * multiplier);
 }
 
 type IncomeState = {
@@ -47,7 +74,7 @@ export async function loadIncomes() {
   
   try {
     const data = await apiClient.get('/api/incomes');
-    const incomes = (data?.data || []) as Income[];
+    const incomes = (data || []) as Income[];
     store.update(s => ({ ...s, incomes, loading: false }));
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load incomes');
@@ -100,3 +127,21 @@ export function clearError() {
 }
 
 export const incomesStore = store;
+
+// Derived store for incomes with monthly contribution calculated
+export const incomesWithContribution = derived(incomes, ($incomes): IncomeWithContribution[] => 
+  $incomes.map(income => ({
+    ...income,
+    monthlyContribution: calculateMonthlyContribution(income.amount, income.billing_period)
+  }))
+);
+
+// Derived store for active incomes with monthly contribution
+export const activeIncomesWithContribution = derived(incomesWithContribution, ($incomes) =>
+  $incomes.filter(i => i.is_active)
+);
+
+// Derived store for total monthly income (sum of all active incomes' monthly contributions)
+export const totalMonthlyIncome = derived(activeIncomesWithContribution, ($incomes) =>
+  $incomes.reduce((sum, income) => sum + income.monthlyContribution, 0)
+);

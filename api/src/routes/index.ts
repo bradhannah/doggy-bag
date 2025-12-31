@@ -55,6 +55,8 @@ import {
   createCategoriesHandlerDELETE
 } from './handlers/categories.handlers';
 
+import { createSeedDefaultsHandler } from './handlers/seed.handlers';
+
 // Route definition type
 interface RouteDefinition {
   method: string;
@@ -68,6 +70,9 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   { path: '/api/health', definition: { method: 'GET', handler: createHealthHandler() } },
   { path: '/health', definition: { method: 'GET', handler: createHealthHandler() } },
   { path: '/api/test', definition: { method: 'GET', handler: createTestHandler() } },
+  
+  // Seed Defaults
+  { path: '/api/seed-defaults', definition: { method: 'POST', handler: createSeedDefaultsHandler() } },
   
   // Categories
   { path: '/api/categories', definition: { method: 'GET', handler: createCategoriesHandlerGET() } },

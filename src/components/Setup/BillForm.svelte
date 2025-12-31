@@ -8,7 +8,7 @@
    */
   import { createBill, updateBill } from '../../stores/bills';
   import { paymentSourcesStore } from '../../stores/payment-sources';
-  import type { Bill } from '../../stores/bills';
+  import type { Bill, BillData } from '../../stores/bills';
 
   export let editingItem: Bill | null = null;
   export let onSave: () => void = () => {};
@@ -20,8 +20,20 @@
   let billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually' = editingItem?.billing_period || 'monthly';
   let start_date = editingItem?.start_date || '';
   let payment_source_id = editingItem?.payment_source_id || '';
+  
+  // Monthly recurrence options
+  type MonthlyType = 'day_of_month' | 'nth_weekday';
+  let monthly_type: MonthlyType = editingItem?.recurrence_week !== undefined ? 'nth_weekday' : 'day_of_month';
+  let day_of_month = editingItem?.day_of_month || 1;
+  let recurrence_week = editingItem?.recurrence_week || 1;
+  let recurrence_day = editingItem?.recurrence_day || 0;
+  
   let error = '';
   let saving = false;
+
+  // Weekday names for dropdown
+  const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const WEEK_ORDINALS = ['1st', '2nd', '3rd', '4th', '5th/Last'];
 
   // Reset form when editingItem changes
   $: if (editingItem) {
@@ -30,6 +42,10 @@
     billing_period = editingItem.billing_period;
     start_date = editingItem.start_date || '';
     payment_source_id = editingItem.payment_source_id;
+    monthly_type = editingItem.recurrence_week !== undefined ? 'nth_weekday' : 'day_of_month';
+    day_of_month = editingItem.day_of_month || 1;
+    recurrence_week = editingItem.recurrence_week || 1;
+    recurrence_day = editingItem.recurrence_day || 0;
   }
 
   function formatAmount(cents: number): string {
@@ -55,13 +71,27 @@
     error = '';
 
     try {
-      const billData = {
+      const billData: BillData = {
         name,
         amount,
         billing_period,
-        payment_source_id,
-        ...(billing_period !== 'monthly' && start_date ? { start_date } : {})
+        payment_source_id
       };
+
+      // Add appropriate fields based on billing period
+      if (billing_period !== 'monthly' && start_date) {
+        billData.start_date = start_date;
+      }
+      
+      // Add monthly recurrence fields
+      if (billing_period === 'monthly') {
+        if (monthly_type === 'day_of_month') {
+          billData.day_of_month = day_of_month;
+        } else {
+          billData.recurrence_week = recurrence_week;
+          billData.recurrence_day = recurrence_day;
+        }
+      }
 
       if (editingItem) {
         await updateBill(editingItem.id, billData);
@@ -150,6 +180,52 @@
         {/if}
       </div>
     </div>
+  {:else}
+    <!-- Monthly recurrence options -->
+    <div class="form-group">
+      <label>When does this bill occur?</label>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" bind:group={monthly_type} value="day_of_month" disabled={saving || !hasPaymentSources} />
+          Specific day of month
+        </label>
+        <label class="radio-label">
+          <input type="radio" bind:group={monthly_type} value="nth_weekday" disabled={saving || !hasPaymentSources} />
+          Nth weekday of month
+        </label>
+      </div>
+    </div>
+
+    {#if monthly_type === 'day_of_month'}
+      <div class="form-group">
+        <label for="bill-day-of-month">Day of Month</label>
+        <select id="bill-day-of-month" bind:value={day_of_month} disabled={saving || !hasPaymentSources}>
+          {#each Array.from({length: 31}, (_, i) => i + 1) as day}
+            <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
+          {/each}
+        </select>
+      </div>
+    {:else}
+      <div class="form-group">
+        <label for="bill-recurrence-week">Which week?</label>
+        <select id="bill-recurrence-week" bind:value={recurrence_week} disabled={saving || !hasPaymentSources}>
+          {#each WEEK_ORDINALS as label, i}
+            <option value={i + 1}>{label}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="bill-recurrence-day">Which day?</label>
+        <select id="bill-recurrence-day" bind:value={recurrence_day} disabled={saving || !hasPaymentSources}>
+          {#each WEEKDAYS as label, i}
+            <option value={i}>{label}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="help-text">
+        Example: "{WEEK_ORDINALS[recurrence_week - 1]} {WEEKDAYS[recurrence_day]}" of every month
+      </div>
+    {/if}
   {/if}
 
   <div class="form-group">
@@ -235,6 +311,27 @@
     font-size: 12px;
     color: #24c8db;
     margin-top: 4px;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: normal;
+    font-size: 14px;
+  }
+
+  .radio-label input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #24c8db;
   }
 
   .form-actions {

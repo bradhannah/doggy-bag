@@ -10,8 +10,8 @@ import type {
 export interface PaymentSourcesService {
   getAll(): Promise<PaymentSource[]>;
   getById(id: string): Promise<PaymentSource | null>;
-  create(data: Omit<PaymentSource, 'created_at' | 'updated_at'>): Promise<PaymentSource>;
-  update(id: string, updates: Partial<Omit<PaymentSource, 'created_at' | 'updated_at'>>): Promise<PaymentSource | null>;
+  create(data: Omit<PaymentSource, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<PaymentSource>;
+  update(id: string, updates: Partial<Omit<PaymentSource, 'id' | 'created_at' | 'updated_at'>>): Promise<PaymentSource | null>;
   delete(id: string): Promise<void>;
   
   validate(data: Partial<PaymentSource>): ValidationResult;
@@ -44,7 +44,7 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
     }
   }
   
-  public async create(data: Omit<PaymentSource, 'created_at' | 'updated_at'>): Promise<PaymentSource> {
+  public async create(data: Omit<PaymentSource, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<PaymentSource> {
     try {
       const sources = await this.getAll();
       
@@ -66,7 +66,7 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
     }
   }
   
-  public async update(id: string, updates: Partial<Omit<PaymentSource, 'created_at' | 'updated_at'>>): Promise<PaymentSource | null> {
+  public async update(id: string, updates: Partial<Omit<PaymentSource, 'id' | 'created_at' | 'updated_at'>>): Promise<PaymentSource | null> {
     try {
       const sources = await this.getAll();
       const index = sources.findIndex(source => source.id === id);

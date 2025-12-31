@@ -1,22 +1,23 @@
 [
   {
     "name": "Salary",
-    "amount": 50000,
-    "billing_period": "monthly",
-    "payment_source_id": "0fece128-d84a-40e9-ba1e-a0f922bf3ed3",
-    "id": "4b3b2eef-2978-4322-bc1c-40c0",
-    "created_at": "2025-12-30T17:25:12.498Z",
-    "updated_at": "2025-12-30T17:25:12.498Z",
+    "amount": 250000,
+    "billing_period": "bi_weekly",
+    "start_date": "2025-01-03",
+    "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+    "id": "dc7b5303-ca61-44a7-ba43-4bd5",
+    "created_at": "2025-12-31T15:20:51.625Z",
+    "updated_at": "2025-12-31T15:20:51.625Z",
     "is_active": true
   },
   {
-    "name": "Test Salary",
-    "amount": 500000,
+    "name": "Side Gig",
+    "amount": 50000,
     "billing_period": "monthly",
-    "payment_source_id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
-    "id": "ddec59d7-8484-4c93-afc1-41c9",
-    "created_at": "2025-12-30T17:53:48.586Z",
-    "updated_at": "2025-12-30T17:53:48.586Z",
+    "payment_source_id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+    "id": "67470f89-a9cc-48ef-a723-4c83",
+    "created_at": "2025-12-31T15:20:51.626Z",
+    "updated_at": "2025-12-31T15:20:51.626Z",
     "is_active": true
   }
 ]

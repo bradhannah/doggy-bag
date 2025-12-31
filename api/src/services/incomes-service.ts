@@ -12,8 +12,8 @@ import type {
 export interface IncomesService {
   getAll(): Promise<Income[]>;
   getById(id: string): Promise<Income | null>;
-  create(data: Omit<Income, 'created_at' | 'updated_at' | 'id'>): Promise<Income>;
-  update(id: string, updates: Partial<Omit<Income, 'created_at' | 'updated_at' | 'id'>>): Promise<Income | null>;
+  create(data: Omit<Income, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<Income>;
+  update(id: string, updates: Partial<Omit<Income, 'id' | 'created_at' | 'updated_at'>>): Promise<Income | null>;
   delete(id: string): Promise<void>;
   
   validate(data: Partial<Income>): ValidationResult;
@@ -56,7 +56,7 @@ export class IncomesServiceImpl implements IncomesService {
     }
   }
   
-  public async create(data: Omit<Income, 'created_at' | 'updated_at' | 'id'>): Promise<Income> {
+  public async create(data: Omit<Income, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<Income> {
     try {
       const validation = this.validation.validateIncome(data);
       if (!validation.isValid) {
@@ -84,7 +84,7 @@ export class IncomesServiceImpl implements IncomesService {
     }
   }
   
-  public async update(id: string, updates: Partial<Omit<Income, 'created_at' | 'updated_at' | 'id'>>): Promise<Income | null> {
+  public async update(id: string, updates: Partial<Omit<Income, 'id' | 'created_at' | 'updated_at'>>): Promise<Income | null> {
     try {
       const incomes = await this.getAll();
       const index = incomes.findIndex(income => income.id === id);

@@ -3,8 +3,8 @@
   
   // Stores
   import { paymentSourcesStore, loadPaymentSources, deletePaymentSource } from '../../stores/payment-sources';
-  import { billsStore, loadBills, deleteBill } from '../../stores/bills';
-  import { incomesStore, loadIncomes, deleteIncome } from '../../stores/incomes';
+  import { billsStore, loadBills, deleteBill, activeBillsWithContribution, totalFixedCosts, calculateMonthlyContribution as calculateBillContribution } from '../../stores/bills';
+  import { incomesStore, loadIncomes, deleteIncome, activeIncomesWithContribution, totalMonthlyIncome, calculateMonthlyContribution as calculateIncomeContribution } from '../../stores/incomes';
   import { categoriesStore, loadCategories, deleteCategory } from '../../stores/categories';
   
   // Components
@@ -17,6 +17,7 @@
   import IncomeView from './IncomeView.svelte';
   import CategoryForm from './CategoryForm.svelte';
   import CategoryView from './CategoryView.svelte';
+  import LoadDefaultsButton from '../shared/LoadDefaultsButton.svelte';
   
   // Types
   import type { PaymentSource } from '../../stores/payment-sources';
@@ -207,6 +208,8 @@
       &larr; Dashboard
     </a>
     <h1>Entity Configuration</h1>
+    <div class="header-spacer"></div>
+    <LoadDefaultsButton />
   </header>
 
   <div class="setup-layout">
@@ -289,7 +292,7 @@
               <p class="hint">Add your recurring bills like rent, utilities, subscriptions.</p>
             </div>
           {:else}
-            {#each $billsStore.bills as bill}
+            {#each $activeBillsWithContribution as bill}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div class="entity-card clickable" on:click={() => openViewDrawer(bill)}>
@@ -302,7 +305,7 @@
                 {/if}
                 <div class="card-meta">Paid from: {getPaymentSourceName(bill.payment_source_id)}</div>
                 <div class="card-amount" style="color: #ff6b6b;">
-                  {formatAmount(bill.amount)}
+                  {formatAmount(bill.monthlyContribution)}/mo
                 </div>
                 <div class="card-actions" on:click|stopPropagation>
                   {#if deleteConfirmId === bill.id}
@@ -316,6 +319,11 @@
                 </div>
               </div>
             {/each}
+            <!-- Total Fixed Costs -->
+            <div class="total-row">
+              <span class="total-label">Total Fixed Costs</span>
+              <span class="total-value" style="color: #ff6b6b;">{formatAmount($totalFixedCosts)}/mo</span>
+            </div>
           {/if}
 
         {:else if activeTab === 'incomes'}
@@ -325,7 +333,7 @@
               <p class="hint">Add your salary, freelance income, or other recurring income.</p>
             </div>
           {:else}
-            {#each $incomesStore.incomes as income}
+            {#each $activeIncomesWithContribution as income}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div class="entity-card clickable" on:click={() => openViewDrawer(income)}>
@@ -338,7 +346,7 @@
                 {/if}
                 <div class="card-meta">Deposited to: {getPaymentSourceName(income.payment_source_id)}</div>
                 <div class="card-amount" style="color: #22c55e;">
-                  {formatAmount(income.amount)}
+                  {formatAmount(income.monthlyContribution)}/mo
                 </div>
                 <div class="card-actions" on:click|stopPropagation>
                   {#if deleteConfirmId === income.id}
@@ -352,6 +360,11 @@
                 </div>
               </div>
             {/each}
+            <!-- Total Monthly Income -->
+            <div class="total-row">
+              <span class="total-label">Total Monthly Income</span>
+              <span class="total-value" style="color: #22c55e;">{formatAmount($totalMonthlyIncome)}/mo</span>
+            </div>
           {/if}
 
         {:else if activeTab === 'categories'}
@@ -467,6 +480,10 @@
     margin: 0;
     font-size: 20px;
     font-weight: 600;
+  }
+
+  .header-spacer {
+    flex: 1;
   }
 
   /* Layout */
@@ -613,6 +630,29 @@
   .empty-state .hint {
     font-size: 14px;
     color: #666;
+  }
+
+  /* Total Row */
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #16213e;
+    border-radius: 8px;
+    border: 2px solid #333355;
+    margin-top: 10px;
+  }
+
+  .total-label {
+    font-weight: 600;
+    font-size: 16px;
+    color: #e4e4e7;
+  }
+
+  .total-value {
+    font-size: 22px;
+    font-weight: bold;
   }
 
   /* Buttons */

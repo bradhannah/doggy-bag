@@ -1,38 +1,29 @@
 [
   {
-    "name": "Test",
-    "type": "bank_account",
-    "balance": 150000,
-    "id": "f5113d33-5765-45d4-ab13-dac8414d96e2",
-    "created_at": "2025-12-30T17:05:04.459Z",
-    "updated_at": "2025-12-30T17:05:04.459Z",
-    "is_active": true
-  },
-  {
     "name": "Main Checking",
     "type": "bank_account",
-    "balance": 150000,
-    "id": "822ba72e-6cd1-4fc1-a8af-a4ca807e92e8",
-    "created_at": "2025-12-30T17:09:33.541Z",
-    "updated_at": "2025-12-30T17:09:33.541Z",
+    "balance": 500000,
+    "id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
+    "created_at": "2025-12-31T15:20:51.624Z",
+    "updated_at": "2025-12-31T15:20:51.624Z",
     "is_active": true
   },
   {
-    "name": "Main Checking",
-    "type": "bank_account",
-    "balance": 150000,
-    "id": "3924a797-fe57-4be7-94e7-96fe6be8a848",
-    "created_at": "2025-12-30T17:09:33.553Z",
-    "updated_at": "2025-12-30T17:09:33.553Z",
+    "name": "Credit Card",
+    "type": "credit_card",
+    "balance": -120000,
+    "id": "33554e8b-5a40-48d2-b16b-0dda55685494",
+    "created_at": "2025-12-31T15:20:51.625Z",
+    "updated_at": "2025-12-31T15:20:51.625Z",
     "is_active": true
   },
   {
-    "name": "Test",
-    "type": "bank_account",
-    "balance": 50000,
-    "id": "0fece128-d84a-40e9-ba1e-a0f922bf3ed3",
-    "created_at": "2025-12-30T17:25:12.471Z",
-    "updated_at": "2025-12-30T17:25:12.471Z",
+    "name": "Cash",
+    "type": "cash",
+    "balance": 30000,
+    "id": "b73ecba8-3be0-4a5f-9888-c78628334466",
+    "created_at": "2025-12-31T15:20:51.625Z",
+    "updated_at": "2025-12-31T15:20:51.625Z",
     "is_active": true
   }
 ]

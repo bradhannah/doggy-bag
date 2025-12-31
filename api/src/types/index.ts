@@ -28,6 +28,10 @@ interface Bill {
   amount: number;
   billing_period: BillingPeriod;
   start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
+  // For monthly billing: specify EITHER day_of_month OR (recurrence_week + recurrence_day)
+  day_of_month?: number;      // 1-31 (use 31 for "last day of month")
+  recurrence_week?: number;   // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
+  recurrence_day?: number;    // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   category_id?: string;
   is_active: boolean;
@@ -51,6 +55,10 @@ interface Income {
   amount: number;
   billing_period: BillingPeriod;
   start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
+  // For monthly billing: specify EITHER day_of_month OR (recurrence_week + recurrence_day)
+  day_of_month?: number;      // 1-31 (use 31 for "last day of month")
+  recurrence_week?: number;   // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
+  recurrence_day?: number;    // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   is_active: boolean;
   created_at: string;

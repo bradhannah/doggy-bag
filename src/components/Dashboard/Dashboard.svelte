@@ -3,6 +3,7 @@
   import MonthSelector from './MonthSelector.svelte';
   import LeftoverCard from './LeftoverCard.svelte';
   import SummaryCards from './SummaryCards.svelte';
+  import PaymentSourcesCard from './PaymentSourcesCard.svelte';
   import ExpensesCard from './ExpensesCard.svelte';
   import BillsCard from './BillsCard.svelte';
   import IncomesCard from './IncomesCard.svelte';
@@ -14,6 +15,8 @@
     totalIncome, 
     totalExpenses, 
     netWorth,
+    totalCash,
+    totalCreditDebt,
     billInstances,
     incomeInstances,
     variableExpenses
@@ -60,6 +63,15 @@
       <SummaryCards 
         totalIncome={$totalIncome} 
         totalExpenses={$totalExpenses} 
+        netWorth={$netWorth}
+        loading={$monthlyLoading}
+      />
+    </section>
+    
+    <section class="payment-sources-section">
+      <PaymentSourcesCard
+        totalCash={$totalCash}
+        totalCreditDebt={$totalCreditDebt}
         netWorth={$netWorth}
         loading={$monthlyLoading}
       />

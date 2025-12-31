@@ -78,6 +78,35 @@ export class ValidationServiceImpl implements ValidationService {
       }
     }
     
+    // For monthly billing, require either day_of_month OR (recurrence_week + recurrence_day)
+    if (bill.billing_period === 'monthly') {
+      const hasDayOfMonth = bill.day_of_month !== undefined && bill.day_of_month !== null;
+      const hasWeekdayRecurrence = bill.recurrence_week !== undefined && bill.recurrence_day !== undefined;
+      
+      if (!hasDayOfMonth && !hasWeekdayRecurrence) {
+        errors.push('Monthly bills require either day_of_month OR recurrence_week + recurrence_day');
+      }
+      
+      if (hasDayOfMonth && hasWeekdayRecurrence) {
+        errors.push('Specify either day_of_month OR recurrence_week + recurrence_day, not both');
+      }
+      
+      if (hasDayOfMonth) {
+        if (bill.day_of_month! < 1 || bill.day_of_month! > 31) {
+          errors.push('day_of_month must be between 1 and 31');
+        }
+      }
+      
+      if (hasWeekdayRecurrence) {
+        if (bill.recurrence_week! < 1 || bill.recurrence_week! > 5) {
+          errors.push('recurrence_week must be between 1 and 5 (1st through 5th/last)');
+        }
+        if (bill.recurrence_day! < 0 || bill.recurrence_day! > 6) {
+          errors.push('recurrence_day must be between 0 (Sunday) and 6 (Saturday)');
+        }
+      }
+    }
+    
     if (!bill.payment_source_id) {
       errors.push('Payment source ID is required');
     }
@@ -117,6 +146,35 @@ export class ValidationServiceImpl implements ValidationService {
         errors.push('Start date is required for bi-weekly, weekly, and semi-annual billing periods');
       } else if (!this.validateDate(income.start_date)) {
         errors.push('Start date must be a valid date in YYYY-MM-DD format');
+      }
+    }
+    
+    // For monthly billing, require either day_of_month OR (recurrence_week + recurrence_day)
+    if (income.billing_period === 'monthly') {
+      const hasDayOfMonth = income.day_of_month !== undefined && income.day_of_month !== null;
+      const hasWeekdayRecurrence = income.recurrence_week !== undefined && income.recurrence_day !== undefined;
+      
+      if (!hasDayOfMonth && !hasWeekdayRecurrence) {
+        errors.push('Monthly incomes require either day_of_month OR recurrence_week + recurrence_day');
+      }
+      
+      if (hasDayOfMonth && hasWeekdayRecurrence) {
+        errors.push('Specify either day_of_month OR recurrence_week + recurrence_day, not both');
+      }
+      
+      if (hasDayOfMonth) {
+        if (income.day_of_month! < 1 || income.day_of_month! > 31) {
+          errors.push('day_of_month must be between 1 and 31');
+        }
+      }
+      
+      if (hasWeekdayRecurrence) {
+        if (income.recurrence_week! < 1 || income.recurrence_week! > 5) {
+          errors.push('recurrence_week must be between 1 and 5 (1st through 5th/last)');
+        }
+        if (income.recurrence_day! < 0 || income.recurrence_day! > 6) {
+          errors.push('recurrence_day must be between 0 (Sunday) and 6 (Saturday)');
+        }
       }
     }
     

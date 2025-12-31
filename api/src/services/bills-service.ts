@@ -12,8 +12,8 @@ import type {
 export interface BillsService {
   getAll(): Promise<Bill[]>;
   getById(id: string): Promise<Bill | null>;
-  create(data: Omit<Bill, 'created_at' | 'updated_at' | 'id'>): Promise<Bill>;
-  update(id: string, updates: Partial<Omit<Bill, 'created_at' | 'updated_at' | 'id'>>): Promise<Bill | null>;
+  create(data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<Bill>;
+  update(id: string, updates: Partial<Omit<Bill, 'id' | 'created_at' | 'updated_at'>>): Promise<Bill | null>;
   delete(id: string): Promise<void>;
   
   validate(data: Partial<Bill>): ValidationResult;
@@ -48,7 +48,7 @@ export class BillsServiceImpl implements BillsService {
     }
   }
   
-  public async create(data: Omit<Bill, 'created_at' | 'updated_at' | 'id'>): Promise<Bill> {
+  public async create(data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<Bill> {
     try {
       const validation = this.validation.validateBill(data);
       if (!validation.isValid) {
@@ -76,7 +76,7 @@ export class BillsServiceImpl implements BillsService {
     }
   }
   
-  public async update(id: string, updates: Partial<Omit<Bill, 'created_at' | 'updated_at' | 'id'>>): Promise<Bill | null> {
+  public async update(id: string, updates: Partial<Omit<Bill, 'id' | 'created_at' | 'updated_at'>>): Promise<Bill | null> {
     try {
       const bills = await this.getAll();
       const index = bills.findIndex(bill => bill.id === id);
@@ -125,3 +125,6 @@ function generateId(): string {
     return v.toString(16);
   });
 }
+
+// Singleton instance
+export const billsService = new BillsServiceImpl();

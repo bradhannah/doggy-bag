@@ -186,6 +186,8 @@ export const totalIncome = derived(monthsStore, ($store) => $store.data?.summary
 export const totalExpenses = derived(monthsStore, ($store) => $store.data?.summary?.totalExpenses || 0);
 export const leftover = derived(monthsStore, ($store) => $store.data?.summary?.leftover || 0);
 export const netWorth = derived(monthsStore, ($store) => $store.data?.summary?.netWorth || 0);
+export const totalCash = derived(monthsStore, ($store) => $store.data?.summary?.totalCash || 0);
+export const totalCreditDebt = derived(monthsStore, ($store) => $store.data?.summary?.totalCreditDebt || 0);
 
 // Bill and income instances
 export const billInstances = derived(monthsStore, ($store) => $store.data?.bill_instances || []);
