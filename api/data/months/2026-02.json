@@ -84,6 +84,34 @@
       "is_adhoc": false,
       "created_at": "2025-12-31T16:14:10.219Z",
       "updated_at": "2025-12-31T16:14:10.219Z"
+    },
+    {
+      "id": "f687eee5-69fa-4f31-87c1-351141e372bb",
+      "bill_id": "4fea7170-5c52-4982-ba25",
+      "month": "2026-02",
+      "amount": 15000,
+      "expected_amount": 15000,
+      "payments": [],
+      "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
+      "created_at": "2026-01-01T22:42:37.599Z",
+      "updated_at": "2026-01-01T22:42:37.599Z"
+    },
+    {
+      "id": "d0a8d0a0-11c4-4e28-befc-f19b3a7e4121",
+      "bill_id": "1cea7e8d-a233-48fc-bc81",
+      "month": "2026-02",
+      "amount": 2500,
+      "expected_amount": 2500,
+      "payments": [],
+      "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
+      "created_at": "2026-01-01T22:42:37.599Z",
+      "updated_at": "2026-01-01T22:42:37.599Z"
     }
   ],
   "income_instances": [
@@ -176,5 +204,5 @@
   "free_flowing_expenses": [],
   "bank_balances": {},
   "created_at": "2025-12-31T16:14:10.219Z",
-  "updated_at": "2025-12-31T16:14:10.219Z"
+  "updated_at": "2026-01-01T22:42:37.599Z"
 }
