@@ -73,7 +73,11 @@ import {
   createAddPaymentHandler,
   createUpdatePaymentHandler,
   createDeletePaymentHandler,
-  createGetPaymentsHandler
+  createGetPaymentsHandler,
+  createAddIncomePaymentHandler,
+  createUpdateIncomePaymentHandler,
+  createDeleteIncomePaymentHandler,
+  createGetIncomePaymentsHandler
 } from './handlers/payments.handlers';
 
 import {
@@ -174,6 +178,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   { path: '/api/months/bills', definition: { method: 'PUT', handler: createBillInstanceHandlerPUT(), hasPathParam: true } },
   
   // Income instances
+  { path: '/api/months/incomes/payments', definition: { method: 'GET', handler: createGetIncomePaymentsHandler(), hasPathParam: true } },
+  { path: '/api/months/incomes/payments', definition: { method: 'POST', handler: createAddIncomePaymentHandler(), hasPathParam: true } },
+  { path: '/api/months/incomes/payments', definition: { method: 'PUT', handler: createUpdateIncomePaymentHandler(), hasPathParam: true } },
+  { path: '/api/months/incomes/payments', definition: { method: 'DELETE', handler: createDeleteIncomePaymentHandler(), hasPathParam: true } },
   { path: '/api/months/incomes/reset', definition: { method: 'POST', handler: createIncomeInstanceHandlerReset(), hasPathParam: true } },
   { path: '/api/months/incomes/paid', definition: { method: 'POST', handler: createIncomeInstanceHandlerTogglePaid(), hasPathParam: true } },
   { path: '/api/months/incomes/close', definition: { method: 'POST', handler: createIncomeInstanceHandlerClose(), hasPathParam: true } },

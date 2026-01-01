@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { BillInstanceDetailed } from '../../stores/detailed-month';
+  import { detailedMonth } from '../../stores/detailed-month';
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
   import { apiClient } from '../../lib/api/client';
@@ -39,7 +40,7 @@
   }
   
   // Computed values
-  $: hasTransactions = bill.payments && bill.payments.length > 0;
+  $: hasTransactions = (bill.payments && bill.payments.length > 0) || bill.total_paid > 0;
   $: transactionCount = bill.payments?.length ?? 0;
   $: isClosed = (bill as any).is_closed ?? false;
   $: closedDate = (bill as any).closed_date ?? null;
@@ -65,7 +66,9 @@
       await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
       
       success('Bill paid and closed');
-      dispatch('refresh');
+      // Optimistic update - update totals and close status without re-sorting
+      const newTotalPaid = bill.total_paid + paymentAmount;
+      detailedMonth.updateBillClosedStatus(bill.id, true, newTotalPaid);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to pay bill');
     } finally {
@@ -80,7 +83,8 @@
     try {
       await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
       success('Bill closed');
-      dispatch('refresh');
+      // Optimistic update - close without re-sorting
+      detailedMonth.updateBillClosedStatus(bill.id, true);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close bill');
     } finally {
@@ -95,7 +99,8 @@
     try {
       await apiClient.post(`/api/months/${month}/bills/${bill.id}/reopen`, {});
       success('Bill reopened');
-      dispatch('refresh');
+      // Optimistic update - reopen without re-sorting
+      detailedMonth.updateBillClosedStatus(bill.id, false);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to reopen bill');
     } finally {

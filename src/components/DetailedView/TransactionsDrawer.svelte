@@ -145,7 +145,12 @@
   
   async function deleteTransaction(paymentId: string) {
     try {
-      await payments.removePayment(month, instanceId, paymentId);
+      if (type === 'bill') {
+        await payments.removePayment(month, instanceId, paymentId);
+      } else {
+        // @ts-ignore - removeIncomePayment exists but TypeScript inference doesn't pick it up
+        await payments.removeIncomePayment(month, instanceId, paymentId);
+      }
       success(`${typeLabel} deleted`);
       dispatch('updated');
     } catch (err) {

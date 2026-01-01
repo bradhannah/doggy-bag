@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { IncomeInstanceDetailed } from '../../stores/detailed-month';
+  import { detailedMonth } from '../../stores/detailed-month';
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
   import { apiClient } from '../../lib/api/client';
@@ -40,7 +41,7 @@
   
   // Computed values - use (income as any) to work around potential TS cache issues
   $: payments = (income as any).payments ?? [];
-  $: hasTransactions = payments && payments.length > 0;
+  $: hasTransactions = (payments && payments.length > 0) || totalReceived > 0;
   $: transactionCount = payments?.length ?? 0;
   $: totalReceived = (income as any).total_received ?? 0;
   $: remaining = (income as any).remaining ?? income.expected_amount;
@@ -68,7 +69,9 @@
       await apiClient.post(`/api/months/${month}/incomes/${income.id}/close`, {});
       
       success('Income received and closed');
-      dispatch('refresh');
+      // Optimistic update - update totals and close status without re-sorting
+      const newTotalReceived = totalReceived + receiptAmount;
+      detailedMonth.updateIncomeClosedStatus(income.id, true, newTotalReceived);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to receive income');
     } finally {
@@ -83,7 +86,8 @@
     try {
       await apiClient.post(`/api/months/${month}/incomes/${income.id}/close`, {});
       success('Income closed');
-      dispatch('refresh');
+      // Optimistic update - close without re-sorting
+      detailedMonth.updateIncomeClosedStatus(income.id, true);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close income');
     } finally {
@@ -98,7 +102,8 @@
     try {
       await apiClient.post(`/api/months/${month}/incomes/${income.id}/reopen`, {});
       success('Income reopened');
-      dispatch('refresh');
+      // Optimistic update - reopen without re-sorting
+      detailedMonth.updateIncomeClosedStatus(income.id, false);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to reopen income');
     } finally {

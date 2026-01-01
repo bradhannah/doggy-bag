@@ -239,13 +239,20 @@
       "month": "2025-12",
       "amount": 0,
       "expected_amount": 0,
-      "payments": [],
-      "is_default": true,
+      "payments": [
+        {
+          "id": "51d16893-0501-4f94-89e7-9b59c40e210e",
+          "amount": 7500,
+          "date": "2026-01-01",
+          "created_at": "2026-01-01T20:15:42.518Z"
+        }
+      ],
+      "is_default": false,
       "is_paid": false,
       "is_closed": false,
       "is_adhoc": false,
       "created_at": "2025-12-31T15:29:16.561Z",
-      "updated_at": "2026-01-01T19:13:22.841Z"
+      "updated_at": "2026-01-01T20:15:48.868Z"
     },
     {
       "id": "ecdcd0d7-93bf-4149-95d3-702f668c8e73",
@@ -319,5 +326,5 @@
   "free_flowing_expenses": [],
   "bank_balances": {},
   "created_at": "2025-12-30T18:08:31.732Z",
-  "updated_at": "2026-01-01T19:13:22.841Z"
+  "updated_at": "2026-01-01T20:15:48.868Z"
 }

@@ -198,6 +198,14 @@
             </svg>
           {/if}
         </button>
+        <!-- Refresh button -->
+        <button class="refresh-toggle" on:click={refreshData} title="Refresh data">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <polyline points="23 4 23 10 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="1 20 1 14 7 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         {#if $detailedMonthData.leftoverBreakdown.hasActuals}
           <div class="leftover-display" class:negative={leftoverClass === 'negative'}>
             <span class="leftover-label">Leftover</span>
@@ -361,7 +369,8 @@
   }
   
   .compact-toggle,
-  .width-toggle {
+  .width-toggle,
+  .refresh-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -376,7 +385,8 @@
   }
   
   .compact-toggle:hover,
-  .width-toggle:hover {
+  .width-toggle:hover,
+  .refresh-toggle:hover {
     background: rgba(36, 200, 219, 0.1);
     border-color: #24c8db;
     color: #24c8db;

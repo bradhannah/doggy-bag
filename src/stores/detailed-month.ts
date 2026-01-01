@@ -287,7 +287,8 @@ function createDetailedMonthStore() {
     },
 
     // Optimistic update for bill close/reopen
-    updateBillClosedStatus(instanceId: string, isClosed: boolean): void {
+    // When totalPaid is provided (e.g., from Pay Full), also update payment totals
+    updateBillClosedStatus(instanceId: string, isClosed: boolean, totalPaid?: number): void {
       update(state => {
         if (!state.data) return state;
         
@@ -297,19 +298,27 @@ function createDetailedMonthStore() {
           const billItems = section.items as BillInstanceDetailed[];
           const newItems = billItems.map(item => {
             if (item.id === instanceId) {
+              const newTotalPaid = totalPaid !== undefined ? totalPaid : item.total_paid;
               return {
                 ...item,
                 is_closed: isClosed,
                 is_paid: isClosed,
-                closed_date: isClosed ? today : null
+                closed_date: isClosed ? today : null,
+                total_paid: newTotalPaid,
+                remaining: Math.max(0, item.expected_amount - newTotalPaid)
               };
             }
             return item;
           });
           
+          // Recalculate subtotal
+          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+          const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
+          
           return {
             ...section,
-            items: newItems
+            items: newItems,
+            subtotal: { expected, actual }
           };
         });
         
@@ -324,7 +333,8 @@ function createDetailedMonthStore() {
     },
 
     // Optimistic update for income close/reopen
-    updateIncomeClosedStatus(instanceId: string, isClosed: boolean): void {
+    // When totalReceived is provided (e.g., from Receive Full), also update payment totals
+    updateIncomeClosedStatus(instanceId: string, isClosed: boolean, totalReceived?: number): void {
       update(state => {
         if (!state.data) return state;
         
@@ -334,19 +344,27 @@ function createDetailedMonthStore() {
           const incomeItems = section.items as IncomeInstanceDetailed[];
           const newItems = incomeItems.map(item => {
             if (item.id === instanceId) {
+              const newTotalReceived = totalReceived !== undefined ? totalReceived : item.total_received;
               return {
                 ...item,
                 is_closed: isClosed,
                 is_paid: isClosed,
-                closed_date: isClosed ? today : null
+                closed_date: isClosed ? today : null,
+                total_received: newTotalReceived,
+                remaining: Math.max(0, item.expected_amount - newTotalReceived)
               };
             }
             return item;
           });
           
+          // Recalculate subtotal
+          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+          const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
+          
           return {
             ...section,
-            items: newItems
+            items: newItems,
+            subtotal: { expected, actual }
           };
         });
         
