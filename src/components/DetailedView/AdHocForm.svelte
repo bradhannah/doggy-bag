@@ -7,6 +7,7 @@
   export let open = false;
   export let month: string;
   export let type: 'bill' | 'income' = 'bill';
+  export let defaultCategoryId: string = '';
   
   const dispatch = createEventDispatcher();
   
@@ -22,6 +23,11 @@
     const catType = (c as any).type;
     return catType === type || c.name === 'Ad-hoc';
   });
+  
+  // Set default category when form opens
+  $: if (open && defaultCategoryId && categoryId === '') {
+    categoryId = defaultCategoryId;
+  }
   
   onMount(async () => {
     if ($categories.length === 0) {
@@ -43,7 +49,7 @@
   function resetForm() {
     name = '';
     amount = '';
-    categoryId = '';
+    categoryId = defaultCategoryId || '';
     error = '';
   }
   

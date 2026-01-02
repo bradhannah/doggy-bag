@@ -107,6 +107,7 @@
   bind:open={showAdHocForm}
   {month}
   type={type === 'bills' ? 'bill' : 'income'}
+  defaultCategoryId={section.category.id}
   on:created={handleAdHocCreated}
   on:close={() => showAdHocForm = false}
 />

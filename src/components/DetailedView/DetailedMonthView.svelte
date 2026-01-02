@@ -306,9 +306,9 @@
             </div>
             
             {#if $detailedMonthData.billSections.length === 0}
-              <p class="empty-text">No bills for this month.</p>
+              <p class="empty-text">No bill categories. Add categories in Setup.</p>
             {:else}
-              {#each $detailedMonthData.billSections.filter(s => s.items.length > 0) as section (section.category.id)}
+              {#each $detailedMonthData.billSections as section (section.category.id)}
                 <CategorySection {section} type="bills" {month} {compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleBillPaid} on:refresh={refreshData} />
               {/each}
             {/if}
@@ -331,9 +331,9 @@
             </div>
             
             {#if $detailedMonthData.incomeSections.length === 0}
-              <p class="empty-text">No income for this month.</p>
+              <p class="empty-text">No income categories. Add categories in Setup.</p>
             {:else}
-              {#each $detailedMonthData.incomeSections.filter(s => s.items.length > 0) as section (section.category.id)}
+              {#each $detailedMonthData.incomeSections as section (section.category.id)}
                 <CategorySection {section} type="income" {month} {compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleIncomePaid} on:refresh={refreshData} />
               {/each}
             {/if}

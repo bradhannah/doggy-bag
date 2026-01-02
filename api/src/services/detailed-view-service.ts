@@ -281,7 +281,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     
     for (const category of sortedCategories) {
       const items = categoryInstancesMap.get(category.id) || [];
-      if (items.length === 0) continue; // Skip empty categories
+      // Include empty categories so users can add ad-hoc items to them
       
       // Sort items within category
       const sortedItems = this.sortBillInstances(items);
@@ -365,7 +365,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     
     for (const category of sortedCategories) {
       const items = categoryInstancesMap.get(category.id) || [];
-      if (items.length === 0) continue; // Skip empty categories
+      // Include empty categories so users can add ad-hoc items to them
       
       // Sort items within category
       const sortedItems = this.sortIncomeInstances(items);
