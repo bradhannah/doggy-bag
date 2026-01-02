@@ -405,47 +405,15 @@
           <div class="category-orderers">
             <CategoryOrderer 
               categories={$billCategories} 
-              type="bill" 
+              type="bill"
+              on:edit={(e) => openEditDrawer(e.detail.category)}
             />
             <CategoryOrderer 
               categories={$incomeCategories} 
-              type="income" 
+              type="income"
+              on:edit={(e) => openEditDrawer(e.detail.category)}
             />
           </div>
-          
-          <div class="categories-divider"></div>
-          
-          <!-- Category list for add/edit/delete -->
-          <h3 class="section-subtitle">Manage Categories</h3>
-          {#if $categoriesStore.categories.length === 0}
-            <div class="empty-state">
-              <p>No categories yet.</p>
-              <p class="hint">Add custom categories for your expenses.</p>
-            </div>
-          {:else}
-            {#each $categoriesStore.categories as category}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <div class="entity-card clickable" on:click={() => openViewDrawer(category)}>
-                <div class="card-header">
-                  <span class="card-name">{category.name}</span>
-                  {#if category.is_predefined}
-                    <span class="card-badge predefined">Predefined</span>
-                  {:else}
-                    <span class="card-badge">Custom</span>
-                  {/if}
-                </div>
-                <div class="card-actions" on:click|stopPropagation>
-                  {#if category.is_predefined}
-                    <span class="card-meta">Cannot modify predefined categories</span>
-                  {:else}
-                    <button class="btn-small btn-secondary" on:click={() => openEditDrawer(category)}>Edit</button>
-                    <button class="btn-small btn-danger" on:click={() => confirmDelete({ id: category.id, name: category.name })}>Delete</button>
-                  {/if}
-                </div>
-              </div>
-            {/each}
-          {/if}
 
         {:else if activeTab === 'expense-templates'}
           {#if $variableExpenseTemplatesStore.templates.length === 0}
@@ -695,7 +663,7 @@
     border-radius: 4px;
   }
 
-  .card-badge.predefined {
+  .card-badge.inactive {
     color: #888;
     background: rgba(136, 136, 136, 0.1);
   }
@@ -738,19 +706,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 24px;
     margin-bottom: 24px;
-  }
-
-  .categories-divider {
-    height: 1px;
-    background: #333355;
-    margin: 24px 0;
-  }
-
-  .section-subtitle {
-    margin: 0 0 16px 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #888;
   }
 
   /* Total Row */

@@ -2,13 +2,16 @@
   import { createEventDispatcher } from 'svelte';
   import { dndzone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import type { Category, CategoryType } from '../../stores/categories';
-  import { reorderCategories, updateCategory } from '../../stores/categories';
+  import { reorderCategories, updateCategory, deleteCategory } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
   
   export let categories: Category[] = [];
   export let type: CategoryType;
   
   const dispatch = createEventDispatcher();
+  
+  // Delete confirmation state
+  let confirmingDeleteId: string | null = null;
   const flipDurationMs = 200;
   
   // Local display order - synced with prop but can be updated optimistically
@@ -81,6 +84,30 @@
       showError(message);
     }
   }
+  
+  function handleEdit(cat: Category) {
+    dispatch('edit', { category: cat });
+  }
+  
+  function startDelete(catId: string) {
+    confirmingDeleteId = catId;
+  }
+  
+  function cancelDelete() {
+    confirmingDeleteId = null;
+  }
+  
+  async function confirmDeleteCategory(cat: Category) {
+    try {
+      await deleteCategory(cat.id);
+      success(`Deleted "${cat.name}"`);
+      confirmingDeleteId = null;
+      dispatch('deleted', { id: cat.id });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete category';
+      showError(message);
+    }
+  }
 </script>
 
 <div class="category-orderer">
@@ -128,6 +155,39 @@
           {#if cat.is_predefined}
             <span class="predefined-badge">default</span>
           {/if}
+          
+          <!-- Action buttons -->
+          <div class="item-actions" on:click|stopPropagation>
+            {#if confirmingDeleteId === cat.id}
+              <span class="confirm-text">Delete?</span>
+              <button class="btn-icon btn-confirm" on:click={() => confirmDeleteCategory(cat)} title="Confirm delete">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </button>
+              <button class="btn-icon btn-cancel" on:click={cancelDelete} title="Cancel">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            {:else}
+              <button class="btn-icon btn-edit" on:click={() => handleEdit(cat)} title="Edit category">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              {#if !cat.is_predefined}
+                <button class="btn-icon btn-delete" on:click={() => startDelete(cat.id)} title="Delete category">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              {/if}
+            {/if}
+          </div>
         </li>
       {/each}
     </ul>
@@ -228,6 +288,75 @@
     padding: 2px 6px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
+  }
+  
+  .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  
+  .category-item:hover .item-actions {
+    opacity: 1;
+  }
+  
+  .confirm-text {
+    font-size: 0.7rem;
+    color: #ef4444;
+    margin-right: 4px;
+  }
+  
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  
+  .btn-edit {
+    color: #888;
+  }
+  
+  .btn-edit:hover {
+    background: rgba(36, 200, 219, 0.15);
+    color: #24c8db;
+  }
+  
+  .btn-delete {
+    color: #888;
+  }
+  
+  .btn-delete:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+  
+  .btn-confirm {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+  
+  .btn-confirm:hover {
+    background: rgba(34, 197, 94, 0.2);
+  }
+  
+  .btn-cancel {
+    color: #888;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e4e4e7;
   }
   
   .hint {
