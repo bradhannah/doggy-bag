@@ -7,15 +7,18 @@
    * @prop onCancel - Callback to close form without saving
    */
   import { createCategory, updateCategory } from '../../stores/categories';
-  import type { Category } from '../../stores/categories';
+  import type { Category, CategoryType } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
 
   export let editingItem: Category | null = null;
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
+  export let defaultType: CategoryType = 'bill'; // Default type when creating new
 
   // Form state
   let name = editingItem?.name || '';
+  let type: CategoryType = editingItem?.type || defaultType;
+  let color = editingItem?.color || '#24c8db';
   let error = '';
   let saving = false;
 
@@ -25,6 +28,8 @@
   // Reset form when editingItem changes
   $: if (editingItem) {
     name = editingItem.name;
+    type = editingItem.type;
+    color = editingItem.color || '#24c8db';
   }
 
   async function handleSubmit() {
@@ -45,10 +50,10 @@
 
     try {
       if (editingItem) {
-        await updateCategory(editingItem.id, { name });
+        await updateCategory(editingItem.id, { name, type, color });
         success('Category updated');
       } else {
-        await createCategory({ name });
+        await createCategory({ name, type, color });
         success('Category created');
       }
       onSave();
@@ -83,6 +88,38 @@
       required
       disabled={saving || isPredefined}
     />
+  </div>
+
+  <div class="form-group">
+    <label for="cat-type">Category Type</label>
+    <select 
+      id="cat-type" 
+      bind:value={type} 
+      disabled={saving || isPredefined || !!editingItem}
+    >
+      <option value="bill">Bill Category</option>
+      <option value="income">Income Category</option>
+    </select>
+    <div class="help-text">
+      {type === 'bill' ? 'Used to organize expenses in the monthly view' : 'Used to organize income sources in the monthly view'}
+    </div>
+    {#if editingItem}
+      <div class="help-text warning">Category type cannot be changed after creation</div>
+    {/if}
+  </div>
+
+  <div class="form-group">
+    <label for="cat-color">Color</label>
+    <div class="color-input-wrapper">
+      <input
+        id="cat-color"
+        type="color"
+        bind:value={color}
+        disabled={saving || isPredefined}
+      />
+      <span class="color-preview" style="background-color: {color}">{color}</span>
+    </div>
+    <div class="help-text">Used for the category header accent color</div>
   </div>
 
   <div class="form-actions">
@@ -131,7 +168,7 @@
     color: #e4e4e7;
   }
 
-  input {
+  input, select {
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #333355;
@@ -140,14 +177,46 @@
     font-size: 15px;
   }
 
-  input:focus {
+  input:focus, select:focus {
     outline: none;
     border-color: #24c8db;
   }
 
-  input:disabled {
+  input:disabled, select:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .help-text {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  .help-text.warning {
+    color: #f59e0b;
+  }
+
+  .color-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  input[type="color"] {
+    width: 50px;
+    height: 40px;
+    padding: 2px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .color-preview {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #fff;
+    font-family: monospace;
   }
 
   .form-actions {

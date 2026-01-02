@@ -8,13 +8,19 @@
    */
   import { createIncome, updateIncome } from '../../stores/incomes';
   import { paymentSourcesStore } from '../../stores/payment-sources';
-  import { incomeCategories } from '../../stores/categories';
+  import { incomeCategories, loadCategories } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
   import type { Income, IncomeData } from '../../stores/incomes';
+  import { onMount } from 'svelte';
 
   export let editingItem: Income | null = null;
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
+
+  // Load categories on mount
+  onMount(() => {
+    loadCategories();
+  });
 
   // Form state - amount is stored in dollars for user input
   let name = editingItem?.name || '';
