@@ -5,6 +5,12 @@
 
 import { serve } from 'bun';
 import { routes } from './src/routes';
+import { StorageServiceImpl } from './src/services/storage';
+
+// Initialize storage service with DATA_DIR from environment or default
+// In production, Tauri passes DATA_DIR when spawning the sidecar
+// In development, it defaults to './data' (project-relative)
+StorageServiceImpl.initialize();
 
 // Logging utility with timestamps
 function log(level: 'INFO' | 'ERROR' | 'WARN' | 'DEBUG', message: string, ...args: unknown[]) {
@@ -314,6 +320,10 @@ const server = serve({
   }
 });
 
+// Log startup info
+const storageConfig = StorageServiceImpl.getConfig();
 log('INFO', `Bun backend server running on http://localhost:${PORT}`);
 log('INFO', `Health check: http://localhost:${PORT}/health`);
 log('INFO', `Registered ${routes.length} routes`);
+log('INFO', `Data directory: ${storageConfig.basePath}`);
+log('INFO', `Mode: ${storageConfig.isDevelopment ? 'development' : 'production'}`);

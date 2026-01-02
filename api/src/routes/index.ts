@@ -115,6 +115,13 @@ import {
   createVariableExpenseTemplatesHandlerDELETE
 } from './handlers/variable-expense-templates.handlers';
 
+import {
+  getSettings,
+  getDataDirectory,
+  validateDirectory,
+  migrateData
+} from './handlers/settings';
+
 // Route definition type
 interface RouteDefinition {
   method: string;
@@ -141,6 +148,12 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   { path: '/api/backup', definition: { method: 'GET', handler: createBackupHandlerGET() } },
   { path: '/api/backup', definition: { method: 'POST', handler: createBackupHandlerPOST() } },
   { path: '/api/backup/validate', definition: { method: 'POST', handler: createBackupHandlerValidate() } },
+  
+  // Settings
+  { path: '/api/settings', definition: { method: 'GET', handler: getSettings } },
+  { path: '/api/settings/data-directory', definition: { method: 'GET', handler: getDataDirectory } },
+  { path: '/api/settings/validate-directory', definition: { method: 'POST', handler: validateDirectory } },
+  { path: '/api/settings/migrate-data', definition: { method: 'POST', handler: migrateData } },
   
   // Categories
   { path: '/api/categories', definition: { method: 'GET', handler: createCategoriesHandlerGET() } },

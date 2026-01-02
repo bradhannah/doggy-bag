@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2025-12-30
 ## Active Technologies
 - TypeScript (strict mode), Svelte 4.x, Bun 1.x + Svelte, Tauri, Bun HTTP server, existing API routes (002-detailed-monthly-view)
 - Local JSON files (data/entities/, data/months/) (002-detailed-monthly-view)
+- TypeScript (strict mode), Rust (Tauri) + Bun 1.x, Svelte 4.x, Tauri 2.x, tauri-plugin-store, tauri-plugin-dialog, tauri-plugin-fs (003-configurable-data-storage)
+- JSON files in user-configurable directory (003-configurable-data-storage)
 
 - (001-monthly-budget)
 
@@ -28,10 +30,10 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 003-configurable-data-storage: Added TypeScript (strict mode), Rust (Tauri) + Bun 1.x, Svelte 4.x, Tauri 2.x, tauri-plugin-store, tauri-plugin-dialog, tauri-plugin-fs
 - 002-detailed-monthly-view: Added TypeScript (strict mode), Svelte 4.x, Bun 1.x + Svelte, Tauri, Bun HTTP server, existing API routes
 
 - 001-monthly-budget: Added
-- 002: OpenAPI type coordination (tsoa, openapi-typescript, openapi-fetch)
 
 <!-- MANUAL ADDITIONS START -->
   - Backend types (api/src/types/index.ts)

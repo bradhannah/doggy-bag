@@ -1,7 +1,22 @@
-import { readFile, writeFile, unlink, access, mkdir, readdir } from 'node:fs/promises';
+import { readFile, writeFile, unlink, access, mkdir, readdir, copyFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { join, dirname } from 'node:path';
 
-const ENTITIES_DIR = 'data/entities';
+// Storage configuration
+interface StorageConfig {
+  basePath: string;
+  entitiesDir: string;
+  monthsDir: string;
+  isDevelopment: boolean;
+}
+
+// Default configuration (development mode)
+let config: StorageConfig = {
+  basePath: 'data',
+  entitiesDir: 'data/entities',
+  monthsDir: 'data/months',
+  isDevelopment: true
+};
 
 export interface StorageService {
   readFile<T>(path: string): Promise<T | null>;
@@ -12,10 +27,35 @@ export interface StorageService {
   listFiles(path: string): Promise<string[]>;
   readJSON<T>(path: string): Promise<T | null>;
   writeJSON<T>(path: string, data: T): Promise<void>;
+  copyFile(src: string, dest: string): Promise<void>;
+  getConfig(): StorageConfig;
 }
 
 export class StorageServiceImpl implements StorageService {
   private static instance: StorageServiceImpl | null = null;
+  
+  /**
+   * Initialize the storage service with a base path.
+   * Must be called before getInstance() in production.
+   * In development, defaults to './data'.
+   */
+  public static initialize(basePath?: string): void {
+    const resolvedBasePath = basePath || process.env.DATA_DIR || 'data';
+    const isDevelopment = !process.env.DATA_DIR;
+    
+    config = {
+      basePath: resolvedBasePath,
+      entitiesDir: join(resolvedBasePath, 'entities'),
+      monthsDir: join(resolvedBasePath, 'months'),
+      isDevelopment
+    };
+    
+    console.log(`[StorageService] Initialized with base path: ${resolvedBasePath}`);
+    console.log(`[StorageService] Mode: ${isDevelopment ? 'development' : 'production'}`);
+    
+    // Reset instance to use new config
+    StorageServiceImpl.instance = null;
+  }
   
   public static getInstance(): StorageService {
     if (!StorageServiceImpl.instance) {
@@ -24,44 +64,80 @@ export class StorageServiceImpl implements StorageService {
     return StorageServiceImpl.instance;
   }
   
-  constructor() {
-    this.initialize();
+  /**
+   * Get the current storage configuration.
+   */
+  public static getConfig(): StorageConfig {
+    return { ...config };
   }
   
-  private async initialize() {
-    await this.ensureDirectory(ENTITIES_DIR);
-    await this.ensureDirectory('data/months');
+  constructor() {
+    this.initializeDirectories();
+  }
+  
+  private async initializeDirectories() {
+    await this.ensureDirectory(config.entitiesDir);
+    await this.ensureDirectory(config.monthsDir);
+  }
+  
+  /**
+   * Resolve a relative path to an absolute path based on the configured base path.
+   * If the path already starts with the base path, it's returned as-is.
+   * If the path starts with 'data/', it's resolved relative to the base path.
+   */
+  private resolvePath(path: string): string {
+    // If path is already absolute or starts with base path, use as-is
+    if (path.startsWith('/') || path.startsWith(config.basePath)) {
+      return path;
+    }
+    
+    // Handle legacy 'data/...' paths - resolve relative to base path
+    if (path.startsWith('data/')) {
+      const relativePath = path.slice(5); // Remove 'data/' prefix
+      return join(config.basePath, relativePath);
+    }
+    
+    // Otherwise, resolve relative to base path
+    return join(config.basePath, path);
+  }
+  
+  public getConfig(): StorageConfig {
+    return StorageServiceImpl.getConfig();
   }
   
   public async readFile<T>(path: string): Promise<T | null> {
+    const resolvedPath = this.resolvePath(path);
     try {
-      const content = await readFile(path, 'utf-8');
+      const content = await readFile(resolvedPath, 'utf-8');
       return JSON.parse(content) as T;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[StorageService] Failed to read file ${path}:`, errorMessage);
+      console.error(`[StorageService] Failed to read file ${resolvedPath}:`, errorMessage);
       return null;
     }
   }
   
   public async writeFile<T>(path: string, data: T): Promise<void> {
-    await this.ensureDirectory(path.split('/').slice(0, -1).join('/'));
+    const resolvedPath = this.resolvePath(path);
+    await this.ensureDirectory(dirname(resolvedPath));
     const content = JSON.stringify(data, null, 2);
-    await writeFile(path, content, 'utf-8');
+    await writeFile(resolvedPath, content, 'utf-8');
   }
   
   public async deleteFile(path: string): Promise<void> {
+    const resolvedPath = this.resolvePath(path);
     try {
-      await unlink(path);
+      await unlink(resolvedPath);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[StorageService] Failed to delete file ${path}:`, errorMessage);
+      console.error(`[StorageService] Failed to delete file ${resolvedPath}:`, errorMessage);
     }
   }
   
   public async fileExists(path: string): Promise<boolean> {
+    const resolvedPath = this.resolvePath(path);
     try {
-      await access(path, constants.F_OK);
+      await access(resolvedPath, constants.F_OK);
       return true;
     } catch {
       return false;
@@ -69,23 +145,25 @@ export class StorageServiceImpl implements StorageService {
   }
   
   public async ensureDirectory(path: string): Promise<void> {
+    const resolvedPath = this.resolvePath(path);
     try {
-      await mkdir(path, { recursive: true });
+      await mkdir(resolvedPath, { recursive: true });
     } catch (error) {
       if (error instanceof Error && 'code' in error && (error as any).code !== 'EEXIST') {
         const errorMessage = error.message;
-        console.error(`[StorageService] Failed to create directory ${path}:`, errorMessage);
+        console.error(`[StorageService] Failed to create directory ${resolvedPath}:`, errorMessage);
       }
     }
   }
   
   public async listFiles(path: string): Promise<string[]> {
+    const resolvedPath = this.resolvePath(path);
     try {
-      const entries = await readdir(path, { withFileTypes: true });
+      const entries = await readdir(resolvedPath, { withFileTypes: true });
       return entries.filter(entry => entry.isFile()).map(entry => entry.name);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[StorageService] Failed to list files in ${path}:`, errorMessage);
+      console.error(`[StorageService] Failed to list files in ${resolvedPath}:`, errorMessage);
       return [];
     }
   }
@@ -97,5 +175,12 @@ export class StorageServiceImpl implements StorageService {
   
   public async writeJSON<T>(path: string, data: T): Promise<void> {
     await this.writeFile(path, data);
+  }
+  
+  public async copyFile(src: string, dest: string): Promise<void> {
+    const resolvedSrc = this.resolvePath(src);
+    const resolvedDest = this.resolvePath(dest);
+    await this.ensureDirectory(dirname(resolvedDest));
+    await copyFile(resolvedSrc, resolvedDest);
   }
 }
