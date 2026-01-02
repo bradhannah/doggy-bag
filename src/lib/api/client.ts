@@ -9,6 +9,9 @@ export const getBaseUrl = () => {
 export const apiUrl = (path: string) => `${getBaseUrl()}${path}`;
 
 export const apiClient = {
+  // Expose getBaseUrl for components that need to construct their own URLs
+  getBaseUrl,
+  
   async get(path: string) {
     const response = await fetch(apiUrl(path));
     if (!response.ok) {
@@ -68,6 +71,28 @@ export const apiClient = {
     });
     if (!response.ok && response.status !== 204) {
       throw new Error(`DELETE ${path}/${id} failed: ${response.statusText}`);
+    }
+    return null;
+  },
+
+  // Generic DELETE for paths that don't follow the /{id} pattern
+  async deletePath(path: string) {
+    console.log('[apiClient] DELETE:', apiUrl(path));
+    const response = await fetch(apiUrl(path), {
+      method: 'DELETE'
+    });
+    console.log('[apiClient] DELETE response:', response.status);
+    if (!response.ok && response.status !== 204) {
+      const errorBody = await response.text();
+      console.error('[apiClient] DELETE error body:', errorBody);
+      let errorMsg = `DELETE ${path} failed: ${response.statusText}`;
+      try {
+        const error = JSON.parse(errorBody);
+        errorMsg = error.message || error.error || errorMsg;
+      } catch {
+        // Use raw error body if not JSON
+      }
+      throw new Error(errorMsg);
     }
     return null;
   }

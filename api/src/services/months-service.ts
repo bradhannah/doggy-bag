@@ -139,20 +139,16 @@ export class MonthsServiceImpl implements MonthsService {
   
   public async getAllMonths(): Promise<MonthSummary[]> {
     try {
-      const monthsDir = 'data/months';
-      const files = await Bun.file(monthsDir).exists() ? [] : [];
-      
-      // Read the months directory
-      const dir = await import('node:fs/promises');
-      const entries = await dir.readdir(monthsDir);
+      // Use storage service to list files (respects DATA_DIR)
+      const files = await this.storage.listFiles('data/months');
       
       const summaries: MonthSummary[] = [];
       
-      for (const entry of entries) {
+      for (const file of files) {
         // Skip non-JSON files and .gitkeep
-        if (!entry.endsWith('.json') || entry === '.gitkeep') continue;
+        if (!file.endsWith('.json') || file === '.gitkeep') continue;
         
-        const month = entry.replace('.json', '');
+        const month = file.replace('.json', '');
         const data = await this.getMonthlyData(month);
         
         if (data) {
@@ -860,8 +856,7 @@ export class MonthsServiceImpl implements MonthsService {
   
   public async monthExists(month: string): Promise<boolean> {
     try {
-      const file = Bun.file(`data/months/${month}.json`);
-      return await file.exists();
+      return await this.storage.fileExists(`data/months/${month}.json`);
     } catch (error) {
       console.error('[MonthsService] Failed to check month exists:', error);
       return false;
@@ -1013,9 +1008,8 @@ export class MonthsServiceImpl implements MonthsService {
         throw new Error(`Month ${month} is read-only. Unlock it before deleting.`);
       }
       
-      // Delete the file
-      const fs = await import('node:fs/promises');
-      await fs.unlink(`data/months/${month}.json`);
+      // Delete the file using storage service
+      await this.storage.deleteFile(`data/months/${month}.json`);
       
       console.log(`[MonthsService] Deleted month ${month}`);
     } catch (error) {

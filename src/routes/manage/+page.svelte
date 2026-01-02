@@ -121,15 +121,13 @@
     confirmMessage = `Delete ${formatMonth(month.month)}? All bills, incomes, expenses, and payment records for this month will be permanently deleted. This cannot be undone.`;
     confirmAction = async () => {
       try {
-        // Use fetch directly since apiClient.delete expects (path, id) format
-        const response = await fetch(`/api/months/${month.month}`, { method: 'DELETE' });
-        if (!response.ok && response.status !== 204) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.message || error.error || 'Delete failed');
-        }
+        console.log('[ManageMonths] Deleting month:', month.month);
+        await apiClient.deletePath(`/api/months/${month.month}`);
+        console.log('[ManageMonths] Delete successful');
         addToast(`Deleted ${formatMonth(month.month)}`, 'success');
         await loadMonths();
       } catch (e) {
+        console.error('[ManageMonths] Delete error:', e);
         const msg = e instanceof Error ? e.message : 'Failed to delete month';
         addToast(msg, 'error');
       }
