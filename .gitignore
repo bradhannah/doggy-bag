@@ -11,3 +11,6 @@ vite.config.ts.timestamp-*
 
 # Development logs
 /logs/
+
+# Legacy API data location (now consolidated to ./data/)
+api/data/

@@ -392,6 +392,323 @@ const incomes: Income[] = [
 ];
 
 // ============================================================================
+// Month Data Generation Types
+// ============================================================================
+
+interface Payment {
+  id: string;
+  amount: number;
+  payment_date: string;
+  payment_source_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Occurrence {
+  id: string;
+  sequence: number;
+  expected_date: string;
+  expected_amount: number;
+  is_closed: boolean;
+  payments: Payment[];
+  is_adhoc: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BillInstance {
+  id: string;
+  bill_id: string;
+  month: string;
+  billing_period: BillingPeriod;
+  amount: number;
+  expected_amount: number;
+  payments: Payment[];
+  occurrences: Occurrence[];
+  is_default: boolean;
+  is_paid: boolean;
+  is_closed: boolean;
+  is_adhoc: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IncomeInstance {
+  id: string;
+  income_id: string;
+  month: string;
+  billing_period: BillingPeriod;
+  amount: number;
+  expected_amount: number;
+  payments: Payment[];
+  occurrences: Occurrence[];
+  is_default: boolean;
+  is_paid: boolean;
+  is_closed: boolean;
+  is_adhoc: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface VariableExpense {
+  id: string;
+  name: string;
+  amount: number;
+  payment_source_id: string;
+  month: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MonthData {
+  month: string;
+  bill_instances: BillInstance[];
+  income_instances: IncomeInstance[];
+  variable_expenses: VariableExpense[];
+  free_flowing_expenses: unknown[];
+  bank_balances: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
+// Month Data Generation Helpers
+// ============================================================================
+
+function formatDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function getBiWeeklyDatesInMonth(startDate: string, year: number, month: number): string[] {
+  const dates: string[] = [];
+  const start = new Date(startDate);
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 0);
+  
+  // Find occurrences in this month
+  let current = new Date(start);
+  while (current <= monthEnd) {
+    if (current >= monthStart && current <= monthEnd) {
+      dates.push(formatDate(current.getFullYear(), current.getMonth() + 1, current.getDate()));
+    }
+    current.setDate(current.getDate() + 14);
+  }
+  
+  // Also check backwards from start date
+  current = new Date(start);
+  current.setDate(current.getDate() - 14);
+  while (current >= monthStart) {
+    if (current >= monthStart && current <= monthEnd) {
+      dates.unshift(formatDate(current.getFullYear(), current.getMonth() + 1, current.getDate()));
+    }
+    current.setDate(current.getDate() - 14);
+  }
+  
+  return dates;
+}
+
+function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean): BillInstance {
+  const [year, month] = monthStr.split('-').map(Number);
+  const daysInMonth = getDaysInMonth(year, month);
+  
+  let occurrences: Occurrence[] = [];
+  
+  if (bill.billing_period === 'monthly') {
+    const day = Math.min(bill.day_of_month || 1, daysInMonth);
+    const expectedDate = formatDate(year, month, day);
+    const isPaid = isPastMonth || (bill.day_of_month || 1) < 15; // Past months all paid, current month paid if early
+    
+    const payments: Payment[] = isPaid ? [{
+      id: randomUUID(),
+      amount: bill.amount,
+      payment_date: expectedDate,
+      payment_source_id: bill.payment_source_id,
+      created_at: now,
+      updated_at: now
+    }] : [];
+    
+    occurrences.push({
+      id: randomUUID(),
+      sequence: 1,
+      expected_date: expectedDate,
+      expected_amount: bill.amount,
+      is_closed: isPaid,
+      payments,
+      is_adhoc: false,
+      created_at: now,
+      updated_at: now
+    });
+  } else if (bill.billing_period === 'bi_weekly' && bill.start_date) {
+    const dates = getBiWeeklyDatesInMonth(bill.start_date, year, month);
+    occurrences = dates.map((date, idx) => {
+      const isPaid = isPastMonth;
+      const payments: Payment[] = isPaid ? [{
+        id: randomUUID(),
+        amount: bill.amount,
+        payment_date: date,
+        payment_source_id: bill.payment_source_id,
+        created_at: now,
+        updated_at: now
+      }] : [];
+      
+      return {
+        id: randomUUID(),
+        sequence: idx + 1,
+        expected_date: date,
+        expected_amount: bill.amount,
+        is_closed: isPaid,
+        payments,
+        is_adhoc: false,
+        created_at: now,
+        updated_at: now
+      };
+    });
+  }
+  
+  const totalAmount = occurrences.reduce((sum, o) => sum + o.expected_amount, 0);
+  const allPaid = occurrences.length > 0 && occurrences.every(o => o.is_closed);
+  
+  return {
+    id: randomUUID(),
+    bill_id: bill.id,
+    month: monthStr,
+    billing_period: bill.billing_period,
+    amount: totalAmount,
+    expected_amount: totalAmount,
+    payments: [],
+    occurrences,
+    is_default: true,
+    is_paid: allPaid,
+    is_closed: allPaid,
+    is_adhoc: false,
+    created_at: now,
+    updated_at: now
+  };
+}
+
+function generateIncomeInstance(income: Income, monthStr: string, isPastMonth: boolean): IncomeInstance {
+  const [year, month] = monthStr.split('-').map(Number);
+  const daysInMonth = getDaysInMonth(year, month);
+  
+  let occurrences: Occurrence[] = [];
+  
+  if (income.billing_period === 'monthly') {
+    const day = Math.min(income.day_of_month || 1, daysInMonth);
+    const expectedDate = formatDate(year, month, day);
+    const isPaid = isPastMonth || (income.day_of_month || 1) < 15;
+    
+    const payments: Payment[] = isPaid ? [{
+      id: randomUUID(),
+      amount: income.amount,
+      payment_date: expectedDate,
+      payment_source_id: income.payment_source_id,
+      created_at: now,
+      updated_at: now
+    }] : [];
+    
+    occurrences.push({
+      id: randomUUID(),
+      sequence: 1,
+      expected_date: expectedDate,
+      expected_amount: income.amount,
+      is_closed: isPaid,
+      payments,
+      is_adhoc: false,
+      created_at: now,
+      updated_at: now
+    });
+  } else if (income.billing_period === 'bi_weekly' && income.start_date) {
+    const dates = getBiWeeklyDatesInMonth(income.start_date, year, month);
+    occurrences = dates.map((date, idx) => {
+      const isPaid = isPastMonth;
+      const payments: Payment[] = isPaid ? [{
+        id: randomUUID(),
+        amount: income.amount,
+        payment_date: date,
+        payment_source_id: income.payment_source_id,
+        created_at: now,
+        updated_at: now
+      }] : [];
+      
+      return {
+        id: randomUUID(),
+        sequence: idx + 1,
+        expected_date: date,
+        expected_amount: income.amount,
+        is_closed: isPaid,
+        payments,
+        is_adhoc: false,
+        created_at: now,
+        updated_at: now
+      };
+    });
+  }
+  
+  const totalAmount = occurrences.reduce((sum, o) => sum + o.expected_amount, 0);
+  const allPaid = occurrences.length > 0 && occurrences.every(o => o.is_closed);
+  
+  return {
+    id: randomUUID(),
+    income_id: income.id,
+    month: monthStr,
+    billing_period: income.billing_period,
+    amount: totalAmount,
+    expected_amount: totalAmount,
+    payments: [],
+    occurrences,
+    is_default: true,
+    is_paid: allPaid,
+    is_closed: allPaid,
+    is_adhoc: false,
+    created_at: now,
+    updated_at: now
+  };
+}
+
+function generateMonthData(monthStr: string, isPastMonth: boolean): MonthData {
+  const billInstances = bills.map(bill => generateBillInstance(bill, monthStr, isPastMonth));
+  const incomeInstances = incomes.map(income => generateIncomeInstance(income, monthStr, isPastMonth));
+  
+  // Add some variable expenses for past months
+  const variableExpenses: VariableExpense[] = [];
+  if (isPastMonth) {
+    variableExpenses.push({
+      id: randomUUID(),
+      name: 'Groceries',
+      amount: cents(randomBetween(350, 550)),
+      payment_source_id: checkingId,
+      month: monthStr,
+      created_at: now,
+      updated_at: now
+    });
+    variableExpenses.push({
+      id: randomUUID(),
+      name: 'Dining Out',
+      amount: cents(randomBetween(80, 200)),
+      payment_source_id: rewardsCCId,
+      month: monthStr,
+      created_at: now,
+      updated_at: now
+    });
+  }
+  
+  return {
+    month: monthStr,
+    bill_instances: billInstances,
+    income_instances: incomeInstances,
+    variable_expenses: variableExpenses,
+    free_flowing_expenses: [],
+    bank_balances: {},
+    created_at: now,
+    updated_at: now
+  };
+}
+
+// ============================================================================
 // Output
 // ============================================================================
 
@@ -425,8 +742,20 @@ async function main() {
   // Write empty undo file
   await Bun.write(`${outputDir}/entities/undo.json`, '[]');
   
-  // Write .gitkeep files
-  await Bun.write(`${outputDir}/months/.gitkeep`, '');
+  // Generate month data files
+  const monthsToGenerate = [
+    { month: '2025-01', isPast: true },
+    { month: '2025-02', isPast: true },
+    { month: '2025-12', isPast: false }, // "Current" month for demo
+  ];
+  
+  for (const { month, isPast } of monthsToGenerate) {
+    const monthData = generateMonthData(month, isPast);
+    await Bun.write(
+      `${outputDir}/months/${month}.json`,
+      JSON.stringify(monthData, null, 2)
+    );
+  }
   
   console.log('Sample data generated successfully!');
   console.log(`Output directory: ${outputDir}`);
@@ -436,6 +765,7 @@ async function main() {
   console.log(`  - ${paymentSources.length} payment sources`);
   console.log(`  - ${bills.length} bills`);
   console.log(`  - ${incomes.length} incomes`);
+  console.log(`  - ${monthsToGenerate.length} month files`);
   console.log('');
   console.log('Monthly totals (approximate):');
   const monthlyBills = bills.reduce((sum, b) => {

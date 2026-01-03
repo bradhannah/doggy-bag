@@ -1,29 +1,50 @@
 [
   {
-    "name": "Main Checking",
+    "id": "a1b2c3d4-1111-4000-8000-000000000001",
+    "name": "Primary Checking",
     "type": "bank_account",
-    "balance": 500000,
-    "id": "4ea8564d-40ff-4fe8-ada4-a91fa15925d1",
-    "created_at": "2025-12-31T15:20:51.624Z",
-    "updated_at": "2025-12-31T15:20:51.624Z",
-    "is_active": true
+    "balance": 453218,
+    "is_active": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
   },
   {
-    "name": "Credit Card",
+    "id": "a1b2c3d4-2222-4000-8000-000000000002",
+    "name": "Savings Account",
+    "type": "bank_account",
+    "balance": 1250000,
+    "is_active": true,
+    "exclude_from_leftover": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "a1b2c3d4-3333-4000-8000-000000000003",
+    "name": "Rewards Credit Card",
     "type": "credit_card",
-    "balance": -120000,
-    "id": "33554e8b-5a40-48d2-b16b-0dda55685494",
-    "created_at": "2025-12-31T15:20:51.625Z",
-    "updated_at": "2025-12-31T15:20:51.625Z",
-    "is_active": true
+    "balance": 184723,
+    "is_active": true,
+    "pay_off_monthly": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
   },
   {
+    "id": "a1b2c3d4-4444-4000-8000-000000000004",
+    "name": "Travel Card",
+    "type": "credit_card",
+    "balance": 52345,
+    "is_active": true,
+    "pay_off_monthly": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "a1b2c3d4-5555-4000-8000-000000000005",
     "name": "Cash",
     "type": "cash",
-    "balance": 30000,
-    "id": "b73ecba8-3be0-4a5f-9888-c78628334466",
-    "created_at": "2025-12-31T15:20:51.625Z",
-    "updated_at": "2025-12-31T15:20:51.625Z",
-    "is_active": true
+    "balance": 15000,
+    "is_active": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
   }
 ]

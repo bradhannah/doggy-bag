@@ -138,7 +138,7 @@ dev: ## Start all services (Tauri + Bun + Vite) with logging
 
 start-bun: ## Start Bun backend server on localhost:3000
 	@echo "[$(shell date '+%Y-%m-%d %H:%M:%S')] Starting Bun backend server on localhost:3000..."
-	@cd api && bun run server.ts
+	@cd api && DATA_DIR=../data bun run server.ts
 
 start-vite: ## Start Vite dev server
 	@echo "Starting Vite dev server..."
