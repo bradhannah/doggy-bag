@@ -13,6 +13,9 @@
   
   const dispatch = createEventDispatcher();
   
+  // Check if this is a payoff bill (only relevant for bills)
+  $: isPayoffBill = type === 'bill' && (item as BillInstanceDetailed).is_payoff_bill === true;
+  
   let showTransactionsDrawer = false;
   let selectedOccurrence: Occurrence | null = null;
   let addingOccurrence = false;
@@ -138,14 +141,15 @@
         instanceId={item.id}
         {type}
         {readOnly}
+        {isPayoffBill}
         on:updated={handleOccurrenceUpdated}
         on:openPayments={handleOpenPayments}
       />
     {/each}
   </div>
   
-  <!-- Add Occurrence Button -->
-  {#if !readOnly}
+  <!-- Add Occurrence Button (hidden for payoff bills since they're auto-generated) -->
+  {#if !readOnly && !isPayoffBill}
     <div class="card-footer">
       <button 
         class="add-occurrence-btn" 
@@ -170,6 +174,7 @@
     isClosed={selectedOccurrence.is_closed}
     type={type === 'bill' ? 'bill' : 'income'}
     occurrenceId={selectedOccurrence.id}
+    {isPayoffBill}
     on:updated={handleTransactionsUpdated}
   />
 {/if}

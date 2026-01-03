@@ -1,16 +1,21 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { detailedMonth, detailedMonthData, detailedMonthLoading, detailedMonthError } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import { widthMode } from '../../stores/ui';
+  import { widthMode, compactMode } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
   import { apiUrl } from '$lib/api/client';
   
   export let month: string;
+  
+  // Scroll position preservation
+  let savedScrollY: number | null = null;
+  let restoreScrollAfterLoad = false;
+  let isRefreshing = false; // Track if we're doing a soft refresh vs initial load
   
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -109,20 +114,65 @@
     monthsStore.loadMonth(month);
   }
   
-  $: leftoverClass = $detailedMonthData?.leftover && $detailedMonthData.leftover < 0 ? 'negative' : 'positive';
-  
-  // Compact mode state
-  let compactMode = false;
-  
   // Toggle width mode (cycles through small -> medium -> wide)
   function toggleWidthMode() {
     widthMode.cycle();
   }
   
-  // Refresh all data
+  // Helper: check if a category section is complete (all paid or empty)
+  function isSectionComplete(section: { items: { is_paid: boolean }[] }): boolean {
+    return section.items.length === 0 || section.items.every(item => item.is_paid);
+  }
+  
+  // Sort sections: incomplete first, complete/empty last
+  function sortSections<T extends { items: { is_paid: boolean }[] }>(sections: T[]): T[] {
+    return [...sections].sort((a, b) => {
+      const aComplete = isSectionComplete(a);
+      const bComplete = isSectionComplete(b);
+      if (aComplete === bComplete) return 0;
+      return aComplete ? 1 : -1;
+    });
+  }
+  
+  // Sorted sections (complete/empty at bottom)
+  $: sortedBillSections = $detailedMonthData ? sortSections($detailedMonthData.billSections) : [];
+  $: sortedIncomeSections = $detailedMonthData ? sortSections($detailedMonthData.incomeSections) : [];
+  
+  // Refresh all data with scroll position preservation
   function refreshData() {
+    // Save current scroll position before refresh
+    savedScrollY = window.scrollY;
+    restoreScrollAfterLoad = true;
+    isRefreshing = true;
+    
     detailedMonth.refresh();
     monthsStore.loadMonth(month);
+  }
+  
+  // Restore scroll position after data loads
+  $: if ($detailedMonthData && restoreScrollAfterLoad && savedScrollY !== null) {
+    restoreScrollPosition();
+  }
+  
+  // Clear isRefreshing when loading completes
+  $: if (!$detailedMonthLoading && isRefreshing) {
+    isRefreshing = false;
+  }
+  
+  async function restoreScrollPosition() {
+    // Wait for Svelte DOM updates
+    await tick();
+    
+    // Wait for browser to complete layout and paint (double RAF ensures all children painted)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (savedScrollY !== null) {
+          window.scrollTo(0, savedScrollY);
+          savedScrollY = null;
+          restoreScrollAfterLoad = false;
+        }
+      });
+    });
   }
   
   // Create month data
@@ -144,7 +194,7 @@
   }
 </script>
 
-<div class="detailed-view" class:compact={compactMode}>
+<div class="detailed-view" class:compact={$compactMode}>
   <div class="content-wrapper"
     class:small={$widthMode === 'small'} 
     class:medium={$widthMode === 'medium'}
@@ -205,8 +255,8 @@
           {/if}
         </button>
         <!-- Compact toggle -->
-        <button class="compact-toggle" on:click={() => compactMode = !compactMode} title={compactMode ? 'Normal view' : 'Compact view'}>
-          {#if compactMode}
+        <button class="compact-toggle" on:click={() => compactMode.toggle()} title={$compactMode ? 'Normal view' : 'Compact view'}>
+          {#if $compactMode}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -224,17 +274,6 @@
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        {#if $detailedMonthData.leftoverBreakdown.hasActuals}
-          <div class="leftover-display" class:negative={leftoverClass === 'negative'}>
-            <span class="leftover-label">Leftover</span>
-            <span class="leftover-value">{formatCurrency($detailedMonthData.leftover)}</span>
-          </div>
-        {:else}
-          <div class="leftover-display muted">
-            <span class="leftover-label">Leftover</span>
-            <span class="leftover-hint">Enter actuals</span>
-          </div>
-        {/if}
       </div>
     {/if}
   </header>
@@ -250,7 +289,7 @@
   {/if}
 
   
-  {#if $detailedMonthLoading}
+  {#if $detailedMonthLoading && !isRefreshing && !$detailedMonthData}
     <div class="loading-state">
       <p>Loading detailed view...</p>
     </div>
@@ -304,11 +343,11 @@
               <h2>Bills</h2>
             </div>
             
-            {#if $detailedMonthData.billSections.length === 0}
+            {#if sortedBillSections.length === 0}
               <p class="empty-text">No bill categories. Add categories in Setup.</p>
             {:else}
-              {#each $detailedMonthData.billSections as section (section.category.id)}
-                <CategorySection {section} type="bills" {month} {compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleBillPaid} on:refresh={refreshData} />
+              {#each sortedBillSections as section (section.category.id)}
+                <CategorySection {section} type="bills" {month} compactMode={$compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleBillPaid} on:refresh={refreshData} />
               {/each}
             {/if}
           </section>
@@ -319,11 +358,11 @@
               <h2>Income</h2>
             </div>
             
-            {#if $detailedMonthData.incomeSections.length === 0}
+            {#if sortedIncomeSections.length === 0}
               <p class="empty-text">No income categories. Add categories in Setup.</p>
             {:else}
-              {#each $detailedMonthData.incomeSections as section (section.category.id)}
-                <CategorySection {section} type="income" {month} {compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleIncomePaid} on:refresh={refreshData} />
+              {#each sortedIncomeSections as section (section.category.id)}
+                <CategorySection {section} type="income" {month} compactMode={$compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleIncomePaid} on:refresh={refreshData} />
               {/each}
             {/if}
           </section>
@@ -525,6 +564,8 @@
     border-radius: 16px;
     border: 1px solid #333355;
     padding: 24px;
+    min-width: 0; /* Prevent grid blowout */
+    overflow-x: hidden; /* Prevent horizontal scrollbar */
   }
   
   .section-header {
@@ -665,7 +706,7 @@
   }
   
   /* Container query: 2-column layout when content-wrapper is wide enough */
-  @container content (min-width: 1100px) {
+  @container content (min-width: 900px) {
     .sections-container {
       grid-template-columns: 1fr 1fr;
     }

@@ -566,18 +566,6 @@
     opacity: 0.7;
   }
   
-  .income-row.partial {
-    border-left: 3px solid #f59e0b;
-  }
-  
-  .income-row.overdue:not(.partial) {
-    border-left: 3px solid #f59e0b;
-  }
-  
-  .income-row.adhoc:not(.partial):not(.overdue) {
-    border-left: 3px solid #a78bfa;
-  }
-  
   .income-main {
     display: flex;
     align-items: center;

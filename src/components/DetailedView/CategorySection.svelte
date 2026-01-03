@@ -41,6 +41,12 @@
   
   $: showAmber = section.subtotal.actual > 0 && section.subtotal.actual !== section.subtotal.expected;
   
+  // Category completion state: all items closed (not just paid) or no items
+  // Use is_closed because an item can have payments but still be open
+  $: allClosed = section.items.length > 0 && section.items.every(item => item.is_closed);
+  $: isEmpty = section.items.length === 0;
+  $: isComplete = allClosed || isEmpty;
+  
   // Generate a subtle background tint from the category color
   function hexToRgba(hex: string, alpha: number): string {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -69,11 +75,11 @@
   }
 </script>
 
-<div class="category-section" class:compact={compactMode}>
+<div class="category-section" class:compact={compactMode} class:complete={isComplete}>
   <div class="category-header" style="border-left-color: {section.category.color}; background: {headerBgColor}">
     <div class="category-title">
       <span class="category-color" style="background-color: {section.category.color}"></span>
-      <h4>{section.category.name}</h4>
+      <h4 class:crossed-out={isComplete}>{section.category.name}</h4>
       <span class="item-count">({section.items.length})</span>
       <button class="add-adhoc-btn" on:click={openAdHocForm} title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}" disabled={readOnly}>
         +
@@ -129,6 +135,21 @@
 <style>
   .category-section {
     margin-bottom: 24px;
+  }
+  
+  /* Complete/empty category state: reduced opacity */
+  .category-section.complete {
+    opacity: 0.6;
+  }
+  
+  /* Keep add button fully visible in complete state */
+  .category-section.complete .add-adhoc-btn {
+    opacity: 1.67; /* Counteract parent opacity: 1/0.6 ≈ 1.67 */
+  }
+  
+  /* Crossed out category name */
+  .crossed-out {
+    text-decoration: line-through;
   }
   
   .category-header {

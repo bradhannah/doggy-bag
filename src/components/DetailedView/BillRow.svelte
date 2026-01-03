@@ -4,8 +4,10 @@
   import { detailedMonth } from '../../stores/detailed-month';
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
+  import CCBalanceSyncModal from './CCBalanceSyncModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import { paymentSources, type PaymentSourceType } from '../../stores/payment-sources';
   
   export let bill: BillInstanceDetailed;
   export let month: string = '';
@@ -18,11 +20,20 @@
   let showTransactionsDrawer = false;
   let showMakeRegularDrawer = false;
   let showDeleteConfirm = false;
+  let showCCBalanceSyncModal = false;
+  let ccSyncPaymentAmount = 0;
   let isEditingExpected = false;
   let expectedEditValue = '';
   let isEditingDueDay = false;
   let editingDayValue = '';
   let saving = false;
+  
+  // Get the payment source details for CC sync modal
+  $: payoffSourceId = bill.payoff_source_id || bill.payment_source?.id || '';
+  $: payoffSource = $paymentSources.find(ps => ps.id === payoffSourceId);
+  $: payoffSourceName = payoffSource?.name || bill.payment_source?.name || 'Credit Card';
+  $: payoffSourceType = (payoffSource?.type || 'credit_card') as PaymentSourceType;
+  $: payoffSourceBalance = payoffSource?.balance ?? 0;
   
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -128,6 +139,12 @@
       // Optimistic update - update totals and close status without re-sorting
       const newTotalPaid = bill.total_paid + paymentAmount;
       detailedMonth.updateBillClosedStatus(bill.id, true, newTotalPaid);
+      
+      // If this is a payoff bill, show the CC balance sync modal
+      if (isPayoffBill && payoffSourceId) {
+        ccSyncPaymentAmount = paymentAmount;
+        showCCBalanceSyncModal = true;
+      }
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to pay bill');
     } finally {
@@ -287,7 +304,18 @@
     dispatch('refresh');
   }
   
-  function handleTransactionsUpdated() {
+  function handleTransactionsUpdated(event: CustomEvent<{paymentAmount?: number}>) {
+    dispatch('refresh');
+    
+    // If this is a payoff bill and we got a payment amount, show CC sync modal
+    if (isPayoffBill && payoffSourceId && event.detail?.paymentAmount) {
+      ccSyncPaymentAmount = event.detail.paymentAmount;
+      showCCBalanceSyncModal = true;
+    }
+  }
+  
+  function handleCCSyncUpdated() {
+    // Refresh to get the updated balance data
     dispatch('refresh');
   }
   
@@ -368,9 +396,7 @@
             <span class="badge partial-badge">partial</span>
           {/if}
           {#if bill.is_overdue && !isClosed}
-            <span class="badge overdue-badge">
-              {bill.days_overdue} day{bill.days_overdue !== 1 ? 's' : ''} overdue
-            </span>
+            <span class="badge overdue-badge">overdue</span>
           {/if}
         </span>
         
@@ -485,8 +511,8 @@
           </button>
         {/if}
         
-        <!-- Delete button for any bill (when not read-only) -->
-        {#if !readOnly}
+        <!-- Delete button for any bill (when not read-only and not payoff bill) -->
+        {#if !readOnly && !isPayoffBill}
           <button 
             class="action-btn-icon delete" 
             on:click={confirmDeleteBill} 
@@ -514,6 +540,7 @@
   transactionList={bill.payments || []}
   isClosed={isClosed}
   type="bill"
+  {isPayoffBill}
   on:updated={handleTransactionsUpdated}
 />
 
@@ -550,6 +577,20 @@
   </div>
 {/if}
 
+<!-- CC Balance Sync Modal (for payoff bills) -->
+{#if isPayoffBill}
+  <CCBalanceSyncModal
+    bind:open={showCCBalanceSyncModal}
+    {month}
+    paymentSourceId={payoffSourceId}
+    paymentSourceName={payoffSourceName}
+    paymentSourceType={payoffSourceType}
+    currentBalance={payoffSourceBalance}
+    paymentAmount={ccSyncPaymentAmount}
+    on:updated={handleCCSyncUpdated}
+  />
+{/if}
+
 <style>
   .bill-row-container {
     margin-bottom: 4px;
@@ -573,27 +614,6 @@
   .bill-row.closed {
     background: rgba(74, 222, 128, 0.05);
     opacity: 0.7;
-  }
-  
-  .bill-row.partial {
-    border-left: 3px solid #f59e0b;
-  }
-  
-  .bill-row.overdue:not(.partial) {
-    border-left: 3px solid #f87171;
-  }
-  
-  .bill-row.adhoc:not(.partial):not(.overdue) {
-    border-left: 3px solid #a78bfa;
-  }
-  
-  .bill-row.payoff {
-    border-left: 3px solid #8b5cf6;
-    background: rgba(139, 92, 246, 0.05);
-  }
-  
-  .bill-row.payoff:hover {
-    background: rgba(139, 92, 246, 0.08);
   }
   
   .bill-main {

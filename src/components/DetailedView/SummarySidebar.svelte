@@ -191,7 +191,7 @@
   <div class="sidebar-box">
     <!-- Asset Accounts -->
     <div class="box-section">
-      <h3 class="box-title">Bank Accounts & Cash</h3>
+      <h3 class="box-title asset-title">Bank Accounts & Cash</h3>
       <div class="balance-list">
         {#each assetAccounts as source (source.id)}
           {@const isEditing = editingBalanceId === source.id}
@@ -354,17 +354,6 @@
       </div>
     {/if}
     
-    <div class="section-divider"></div>
-    
-    <!-- Net Worth -->
-    <div class="box-section">
-      <div class="section-subtotal networth-row">
-        <span class="subtotal-label">Net Worth</span>
-        <span class="subtotal-value" class:negative={netWorth < 0} class:positive={netWorth >= 0}>
-          {formatCurrency(netWorth)}
-        </span>
-      </div>
-    </div>
   </div>
   
   <!-- Box 2: Income + Bills -->
@@ -465,6 +454,10 @@
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.1em;
+  }
+  
+  .box-title.asset-title {
+    color: #4ade80;
   }
   
   .box-title.debt-title {

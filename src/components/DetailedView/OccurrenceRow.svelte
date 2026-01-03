@@ -9,6 +9,7 @@
   export let instanceId: string;
   export let type: 'bill' | 'income' = 'bill';
   export let readOnly: boolean = false;
+  export let isPayoffBill: boolean = false;
   
   const dispatch = createEventDispatcher();
   
@@ -376,8 +377,8 @@
       </button>
     {/if}
     
-    <!-- Delete button for all occurrences -->
-    {#if !readOnly}
+    <!-- Delete button for all occurrences (except payoff bills) -->
+    {#if !readOnly && !isPayoffBill}
       <button 
         class="action-btn-icon delete" 
         on:click={confirmDelete}
@@ -429,7 +430,6 @@
     padding-left: 20px; /* Indent for sub-row appearance */
     background: rgba(255, 255, 255, 0.02);
     border-radius: 6px;
-    border-left: 2px solid transparent;
     transition: all 0.15s ease;
     font-size: 0.8rem; /* Smaller font for occurrence rows */
   }
@@ -441,14 +441,6 @@
   .occurrence-row.closed {
     background: rgba(74, 222, 128, 0.03);
     opacity: 0.7;
-  }
-  
-  .occurrence-row.partial {
-    border-left-color: #f59e0b;
-  }
-  
-  .occurrence-row.adhoc:not(.partial) {
-    border-left-color: #a78bfa;
   }
   
   .occ-date {

@@ -13,6 +13,7 @@
   export let isClosed: boolean = false;
   export let type: 'bill' | 'income' = 'bill';
   export let occurrenceId: string | undefined = undefined; // NEW: For occurrence-level payments
+  export let isPayoffBill: boolean = false; // NEW: Disable close actions for payoff bills
   
   const dispatch = createEventDispatcher();
   
@@ -118,7 +119,7 @@
         success(`${typeLabel} added`);
       }
       
-      dispatch('updated');
+      dispatch('updated', { paymentAmount: amountCents });
       
       if (closeAfter) {
         handleClose();
@@ -299,22 +300,26 @@
               >
                 Add & Keep Open
               </button>
-              <button 
-                class="action-btn primary" 
-                on:click={addTransactionAndClose} 
-                disabled={saving}
-              >
-                Add & Close
-              </button>
+              {#if !isPayoffBill}
+                <button 
+                  class="action-btn primary" 
+                  on:click={addTransactionAndClose} 
+                  disabled={saving}
+                >
+                  Add & Close
+                </button>
+              {/if}
             </div>
             
-            <button 
-              class="close-without-btn" 
-              on:click={closeWithoutAdding} 
-              disabled={saving}
-            >
-              Close Without Adding
-            </button>
+            {#if !isPayoffBill}
+              <button 
+                class="close-without-btn" 
+                on:click={closeWithoutAdding} 
+                disabled={saving}
+              >
+                Close Without Adding
+              </button>
+            {/if}
           </div>
         {:else}
           <div class="closed-notice">
