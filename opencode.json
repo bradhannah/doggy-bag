@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "bash": {
+      "ls": "allow",
+      "ls *": "allow",
+      "cat": "allow",
+      "cat *": "allow",
+      "head": "allow",
+      "head *": "allow",
+      "tail": "allow",
+      "tail *": "allow",
+      "wc": "allow",
+      "wc *": "allow",
+      "pwd": "allow",
+      "find *": "allow",
+      "grep *": "allow",
+      "rg *": "allow",
+      "tree": "allow",
+      "tree *": "allow",
+      "file *": "allow",
+      "stat *": "allow",
+      "du *": "allow",
+      "df *": "allow",
+      "which *": "allow",
+      "echo *": "allow",
+      "date *": "allow",
+      "date": "allow",
+      "curl *": "allow"
+    }
+  }
+}

@@ -125,31 +125,17 @@ function createMonthsStore() {
         } else if (!response.ok) {
           throw new Error('Failed to load monthly data');
         } else {
-          // Month exists - sync to add any missing bills/incomes
-          const syncResponse = await fetch(apiUrl(`/api/months/${month}/sync`), {
-            method: 'POST'
-          });
-          
-          if (syncResponse.ok) {
-            const data = await syncResponse.json();
-            update(state => ({
-              ...state,
-              data: data as MonthlyData,
-              exists: true,
-              isReadOnly: data.is_read_only ?? false,
-              loading: false
-            }));
-          } else {
-            // Sync failed, just use the original data
-            const data = await response.json();
-            update(state => ({
-              ...state,
-              data: data as MonthlyData,
-              exists: true,
-              isReadOnly: data.is_read_only ?? false,
-              loading: false
-            }));
-          }
+          // Month exists - load directly without syncing
+          // Sync is now only triggered explicitly (e.g., when creating month or via sync button)
+          // This prevents deleted instances from being re-added on refresh
+          const data = await response.json();
+          update(state => ({
+            ...state,
+            data: data as MonthlyData,
+            exists: true,
+            isReadOnly: data.is_read_only ?? false,
+            loading: false
+          }));
         }
       } catch (error) {
         update(state => ({
@@ -157,6 +143,39 @@ function createMonthsStore() {
           loading: false,
           error: error instanceof Error ? error.message : 'Unknown error'
         }));
+      }
+    },
+
+    // Explicit sync method - adds any new bills/incomes that were created after the month was generated
+    // Note: This will re-add any instances that were manually deleted if their bill/income entity still exists
+    async syncMonth(month: string): Promise<boolean> {
+      update(state => ({ ...state, loading: true, error: null }));
+
+      try {
+        const syncResponse = await fetch(apiUrl(`/api/months/${month}/sync`), {
+          method: 'POST'
+        });
+
+        if (!syncResponse.ok) {
+          throw new Error('Failed to sync monthly data');
+        }
+
+        const data = await syncResponse.json();
+        update(state => ({
+          ...state,
+          data: data as MonthlyData,
+          exists: true,
+          isReadOnly: data.is_read_only ?? false,
+          loading: false
+        }));
+        return true;
+      } catch (error) {
+        update(state => ({
+          ...state,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }));
+        return false;
       }
     },
 
