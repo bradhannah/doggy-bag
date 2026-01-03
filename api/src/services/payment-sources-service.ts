@@ -118,6 +118,22 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       errors.push('Payment source type must be bank_account, credit_card, line_of_credit, or cash');
     }
     
+    // pay_off_monthly is only valid for debt accounts (credit_card, line_of_credit)
+    if (data.pay_off_monthly === true) {
+      const debtTypes = ['credit_card', 'line_of_credit'];
+      if (data.type && !debtTypes.includes(data.type)) {
+        errors.push('pay_off_monthly can only be enabled for credit cards and lines of credit');
+      }
+    }
+    
+    // exclude_from_leftover is only valid for debt accounts
+    if (data.exclude_from_leftover === true) {
+      const debtTypes = ['credit_card', 'line_of_credit'];
+      if (data.type && !debtTypes.includes(data.type)) {
+        errors.push('exclude_from_leftover can only be enabled for credit cards and lines of credit');
+      }
+    }
+    
     return {
       isValid: errors.length === 0,
       errors

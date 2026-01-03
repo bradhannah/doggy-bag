@@ -33,12 +33,25 @@ export function getTypeDisplayName(type: PaymentSourceType): string {
   }
 }
 
+// Helper to get unicode icon for account type
+export function getTypeIcon(type: PaymentSourceType): string {
+  switch (type) {
+    case 'bank_account': return '🏦';
+    case 'credit_card': return '💳';
+    case 'line_of_credit': return '🏧';
+    case 'cash': return '💵';
+    default: return '💰';
+  }
+}
+
 export interface PaymentSource {
   id: string;
   name: string;
   type: PaymentSourceType;
   balance: number;
   is_active: boolean;
+  exclude_from_leftover?: boolean;  // If true, balance not included in leftover calculation
+  pay_off_monthly?: boolean;        // If true, auto-generate payoff bill (implies exclude_from_leftover)
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +60,8 @@ export interface PaymentSourceData {
   name: string;
   type: PaymentSourceType;
   balance: number;
+  exclude_from_leftover?: boolean;
+  pay_off_monthly?: boolean;
 }
 
 type PaymentSourceState = {

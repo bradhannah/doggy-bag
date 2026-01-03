@@ -10,6 +10,7 @@
   interface Tallies {
     bills: Tally;
     adhocBills: Tally;
+    ccPayoffs: Tally;
     totalExpenses: Tally;
     income: Tally;
     adhocIncome: Tally;
@@ -17,21 +18,29 @@
   }
   
   interface LeftoverBreakdown {
-    bankBalances: number;
-    actualIncome: number;
-    actualBills: number;
-    variableExpenses: number;
-    freeFlowingExpenses: number;
-    totalExpenses: number;
-    leftover: number;
-    hasActuals: boolean;
+    bankBalances: number;        // Current cash position (snapshot from bank_balances)
+    remainingIncome: number;     // Income still expected to receive
+    remainingExpenses: number;   // Expenses still need to pay
+    leftover: number;            // bank + remainingIncome - remainingExpenses
+    isValid: boolean;            // False if required bank balances are missing
+    hasActuals?: boolean;        // True if any actuals have been entered
+    missingBalances?: string[];  // IDs of payment sources missing balances
+    errorMessage?: string;       // Human-readable error message
+  }
+  
+  interface PayoffSummary {
+    paymentSourceId: string;
+    paymentSourceName: string;
+    balance: number;
+    paid: number;
+    remaining: number;
   }
   
   export let paymentSources: PaymentSource[] = [];
   export let bankBalances: Record<string, number> = {};
   export let tallies: Tallies;
   export let leftoverBreakdown: LeftoverBreakdown;
-  export let variableExpensesTotal: number = 0;
+  export let payoffSummaries: PayoffSummary[] = [];
   
   function formatCurrency(cents: number): string {
     const dollars = Math.abs(cents) / 100;
@@ -63,6 +72,16 @@
   $: assetAccounts = paymentSources.filter(ps => !isDebtAccount(ps.type));
   $: debtAccounts = paymentSources.filter(ps => isDebtAccount(ps.type));
   
+  // Get payoff summary for a payment source
+  function getPayoffSummary(sourceId: string): PayoffSummary | undefined {
+    return payoffSummaries.find(ps => ps.paymentSourceId === sourceId);
+  }
+  
+  // Check if a source is pay-off-monthly
+  function isPayOffMonthly(source: PaymentSource): boolean {
+    return (source as any).pay_off_monthly ?? false;
+  }
+  
   // Calculate totals
   $: totalAssets = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
   $: totalDebt = debtAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
@@ -71,22 +90,15 @@
   // Calculate liquid total (sum of all bank balances - for display, uses display balance)
   $: liquidTotal = netWorth;
   
-  // Income calculations - actuals focused
+  // Income calculations (for display in sidebar)
   $: incomeReceived = tallies?.totalIncome?.actual ?? 0;
   $: incomeExpected = tallies?.totalIncome?.expected ?? 0;
   $: incomePending = incomeExpected - incomeReceived;
   
-  // Expense calculations - actuals focused
+  // Expense calculations (for display in sidebar)
   $: billsPaid = tallies?.totalExpenses?.actual ?? 0;
   $: billsExpected = tallies?.totalExpenses?.expected ?? 0;
   $: billsPending = billsExpected - billsPaid;
-  $: totalSpent = billsPaid + variableExpensesTotal;
-  
-  // Current position (what's real right now)
-  $: currentBalance = liquidTotal;
-  
-  // Projected position (current + pending income - pending bills)
-  $: projectedBalance = currentBalance + incomePending - billsPending;
 </script>
 
 <aside class="summary-sidebar">
@@ -125,8 +137,21 @@
         <h3 class="box-title debt-title">Credit & Lines of Credit</h3>
         <div class="balance-list">
           {#each debtAccounts as source (source.id)}
-            <div class="balance-row">
-              <span class="balance-name">{source.name}</span>
+            {@const payoff = getPayoffSummary(source.id)}
+            <div class="balance-row" class:payoff-mode={isPayOffMonthly(source)}>
+              <div class="balance-info">
+                <span class="balance-name">
+                  {source.name}
+                  {#if isPayOffMonthly(source)}
+                    <span class="payoff-indicator" title="Pay off monthly">payoff</span>
+                  {/if}
+                </span>
+                {#if payoff && payoff.paid > 0}
+                  <span class="payoff-progress">
+                    Paid: {formatCurrency(payoff.paid)}
+                  </span>
+                {/if}
+              </div>
               <span class="balance-value negative">
                 {formatCurrency(getDisplayBalance(source))}
               </span>
@@ -185,62 +210,39 @@
           <span class="row-label">Pending</span>
           <span class="row-value">{formatCurrency(billsPending)}</span>
         </div>
-        <div class="summary-row">
-          <span class="row-label">Variable</span>
-          <span class="row-value expense">{formatCurrency(variableExpensesTotal)}</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Unified Leftover - Single Box -->
+  <div class="sidebar-box leftover-box" class:invalid={!leftoverBreakdown?.isValid}>
+    <h3 class="box-title">Leftover at End of Month</h3>
+    
+    {#if leftoverBreakdown?.isValid}
+      <div class="leftover-calc">
+        <div class="calc-row">
+          <span class="calc-label">Bank Balances</span>
+          <span class="calc-value">{formatCurrency(leftoverBreakdown?.bankBalances ?? 0)}</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">+ Remaining Income</span>
+          <span class="calc-value income">{formatCurrencyWithSign(leftoverBreakdown?.remainingIncome ?? 0)}</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">- Remaining Expenses</span>
+          <span class="calc-value expense">{formatCurrency(-(leftoverBreakdown?.remainingExpenses ?? 0))}</span>
         </div>
       </div>
-      <div class="section-subtotal">
-        <span class="subtotal-label">Total Spent</span>
-        <span class="subtotal-value expense">{formatCurrency(totalSpent)}</span>
+      <div class="leftover-total" class:negative={leftoverBreakdown?.leftover < 0}>
+        <span class="leftover-label">= End of Month</span>
+        <span class="leftover-value">{formatCurrency(leftoverBreakdown?.leftover ?? 0)}</span>
       </div>
-    </div>
-  </div>
-  
-  <!-- Current Position - Separate Box -->
-  <div class="sidebar-box current-box">
-    <h3 class="box-title">Current</h3>
-    <div class="leftover-calc">
-      <div class="calc-row">
-        <span class="calc-label">Starting</span>
-        <span class="calc-value">{formatCurrency(leftoverBreakdown?.bankBalances ?? 0)}</span>
+    {:else}
+      <div class="error-message">
+        <span class="error-icon">!</span>
+        <span class="error-text">{leftoverBreakdown?.errorMessage ?? 'Enter bank balances to calculate leftover'}</span>
       </div>
-      <div class="calc-row">
-        <span class="calc-label">+ Received</span>
-        <span class="calc-value income">{formatCurrencyWithSign(incomeReceived)}</span>
-      </div>
-      <div class="calc-row">
-        <span class="calc-label">- Spent</span>
-        <span class="calc-value expense">{formatCurrency(-totalSpent)}</span>
-      </div>
-    </div>
-    <div class="leftover-total" class:negative={currentBalance < 0}>
-      <span class="leftover-label">= Current</span>
-      <span class="leftover-value">{formatCurrency(currentBalance)}</span>
-    </div>
-  </div>
-  
-  <!-- Projected Position - Separate Box -->
-  <div class="sidebar-box projected-box">
-    <h3 class="box-title">Projected</h3>
-    <div class="leftover-calc">
-      <div class="calc-row">
-        <span class="calc-label">Current</span>
-        <span class="calc-value">{formatCurrency(currentBalance)}</span>
-      </div>
-      <div class="calc-row">
-        <span class="calc-label">+ Pending In</span>
-        <span class="calc-value income">{formatCurrencyWithSign(incomePending)}</span>
-      </div>
-      <div class="calc-row">
-        <span class="calc-label">- Pending Out</span>
-        <span class="calc-value expense">{formatCurrency(-billsPending)}</span>
-      </div>
-    </div>
-    <div class="projected-total" class:negative={projectedBalance < 0}>
-      <span class="projected-label">= End of Month</span>
-      <span class="projected-value">{formatCurrency(projectedBalance)}</span>
-    </div>
+    {/if}
   </div>
 </aside>
 
@@ -365,6 +367,32 @@
   
   .balance-value.negative {
     color: #f87171;
+  }
+  
+  .balance-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .payoff-indicator {
+    font-size: 0.55rem;
+    padding: 1px 4px;
+    background: rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  
+  .payoff-progress {
+    font-size: 0.7rem;
+    color: #4ade80;
+  }
+  
+  .balance-row.payoff-mode {
+    padding: 6px 0;
   }
   
   /* Section totals */
@@ -500,48 +528,47 @@
     color: #f87171;
   }
   
-  /* Projected total */
-  .projected-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    margin-top: 6px;
-    background: rgba(96, 165, 250, 0.1);
-    border-radius: 8px;
-    border: 1px solid rgba(96, 165, 250, 0.2);
-  }
-  
-  .projected-total.negative {
-    background: rgba(248, 113, 113, 0.1);
-    border-color: rgba(248, 113, 113, 0.2);
-  }
-  
-  .projected-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #60a5fa;
-  }
-  
-  .projected-total.negative .projected-label {
-    color: #f87171;
-  }
-  
-  .projected-value {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #60a5fa;
-  }
-  
-  .projected-total.negative .projected-value {
-    color: #f87171;
-  }
-  
   .empty-text {
     margin: 0;
     font-size: 0.8rem;
     color: #666;
     font-style: italic;
+  }
+  
+  /* Invalid/Error state for leftover box */
+  .sidebar-box.invalid {
+    border-color: rgba(251, 146, 60, 0.4);
+    background: #1a1520;
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(251, 146, 60, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(251, 146, 60, 0.3);
+  }
+  
+  .error-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(251, 146, 60, 0.2);
+    color: #fb923c;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  
+  .error-text {
+    font-size: 0.8rem;
+    color: #fb923c;
+    line-height: 1.4;
   }
   
   /* Scrollbar styling */

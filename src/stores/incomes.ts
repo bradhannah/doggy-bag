@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
+import { categories, type Category } from './categories';
 
 export interface Income {
   id: string;
@@ -148,4 +149,46 @@ export const activeIncomesWithContribution = derived(incomesWithContribution, ($
 // Derived store for total monthly income (sum of all active incomes' monthly contributions)
 export const totalMonthlyIncome = derived(activeIncomesWithContribution, ($incomes) =>
   $incomes.reduce((sum, income) => sum + income.monthlyContribution, 0)
+);
+
+// Type for incomes grouped by category
+export interface IncomeCategoryGroup {
+  category: Category | null;
+  incomes: IncomeWithContribution[];
+  subtotal: number;
+}
+
+// Derived store for incomes grouped by category
+export const incomesByCategory = derived(
+  [activeIncomesWithContribution, categories],
+  ([$incomes, $categories]): IncomeCategoryGroup[] => {
+    // Get income categories sorted by sort_order
+    const incomeCats = $categories
+      .filter(c => c.type === 'income')
+      .sort((a, b) => a.sort_order - b.sort_order);
+    
+    const grouped: IncomeCategoryGroup[] = [];
+    
+    // Uncategorized first
+    const uncategorized = $incomes.filter(i => !i.category_id);
+    if (uncategorized.length > 0 || true) { // Always show uncategorized section
+      grouped.push({ 
+        category: null, 
+        incomes: uncategorized,
+        subtotal: uncategorized.reduce((sum, i) => sum + i.monthlyContribution, 0)
+      });
+    }
+    
+    // Then each category in sort_order
+    for (const cat of incomeCats) {
+      const catIncomes = $incomes.filter(i => i.category_id === cat.id);
+      grouped.push({ 
+        category: cat, 
+        incomes: catIncomes,
+        subtotal: catIncomes.reduce((sum, i) => sum + i.monthlyContribution, 0)
+      });
+    }
+    
+    return grouped;
+  }
 );

@@ -169,8 +169,8 @@ export class AdhocServiceImpl implements AdhocService {
       month,
       billing_period: 'monthly',  // Ad-hoc items are treated as monthly
       amount: data.amount,
-      expected_amount: 0, // Ad-hoc items have no expected amount
-      actual_amount: data.amount,
+      expected_amount: data.amount, // Ad-hoc items use entered amount as expected
+      actual_amount: undefined,     // No actual until payments are made
       payments: [],                // DEPRECATED
       occurrences: [occurrence],   // Single occurrence for ad-hoc
       is_default: false,

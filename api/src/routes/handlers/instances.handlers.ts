@@ -1859,3 +1859,139 @@ export function createDeleteIncomeOccurrencePaymentHandler() {
     }
   };
 }
+
+// ============================================================================
+// Instance Delete Handlers (Delete any bill/income instance from month)
+// ============================================================================
+
+// DELETE /api/months/:month/bills/:id - Delete any bill instance from month
+export function createBillInstanceHandlerDELETE() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const { month, id } = extractMonthAndId(url.pathname, 'bills');
+      
+      if (!month || !id) {
+        return new Response(JSON.stringify({
+          error: 'Invalid URL. Expected /api/months/YYYY-MM/bills/:id'
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 400
+        });
+      }
+      
+      // Check if month is read-only
+      const readOnlyResponse = await checkReadOnly(month);
+      if (readOnlyResponse) return readOnlyResponse;
+      
+      // Get month data and find the instance
+      const monthData = await monthsService.getMonthlyData(month);
+      if (!monthData) {
+        return new Response(JSON.stringify({
+          error: `Month ${month} not found`
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 404
+        });
+      }
+      
+      const instanceIndex = monthData.bill_instances.findIndex(bi => bi.id === id);
+      if (instanceIndex === -1) {
+        return new Response(JSON.stringify({
+          error: `Bill instance ${id} not found in month ${month}`
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 404
+        });
+      }
+      
+      // Remove the instance
+      monthData.bill_instances.splice(instanceIndex, 1);
+      await monthsService.saveMonthlyData(month, monthData);
+      
+      // Calculate updated summary
+      const summary = await leftoverService.calculateLeftover(month);
+      
+      return new Response(JSON.stringify({ success: true, summary }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200
+      });
+    } catch (error) {
+      console.error('[InstancesHandler] Bill Instance DELETE failed:', error);
+      
+      return new Response(JSON.stringify({
+        error: formatErrorForUser(error),
+        message: 'Failed to delete bill instance'
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 500
+      });
+    }
+  };
+}
+
+// DELETE /api/months/:month/incomes/:id - Delete any income instance from month
+export function createIncomeInstanceHandlerDELETE() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const { month, id } = extractMonthAndId(url.pathname, 'incomes');
+      
+      if (!month || !id) {
+        return new Response(JSON.stringify({
+          error: 'Invalid URL. Expected /api/months/YYYY-MM/incomes/:id'
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 400
+        });
+      }
+      
+      // Check if month is read-only
+      const readOnlyResponse = await checkReadOnly(month);
+      if (readOnlyResponse) return readOnlyResponse;
+      
+      // Get month data and find the instance
+      const monthData = await monthsService.getMonthlyData(month);
+      if (!monthData) {
+        return new Response(JSON.stringify({
+          error: `Month ${month} not found`
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 404
+        });
+      }
+      
+      const instanceIndex = monthData.income_instances.findIndex(ii => ii.id === id);
+      if (instanceIndex === -1) {
+        return new Response(JSON.stringify({
+          error: `Income instance ${id} not found in month ${month}`
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 404
+        });
+      }
+      
+      // Remove the instance
+      monthData.income_instances.splice(instanceIndex, 1);
+      await monthsService.saveMonthlyData(month, monthData);
+      
+      // Calculate updated summary
+      const summary = await leftoverService.calculateLeftover(month);
+      
+      return new Response(JSON.stringify({ success: true, summary }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200
+      });
+    } catch (error) {
+      console.error('[InstancesHandler] Income Instance DELETE failed:', error);
+      
+      return new Response(JSON.stringify({
+        error: formatErrorForUser(error),
+        message: 'Failed to delete income instance'
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 500
+      });
+    }
+  };
+}

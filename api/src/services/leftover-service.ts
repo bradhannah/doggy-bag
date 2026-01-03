@@ -1,22 +1,32 @@
 // Leftover Service - Calculate "leftover at end of month" value
+// Uses unified leftover calculation from utils/leftover.ts
 
 import { MonthsServiceImpl } from './months-service';
 import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import type { MonthsService } from './months-service';
 import type { PaymentSourcesService } from './payment-sources-service';
-import type { 
-  MonthlyData,
-  PaymentSource 
-} from '../types';
-import { DEBT_ACCOUNT_TYPES } from '../types';
+import type { UnifiedLeftoverResult } from '../types';
+import { calculateUnifiedLeftover } from '../utils/leftover';
 
+/**
+ * Result from leftover calculation
+ * Uses the unified calculation with validation
+ */
 export interface LeftoverResult {
+  bankBalances: number;        // Current cash position (from bank_balances snapshot)
+  remainingIncome: number;     // Income still expected to receive
+  remainingExpenses: number;   // Expenses still need to pay
+  leftover: number;            // Final: bank + income - expenses
+  isValid: boolean;            // False if required bank balances are missing
+  missingBalances?: string[];  // IDs of payment sources missing balances
+  errorMessage?: string;       // Human-readable error message
+  
+  // Legacy fields for backward compatibility (deprecated)
   totalCash: number;
   totalCreditDebt: number;
   netWorth: number;
   totalIncome: number;
   totalExpenses: number;
-  leftover: number;
 }
 
 export interface LeftoverService {
@@ -43,32 +53,26 @@ export class LeftoverServiceImpl implements LeftoverService {
         throw new Error(`Monthly data for ${month} not found`);
       }
       
-      const totalCash = paymentSources
-        .filter(ps => ps.type === 'bank_account' || ps.type === 'cash')
-        .reduce((sum, ps) => sum + ps.balance, 0);
+      // Use unified leftover calculation
+      const unified = calculateUnifiedLeftover(monthlyData, paymentSources);
       
-      // Debt accounts (credit cards, lines of credit) - positive balance = debt owed
-      const totalCreditDebt = paymentSources
-        .filter(ps => DEBT_ACCOUNT_TYPES.includes(ps.type))
-        .reduce((sum, ps) => sum + Math.abs(ps.balance), 0);
-      
-      const netWorth = totalCash - totalCreditDebt;
-      
-      const totalIncome = monthlyData.income_instances.reduce((sum, ii) => sum + ii.amount, 0);
-      
-      const totalExpenses = monthlyData.bill_instances.reduce((sum, bi) => sum + bi.amount, 0) +
-        monthlyData.variable_expenses.reduce((sum, ve) => sum + ve.amount, 0) +
-        monthlyData.free_flowing_expenses.reduce((sum, ffe) => sum + ffe.amount, 0);
-      
-      const leftover = netWorth + totalIncome - totalExpenses;
-      
+      // Map to LeftoverResult with backward compatibility fields
       return {
-        totalCash,
-        totalCreditDebt,
-        netWorth,
-        totalIncome,
-        totalExpenses,
-        leftover
+        // New unified fields
+        bankBalances: unified.bankBalances,
+        remainingIncome: unified.remainingIncome,
+        remainingExpenses: unified.remainingExpenses,
+        leftover: unified.leftover,
+        isValid: unified.isValid,
+        missingBalances: unified.missingBalances.length > 0 ? unified.missingBalances : undefined,
+        errorMessage: unified.errorMessage,
+        
+        // Legacy fields (deprecated but kept for backward compat)
+        totalCash: unified.bankBalances,
+        totalCreditDebt: 0,
+        netWorth: unified.bankBalances,
+        totalIncome: unified.remainingIncome,
+        totalExpenses: unified.remainingExpenses
       };
     } catch (error) {
       console.error('[LeftoverService] Failed to calculate leftover:', error);

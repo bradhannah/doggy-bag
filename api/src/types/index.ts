@@ -13,7 +13,7 @@ type PaymentSourceType = 'bank_account' | 'credit_card' | 'line_of_credit' | 'ca
 // Debt accounts have their balance displayed as negative (money owed)
 const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'];
 
-type CategoryType = 'bill' | 'income';
+type CategoryType = 'bill' | 'income' | 'variable';
 
 type UndoEntityType = 
   | 'bill' 
@@ -111,6 +111,8 @@ interface BillInstance {
   is_paid: boolean;           // DEPRECATED: use is_closed instead
   is_closed: boolean;         // True when ALL occurrences are closed
   is_adhoc: boolean;          // True for one-time ad-hoc items
+  is_payoff_bill?: boolean;   // True if auto-generated from pay_off_monthly payment source
+  payoff_source_id?: string;  // Reference to the payment source this payoff bill is for
   due_date?: string;          // DEPRECATED: use occurrence expected_date
   closed_date?: string;       // ISO date when fully closed (YYYY-MM-DD)
   name?: string;              // For ad-hoc items (bill_id is null)
@@ -188,6 +190,8 @@ interface PaymentSource {
   type: PaymentSourceType;
   balance: number;
   is_active: boolean;
+  exclude_from_leftover?: boolean;  // If true, balance not included in leftover calculation
+  pay_off_monthly?: boolean;        // If true, auto-generate payoff bill (implies exclude_from_leftover)
   created_at: string;
   updated_at: string;
 }
@@ -249,6 +253,7 @@ interface CategorySection {
     name: string;
     color: string;
     sort_order: number;
+    type?: CategoryType;
   };
   items: BillInstanceDetailed[] | IncomeInstanceDetailed[];
   subtotal: {
@@ -273,6 +278,8 @@ interface BillInstanceDetailed {
   is_paid: boolean;           // DEPRECATED: use is_closed instead
   is_closed: boolean;         // True = no more transactions expected
   is_adhoc: boolean;
+  is_payoff_bill: boolean;    // True if auto-generated from pay_off_monthly payment source
+  payoff_source_id?: string;  // Reference to the payment source this payoff bill is for
   due_date: string | null;    // DEPRECATED: use occurrence expected_date
   closed_date: string | null; // ISO date when closed
   is_overdue: boolean;
@@ -311,14 +318,36 @@ interface IncomeInstanceDetailed {
 }
 
 interface LeftoverBreakdown {
-  bankBalances: number;
-  actualIncome: number;
-  actualBills: number;
-  variableExpenses: number;
-  freeFlowingExpenses: number;
-  totalExpenses: number;
-  leftover: number;
-  hasActuals: boolean;
+  bankBalances: number;        // Current cash position (snapshot from bank_balances)
+  remainingIncome: number;     // Income still expected to receive
+  remainingExpenses: number;   // Expenses still need to pay (including payoff bills)
+  leftover: number;            // bank + remainingIncome - remainingExpenses
+  isValid: boolean;            // False if required bank balances are missing
+  hasActuals?: boolean;        // True if any actuals have been entered
+  missingBalances?: string[];  // IDs of payment sources missing balances
+  errorMessage?: string;       // Human-readable error message
+}
+
+/**
+ * Unified leftover calculation result
+ * Used by calculateUnifiedLeftover() utility
+ */
+interface UnifiedLeftoverResult {
+  bankBalances: number;        // Current cash position (snapshot)
+  remainingIncome: number;     // Income still expected to receive
+  remainingExpenses: number;   // Expenses still need to pay
+  leftover: number;            // Final: bank + income - expenses
+  isValid: boolean;            // True if calculation is valid
+  missingBalances: string[];   // IDs of payment sources missing balances
+  errorMessage?: string;       // Human-readable error if not valid
+}
+
+interface PayoffSummary {
+  paymentSourceId: string;
+  paymentSourceName: string;
+  balance: number;         // Current CC balance (expected payoff)
+  paid: number;            // Sum of payments made this month toward payoff
+  remaining: number;       // balance - paid
 }
 
 interface DetailedMonthResponse {
@@ -328,6 +357,7 @@ interface DetailedMonthResponse {
   tallies: {
     bills: SectionTally;           // Regular bills (with expected amounts)
     adhocBills: SectionTally;      // Ad-hoc bills (actual only)
+    ccPayoffs: SectionTally;       // Credit card payoff bills
     totalExpenses: SectionTally;   // Combined total
     income: SectionTally;          // Regular income
     adhocIncome: SectionTally;     // Ad-hoc income
@@ -335,6 +365,7 @@ interface DetailedMonthResponse {
   };
   leftover: number;
   leftoverBreakdown: LeftoverBreakdown;
+  payoffSummaries: PayoffSummary[];  // Summary of each CC payoff status
   bankBalances: Record<string, number>;
   lastUpdated: string;
 }
@@ -397,6 +428,8 @@ export type {
   BillInstanceDetailed,
   IncomeInstanceDetailed,
   LeftoverBreakdown,
+  UnifiedLeftoverResult,
+  PayoffSummary,
   DetailedMonthResponse,
   Expense,
   Entity,

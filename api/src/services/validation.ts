@@ -210,6 +210,22 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Payment source type must be: bank_account, credit_card, line_of_credit, or cash');
     }
     
+    // pay_off_monthly is only valid for debt accounts (credit_card, line_of_credit)
+    if (source.pay_off_monthly === true) {
+      const debtTypes = ['credit_card', 'line_of_credit'];
+      if (source.type && !debtTypes.includes(source.type)) {
+        errors.push('pay_off_monthly can only be enabled for credit cards and lines of credit');
+      }
+    }
+    
+    // exclude_from_leftover is only valid for debt accounts
+    if (source.exclude_from_leftover === true) {
+      const debtTypes = ['credit_card', 'line_of_credit'];
+      if (source.type && !debtTypes.includes(source.type)) {
+        errors.push('exclude_from_leftover can only be enabled for credit cards and lines of credit');
+      }
+    }
+    
     return {
       isValid: errors.length === 0,
       errors
@@ -240,10 +256,10 @@ export class ValidationServiceImpl implements ValidationService {
       }
     }
     
-    // Validate type - must be 'bill' or 'income'
+    // Validate type - must be 'bill', 'income', or 'variable'
     if (category.type !== undefined) {
-      if (!['bill', 'income'].includes(category.type)) {
-        errors.push("type must be 'bill' or 'income'");
+      if (!['bill', 'income', 'variable'].includes(category.type)) {
+        errors.push("type must be 'bill', 'income', or 'variable'");
       }
     }
     
@@ -279,7 +295,7 @@ export class ValidationServiceImpl implements ValidationService {
    * @returns true if valid
    */
   validateCategoryType(type: string): boolean {
-    return ['bill', 'income'].includes(type);
+    return ['bill', 'income', 'variable'].includes(type);
   }
   
   validateID(id: string): boolean {

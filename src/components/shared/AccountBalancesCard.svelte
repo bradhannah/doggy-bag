@@ -126,10 +126,6 @@
 <div class="account-balances-card">
   <div class="card-header">
     <h3 class="card-title">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M12 8V16M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
       Account Balances
     </h3>
     {#if month}
@@ -265,11 +261,6 @@
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
-  
-  .card-title svg {
-    color: #24c8db;
   }
   
   .month-label {

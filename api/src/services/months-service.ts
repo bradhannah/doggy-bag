@@ -3,11 +3,13 @@
 import { StorageServiceImpl } from './storage';
 import { BillsServiceImpl } from './bills-service';
 import { IncomesServiceImpl } from './incomes-service';
-import { VariableExpenseTemplatesServiceImpl } from './variable-expense-templates-service';
+import { CategoriesServiceImpl } from './categories-service';
+import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import type { StorageService } from './storage';
 import type { BillsService } from './bills-service';
 import type { IncomesService } from './incomes-service';
-import type { VariableExpenseTemplatesService } from './variable-expense-templates-service';
+import type { CategoriesService } from './categories-service';
+import type { PaymentSourcesService } from './payment-sources-service';
 import type { 
   MonthlyData,
   BillInstance,
@@ -36,6 +38,7 @@ import {
   createAdhocOccurrence,
   resequenceOccurrences
 } from '../utils/occurrences';
+import { calculateUnifiedLeftover } from '../utils/leftover';
 
 // Summary for a single month in the list
 export interface MonthSummary {
@@ -44,10 +47,17 @@ export interface MonthSummary {
   is_read_only: boolean;        // Lock status
   created_at: string;
   updated_at: string;
+  // Unified leftover calculation results
+  leftover: number;
+  isValid: boolean;             // False if required bank balances are missing
+  errorMessage?: string;        // Human-readable error message if not valid
+  bankBalances: number;         // Current cash position (snapshot)
+  remainingIncome: number;      // Income still expected to receive
+  remainingExpenses: number;    // Expenses still need to pay
+  // Legacy fields (deprecated)
   total_income: number;
   total_bills: number;
   total_expenses: number;
-  leftover: number;
 }
 
 export interface MonthsService {
@@ -126,13 +136,15 @@ export class MonthsServiceImpl implements MonthsService {
   private storage: StorageService;
   private billsService: BillsService;
   private incomesService: IncomesService;
-  private variableExpenseTemplatesService: VariableExpenseTemplatesService;
+  private categoriesService: CategoriesService;
+  private paymentSourcesService: PaymentSourcesService;
   
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
     this.billsService = new BillsServiceImpl();
     this.incomesService = new IncomesServiceImpl();
-    this.variableExpenseTemplatesService = new VariableExpenseTemplatesServiceImpl();
+    this.categoriesService = new CategoriesServiceImpl();
+    this.paymentSourcesService = new PaymentSourcesServiceImpl();
   }
   
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
@@ -184,6 +196,9 @@ export class MonthsServiceImpl implements MonthsService {
       // Use storage service to list files (respects DATA_DIR)
       const files = await this.storage.listFiles('data/months');
       
+      // Load payment sources once for all months
+      const paymentSources = await this.paymentSourcesService.getAll();
+      
       const summaries: MonthSummary[] = [];
       
       for (const file of files) {
@@ -194,11 +209,13 @@ export class MonthsServiceImpl implements MonthsService {
         const data = await this.getMonthlyData(month);
         
         if (data) {
-          // Calculate totals
-          const totalIncome = data.income_instances.reduce((sum, i) => sum + i.amount, 0);
-          const totalBills = data.bill_instances.reduce((sum, b) => sum + b.amount, 0);
+          // Use unified leftover calculation
+          const leftoverResult = calculateUnifiedLeftover(data, paymentSources);
+          
+          // Legacy totals for backward compatibility
+          const totalIncome = data.income_instances.reduce((sum, i) => sum + i.expected_amount, 0);
+          const totalBills = data.bill_instances.reduce((sum, b) => sum + b.expected_amount, 0);
           const totalExpenses = data.variable_expenses.reduce((sum, e) => sum + e.amount, 0);
-          const leftover = totalIncome - totalBills - totalExpenses;
           
           summaries.push({
             month: data.month,
@@ -206,10 +223,17 @@ export class MonthsServiceImpl implements MonthsService {
             is_read_only: data.is_read_only ?? false,
             created_at: data.created_at,
             updated_at: data.updated_at,
+            // Unified leftover fields
+            leftover: leftoverResult.leftover,
+            isValid: leftoverResult.isValid,
+            errorMessage: leftoverResult.errorMessage,
+            bankBalances: leftoverResult.bankBalances,
+            remainingIncome: leftoverResult.remainingIncome,
+            remainingExpenses: leftoverResult.remainingExpenses,
+            // Legacy fields (deprecated)
             total_income: totalIncome,
             total_bills: totalBills,
-            total_expenses: totalExpenses,
-            leftover
+            total_expenses: totalExpenses
           });
         }
       }
@@ -261,6 +285,56 @@ export class MonthsServiceImpl implements MonthsService {
           created_at: now,
           updated_at: now
         });
+      }
+      
+      // Generate payoff bills for pay_off_monthly payment sources
+      const paymentSources = await this.paymentSourcesService.getAll();
+      const payOffMonthlySources = paymentSources.filter(ps => ps.pay_off_monthly === true && ps.is_active);
+      
+      if (payOffMonthlySources.length > 0) {
+        // Ensure the "Credit Card Payoffs" category exists
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+        
+        for (const source of payOffMonthlySources) {
+          // Create a single occurrence for the payoff with the current balance as expected_amount
+          const payoffOccurrence: Occurrence = {
+            id: crypto.randomUUID(),
+            sequence: 1,
+            expected_date: `${month}-28`, // Default to 28th of the month
+            expected_amount: Math.abs(source.balance), // Use absolute value (balance is negative for debts)
+            is_closed: false,
+            payments: [],
+            is_adhoc: false,
+            created_at: now,
+            updated_at: now
+          };
+          
+          billInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,                     // No associated bill template
+            month,
+            billing_period: 'monthly',
+            amount: Math.abs(source.balance),  // DEPRECATED
+            expected_amount: Math.abs(source.balance),
+            actual_amount: undefined,
+            payments: [],                      // DEPRECATED
+            occurrences: [payoffOccurrence],
+            is_default: true,
+            is_paid: false,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,              // Mark as auto-generated payoff
+            payoff_source_id: source.id,       // Reference to the payment source
+            name: `${source.name} Payoff`,     // Ad-hoc name since bill_id is null
+            category_id: payoffCategory.id,    // Assign to payoff category
+            payment_source_id: source.id,      // Payment comes from this source
+            due_date: undefined,
+            created_at: now,
+            updated_at: now
+          });
+        }
+        
+        console.log(`[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`);
       }
       
       const incomeInstances: IncomeInstance[] = [];
@@ -361,6 +435,64 @@ export class MonthsServiceImpl implements MonthsService {
           created_at: now,
           updated_at: now
         });
+      }
+      
+      // Sync payoff bills for pay_off_monthly payment sources
+      const paymentSources = await this.paymentSourcesService.getAll();
+      const payOffMonthlySources = paymentSources.filter(ps => ps.pay_off_monthly === true && ps.is_active);
+      
+      // Find existing payoff bills by their payoff_source_id
+      const existingPayoffSourceIds = new Set(
+        existingData.bill_instances
+          .filter(bi => bi.is_payoff_bill === true && bi.payoff_source_id)
+          .map(bi => bi.payoff_source_id)
+      );
+      
+      // Create payoff bills for sources that don't have one yet
+      const newPayoffSources = payOffMonthlySources.filter(ps => !existingPayoffSourceIds.has(ps.id));
+      
+      if (newPayoffSources.length > 0) {
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+        
+        for (const source of newPayoffSources) {
+          const payoffOccurrence: Occurrence = {
+            id: crypto.randomUUID(),
+            sequence: 1,
+            expected_date: `${month}-28`,
+            expected_amount: Math.abs(source.balance),
+            is_closed: false,
+            payments: [],
+            is_adhoc: false,
+            created_at: now,
+            updated_at: now
+          };
+          
+          newBillInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            amount: Math.abs(source.balance),
+            expected_amount: Math.abs(source.balance),
+            actual_amount: undefined,
+            payments: [],
+            occurrences: [payoffOccurrence],
+            is_default: true,
+            is_paid: false,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,
+            payoff_source_id: source.id,
+            name: `${source.name} Payoff`,
+            category_id: payoffCategory.id,
+            payment_source_id: source.id,
+            due_date: undefined,
+            created_at: now,
+            updated_at: now
+          });
+        }
+        
+        console.log(`[MonthsService] Synced ${newPayoffSources.length} new payoff bills for ${month}`);
       }
       
       // Find incomes that don't have instances yet
@@ -934,7 +1066,6 @@ export class MonthsServiceImpl implements MonthsService {
     try {
       const bills = await this.billsService.getAll();
       const incomes = await this.incomesService.getAll();
-      const variableExpenseTemplates = await this.variableExpenseTemplatesService.getActive();
       
       const nowIso = new Date().toISOString();
       
@@ -969,6 +1100,56 @@ export class MonthsServiceImpl implements MonthsService {
         });
       }
       
+      // Generate payoff bills for pay_off_monthly payment sources
+      const paymentSources = await this.paymentSourcesService.getAll();
+      const payOffMonthlySources = paymentSources.filter(ps => ps.pay_off_monthly === true && ps.is_active);
+      
+      if (payOffMonthlySources.length > 0) {
+        // Ensure the "Credit Card Payoffs" category exists
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+        
+        for (const source of payOffMonthlySources) {
+          // Create a single occurrence for the payoff with the current balance as expected_amount
+          const payoffOccurrence: Occurrence = {
+            id: crypto.randomUUID(),
+            sequence: 1,
+            expected_date: `${month}-28`, // Default to 28th of the month
+            expected_amount: Math.abs(source.balance), // Use absolute value (balance is negative for debts)
+            is_closed: false,
+            payments: [],
+            is_adhoc: false,
+            created_at: nowIso,
+            updated_at: nowIso
+          };
+          
+          billInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,                     // No associated bill template
+            month,
+            billing_period: 'monthly',
+            amount: Math.abs(source.balance),  // DEPRECATED
+            expected_amount: Math.abs(source.balance),
+            actual_amount: undefined,
+            payments: [],                      // DEPRECATED
+            occurrences: [payoffOccurrence],
+            is_default: true,
+            is_paid: false,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,              // Mark as auto-generated payoff
+            payoff_source_id: source.id,       // Reference to the payment source
+            name: `${source.name} Payoff`,     // Ad-hoc name since bill_id is null
+            category_id: payoffCategory.id,    // Assign to payoff category
+            payment_source_id: source.id,      // Payment comes from this source
+            due_date: undefined,
+            created_at: nowIso,
+            updated_at: nowIso
+          });
+        }
+        
+        console.log(`[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`);
+      }
+      
       // Generate income instances from active incomes
       const incomeInstances: IncomeInstance[] = [];
       for (const income of incomes) {
@@ -1000,19 +1181,8 @@ export class MonthsServiceImpl implements MonthsService {
         });
       }
       
-      // Generate variable expenses from active templates
+      // Variable expenses are now created via ad-hoc bills in the Variable Expenses category
       const variableExpenses: VariableExpense[] = [];
-      for (const template of variableExpenseTemplates) {
-        variableExpenses.push({
-          id: crypto.randomUUID(),
-          name: template.name,
-          amount: template.estimated_amount || 0,
-          payment_source_id: template.payment_source_id || '',
-          month,
-          created_at: nowIso,
-          updated_at: nowIso
-        });
-      }
       
       const monthlyData: MonthlyData = {
         month,
@@ -1117,10 +1287,17 @@ export class MonthsServiceImpl implements MonthsService {
           is_read_only: false,
           created_at: '',
           updated_at: '',
+          // Unified leftover fields (not valid for non-existent months)
+          leftover: 0,
+          isValid: false,
+          errorMessage: 'Month data not yet created',
+          bankBalances: 0,
+          remainingIncome: 0,
+          remainingExpenses: 0,
+          // Legacy fields
           total_income: 0,
           total_bills: 0,
-          total_expenses: 0,
-          leftover: 0
+          total_expenses: 0
         });
       }
       
@@ -1132,10 +1309,17 @@ export class MonthsServiceImpl implements MonthsService {
           is_read_only: false,
           created_at: '',
           updated_at: '',
+          // Unified leftover fields (not valid for non-existent months)
+          leftover: 0,
+          isValid: false,
+          errorMessage: 'Month data not yet created',
+          bankBalances: 0,
+          remainingIncome: 0,
+          remainingExpenses: 0,
+          // Legacy fields
           total_income: 0,
           total_bills: 0,
-          total_expenses: 0,
-          leftover: 0
+          total_expenses: 0
         });
       }
       

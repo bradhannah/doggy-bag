@@ -4,11 +4,10 @@
   import { detailedMonth, detailedMonthData, detailedMonthLoading, detailedMonthError } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
-  import VariableExpensesSection from './VariableExpensesSection.svelte';
   import { success, error as showError } from '../../stores/toast';
   import { widthMode } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
-  import { variableExpenses, monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
+  import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
   import { apiUrl } from '$lib/api/client';
   
   export let month: string;
@@ -114,9 +113,6 @@
   
   // Compact mode state
   let compactMode = false;
-  
-  // Calculate variable expenses total for sidebar
-  $: variableExpensesTotal = $variableExpenses.reduce((sum, e) => sum + e.amount, 0);
   
   // Toggle width mode (cycles through small -> medium -> wide)
   function toggleWidthMode() {
@@ -293,7 +289,7 @@
         bankBalances={$detailedMonthData.bankBalances}
         tallies={$detailedMonthData.tallies}
         leftoverBreakdown={$detailedMonthData.leftoverBreakdown}
-        {variableExpensesTotal}
+        payoffSummaries={$detailedMonthData.payoffSummaries ?? []}
       />
       
       <!-- Right: Main Content -->
@@ -312,16 +308,6 @@
                 <CategorySection {section} type="bills" {month} {compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleBillPaid} on:refresh={refreshData} />
               {/each}
             {/if}
-            
-            <!-- Variable Expenses Section -->
-            <VariableExpensesSection 
-              expenses={$variableExpenses}
-              {month}
-              paymentSources={$paymentSources}
-              {compactMode}
-              readOnly={$monthIsReadOnly}
-              on:refresh={refreshData}
-            />
           </section>
           
           <!-- Income Section -->

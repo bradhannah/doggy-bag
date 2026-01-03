@@ -7,7 +7,7 @@
    * @prop onClose - Callback to close the drawer
    */
   import type { PaymentSource } from '../../stores/payment-sources';
-  import { isDebtAccount, formatBalanceForDisplay, getTypeDisplayName } from '../../stores/payment-sources';
+  import { isDebtAccount, formatBalanceForDisplay, getTypeDisplayName, getTypeIcon } from '../../stores/payment-sources';
 
   export let item: PaymentSource;
   export let onEdit: () => void = () => {};
@@ -35,7 +35,10 @@
 
   <div class="view-field">
     <label>Type</label>
-    <div class="view-value">{getTypeDisplayName(item.type)}</div>
+    <div class="view-value type-with-icon">
+      <span class="type-icon">{getTypeIcon(item.type)}</span>
+      {getTypeDisplayName(item.type)}
+    </div>
   </div>
 
   <div class="view-field">
@@ -98,6 +101,16 @@
   .view-value.muted {
     font-size: 14px;
     color: #888;
+  }
+
+  .view-value.type-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .type-icon {
+    font-size: 20px;
   }
 
   .view-actions {

@@ -41,6 +41,20 @@
   
   $: showAmber = section.subtotal.actual > 0 && section.subtotal.actual !== section.subtotal.expected;
   
+  // Generate a subtle background tint from the category color
+  function hexToRgba(hex: string, alpha: number): string {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      const r = parseInt(result[1], 16);
+      const g = parseInt(result[2], 16);
+      const b = parseInt(result[3], 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return `rgba(100, 100, 100, ${alpha})`; // fallback
+  }
+  
+  $: headerBgColor = hexToRgba(section.category.color, 0.08);
+  
   function handleRefresh() {
     dispatch('refresh');
   }
@@ -56,7 +70,7 @@
 </script>
 
 <div class="category-section" class:compact={compactMode}>
-  <div class="category-header" style="border-left-color: {section.category.color}">
+  <div class="category-header" style="border-left-color: {section.category.color}; background: {headerBgColor}">
     <div class="category-title">
       <span class="category-color" style="background-color: {section.category.color}"></span>
       <h4>{section.category.name}</h4>
@@ -122,7 +136,6 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     border-left: 4px solid #555;
     margin-bottom: 8px;

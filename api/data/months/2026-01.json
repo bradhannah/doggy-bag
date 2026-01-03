@@ -183,45 +183,6 @@
       "actual_amount": 50000
     },
     {
-      "id": "5f53c516-c05d-44f4-a77c-1bf14b51cc75",
-      "bill_id": "9bd21970-5809-4f1d-a9bd",
-      "month": "2026-01",
-      "billing_period": "bi_weekly",
-      "amount": 222,
-      "expected_amount": 222,
-      "payments": [],
-      "occurrences": [
-        {
-          "id": "674df4d7-c446-42a0-8173-61d794789570",
-          "sequence": 1,
-          "expected_date": "2026-01-06",
-          "expected_amount": 111,
-          "is_closed": false,
-          "payments": [],
-          "is_adhoc": false,
-          "created_at": "2026-01-02T14:09:28.770Z",
-          "updated_at": "2026-01-02T14:09:28.770Z"
-        },
-        {
-          "id": "58f6c52b-37e1-49c4-8ced-d46778342509",
-          "sequence": 2,
-          "expected_date": "2026-01-20",
-          "expected_amount": 111,
-          "is_closed": false,
-          "payments": [],
-          "is_adhoc": false,
-          "created_at": "2026-01-02T14:09:28.770Z",
-          "updated_at": "2026-01-02T14:09:28.770Z"
-        }
-      ],
-      "is_default": true,
-      "is_paid": false,
-      "is_closed": false,
-      "is_adhoc": false,
-      "created_at": "2026-01-02T14:09:28.770Z",
-      "updated_at": "2026-01-02T14:09:28.770Z"
-    },
-    {
       "id": "5190e0a5-0410-44bc-ac61-85694dbb4ab2",
       "bill_id": "4fea7170-5c52-4982-ba25",
       "month": "2026-01",
@@ -382,48 +343,141 @@
       "is_adhoc": false,
       "created_at": "2026-01-02T21:23:19.090Z",
       "updated_at": "2026-01-02T21:23:19.090Z"
-    }
-  ],
-  "income_instances": [
+    },
     {
-      "id": "33dc72ca-9067-48a2-a1eb-c6493505aff3",
-      "income_id": "1e2fcfde-1d16-48f0-91dd-43ed",
+      "id": "0716a824-de41-43f2-817b-36c7ce363132",
+      "bill_id": null,
       "month": "2026-01",
-      "billing_period": "bi_weekly",
-      "amount": 800000,
-      "expected_amount": 800000,
+      "billing_period": "monthly",
+      "amount": 50000,
+      "expected_amount": 50000,
       "payments": [],
       "occurrences": [
         {
-          "id": "e58c8349-7c24-4784-a880-3babf8fef153",
+          "id": "c6f8b52e-d15f-452d-8fc7-da7bf4fe2879",
           "sequence": 1,
-          "expected_date": "2026-01-01",
-          "expected_amount": 400000,
+          "expected_date": "2026-01-28",
+          "expected_amount": 50000,
           "is_closed": false,
           "payments": [],
           "is_adhoc": false,
-          "created_at": "2026-01-02T14:09:28.770Z",
-          "updated_at": "2026-01-02T14:09:28.770Z"
-        },
-        {
-          "id": "341e8f45-5d16-48cb-9669-32a54d000e0d",
-          "sequence": 2,
-          "expected_date": "2026-01-15",
-          "expected_amount": 400000,
-          "is_closed": false,
-          "payments": [],
-          "is_adhoc": false,
-          "created_at": "2026-01-02T14:09:28.770Z",
-          "updated_at": "2026-01-02T14:09:28.770Z"
+          "created_at": "2026-01-03T01:37:37.695Z",
+          "updated_at": "2026-01-03T01:37:37.695Z"
         }
       ],
       "is_default": true,
       "is_paid": false,
       "is_closed": false,
       "is_adhoc": false,
-      "created_at": "2026-01-02T14:09:28.770Z",
-      "updated_at": "2026-01-02T14:09:28.770Z"
+      "is_payoff_bill": true,
+      "payoff_source_id": "44caafdc-2315-4b4d-a600-679b0d1d05c0",
+      "name": "Home Equity LOC Payoff",
+      "category_id": "089132a2-acf3-429b-94b9-35e92d2ed333",
+      "payment_source_id": "44caafdc-2315-4b4d-a600-679b0d1d05c0",
+      "created_at": "2026-01-03T01:37:37.695Z",
+      "updated_at": "2026-01-03T01:37:37.695Z"
     },
+    {
+      "id": "4cc37583-fd37-458a-adaa-908d1bad1858",
+      "bill_id": null,
+      "month": "2026-01",
+      "billing_period": "monthly",
+      "amount": 50,
+      "expected_amount": 50,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "5aa473e1-e38e-455b-af63-ace17ff78683",
+          "sequence": 1,
+          "expected_date": "2026-01-03",
+          "expected_amount": 50,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": true,
+          "created_at": "2026-01-03T03:19:02.858Z",
+          "updated_at": "2026-01-03T03:19:02.858Z"
+        }
+      ],
+      "is_default": false,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": true,
+      "name": "Coffee",
+      "category_id": "a1b2c3d4-e5f6-7890-abcd-variable0001",
+      "created_at": "2026-01-03T03:19:02.858Z",
+      "updated_at": "2026-01-03T03:19:02.858Z"
+    },
+    {
+      "id": "6b5280cf-b05d-472f-ae67-20a76dadecdd",
+      "bill_id": null,
+      "month": "2026-01",
+      "billing_period": "monthly",
+      "amount": 50,
+      "expected_amount": 50,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "409a9289-7b17-4117-844e-e7da99feb420",
+          "sequence": 1,
+          "expected_date": "2026-01-03",
+          "expected_amount": 50,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": true,
+          "created_at": "2026-01-03T03:19:08.053Z",
+          "updated_at": "2026-01-03T03:19:08.053Z"
+        }
+      ],
+      "is_default": false,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": true,
+      "name": "Coffee",
+      "category_id": "a1b2c3d4-e5f6-7890-abcd-variable0001",
+      "created_at": "2026-01-03T03:19:08.053Z",
+      "updated_at": "2026-01-03T03:19:08.053Z"
+    },
+    {
+      "id": "b9899a62-10da-45f1-81a9-019f1d2f4cd2",
+      "bill_id": "9bd21970-5809-4f1d-a9bd",
+      "month": "2026-01",
+      "billing_period": "bi_weekly",
+      "amount": 222,
+      "expected_amount": 222,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "f4e03f6c-1f36-44df-8dc0-f44f77adfbba",
+          "sequence": 1,
+          "expected_date": "2026-01-06",
+          "expected_amount": 111,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2026-01-03T14:25:55.695Z",
+          "updated_at": "2026-01-03T14:25:55.695Z"
+        },
+        {
+          "id": "2971f32b-cfa8-4a3a-a51a-320e4bd53263",
+          "sequence": 2,
+          "expected_date": "2026-01-20",
+          "expected_amount": 111,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2026-01-03T14:25:55.695Z",
+          "updated_at": "2026-01-03T14:25:55.695Z"
+        }
+      ],
+      "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
+      "created_at": "2026-01-03T14:25:55.695Z",
+      "updated_at": "2026-01-03T14:25:55.695Z"
+    }
+  ],
+  "income_instances": [
     {
       "id": "318c805d-3ee5-406d-b390-9a77567071a0",
       "income_id": "c2ba8932-2a55-47b5-a533-4c95",
@@ -579,6 +633,45 @@
       "is_adhoc": false,
       "created_at": "2026-01-02T14:36:23.449Z",
       "updated_at": "2026-01-02T14:36:23.449Z"
+    },
+    {
+      "id": "aa3e66c7-30cd-4614-b5bf-09f536fcfccd",
+      "income_id": "1e2fcfde-1d16-48f0-91dd-43ed",
+      "month": "2026-01",
+      "billing_period": "bi_weekly",
+      "amount": 800000,
+      "expected_amount": 800000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "418b2a8c-851c-477b-9296-4241d1373932",
+          "sequence": 1,
+          "expected_date": "2026-01-01",
+          "expected_amount": 400000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2026-01-03T14:25:55.698Z",
+          "updated_at": "2026-01-03T14:25:55.698Z"
+        },
+        {
+          "id": "29a8cbc9-7638-41c1-8e10-3b2a8e0e19d3",
+          "sequence": 2,
+          "expected_date": "2026-01-15",
+          "expected_amount": 400000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2026-01-03T14:25:55.698Z",
+          "updated_at": "2026-01-03T14:25:55.698Z"
+        }
+      ],
+      "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
+      "created_at": "2026-01-03T14:25:55.695Z",
+      "updated_at": "2026-01-03T14:25:55.695Z"
     }
   ],
   "variable_expenses": [
@@ -593,8 +686,11 @@
     }
   ],
   "free_flowing_expenses": [],
-  "bank_balances": {},
+  "bank_balances": {
+    "9064f880-eb6d-40f5-953e-3316ce65792a": 500000,
+    "c0bbb9aa-85ad-4d23-bdb6-34ccafd352e2": 250000
+  },
   "is_read_only": false,
   "created_at": "2026-01-02T14:09:28.770Z",
-  "updated_at": "2026-01-02T21:23:19.090Z"
+  "updated_at": "2026-01-03T14:25:55.695Z"
 }

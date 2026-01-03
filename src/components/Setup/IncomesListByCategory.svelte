@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { BillCategoryGroup, BillWithContribution } from '../../stores/bills';
+  import type { IncomeCategoryGroup, IncomeWithContribution } from '../../stores/incomes';
   
-  export let billsByCategory: BillCategoryGroup[];
-  export let totalFixedCosts: number;
-  export let onView: (bill: BillWithContribution) => void;
-  export let onEdit: (bill: BillWithContribution) => void;
-  export let onDelete: (bill: BillWithContribution) => void;
+  export let incomesByCategory: IncomeCategoryGroup[];
+  export let totalMonthlyIncome: number;
+  export let onView: (income: IncomeWithContribution) => void;
+  export let onEdit: (income: IncomeWithContribution) => void;
+  export let onDelete: (income: IncomeWithContribution) => void;
   export let getPaymentSourceName: (id: string) => string;
   
   // Track collapsed state for each category
@@ -21,11 +21,11 @@
     return collapsed[key] || false;
   }
   
-  function formatAmount(bill: BillWithContribution): string {
-    const amount = bill.amount / 100;
-    const monthly = bill.monthlyContribution / 100;
+  function formatAmount(income: IncomeWithContribution): string {
+    const amount = income.amount / 100;
+    const monthly = income.monthlyContribution / 100;
     
-    if (bill.billing_period === 'monthly') {
+    if (income.billing_period === 'monthly') {
       return `$${amount.toFixed(2)}/mo`;
     } else {
       return `$${amount.toFixed(2)} ($${monthly.toFixed(2)}/mo)`;
@@ -46,31 +46,31 @@
     return '$' + (cents / 100).toFixed(2);
   }
   
-  function getCategoryName(group: BillCategoryGroup): string {
+  function getCategoryName(group: IncomeCategoryGroup): string {
     return group.category?.name || 'Uncategorized';
   }
   
-  function getCategoryColor(group: BillCategoryGroup): string {
+  function getCategoryColor(group: IncomeCategoryGroup): string {
     return group.category?.color || '#888888';
   }
   
-  // Total bill count
-  $: totalBills = billsByCategory.reduce((sum, group) => sum + group.bills.length, 0);
+  // Total income count
+  $: totalIncomes = incomesByCategory.reduce((sum, group) => sum + group.incomes.length, 0);
 </script>
 
-<div class="bills-by-category">
+<div class="incomes-by-category">
   <div class="list-container">
   <!-- Column Header -->
   <div class="column-header">
     <span class="col-name">Name</span>
     <span class="col-period">Period</span>
-    <span class="col-source">Source</span>
+    <span class="col-source">Deposit To</span>
     <span class="col-amount">Amount</span>
     <span class="col-actions">Actions</span>
   </div>
   
   <!-- Category Groups -->
-  {#each billsByCategory as group}
+  {#each incomesByCategory as group}
     {@const categoryId = group.category?.id || null}
     {@const isGroupCollapsed = isCollapsed(categoryId)}
     
@@ -82,35 +82,35 @@
     >
       <span class="collapse-icon">{isGroupCollapsed ? '>' : 'v'}</span>
       <span class="category-name">{getCategoryName(group).toUpperCase()}</span>
-      <span class="category-count">({group.bills.length})</span>
+      <span class="category-count">({group.incomes.length})</span>
       <span class="category-line"></span>
     </button>
     
-    <!-- Bills in Category -->
+    <!-- Incomes in Category -->
     {#if !isGroupCollapsed}
-      {#if group.bills.length === 0}
+      {#if group.incomes.length === 0}
         <div class="empty-category">
-          No bills in this category
+          No incomes in this category
         </div>
       {:else}
-        {#each group.bills as bill}
+        {#each group.incomes as income}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="bill-row" on:click={() => onView(bill)}>
-            <span class="col-name">{bill.name}</span>
-            <span class="col-period">{formatPeriod(bill.billing_period)}</span>
-            <span class="col-source">{getPaymentSourceName(bill.payment_source_id)}</span>
-            <span class="col-amount" class:zero={bill.amount === 0}>
-              {formatAmount(bill)}
+          <div class="income-row" on:click={() => onView(income)}>
+            <span class="col-name">{income.name}</span>
+            <span class="col-period">{formatPeriod(income.billing_period)}</span>
+            <span class="col-source">{getPaymentSourceName(income.payment_source_id)}</span>
+            <span class="col-amount" class:zero={income.amount === 0}>
+              {formatAmount(income)}
             </span>
             <span class="col-actions" on:click|stopPropagation>
-              <button class="btn-icon" on:click={() => onEdit(bill)} title="Edit">
+              <button class="btn-icon" on:click={() => onEdit(income)} title="Edit">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </button>
-              <button class="btn-icon btn-danger" on:click={() => onDelete(bill)} title="Delete">
+              <button class="btn-icon btn-danger" on:click={() => onDelete(income)} title="Delete">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -121,7 +121,7 @@
         {/each}
         
         <!-- Category Subtotal -->
-        {#if group.bills.length > 0}
+        {#if group.incomes.length > 0}
           <div class="category-subtotal">
             <span>Subtotal: {formatCurrency(group.subtotal)}/mo</span>
           </div>
@@ -129,18 +129,17 @@
       {/if}
     {/if}
   {/each}
-  
   </div>
   
-  <!-- Total Fixed Costs -->
+  <!-- Total Monthly Income -->
   <div class="total-row">
-    <span class="total-label">TOTAL FIXED COSTS</span>
-    <span class="total-value">{formatCurrency(totalFixedCosts)}/mo</span>
+    <span class="total-label">TOTAL MONTHLY INCOME</span>
+    <span class="total-value">{formatCurrency(totalMonthlyIncome)}/mo</span>
   </div>
 </div>
 
 <style>
-  .bills-by-category {
+  .incomes-by-category {
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -228,8 +227,8 @@
     font-style: italic;
   }
   
-  /* Bill Row */
-  .bill-row {
+  /* Income Row */
+  .income-row {
     display: grid;
     grid-template-columns: 1fr 90px 130px 150px 80px;
     gap: 12px;
@@ -241,11 +240,11 @@
     transition: background 0.15s ease;
   }
   
-  .bill-row:hover {
-    background: rgba(36, 200, 219, 0.05);
+  .income-row:hover {
+    background: rgba(34, 197, 94, 0.05);
   }
   
-  .bill-row .col-name {
+  .income-row .col-name {
     font-weight: 500;
     color: #e4e4e7;
     white-space: nowrap;
@@ -253,12 +252,12 @@
     text-overflow: ellipsis;
   }
   
-  .bill-row .col-period {
+  .income-row .col-period {
     font-size: 13px;
     color: #888;
   }
   
-  .bill-row .col-source {
+  .income-row .col-source {
     font-size: 13px;
     color: #888;
     white-space: nowrap;
@@ -266,19 +265,19 @@
     text-overflow: ellipsis;
   }
   
-  .bill-row .col-amount {
+  .income-row .col-amount {
     font-size: 14px;
     font-weight: 600;
-    color: #ff6b6b;
+    color: #22c55e;
     text-align: right;
   }
   
-  .bill-row .col-amount.zero {
+  .income-row .col-amount.zero {
     color: #666;
     font-style: italic;
   }
   
-  .bill-row .col-actions {
+  .income-row .col-actions {
     display: flex;
     gap: 6px;
     justify-content: flex-end;
@@ -340,13 +339,13 @@
   .total-value {
     font-size: 20px;
     font-weight: bold;
-    color: #ff6b6b;
+    color: #22c55e;
   }
   
   /* Responsive - hide source column on narrow screens */
   @media (max-width: 768px) {
     .column-header,
-    .bill-row {
+    .income-row {
       grid-template-columns: 1fr 80px 130px 70px;
     }
     
@@ -361,7 +360,7 @@
   
   @media (max-width: 600px) {
     .column-header,
-    .bill-row {
+    .income-row {
       grid-template-columns: 1fr 100px 70px;
     }
     

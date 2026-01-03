@@ -5,18 +5,55 @@
       "id": "b94007e1-e73e-4818-8e38-1b5dbee156e6",
       "bill_id": "9867be3e-d998-429d-9f36-1d884f832bb6",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 150000,
+      "expected_amount": 150000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "fc30c544-39bc-4295-9080-670e3fb64f13",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 150000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-30T18:00:10.427Z",
+          "updated_at": "2025-12-31T18:13:51.684Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-30T18:00:10.427Z",
-      "updated_at": "2025-12-31T18:13:51.684Z",
-      "is_paid": false
+      "updated_at": "2025-12-31T18:13:51.684Z"
     },
     {
       "id": "4e971eff-0517-4382-90e4-689c0e2ec10e",
       "bill_id": "4a2c1094-578b-47b0-a2e9",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 100000,
+      "expected_amount": 100000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "0784e1ef-4211-4b3f-807d-69beb394a3dc",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 100000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-30T18:00:10.427Z",
+          "updated_at": "2025-12-30T18:00:10.427Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-30T18:00:10.427Z",
       "updated_at": "2025-12-30T18:00:10.427Z"
     },
@@ -24,8 +61,27 @@
       "id": "db3b5d14-7f02-4d78-8bae-e38a37cfdc18",
       "bill_id": "4961fa75-3447-47a7-ad93",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 10000,
+      "expected_amount": 10000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "98ff61ba-6da7-454c-8514-09ce2cf49796",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 10000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-30T18:00:10.427Z",
+          "updated_at": "2025-12-30T18:00:10.427Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-30T18:00:10.427Z",
       "updated_at": "2025-12-30T18:00:10.427Z"
     },
@@ -33,8 +89,27 @@
       "id": "86b3e801-8b44-447a-b08e-ff74341a1483",
       "bill_id": "c9fc9c03-aeb3-448c-b2ad",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 150000,
+      "expected_amount": 150000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "5c0d93e2-eabf-4a8f-a63e-65e4da370828",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 150000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-31T14:08:28.894Z",
+          "updated_at": "2025-12-31T14:08:28.894Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:08:28.894Z",
       "updated_at": "2025-12-31T14:08:28.894Z"
     },
@@ -42,8 +117,27 @@
       "id": "30c7ead0-7916-49b8-b24e-d77ce0bdacb1",
       "bill_id": "24dbe637-9826-4346-898d",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 40000,
+      "expected_amount": 40000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "51d6419d-7e8f-4217-8759-410f64f89d5c",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 40000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-31T14:09:04.968Z",
+          "updated_at": "2025-12-31T14:09:04.968Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:09:04.968Z",
       "updated_at": "2025-12-31T14:09:04.968Z"
     },
@@ -51,8 +145,27 @@
       "id": "6492791d-7868-4c24-b078-18423abddf87",
       "bill_id": "3aee7c42-545d-4996-af20",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 150000,
+      "expected_amount": 150000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "68d74f8a-2e71-4f40-aafc-c0380adcb49d",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 150000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-31T14:17:42.569Z",
+          "updated_at": "2025-12-31T14:17:42.569Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:17:42.569Z",
       "updated_at": "2025-12-31T14:17:42.569Z"
     },
@@ -60,8 +173,27 @@
       "id": "f17d242b-7bcb-4893-b642-6e3927ab6c9f",
       "bill_id": "2c87df1f-06a7-49ea-8666",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 30000,
+      "expected_amount": 30000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "80898da5-b1b6-4123-91f4-196e815006d4",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 30000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-31T14:17:42.569Z",
+          "updated_at": "2025-12-31T14:17:42.569Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:17:42.569Z",
       "updated_at": "2025-12-31T14:17:42.569Z"
     },
@@ -69,8 +201,27 @@
       "id": "7cb8eb18-7acc-4082-a958-552bbcf7ccb8",
       "bill_id": "fa02ef5d-f064-47bb-ae1e",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 50000,
+      "expected_amount": 50000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "f633b255-e7ab-43f6-8198-6b9f66a44527",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 50000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-31T14:17:42.569Z",
+          "updated_at": "2025-12-31T14:17:42.569Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-31T14:17:42.569Z",
       "updated_at": "2025-12-31T14:17:42.569Z"
     }
@@ -80,8 +231,27 @@
       "id": "ff3a9b7c-0034-434c-894e-902f1a0cfa39",
       "income_id": "4b3b2eef-2978-4322-bc1c-40c0",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 50000,
+      "expected_amount": 50000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "7b7165e8-d6db-4618-ae43-03cb12bc6232",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 50000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-30T18:00:10.427Z",
+          "updated_at": "2025-12-31T01:25:48.149Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-30T18:00:10.427Z",
       "updated_at": "2025-12-31T01:25:48.149Z"
     },
@@ -89,8 +259,27 @@
       "id": "9155a7d6-3251-40da-b584-c2574a307c07",
       "income_id": "ddec59d7-8484-4c93-afc1-41c9",
       "month": "2025-01",
+      "billing_period": "monthly",
       "amount": 500000,
+      "expected_amount": 500000,
+      "payments": [],
+      "occurrences": [
+        {
+          "id": "11e8f792-97ea-40a6-8d8b-ee6a48cf27d9",
+          "sequence": 1,
+          "expected_date": "2025-01-01",
+          "expected_amount": 500000,
+          "is_closed": false,
+          "payments": [],
+          "is_adhoc": false,
+          "created_at": "2025-12-30T18:00:10.427Z",
+          "updated_at": "2025-12-30T18:00:10.427Z"
+        }
+      ],
       "is_default": true,
+      "is_paid": false,
+      "is_closed": false,
+      "is_adhoc": false,
       "created_at": "2025-12-30T18:00:10.427Z",
       "updated_at": "2025-12-30T18:00:10.427Z"
     }

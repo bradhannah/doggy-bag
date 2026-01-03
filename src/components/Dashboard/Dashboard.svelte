@@ -13,7 +13,6 @@
     leftover, 
     billInstances,
     incomeInstances,
-    variableExpenses,
     bankBalances
   } from '../../stores/months';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
@@ -66,16 +65,6 @@
     expected: income.amount,
     actual: income.is_paid ? income.amount : 0,
     isPaid: income.is_paid ?? false
-  }));
-  
-  // Transform variable expenses for CollapsibleSummarySection
-  // Variable expenses are always "actual" only - no expected
-  $: expenseItems = $variableExpenses.map(expense => ({
-    id: expense.id,
-    name: expense.name,
-    expected: 0,
-    actual: expense.amount,
-    isPaid: true // Expenses are always "spent"
   }));
   
   // Toggle width mode
@@ -175,7 +164,12 @@
         </button>
       </div>
     {:else}
-      <!-- Account Balances - Top, Editable -->
+      <!-- Leftover Card - Top, most important metric -->
+      <section class="leftover-section">
+        <LeftoverCard leftover={$leftover} loading={$monthlyLoading} />
+      </section>
+      
+      <!-- Account Balances - Editable -->
       <section class="balances-section">
         <AccountBalancesCard
           paymentSources={$paymentSources}
@@ -184,11 +178,6 @@
           loading={$monthlyLoading}
           on:updateBalances={handleUpdateBalances}
         />
-      </section>
-      
-      <!-- Leftover Card -->
-      <section class="leftover-section">
-        <LeftoverCard leftover={$leftover} loading={$monthlyLoading} />
       </section>
       
       <!-- Collapsible Sections - All collapsed by default, read-only -->
@@ -204,13 +193,6 @@
           title="Bills"
           items={billItems}
           type="bills"
-          expanded={false}
-        />
-        
-        <CollapsibleSummarySection
-          title="Variable Expenses"
-          items={expenseItems}
-          type="expenses"
           expanded={false}
         />
       </section>

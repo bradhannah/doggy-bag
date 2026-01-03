@@ -60,6 +60,8 @@ import {
   createIncomeInstanceHandlerReopen,
   createBillInstanceHandlerUpdateExpected,
   createIncomeInstanceHandlerUpdateExpected,
+  createBillInstanceHandlerDELETE,
+  createIncomeInstanceHandlerDELETE,
   // Occurrence handlers
   createBillOccurrenceHandlerPUT,
   createIncomeOccurrenceHandlerPUT,
@@ -122,13 +124,6 @@ import {
   createAdhocIncomeHandlerDELETE,
   createMakeRegularIncomeHandler
 } from './handlers/adhoc.handlers';
-
-import {
-  createVariableExpenseTemplatesHandlerGET,
-  createVariableExpenseTemplatesHandlerPOST,
-  createVariableExpenseTemplatesHandlerPUT,
-  createVariableExpenseTemplatesHandlerDELETE
-} from './handlers/variable-expense-templates.handlers';
 
 import {
   getSettings,
@@ -197,12 +192,6 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   { path: '/api/incomes', definition: { method: 'PUT', handler: createIncomesHandlerPUT(), hasPathParam: true } },
   { path: '/api/incomes', definition: { method: 'DELETE', handler: createIncomesHandlerDELETE(), hasPathParam: true } },
   
-  // Variable Expense Templates
-  { path: '/api/variable-expense-templates', definition: { method: 'GET', handler: createVariableExpenseTemplatesHandlerGET() } },
-  { path: '/api/variable-expense-templates', definition: { method: 'POST', handler: createVariableExpenseTemplatesHandlerPOST() } },
-  { path: '/api/variable-expense-templates', definition: { method: 'PUT', handler: createVariableExpenseTemplatesHandlerPUT(), hasPathParam: true } },
-  { path: '/api/variable-expense-templates', definition: { method: 'DELETE', handler: createVariableExpenseTemplatesHandlerDELETE(), hasPathParam: true } },
-  
   // Months list - must come before specific month routes
   { path: '/api/months', definition: { method: 'GET', handler: createMonthsHandlerList() } },
   
@@ -238,6 +227,7 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   { path: '/api/months/bills/reopen', definition: { method: 'POST', handler: createBillInstanceHandlerReopen(), hasPathParam: true } },
   { path: '/api/months/bills/expected', definition: { method: 'PUT', handler: createBillInstanceHandlerUpdateExpected(), hasPathParam: true } },
   { path: '/api/months/bills', definition: { method: 'PUT', handler: createBillInstanceHandlerPUT(), hasPathParam: true } },
+  { path: '/api/months/bills', definition: { method: 'DELETE', handler: createBillInstanceHandlerDELETE(), hasPathParam: true } },
   
   // Income instances
   // Occurrence routes must come before other income instance routes
@@ -258,6 +248,7 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   { path: '/api/months/incomes/reopen', definition: { method: 'POST', handler: createIncomeInstanceHandlerReopen(), hasPathParam: true } },
   { path: '/api/months/incomes/expected', definition: { method: 'PUT', handler: createIncomeInstanceHandlerUpdateExpected(), hasPathParam: true } },
   { path: '/api/months/incomes', definition: { method: 'PUT', handler: createIncomeInstanceHandlerPUT(), hasPathParam: true } },
+  { path: '/api/months/incomes', definition: { method: 'DELETE', handler: createIncomeInstanceHandlerDELETE(), hasPathParam: true } },
   
   // Ad-hoc bills - make-regular must come before other adhoc routes
   { path: '/api/months/adhoc/bills/make-regular', definition: { method: 'POST', handler: createMakeRegularBillHandler(), hasPathParam: true } },

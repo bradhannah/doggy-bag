@@ -18,9 +18,23 @@
   let name = editingItem?.name || '';
   let type: PaymentSourceType = editingItem?.type || 'bank_account';
   let balanceDollars = editingItem ? (editingItem.balance / 100).toFixed(2) : '0.00';
+  let excludeFromLeftover = editingItem?.exclude_from_leftover ?? false;
+  let payOffMonthly = editingItem?.pay_off_monthly ?? false;
   
   // Reactive helper for debt account detection
   $: isDebt = isDebtAccount(type);
+  
+  // When type changes to non-debt, reset the debt-only options
+  $: if (!isDebt) {
+    excludeFromLeftover = false;
+    payOffMonthly = false;
+  }
+  
+  // pay_off_monthly implies exclude_from_leftover
+  $: if (payOffMonthly) {
+    excludeFromLeftover = true;
+  }
+  
   let error = '';
   let saving = false;
 
@@ -29,6 +43,8 @@
     name = editingItem.name;
     type = editingItem.type;
     balanceDollars = (editingItem.balance / 100).toFixed(2);
+    excludeFromLeftover = editingItem.exclude_from_leftover ?? false;
+    payOffMonthly = editingItem.pay_off_monthly ?? false;
   }
 
   // Convert dollars to cents
@@ -51,10 +67,22 @@
 
     try {
       if (editingItem) {
-        await updatePaymentSource(editingItem.id, { name, type, balance: balanceCents });
+        await updatePaymentSource(editingItem.id, { 
+          name, 
+          type, 
+          balance: balanceCents,
+          exclude_from_leftover: isDebt ? excludeFromLeftover : undefined,
+          pay_off_monthly: isDebt ? payOffMonthly : undefined
+        });
         success(`Payment source "${name}" updated`);
       } else {
-        await createPaymentSource({ name, type, balance: balanceCents });
+        await createPaymentSource({ 
+          name, 
+          type, 
+          balance: balanceCents,
+          exclude_from_leftover: isDebt ? excludeFromLeftover : undefined,
+          pay_off_monthly: isDebt ? payOffMonthly : undefined
+        });
         success(`Payment source "${name}" added`);
       }
       onSave();
@@ -87,10 +115,10 @@
   <div class="form-group">
     <label for="ps-type">Type</label>
     <select id="ps-type" bind:value={type} disabled={saving}>
-      <option value="bank_account">Bank Account</option>
-      <option value="credit_card">Credit Card</option>
-      <option value="line_of_credit">Line of Credit</option>
-      <option value="cash">Cash</option>
+      <option value="bank_account">🏦 Bank Account</option>
+      <option value="credit_card">💳 Credit Card</option>
+      <option value="line_of_credit">🏧 Line of Credit</option>
+      <option value="cash">💵 Cash</option>
     </select>
   </div>
 
@@ -111,6 +139,41 @@
       <div class="help-text">Enter amount owed as positive. Enter negative if you have a credit balance.</div>
     {/if}
   </div>
+
+  {#if isDebt}
+    <div class="debt-options">
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            bind:checked={payOffMonthly}
+            disabled={saving}
+          />
+          <span class="checkbox-text">
+            <strong>Pay Off Monthly</strong>
+            <span class="checkbox-description">Auto-generate a payoff bill for this balance each month</span>
+          </span>
+        </label>
+      </div>
+      
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            bind:checked={excludeFromLeftover}
+            disabled={saving || payOffMonthly}
+          />
+          <span class="checkbox-text">
+            <strong>Exclude from Leftover</strong>
+            <span class="checkbox-description">Don't include this balance in the leftover calculation</span>
+          </span>
+        </label>
+        {#if payOffMonthly}
+          <div class="help-text locked">Automatically enabled with "Pay Off Monthly"</div>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" on:click={onCancel} disabled={saving}>
@@ -192,6 +255,64 @@
     font-size: 12px;
     color: #24c8db;
     margin-top: 4px;
+  }
+
+  .help-text.locked {
+    color: #888;
+    font-style: italic;
+  }
+
+  .debt-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    border: 1px solid #333355;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: #24c8db;
+    cursor: pointer;
+  }
+
+  .checkbox-label input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .checkbox-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .checkbox-text strong {
+    font-size: 14px;
+    color: #e4e4e7;
+  }
+
+  .checkbox-description {
+    font-size: 12px;
+    color: #888;
   }
 
   .form-actions {

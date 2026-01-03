@@ -54,12 +54,20 @@ export interface FreeFlowingExpense {
 }
 
 export interface LeftoverSummary {
+  // Unified leftover fields
+  bankBalances: number;        // Current cash position (snapshot)
+  remainingIncome: number;     // Income still expected to receive
+  remainingExpenses: number;   // Expenses still need to pay
+  leftover: number;            // bank + remainingIncome - remainingExpenses
+  isValid: boolean;            // False if required bank balances are missing
+  missingBalances?: string[];  // IDs of payment sources missing balances
+  errorMessage?: string;       // Human-readable error message
+  // Legacy fields (deprecated)
   totalCash: number;
   totalCreditDebt: number;
   netWorth: number;
   totalIncome: number;
   totalExpenses: number;
-  leftover: number;
 }
 
 export interface MonthlyData {
@@ -258,9 +266,6 @@ export const totalCreditDebt = derived(monthsStore, ($store) => $store.data?.sum
 // Bill and income instances
 export const billInstances = derived(monthsStore, ($store) => $store.data?.bill_instances || []);
 export const incomeInstances = derived(monthsStore, ($store) => $store.data?.income_instances || []);
-
-// Variable expenses
-export const variableExpenses = derived(monthsStore, ($store) => $store.data?.variable_expenses || []);
 
 // Bank balances for current month
 export const bankBalances = derived(monthsStore, ($store) => $store.data?.bank_balances || {});

@@ -17,6 +17,7 @@
   
   let showTransactionsDrawer = false;
   let showMakeRegularDrawer = false;
+  let showDeleteConfirm = false;
   let isEditingExpected = false;
   let expectedEditValue = '';
   let saving = false;
@@ -175,6 +176,34 @@
   function handleTransactionsUpdated() {
     dispatch('refresh');
   }
+  
+  function confirmDeleteIncome() {
+    showDeleteConfirm = true;
+  }
+  
+  function cancelDelete() {
+    showDeleteConfirm = false;
+  }
+  
+  async function handleDeleteIncome() {
+    if (saving) return;
+    
+    saving = true;
+    showDeleteConfirm = false;
+    
+    try {
+      await apiClient.deletePath(`/api/months/${month}/incomes/${income.id}`);
+      success('Income deleted');
+      // Optimistic update - remove from store immediately to prevent cycling bug
+      detailedMonth.removeIncomeInstance(income.id);
+      // Then refresh to update tallies from server
+      dispatch('refresh');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to delete income');
+    } finally {
+      saving = false;
+    }
+  }
 </script>
 
 <div class="income-row-container">
@@ -294,6 +323,21 @@
             Receive Full
           </button>
         {/if}
+        
+        <!-- Delete button for any income (when not read-only) -->
+        {#if !readOnly}
+          <button 
+            class="action-btn-icon delete" 
+            on:click={confirmDeleteIncome} 
+            disabled={saving}
+            title="Delete income"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        {/if}
       </div>
     </div>
   </div>
@@ -324,6 +368,25 @@
     on:converted={handleConverted}
     on:close={() => showMakeRegularDrawer = false}
   />
+{/if}
+
+<!-- Delete Confirmation Dialog -->
+{#if showDeleteConfirm}
+  <div class="confirm-overlay" on:click={cancelDelete} on:keydown={(e) => e.key === 'Escape' && cancelDelete()} role="dialog" aria-modal="true" tabindex="-1">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="confirm-dialog" on:click|stopPropagation>
+      <h3>Delete Income</h3>
+      <p>Are you sure you want to delete "<strong>{income.name}</strong>"?</p>
+      <p class="confirm-warning">This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="confirm-btn cancel" on:click={cancelDelete}>Cancel</button>
+        <button class="confirm-btn delete" on:click={handleDeleteIncome} disabled={saving}>
+          {saving ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  </div>
 {/if}
 
 <style>
@@ -675,5 +738,114 @@
   
   .income-row.compact .action-buttons {
     min-width: 70px;
+  }
+  
+  /* Delete icon button */
+  .action-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .action-btn-icon:hover:not(:disabled) {
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
+  }
+  
+  .action-btn-icon.delete:hover:not(:disabled) {
+    background: #ff4444;
+    color: #fff;
+  }
+  
+  .action-btn-icon:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  /* Confirmation dialog */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .confirm-dialog {
+    background: #1a1a2e;
+    border: 1px solid #333355;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+  }
+  
+  .confirm-dialog h3 {
+    margin: 0 0 16px;
+    font-size: 1.1rem;
+    color: #e4e4e7;
+  }
+  
+  .confirm-dialog p {
+    margin: 0 0 8px;
+    color: #a0a0a0;
+    font-size: 0.9rem;
+  }
+  
+  .confirm-warning {
+    color: #f87171 !important;
+    font-size: 0.8rem !important;
+    margin-bottom: 20px !important;
+  }
+  
+  .confirm-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+  
+  .confirm-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .confirm-btn.cancel {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+  }
+  
+  .confirm-btn.cancel:hover {
+    border-color: #666;
+    color: #e4e4e7;
+  }
+  
+  .confirm-btn.delete {
+    background: #ff4444;
+    border: none;
+    color: #fff;
+  }
+  
+  .confirm-btn.delete:hover:not(:disabled) {
+    background: #cc3333;
+  }
+  
+  .confirm-btn.delete:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>

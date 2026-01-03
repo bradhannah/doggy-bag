@@ -24,6 +24,9 @@
 
   // Check if this is a predefined category (can't edit predefined categories)
   $: isPredefined = editingItem?.is_predefined || false;
+  
+  // Check if this is the Variable Expenses category (special system category)
+  $: isVariableCategory = (editingItem as any)?.type === 'variable';
 
   // Reset form when editingItem changes
   $: if (editingItem) {
@@ -68,7 +71,11 @@
 </script>
 
 <form class="entity-form" on:submit|preventDefault={handleSubmit}>
-  {#if isPredefined}
+  {#if isVariableCategory}
+    <div class="info-message variable">
+      <strong>Variable Expenses</strong> is a system category. Add ad-hoc items to this category from the monthly view.
+    </div>
+  {:else if isPredefined}
     <div class="info-message">
       This is a predefined category and cannot be edited.
     </div>
@@ -95,13 +102,23 @@
     <select 
       id="cat-type" 
       bind:value={type} 
-      disabled={saving || isPredefined || !!editingItem}
+      disabled={saving || isPredefined || isVariableCategory || !!editingItem}
     >
       <option value="bill">Bill Category</option>
       <option value="income">Income Category</option>
+      {#if isVariableCategory}
+        <!-- Only show variable option if editing the Variable Expenses category -->
+        <option value="variable">Variable Expense Category</option>
+      {/if}
     </select>
     <div class="help-text">
-      {type === 'bill' ? 'Used to organize expenses in the monthly view' : 'Used to organize income sources in the monthly view'}
+      {#if type === 'bill'}
+        Used to organize fixed recurring bills in the monthly view
+      {:else if type === 'income'}
+        Used to organize income sources in the monthly view
+      {:else}
+        System category for one-off variable expenses (managed automatically)
+      {/if}
     </div>
     {#if editingItem}
       <div class="help-text warning">Category type cannot be changed after creation</div>
@@ -154,6 +171,12 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #24c8db;
+  }
+
+  .info-message.variable {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.4);
   }
 
   .form-group {
