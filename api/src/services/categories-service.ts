@@ -7,6 +7,9 @@ import type { ValidationService } from './validation';
 import type { Category, CategoryType, ValidationResult } from '../types';
 import { migrateCategory, needsCategoryMigration } from '../utils/migration';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RawCategoryData = Record<string, any>;
+
 // Static GUID for the Variable Expenses category (system-only, cannot be deleted)
 export const VARIABLE_EXPENSES_CATEGORY_ID = 'a1b2c3d4-e5f6-7890-abcd-variable0001';
 const VARIABLE_EXPENSES_CATEGORY_NAME = 'Variable Expenses';
@@ -41,7 +44,7 @@ export class CategoriesServiceImpl implements CategoriesService {
   public async getAll(): Promise<Category[]> {
     try {
       const rawCategories =
-        (await this.storage.readJSON<any[]>('data/entities/categories.json')) || [];
+        (await this.storage.readJSON<RawCategoryData[]>('data/entities/categories.json')) || [];
 
       // Ensure Variable Expenses category exists
       const hasVariableCategory = rawCategories.some(
@@ -50,7 +53,8 @@ export class CategoriesServiceImpl implements CategoriesService {
       if (!hasVariableCategory) {
         await this.ensureVariableExpensesCategory();
         // Re-read after creating
-        const updated = (await this.storage.readJSON<any[]>('data/entities/categories.json')) || [];
+        const updated =
+          (await this.storage.readJSON<RawCategoryData[]>('data/entities/categories.json')) || [];
         return this.processCategories(updated);
       }
 
@@ -65,7 +69,7 @@ export class CategoriesServiceImpl implements CategoriesService {
    * Process raw categories: migrate if needed, sort by type then sort_order
    * Variable category always sorted last
    */
-  private async processCategories(rawCategories: any[]): Promise<Category[]> {
+  private async processCategories(rawCategories: RawCategoryData[]): Promise<Category[]> {
     // Apply migration if needed
     let needsSave = false;
     const categories = rawCategories.map((cat, index) => {
@@ -295,7 +299,7 @@ export class CategoriesServiceImpl implements CategoriesService {
   public async ensureVariableExpensesCategory(): Promise<Category> {
     try {
       const rawCategories =
-        (await this.storage.readJSON<any[]>('data/entities/categories.json')) || [];
+        (await this.storage.readJSON<RawCategoryData[]>('data/entities/categories.json')) || [];
 
       // Look for existing variable category by ID or type
       const variableCategory = rawCategories.find(

@@ -8,6 +8,7 @@ import type {
   Income,
   PaymentSource,
   Category,
+  MonthlyData,
   ValidationResult,
 } from '../types';
 
@@ -49,7 +50,7 @@ export class BackupServiceImpl implements BackupService {
         monthFiles
           .filter((f) => f.endsWith('.json') && f !== '.gitkeep')
           .map(async (f) => {
-            const data = await this.storage.readJSON<any>(`data/months/${f}`);
+            const data = await this.storage.readJSON<MonthlyData>(`data/months/${f}`);
             return data;
           })
       );
@@ -61,7 +62,7 @@ export class BackupServiceImpl implements BackupService {
         incomes: incomes || [],
         payment_sources: paymentSources || [],
         categories: categories || [],
-        months: monthData.filter(Boolean),
+        months: monthData.filter((m): m is MonthlyData => m !== null),
       };
 
       await this.storage.writeJSON('data/budgetforfun-backup.json', backupData);

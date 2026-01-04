@@ -1,11 +1,10 @@
 // Undo API Handlers
 
-import { UndoServiceImpl, createUndoEntry } from '../../services/undo-service';
+import { UndoServiceImpl } from '../../services/undo-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
 import { PaymentSourcesServiceImpl } from '../../services/payment-sources-service';
 import { formatErrorForUser } from '../../utils/errors';
-import type { UndoEntry, UndoEntityType } from '../../types';
 
 const undoService = UndoServiceImpl.getInstance();
 const billsService = new BillsServiceImpl();

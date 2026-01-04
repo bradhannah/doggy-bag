@@ -5,7 +5,7 @@ import { MonthsServiceImpl } from './months-service';
 import type { MonthsService } from './months-service';
 import type { Payment, BillInstance, IncomeInstance } from '../types';
 import { NotFoundError, ValidationError } from '../utils/errors';
-import { sumOccurrencePayments, areAllOccurrencesClosed } from '../utils/occurrences';
+import { areAllOccurrencesClosed } from '../utils/occurrences';
 
 export interface PaymentsService {
   // Bill payments (at occurrence level)

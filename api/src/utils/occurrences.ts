@@ -71,7 +71,6 @@ export function getOccurrenceDatesInMonth(
   month: string
 ): string[] {
   const [year, monthNum] = month.split('-').map(Number);
-  const startOfMonth = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0); // Last day of month
   const lastDayOfMonth = endOfMonth.getDate();
 
@@ -209,7 +208,7 @@ export function getSemiAnnuallyDatesInMonth(
 ): string[] {
   if (!startDate) {
     // If no start date, check if this is January or July
-    const [year, monthNum] = month.split('-').map(Number);
+    const [_year, monthNum] = month.split('-').map(Number);
     if (monthNum === 1 || monthNum === 7) {
       return [`${month}-01`];
     }

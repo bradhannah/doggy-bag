@@ -34,12 +34,12 @@
 
 <div class="entity-view">
   <div class="view-field">
-    <label>Name</label>
+    <span class="field-label">Name</span>
     <div class="view-value">{item.name}</div>
   </div>
 
   <div class="view-field">
-    <label>Type</label>
+    <span class="field-label">Type</span>
     <div class="view-value type-with-icon">
       <span class="type-icon">{getTypeIcon(item.type)}</span>
       {getTypeDisplayName(item.type)}
@@ -47,19 +47,19 @@
   </div>
 
   <div class="view-field">
-    <label>{isDebt ? 'Balance Owed' : 'Current Balance'}</label>
+    <span class="field-label">{isDebt ? 'Balance Owed' : 'Current Balance'}</span>
     <div class="view-value amount" style="color: {displayBalance < 0 ? '#ff6b6b' : '#24c8db'};">
       {formatAmount(displayBalance)}
     </div>
   </div>
 
   <div class="view-field">
-    <label>Created</label>
+    <span class="field-label">Created</span>
     <div class="view-value muted">{formatDate(item.created_at)}</div>
   </div>
 
   <div class="view-field">
-    <label>Last Updated</label>
+    <span class="field-label">Last Updated</span>
     <div class="view-value muted">{formatDate(item.updated_at)}</div>
   </div>
 
@@ -82,7 +82,7 @@
     gap: 6px;
   }
 
-  label {
+  .field-label {
     font-size: 0.75rem;
     color: #888;
     text-transform: uppercase;

@@ -1,7 +1,11 @@
 // Migration Utilities for 002-detailed-monthly-view
 // Handles backward-compatible migration of existing data to new schema
 
-import type { BillInstance, IncomeInstance, Category, Payment } from '../types';
+import type { BillInstance, IncomeInstance, Category } from '../types';
+
+// Legacy data types for migration (data with unknown shapes from old schemas)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LegacyData = Record<string, any>;
 
 // Default color palette for categories
 const DEFAULT_COLORS: Record<string, string> = {
@@ -33,7 +37,7 @@ export function getDefaultColor(name: string): string {
  * Migrate a BillInstance from old schema to new schema
  * Adds new fields with sensible defaults if missing
  */
-export function migrateBillInstance(instance: any): BillInstance {
+export function migrateBillInstance(instance: LegacyData): BillInstance {
   const now = new Date().toISOString();
 
   // Create a default occurrence if occurrences is missing
@@ -75,7 +79,7 @@ export function migrateBillInstance(instance: any): BillInstance {
  * Migrate an IncomeInstance from old schema to new schema
  * Adds new fields with sensible defaults if missing
  */
-export function migrateIncomeInstance(instance: any): IncomeInstance {
+export function migrateIncomeInstance(instance: LegacyData): IncomeInstance {
   const now = new Date().toISOString();
 
   // Create a default occurrence if occurrences is missing
@@ -117,7 +121,7 @@ export function migrateIncomeInstance(instance: any): IncomeInstance {
  * Migrate a Category from old schema to new schema
  * Adds sort_order, color, and type fields if missing
  */
-export function migrateCategory(category: any, index: number): Category {
+export function migrateCategory(category: LegacyData, index: number): Category {
   return {
     id: category.id,
     name: category.name,
@@ -133,7 +137,7 @@ export function migrateCategory(category: any, index: number): Category {
 /**
  * Check if a BillInstance needs migration
  */
-export function needsBillInstanceMigration(instance: any): boolean {
+export function needsBillInstanceMigration(instance: LegacyData): boolean {
   return (
     instance.expected_amount === undefined ||
     instance.payments === undefined ||
@@ -147,7 +151,7 @@ export function needsBillInstanceMigration(instance: any): boolean {
 /**
  * Check if an IncomeInstance needs migration
  */
-export function needsIncomeInstanceMigration(instance: any): boolean {
+export function needsIncomeInstanceMigration(instance: LegacyData): boolean {
   return (
     instance.expected_amount === undefined ||
     instance.is_adhoc === undefined ||
@@ -161,7 +165,7 @@ export function needsIncomeInstanceMigration(instance: any): boolean {
 /**
  * Check if a Category needs migration
  */
-export function needsCategoryMigration(category: any): boolean {
+export function needsCategoryMigration(category: LegacyData): boolean {
   return (
     category.sort_order === undefined || category.color === undefined || category.type === undefined
   );

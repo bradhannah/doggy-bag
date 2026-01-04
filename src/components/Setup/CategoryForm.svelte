@@ -26,7 +26,7 @@
   $: isPredefined = editingItem?.is_predefined || false;
 
   // Check if this is the Variable Expenses category (special system category)
-  $: isVariableCategory = (editingItem as any)?.type === 'variable';
+  $: isVariableCategory = (editingItem as { type?: string })?.type === 'variable';
 
   // Reset form when editingItem changes
   $: if (editingItem) {

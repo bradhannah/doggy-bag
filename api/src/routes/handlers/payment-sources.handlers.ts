@@ -4,8 +4,7 @@ import {
   PaymentSourcesService,
   PaymentSourcesServiceImpl,
 } from '../../services/payment-sources-service';
-import { formatErrorForDev, formatErrorForUser } from '../../utils/errors';
-import type { PaymentSource, ValidationResult } from '../../types';
+import { formatErrorForUser } from '../../utils/errors';
 
 const paymentSourcesService: PaymentSourcesService = new PaymentSourcesServiceImpl();
 

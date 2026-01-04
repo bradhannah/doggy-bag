@@ -177,7 +177,7 @@
       </div>
     {:else}
       <div class="months-list">
-        {#each months as month}
+        {#each months as month (month.month)}
           <div class="month-card" class:not-exists={!month.exists}>
             <div class="month-header">
               <h3 class="month-name">{formatMonth(month.month)}</h3>

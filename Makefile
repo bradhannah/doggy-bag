@@ -235,10 +235,12 @@ test-e2e: ## Run E2E tests with Playwright
 	@cd src && bunx playwright test
 
 # Quality
-lint: ## Run ESLint checks
-	@echo "Running ESLint..."
+lint: ## Run all linting checks (ESLint + Clippy)
+	@echo "Running all linters..."
 	@make lint-frontend
 	@make lint-backend
+	@make lint-rust
+	@echo "✓ All linting complete"
 
 lint-backend: ## Lint backend TypeScript
 	@echo "Linting backend (api/src/)..."
@@ -248,15 +250,30 @@ lint-frontend: ## Lint frontend TypeScript and Svelte
 	@echo "Linting frontend (src/)..."
 	@$(BUN)x eslint src/
 
-format: ## Format all files with Prettier
+lint-rust: ## Lint Rust code with Clippy
+	@echo "Linting Rust (src-tauri/)..."
+	@cd src-tauri && cargo clippy -- -D warnings
+
+format: ## Format all files (Prettier + rustfmt)
 	@echo "Formatting files..."
 	@$(BUN)x prettier --write .
-	@echo "Format complete"
+	@cd src-tauri && cargo fmt
+	@echo "✓ Format complete"
 
-format-check: ## Check if files are formatted correctly
+format-check: ## Check if all files are formatted correctly
 	@echo "Checking formatting..."
 	@$(BUN)x prettier --check .
-	@echo "Format check complete"
+	@cd src-tauri && cargo fmt --check
+	@echo "✓ Format check complete"
+
+format-rust: ## Format Rust code with rustfmt
+	@echo "Formatting Rust code..."
+	@cd src-tauri && cargo fmt
+	@echo "✓ Rust formatting complete"
+
+format-rust-check: ## Check Rust formatting
+	@echo "Checking Rust formatting..."
+	@cd src-tauri && cargo fmt --check
 
 # Smoke test (build system validation)
 smoke-test: ## Validate Bun, Svelte, and Tauri integration

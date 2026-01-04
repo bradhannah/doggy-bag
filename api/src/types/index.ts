@@ -213,8 +213,8 @@ interface UndoEntry {
   id: string;
   entity_type: UndoEntityType;
   entity_id: string;
-  old_value: any;
-  new_value: any;
+  old_value: unknown;
+  new_value: unknown;
   timestamp: string;
 }
 

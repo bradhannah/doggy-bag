@@ -2,7 +2,7 @@
 
 import { CategoriesService, CategoriesServiceImpl } from '../../services/categories-service';
 import { formatErrorForUser } from '../../utils/errors';
-import type { Category, CategoryType } from '../../types';
+import type { CategoryType } from '../../types';
 
 const categoriesService: CategoriesService = new CategoriesServiceImpl();
 

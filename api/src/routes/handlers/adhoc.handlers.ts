@@ -9,12 +9,7 @@ import type {
   UpdateAdhocRequest,
   MakeRegularRequest,
 } from '../../services/adhoc-service';
-import {
-  formatErrorForUser,
-  NotFoundError,
-  ValidationError,
-  ReadOnlyError,
-} from '../../utils/errors';
+import { formatErrorForUser, NotFoundError, ValidationError } from '../../utils/errors';
 
 const adhocService = new AdhocServiceImpl();
 const monthsService = new MonthsServiceImpl();

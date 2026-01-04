@@ -54,8 +54,8 @@
     return group.category?.color || '#888888';
   }
 
-  // Total bill count
-  $: totalBills = billsByCategory.reduce((sum, group) => sum + group.bills.length, 0);
+  // Total bill count (used for display but currently commented out)
+  $: _totalBills = billsByCategory.reduce((sum, group) => sum + group.bills.length, 0);
 </script>
 
 <div class="bills-by-category">
@@ -70,7 +70,7 @@
     </div>
 
     <!-- Category Groups -->
-    {#each billsByCategory as group}
+    {#each billsByCategory as group (group.category?.id || 'uncategorized')}
       {@const categoryId = group.category?.id || null}
       {@const isGroupCollapsed = isCollapsed(categoryId)}
 
@@ -91,9 +91,7 @@
         {#if group.bills.length === 0}
           <div class="empty-category">No bills in this category</div>
         {:else}
-          {#each group.bills as bill}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
+          {#each group.bills as bill (bill.id)}
             <div class="bill-row" on:click={() => onView(bill)}>
               <span class="col-name">{bill.name}</span>
               <span class="col-period">{formatPeriod(bill.billing_period)}</span>

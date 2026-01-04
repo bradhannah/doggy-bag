@@ -5,7 +5,6 @@ import { MonthsServiceImpl } from './months-service';
 import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import type { MonthsService } from './months-service';
 import type { PaymentSourcesService } from './payment-sources-service';
-import type { UnifiedLeftoverResult } from '../types';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 
 /**

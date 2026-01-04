@@ -26,7 +26,7 @@
   $: isSettingsActive = currentPath.startsWith('/settings');
 
   // Check if in Tauri environment (for zoom controls)
-  $: inTauri = isTauri();
+  const inTauri = isTauri();
 
   // Current zoom percentage display
   $: zoomPercentage = getZoomPercentage($zoomLevel);
@@ -85,7 +85,7 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       addToast('Backup exported successfully', 'success');
-    } catch (error) {
+    } catch {
       addToast('Failed to export backup', 'error');
     } finally {
       backupLoading = false;
@@ -133,7 +133,7 @@
       addToast('Backup imported successfully', 'success');
       // Refresh the page to load new data
       window.location.reload();
-    } catch (error) {
+    } catch {
       addToast('Failed to import backup: Invalid file format', 'error');
     } finally {
       backupLoading = false;

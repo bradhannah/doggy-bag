@@ -70,8 +70,8 @@
     return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
-  // Preview amount in formatted dollars
-  $: amountPreview = (() => {
+  // Preview amount in formatted dollars (used in future version for real-time preview)
+  $: _amountPreview = (() => {
     const cents = dollarsToCents(amountDollars);
     return '$' + (cents / 100).toFixed(2);
   })();
@@ -224,7 +224,7 @@
   {:else}
     <!-- Monthly recurrence options -->
     <div class="form-group">
-      <label>When does this bill occur?</label>
+      <span class="group-label">When does this bill occur?</span>
       <div class="radio-group">
         <label class="radio-label">
           <input
@@ -255,7 +255,7 @@
           bind:value={day_of_month}
           disabled={saving || !hasPaymentSources}
         >
-          {#each Array.from({ length: 31 }, (_, i) => i + 1) as day}
+          {#each Array.from({ length: 31 }, (_, i) => i + 1) as day (day)}
             <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
           {/each}
         </select>
@@ -268,7 +268,7 @@
           bind:value={recurrence_week}
           disabled={saving || !hasPaymentSources}
         >
-          {#each WEEK_ORDINALS as label, i}
+          {#each WEEK_ORDINALS as label, i (i)}
             <option value={i + 1}>{label}</option>
           {/each}
         </select>
@@ -280,7 +280,7 @@
           bind:value={recurrence_day}
           disabled={saving || !hasPaymentSources}
         >
-          {#each WEEKDAYS as label, i}
+          {#each WEEKDAYS as label, i (i)}
             <option value={i}>{label}</option>
           {/each}
         </select>
@@ -301,7 +301,7 @@
       disabled={saving || !hasPaymentSources}
     >
       <option value="">-- Select Payment Source --</option>
-      {#each $paymentSourcesStore.paymentSources as ps}
+      {#each $paymentSourcesStore.paymentSources as ps (ps.id)}
         <option value={ps.id}>{ps.name}</option>
       {/each}
     </select>
@@ -311,7 +311,7 @@
     <label for="bill-category">Category (Optional)</label>
     <select id="bill-category" bind:value={category_id} disabled={saving || !hasPaymentSources}>
       <option value="">-- No category --</option>
-      {#each $billCategories as cat}
+      {#each $billCategories as cat (cat.id)}
         <option value={cat.id}>{cat.name}</option>
       {/each}
     </select>
@@ -322,7 +322,7 @@
     <label for="bill-due-day">Due Day (Optional)</label>
     <select id="bill-due-day" bind:value={due_day} disabled={saving || !hasPaymentSources}>
       <option value="">-- No due date --</option>
-      {#each Array.from({ length: 31 }, (_, i) => i + 1) as day}
+      {#each Array.from({ length: 31 }, (_, i) => i + 1) as day (day)}
         <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
       {/each}
     </select>
@@ -367,7 +367,8 @@
     gap: 8px;
   }
 
-  label {
+  label,
+  .group-label {
     font-weight: 500;
     font-size: 0.875rem;
     color: #e4e4e7;

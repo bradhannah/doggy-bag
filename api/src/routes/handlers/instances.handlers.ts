@@ -4,7 +4,7 @@ import { MonthsServiceImpl } from '../../services/months-service';
 import { LeftoverServiceImpl } from '../../services/leftover-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
-import { formatErrorForUser, ReadOnlyError } from '../../utils/errors';
+import { formatErrorForUser } from '../../utils/errors';
 
 const monthsService = new MonthsServiceImpl();
 const leftoverService = new LeftoverServiceImpl();

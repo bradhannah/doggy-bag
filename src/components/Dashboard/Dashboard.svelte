@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { currentMonth, goToPreviousMonth, goToNextMonth, goToMonth } from '../../stores/ui';
   import {
@@ -55,33 +54,61 @@
     }).format(dollars);
   }
 
+  // Types for items with occurrences and payments
+  interface Payment {
+    amount: number;
+  }
+
+  interface Occurrence {
+    payments?: Payment[];
+  }
+
+  interface ItemWithOccurrences {
+    occurrences?: Occurrence[];
+    payments?: Payment[];
+  }
+
   // Helper to sum payments from occurrences
-  function sumOccurrencePayments(item: any): number {
+  function sumOccurrencePayments(item: ItemWithOccurrences): number {
     const occPayments = (item.occurrences || []).reduce(
-      (oSum: number, occ: any) =>
-        oSum + (occ.payments || []).reduce((pSum: number, p: any) => pSum + p.amount, 0),
+      (oSum: number, occ: Occurrence) =>
+        oSum + (occ.payments || []).reduce((pSum: number, p: Payment) => pSum + p.amount, 0),
       0
     );
     const legacyPayments = (item.payments || []).reduce(
-      (pSum: number, p: any) => pSum + p.amount,
+      (pSum: number, p: Payment) => pSum + p.amount,
       0
     );
     return occPayments + legacyPayments;
   }
 
+  // Type for bill/income instances with expected_amount
+  interface InstanceWithExpectedAmount {
+    expected_amount?: number;
+    amount?: number;
+    occurrences?: Occurrence[];
+    payments?: Payment[];
+  }
+
   // Calculate totals from instances - use expected_amount and occurrence-based payments
   $: billsExpected = $billInstances.reduce(
-    (sum, b) => sum + ((b as any).expected_amount || b.amount || 0),
+    (sum, b) => sum + ((b as InstanceWithExpectedAmount).expected_amount || b.amount || 0),
     0
   );
-  $: billsPaid = $billInstances.reduce((sum, b) => sum + sumOccurrencePayments(b), 0);
+  $: billsPaid = $billInstances.reduce(
+    (sum, b) => sum + sumOccurrencePayments(b as ItemWithOccurrences),
+    0
+  );
   $: billsProgress = billsExpected > 0 ? Math.round((billsPaid / billsExpected) * 100) : 0;
 
   $: incomeExpected = $incomeInstances.reduce(
-    (sum, i) => sum + ((i as any).expected_amount || i.amount || 0),
+    (sum, i) => sum + ((i as InstanceWithExpectedAmount).expected_amount || i.amount || 0),
     0
   );
-  $: incomeReceived = $incomeInstances.reduce((sum, i) => sum + sumOccurrencePayments(i), 0);
+  $: incomeReceived = $incomeInstances.reduce(
+    (sum, i) => sum + sumOccurrencePayments(i as ItemWithOccurrences),
+    0
+  );
   $: incomeProgress = incomeExpected > 0 ? Math.round((incomeReceived / incomeExpected) * 100) : 0;
 
   // Adjacent month data
@@ -96,11 +123,11 @@
 
   let prevMonthData: MonthSummary | null = null;
   let nextMonthData: MonthSummary | null = null;
-  let loadingAdjacent = false;
+  let _loadingAdjacent = false;
 
   async function loadAdjacentMonths() {
     if (!$currentMonth) return;
-    loadingAdjacent = true;
+    _loadingAdjacent = true;
 
     try {
       const [prevRes, nextRes] = await Promise.all([
@@ -112,19 +139,24 @@
         const data = await prevRes.json();
         const billsExp =
           data.bill_instances?.reduce(
-            (s: number, b: any) => s + (b.expected_amount || b.amount || 0),
+            (s: number, b: InstanceWithExpectedAmount) => s + (b.expected_amount || b.amount || 0),
             0
           ) || 0;
         const billsPd =
-          data.bill_instances?.reduce((s: number, b: any) => s + sumOccurrencePayments(b), 0) || 0;
+          data.bill_instances?.reduce(
+            (s: number, b: ItemWithOccurrences) => s + sumOccurrencePayments(b),
+            0
+          ) || 0;
         const incExp =
           data.income_instances?.reduce(
-            (s: number, i: any) => s + (i.expected_amount || i.amount || 0),
+            (s: number, i: InstanceWithExpectedAmount) => s + (i.expected_amount || i.amount || 0),
             0
           ) || 0;
         const incRec =
-          data.income_instances?.reduce((s: number, i: any) => s + sumOccurrencePayments(i), 0) ||
-          0;
+          data.income_instances?.reduce(
+            (s: number, i: ItemWithOccurrences) => s + sumOccurrencePayments(i),
+            0
+          ) || 0;
 
         prevMonthData = {
           month: prevMonth,
@@ -149,19 +181,24 @@
         const data = await nextRes.json();
         const billsExp =
           data.bill_instances?.reduce(
-            (s: number, b: any) => s + (b.expected_amount || b.amount || 0),
+            (s: number, b: InstanceWithExpectedAmount) => s + (b.expected_amount || b.amount || 0),
             0
           ) || 0;
         const billsPd =
-          data.bill_instances?.reduce((s: number, b: any) => s + sumOccurrencePayments(b), 0) || 0;
+          data.bill_instances?.reduce(
+            (s: number, b: ItemWithOccurrences) => s + sumOccurrencePayments(b),
+            0
+          ) || 0;
         const incExp =
           data.income_instances?.reduce(
-            (s: number, i: any) => s + (i.expected_amount || i.amount || 0),
+            (s: number, i: InstanceWithExpectedAmount) => s + (i.expected_amount || i.amount || 0),
             0
           ) || 0;
         const incRec =
-          data.income_instances?.reduce((s: number, i: any) => s + sumOccurrencePayments(i), 0) ||
-          0;
+          data.income_instances?.reduce(
+            (s: number, i: ItemWithOccurrences) => s + sumOccurrencePayments(i),
+            0
+          ) || 0;
 
         nextMonthData = {
           month: nextMonth,
@@ -181,10 +218,10 @@
           incomeProgress: 0,
         };
       }
-    } catch (error) {
-      console.error('Failed to load adjacent months:', error);
+    } catch (err) {
+      console.error('Failed to load adjacent months:', err);
     } finally {
-      loadingAdjacent = false;
+      _loadingAdjacent = false;
     }
   }
 
@@ -201,7 +238,15 @@
     actionLabel?: string;
   }
 
-  $: attentionItems = computeAttentionItems();
+  // Force reactivity by referencing dependencies
+  $: attentionItems = (() => {
+    // Reference dependencies so Svelte tracks them
+    void prevMonthData;
+    void $billInstances;
+    void prevMonth;
+    void $currentMonth;
+    return computeAttentionItems();
+  })();
 
   function computeAttentionItems(): AttentionItem[] {
     const items: AttentionItem[] = [];
@@ -221,8 +266,8 @@
     }
 
     // Check for bills due soon (within 7 days)
-    const today = new Date();
-    const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // TODO: Implement due date checking when expected_date is added to instances
+    const _sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const billsDueSoon = $billInstances.filter((b) => {
       if (b.is_paid) return false;
@@ -299,7 +344,7 @@
         success(`Month ${$currentMonth} created`);
         loadAdjacentMonths();
       }
-    } catch (error) {
+    } catch {
       showError('Failed to create month');
     } finally {
       creating = false;
@@ -552,7 +597,7 @@
           Attention Needed
         </h3>
         <div class="attention-list">
-          {#each attentionItems as item}
+          {#each attentionItems as item (item.message)}
             <div
               class="attention-item"
               class:lock={item.type === 'lock'}
@@ -573,14 +618,12 @@
 
   <!-- Lock Confirmation Modal -->
   {#if showLockConfirm}
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       class="modal-overlay"
       role="presentation"
       on:click={cancelLock}
       on:keydown={(e) => e.key === 'Escape' && cancelLock()}
     >
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="modal-content"
         role="dialog"

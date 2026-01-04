@@ -5,7 +5,7 @@ import { LeftoverServiceImpl } from '../../services/leftover-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
 import { formatErrorForUser } from '../../utils/errors';
-import type { MonthlyData, Bill, Income } from '../../types';
+import type { MonthlyData } from '../../types';
 
 const monthsService = new MonthsServiceImpl();
 const leftoverService = new LeftoverServiceImpl();

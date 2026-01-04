@@ -4,14 +4,34 @@
 pre-commit:
   parallel: true
   jobs:
+    # TypeScript/Svelte linting
     - name: lint
       glob: '*.{ts,svelte}'
-      # Only check for errors, not warnings (warnings are allowed)
       run: npx eslint {staged_files}
 
+    # TypeScript/Svelte formatting
     - name: format-check
       glob: '*.{ts,js,svelte,json,css,html,md}'
       run: npx prettier --check {staged_files}
 
+    # Svelte type checking
     - name: typecheck
       run: npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json
+
+    # Rust formatting
+    - name: rust-format
+      glob: 'src-tauri/**/*.rs'
+      run: cd src-tauri && cargo fmt --check
+
+    # Rust linting (Clippy with warnings as errors)
+    - name: rust-lint
+      glob: 'src-tauri/**/*.rs'
+      run: cd src-tauri && cargo clippy -- -D warnings
+
+    # Frontend tests (Vitest - fast)
+    - name: test-frontend
+      run: npx vitest run
+
+    # Backend tests (Bun - very fast)
+    - name: test-backend
+      run: cd api && ~/.bun/bin/bun test

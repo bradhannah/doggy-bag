@@ -8,7 +8,7 @@
     goToCurrentMonth,
     goToMonth,
   } from '../../stores/ui';
-  import { apiClient, apiUrl } from '../../lib/api/client';
+  import { apiUrl } from '../../lib/api/client';
 
   interface MonthSummary {
     month: string;

@@ -1,4 +1,4 @@
-import { Controller, Route, Get, Post, Response, Body, Tags, SuccessResponse } from 'tsoa';
+import { Controller, Route, Get, Post, Response, Tags, SuccessResponse } from 'tsoa';
 import type { UndoEntry } from '../types';
 import type { ApiError } from '../types/requests';
 

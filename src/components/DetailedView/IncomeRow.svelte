@@ -64,20 +64,30 @@
     return isNaN(dollars) ? 0 : Math.round(dollars * 100);
   }
 
-  // Computed values - use (income as any) to work around potential TS cache issues
-  $: payments = (income as any).payments ?? [];
+  // Type for income instance with extended properties
+  interface IncomeInstanceExtended {
+    payments?: Array<{ id: string; amount: number; date: string }>;
+    total_received?: number;
+    remaining?: number;
+    is_closed?: boolean;
+    closed_date?: string | null;
+    occurrences?: Array<{ id: string; expected_date: string }>;
+  }
+
+  // Computed values - use typed cast to work around potential TS cache issues
+  $: payments = (income as unknown as IncomeInstanceExtended).payments ?? [];
   $: hasTransactions = (payments && payments.length > 0) || totalReceived > 0;
   $: transactionCount = payments?.length ?? 0;
-  $: totalReceived = (income as any).total_received ?? 0;
-  $: remaining = (income as any).remaining ?? income.expected_amount;
-  $: isClosed = (income as any).is_closed ?? false;
-  $: closedDate = (income as any).closed_date ?? null;
+  $: totalReceived = (income as unknown as IncomeInstanceExtended).total_received ?? 0;
+  $: remaining = (income as unknown as IncomeInstanceExtended).remaining ?? income.expected_amount;
+  $: isClosed = (income as unknown as IncomeInstanceExtended).is_closed ?? false;
+  $: closedDate = (income as unknown as IncomeInstanceExtended).closed_date ?? null;
   $: showAmber = totalReceived !== income.expected_amount && totalReceived > 0;
   $: isPartiallyReceived =
     hasTransactions && totalReceived > 0 && totalReceived < income.expected_amount && !isClosed;
 
   // Single-occurrence detection for "on Xth" display
-  $: occurrences = (income as any).occurrences ?? [];
+  $: occurrences = (income as unknown as IncomeInstanceExtended).occurrences ?? [];
   $: isSingleOccurrence = occurrences.length <= 1;
   $: firstOccurrenceDate = occurrences[0]?.expected_date || income.due_date;
 
@@ -344,7 +354,8 @@
           {#if isSingleOccurrence && firstOccurrenceDate && !isClosed}
             {#if isEditingDueDay}
               <span class="due-day-edit">
-                on <input
+                on
+                <input
                   type="number"
                   min="1"
                   max="31"
@@ -555,8 +566,6 @@
     aria-modal="true"
     tabindex="-1"
   >
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="confirm-dialog" on:click|stopPropagation>
       <h3>Delete Income</h3>
       <p>Are you sure you want to delete "<strong>{income.name}</strong>"?</p>
@@ -666,10 +675,12 @@
   .due-day-input::-webkit-outer-spin-button,
   .due-day-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
   }
   .due-day-input[type='number'] {
     -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   .badge {

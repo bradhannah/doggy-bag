@@ -55,7 +55,7 @@ export class CategoriesController extends Controller {
   @Post()
   @SuccessResponse(201, 'Created')
   @Response<ApiError>(400, 'Bad Request')
-  public async createCategory(@Body() body: CreateCategoryRequest): Promise<Category> {
+  public async createCategory(@Body() _body: CreateCategoryRequest): Promise<Category> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -69,8 +69,8 @@ export class CategoriesController extends Controller {
   @Response<ApiError>(400, 'Bad Request')
   @Response<ApiError>(404, 'Not Found')
   public async updateCategory(
-    @Path() id: string,
-    @Body() body: UpdateCategoryRequest
+    @Path() _id: string,
+    @Body() _body: UpdateCategoryRequest
   ): Promise<Category> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -83,7 +83,7 @@ export class CategoriesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteCategory(@Path() id: string): Promise<void> {
+  public async deleteCategory(@Path() _id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -94,7 +94,7 @@ export class CategoriesController extends Controller {
   @Put('reorder')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Bad Request')
-  public async reorderCategories(@Body() body: ReorderCategoriesRequest): Promise<Category[]> {
+  public async reorderCategories(@Body() _body: ReorderCategoriesRequest): Promise<Category[]> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

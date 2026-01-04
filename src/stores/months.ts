@@ -1,7 +1,6 @@
 // Months Store - Manages monthly budget data
 
 import { writable, derived } from 'svelte/store';
-import { currentMonth } from './ui';
 import { apiUrl } from '$lib/api/client';
 import { createLogger } from '$lib/logger';
 

@@ -2,18 +2,7 @@
 
 import { StorageServiceImpl } from './storage';
 import type { StorageService } from './storage';
-import type {
-  Bill,
-  Income,
-  PaymentSource,
-  Category,
-  CategoryType,
-  Payment,
-  BillInstance,
-  IncomeInstance,
-  VariableExpense,
-  FreeFlowingExpense,
-} from '../types';
+import type { Bill, Income, PaymentSource, Category } from '../types';
 
 export interface ValidationResult {
   isValid: boolean;

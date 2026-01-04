@@ -1,6 +1,6 @@
 // Toast Store - Manages toast notifications
 
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 

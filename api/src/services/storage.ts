@@ -169,6 +169,7 @@ export class StorageServiceImpl implements StorageService {
     try {
       await mkdir(resolvedPath, { recursive: true });
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (error instanceof Error && 'code' in error && (error as any).code !== 'EEXIST') {
         const errorMessage = error.message;
         console.error(`[StorageService] Failed to create directory ${resolvedPath}:`, errorMessage);

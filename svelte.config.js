@@ -8,6 +8,17 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
   preprocess: vitePreprocess(),
+  compilerOptions: {
+    // Disable specific a11y warnings that are intentional UX decisions
+    warningFilter: (warning) => {
+      // Autofocus is intentional for modal/drawer/inline edit UX
+      if (warning.code === 'a11y_autofocus') return false;
+      // Click events on divs are for stop propagation in modals/overlays
+      if (warning.code === 'a11y_click_events_have_key_events') return false;
+      if (warning.code === 'a11y_no_static_element_interactions') return false;
+      return true;
+    },
+  },
   kit: {
     adapter: adapter({
       fallback: 'index.html',

@@ -1,7 +1,7 @@
 // Undo Store - Manages undo stack state
 
 import { writable, derived } from 'svelte/store';
-import { apiClient, apiUrl } from '$lib/api/client';
+import { apiUrl } from '$lib/api/client';
 
 export interface UndoEntry {
   id: string;

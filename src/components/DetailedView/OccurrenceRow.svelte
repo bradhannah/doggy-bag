@@ -425,8 +425,6 @@
     aria-modal="true"
     tabindex="-1"
   >
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="confirm-dialog" on:click|stopPropagation>
       <h3>Delete Occurrence</h3>
       <p>Are you sure you want to delete this occurrence?</p>
@@ -521,10 +519,12 @@
   .date-input::-webkit-outer-spin-button,
   .date-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
   }
   .date-input[type='number'] {
     -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   .badge {

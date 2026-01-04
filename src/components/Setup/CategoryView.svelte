@@ -19,12 +19,12 @@
 
 <div class="entity-view">
   <div class="view-field">
-    <label>Category Name</label>
+    <span class="field-label">Category Name</span>
     <div class="view-value">{item.name}</div>
   </div>
 
   <div class="view-field">
-    <label>Type</label>
+    <span class="field-label">Type</span>
     <div class="view-value">
       {#if item.is_predefined}
         <span class="badge predefined">Predefined</span>
@@ -35,12 +35,12 @@
   </div>
 
   <div class="view-field">
-    <label>Created</label>
+    <span class="field-label">Created</span>
     <div class="view-value muted">{formatDate(item.created_at)}</div>
   </div>
 
   <div class="view-field">
-    <label>Last Updated</label>
+    <span class="field-label">Last Updated</span>
     <div class="view-value muted">{formatDate(item.updated_at)}</div>
   </div>
 
@@ -69,7 +69,7 @@
     gap: 6px;
   }
 
-  label {
+  .field-label {
     font-size: 0.75rem;
     color: #888;
     text-transform: uppercase;

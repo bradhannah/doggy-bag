@@ -66,7 +66,7 @@ export class BillsController extends Controller {
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   })
-  public async createBill(@Body() body: CreateBillRequest): Promise<Bill> {
+  public async createBill(@Body() _body: CreateBillRequest): Promise<Bill> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -79,7 +79,7 @@ export class BillsController extends Controller {
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Bad Request')
   @Response<ApiError>(404, 'Not Found')
-  public async updateBill(@Path() id: string, @Body() body: UpdateBillRequest): Promise<Bill> {
+  public async updateBill(@Path() _id: string, @Body() _body: UpdateBillRequest): Promise<Bill> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -91,7 +91,7 @@ export class BillsController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteBill(@Path() id: string): Promise<void> {
+  public async deleteBill(@Path() _id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

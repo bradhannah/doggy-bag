@@ -45,7 +45,7 @@ export class SettingsController extends Controller {
   @Post('validate-directory')
   @SuccessResponse(200, 'OK')
   public async validateDirectory(
-    @Body() body: ValidateDirectoryRequest
+    @Body() _body: ValidateDirectoryRequest
   ): Promise<DirectoryValidation> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -57,7 +57,7 @@ export class SettingsController extends Controller {
   @Post('migrate-data')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Migration failed')
-  public async migrateData(@Body() body: MigrateDataRequest): Promise<MigrationResult> {
+  public async migrateData(@Body() _body: MigrateDataRequest): Promise<MigrationResult> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -69,7 +69,7 @@ export class SettingsController extends Controller {
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Switch failed')
   public async switchDirectory(
-    @Body() body: SwitchDirectoryRequest
+    @Body() _body: SwitchDirectoryRequest
   ): Promise<{ success: boolean; message: string }> {
     throw new Error('Not implemented - use existing handlers');
   }

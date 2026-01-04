@@ -44,41 +44,41 @@
 
 <div class="entity-view">
   <div class="view-field">
-    <label>Income Name</label>
+    <span class="field-label">Income Name</span>
     <div class="view-value">{item.name}</div>
   </div>
 
   <div class="view-field">
-    <label>Amount</label>
+    <span class="field-label">Amount</span>
     <div class="view-value amount" style="color: #22c55e;">
       {formatAmount(item.amount)}
     </div>
   </div>
 
   <div class="view-field">
-    <label>Billing Period</label>
+    <span class="field-label">Billing Period</span>
     <div class="view-value">{formatPeriod(item.billing_period)}</div>
   </div>
 
   {#if item.start_date && item.billing_period !== 'monthly'}
     <div class="view-field">
-      <label>First Payment Date</label>
+      <span class="field-label">First Payment Date</span>
       <div class="view-value">{item.start_date}</div>
     </div>
   {/if}
 
   <div class="view-field">
-    <label>Deposited To</label>
+    <span class="field-label">Deposited To</span>
     <div class="view-value">{getPaymentSourceName(item.payment_source_id)}</div>
   </div>
 
   <div class="view-field">
-    <label>Created</label>
+    <span class="field-label">Created</span>
     <div class="view-value muted">{formatDate(item.created_at)}</div>
   </div>
 
   <div class="view-field">
-    <label>Last Updated</label>
+    <span class="field-label">Last Updated</span>
     <div class="view-value muted">{formatDate(item.updated_at)}</div>
   </div>
 
@@ -101,7 +101,7 @@
     gap: 6px;
   }
 
-  label {
+  .field-label {
     font-size: 0.75rem;
     color: #888;
     text-transform: uppercase;

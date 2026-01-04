@@ -15,6 +15,13 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'html'],
       include: ['src/**/*.{ts,svelte}'],
       exclude: ['src/**/*.{test,spec}.ts', 'src/types/**'],
+      thresholds: {
+        // Start with lower thresholds, increase as tests are added
+        lines: 20,
+        functions: 20,
+        branches: 20,
+        statements: 20,
+      },
     },
   },
 });

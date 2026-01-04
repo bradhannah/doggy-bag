@@ -26,7 +26,7 @@
 
   // Filter categories by type
   $: filteredCategories = $categories.filter((c) => {
-    const catType = (c as any).type;
+    const catType = (c as { type?: string }).type;
     return catType === type;
   });
 
@@ -110,7 +110,14 @@
           ? `/api/months/${month}/adhoc/bills/${instanceId}/make-regular`
           : `/api/months/${month}/adhoc/incomes/${instanceId}/make-regular`;
 
-      const payload: any = {
+      const payload: {
+        name: string;
+        amount: number;
+        category_id: string;
+        payment_source_id: string;
+        billing_period: string;
+        due_day?: number;
+      } = {
         name: name.trim(),
         amount: amountCents,
         category_id: categoryId,
@@ -151,7 +158,6 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="drawer-backdrop"
     role="presentation"
@@ -214,7 +220,7 @@
             <label for="category">Category</label>
             <select id="category" bind:value={categoryId} disabled={saving}>
               <option value="">-- Select Category --</option>
-              {#each filteredCategories as category}
+              {#each filteredCategories as category (category.id)}
                 <option value={category.id}>{category.name}</option>
               {/each}
             </select>
@@ -224,7 +230,7 @@
             <label for="paymentSource">Payment Source</label>
             <select id="paymentSource" bind:value={paymentSourceId} disabled={saving}>
               <option value="">-- Select Payment Source --</option>
-              {#each activePaymentSources as source}
+              {#each activePaymentSources as source (source.id)}
                 <option value={source.id}>{source.name}</option>
               {/each}
             </select>
@@ -245,7 +251,7 @@
               <label for="dueDay">Due Day (Optional)</label>
               <select id="dueDay" bind:value={dueDay} disabled={saving}>
                 <option value="">-- Not Set --</option>
-                {#each Array.from({ length: 31 }, (_, i) => i + 1) as day}
+                {#each Array.from({ length: 31 }, (_, i) => i + 1) as day (day)}
                   <option value={day}>{day}</option>
                 {/each}
               </select>

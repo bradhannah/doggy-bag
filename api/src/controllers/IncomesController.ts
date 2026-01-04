@@ -53,7 +53,7 @@ export class IncomesController extends Controller {
   @Post()
   @SuccessResponse(201, 'Created')
   @Response<ApiError>(400, 'Bad Request')
-  public async createIncome(@Body() body: CreateIncomeRequest): Promise<Income> {
+  public async createIncome(@Body() _body: CreateIncomeRequest): Promise<Income> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -67,8 +67,8 @@ export class IncomesController extends Controller {
   @Response<ApiError>(400, 'Bad Request')
   @Response<ApiError>(404, 'Not Found')
   public async updateIncome(
-    @Path() id: string,
-    @Body() body: UpdateIncomeRequest
+    @Path() _id: string,
+    @Body() _body: UpdateIncomeRequest
   ): Promise<Income> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -81,7 +81,7 @@ export class IncomesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteIncome(@Path() id: string): Promise<void> {
+  public async deleteIncome(@Path() _id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

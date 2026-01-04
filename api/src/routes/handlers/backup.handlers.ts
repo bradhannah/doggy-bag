@@ -9,7 +9,7 @@ const backupService = BackupServiceImpl.getInstance();
  * GET /api/backup - Export all data as JSON backup
  */
 export function createBackupHandlerGET() {
-  return async (req: Request): Promise<Response> => {
+  return async (_req: Request): Promise<Response> => {
     try {
       const backupData = await backupService.exportBackup();
 

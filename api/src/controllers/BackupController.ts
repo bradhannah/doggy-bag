@@ -31,7 +31,7 @@ export class BackupController extends Controller {
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Invalid backup data')
   public async restoreBackup(
-    @Body() body: RestoreBackupRequest
+    @Body() _body: RestoreBackupRequest
   ): Promise<{ success: boolean; message: string }> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -43,7 +43,7 @@ export class BackupController extends Controller {
   @Post('validate')
   @SuccessResponse(200, 'OK')
   public async validateBackup(
-    @Body() body: ValidateBackupRequest
+    @Body() _body: ValidateBackupRequest
   ): Promise<ValidateBackupResponse> {
     throw new Error('Not implemented - use existing handlers');
   }

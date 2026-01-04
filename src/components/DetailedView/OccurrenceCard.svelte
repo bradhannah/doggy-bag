@@ -57,7 +57,7 @@
   );
   $: closedCount = occurrences.filter((occ) => occ.is_closed).length;
   $: allClosed = closedCount === occurrences.length && occurrences.length > 0;
-  $: isClosed = (item as any).is_closed ?? allClosed;
+  $: isClosed = (item as unknown as { is_closed?: boolean }).is_closed ?? allClosed;
 
   // Handle occurrence payment drawer
   function handleOpenPayments(event: CustomEvent<{ occurrence: Occurrence }>) {
@@ -146,7 +146,7 @@
 
   <!-- Occurrences List -->
   <div class="occurrences-list">
-    {#each occurrences.sort((a, b) => a.sequence - b.sequence) as occurrence (occurrence.id)}
+    {#each [...occurrences].sort((a, b) => a.sequence - b.sequence) as occurrence (occurrence.id)}
       <OccurrenceRow
         {occurrence}
         {month}

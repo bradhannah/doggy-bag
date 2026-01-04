@@ -92,7 +92,7 @@
 
   // Check if a source is pay-off-monthly
   function isPayOffMonthly(source: PaymentSource): boolean {
-    return (source as any).pay_off_monthly ?? false;
+    return (source as unknown as { pay_off_monthly?: boolean }).pay_off_monthly ?? false;
   }
 
   // Start editing a balance (works for both asset and debt accounts)
@@ -173,7 +173,7 @@
   $: netWorth = totalAssets + totalDebt; // totalDebt is already negative
 
   // Calculate liquid total (sum of all bank balances - for display, uses display balance)
-  $: liquidTotal = netWorth;
+  $: _liquidTotal = netWorth;
 
   // Income calculations (for display in sidebar)
   $: incomeReceived = tallies?.totalIncome?.actual ?? 0;
@@ -719,10 +719,12 @@
   .balance-input::-webkit-outer-spin-button,
   .balance-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
   }
   .balance-input[type='number'] {
     -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   .edit-btn {

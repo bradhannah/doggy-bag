@@ -16,12 +16,10 @@ import type {
   IncomeInstance,
   VariableExpense,
   FreeFlowingExpense,
-  Bill,
-  Income,
   Occurrence,
   Payment,
 } from '../types';
-import { getMonthlyInstanceCount, calculateActualMonthlyAmount } from '../utils/billing-period';
+import { calculateActualMonthlyAmount } from '../utils/billing-period';
 import {
   migrateBillInstance,
   migrateIncomeInstance,
@@ -32,9 +30,7 @@ import {
   generateBillOccurrences,
   generateIncomeOccurrences,
   sumOccurrenceExpectedAmounts,
-  sumOccurrencePayments,
   areAllOccurrencesClosed,
-  isExtraOccurrenceMonth,
   createAdhocOccurrence,
   resequenceOccurrences,
 } from '../utils/occurrences';
@@ -239,6 +235,7 @@ export class MonthsServiceImpl implements MonthsService {
       let needsSave = false;
 
       // Migrate bill instances
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const migratedBillInstances = data.bill_instances.map((bi: any) => {
         if (needsBillInstanceMigration(bi)) {
           needsSave = true;
@@ -248,6 +245,7 @@ export class MonthsServiceImpl implements MonthsService {
       });
 
       // Migrate income instances
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const migratedIncomeInstances = data.income_instances.map((ii: any) => {
         if (needsIncomeInstanceMigration(ii)) {
           needsSave = true;
@@ -914,7 +912,7 @@ export class MonthsServiceImpl implements MonthsService {
   public async toggleIncomeInstancePaid(
     month: string,
     instanceId: string,
-    actualAmount?: number
+    _actualAmount?: number
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);

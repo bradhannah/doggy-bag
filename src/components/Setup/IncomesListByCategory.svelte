@@ -54,8 +54,8 @@
     return group.category?.color || '#888888';
   }
 
-  // Total income count
-  $: totalIncomes = incomesByCategory.reduce((sum, group) => sum + group.incomes.length, 0);
+  // Total income count (used for display but currently commented out)
+  $: _totalIncomes = incomesByCategory.reduce((sum, group) => sum + group.incomes.length, 0);
 </script>
 
 <div class="incomes-by-category">
@@ -70,7 +70,7 @@
     </div>
 
     <!-- Category Groups -->
-    {#each incomesByCategory as group}
+    {#each incomesByCategory as group (group.category?.id || 'uncategorized')}
       {@const categoryId = group.category?.id || null}
       {@const isGroupCollapsed = isCollapsed(categoryId)}
 
@@ -91,9 +91,7 @@
         {#if group.incomes.length === 0}
           <div class="empty-category">No incomes in this category</div>
         {:else}
-          {#each group.incomes as income}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
+          {#each group.incomes as income (income.id)}
             <div class="income-row" on:click={() => onView(income)}>
               <span class="col-name">{income.name}</span>
               <span class="col-period">{formatPeriod(income.billing_period)}</span>

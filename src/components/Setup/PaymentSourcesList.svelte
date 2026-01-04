@@ -44,11 +44,9 @@
     {#if paymentSources.length === 0}
       <div class="empty-state">No payment sources yet. Add your first account to get started.</div>
     {:else}
-      {#each paymentSources as ps}
+      {#each paymentSources as ps (ps.id)}
         {@const isDebt = isDebtAccount(ps.type)}
         {@const displayBalance = formatBalanceForDisplay(ps.balance, ps.type)}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="source-row" class:debt={isDebt} on:click={() => onView(ps)}>
           <span class="col-name">
             <span class="type-icon">{getTypeIcon(ps.type)}</span>

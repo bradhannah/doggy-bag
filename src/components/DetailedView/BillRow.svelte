@@ -75,18 +75,25 @@
     return isNaN(dollars) ? 0 : Math.round(dollars * 100);
   }
 
+  // Type for bill instance with extended properties
+  interface BillInstanceExtended {
+    is_closed?: boolean;
+    closed_date?: string | null;
+    occurrences?: Array<{ id: string; expected_date: string }>;
+  }
+
   // Computed values
   $: hasTransactions = (bill.payments && bill.payments.length > 0) || bill.total_paid > 0;
   $: transactionCount = bill.payments?.length ?? 0;
-  $: isClosed = (bill as any).is_closed ?? false;
-  $: closedDate = (bill as any).closed_date ?? null;
+  $: isClosed = (bill as unknown as BillInstanceExtended).is_closed ?? false;
+  $: closedDate = (bill as unknown as BillInstanceExtended).closed_date ?? null;
   $: showAmber = bill.total_paid !== bill.expected_amount && bill.total_paid > 0;
   $: isPartiallyPaid =
     hasTransactions && bill.total_paid > 0 && bill.total_paid < bill.expected_amount && !isClosed;
   $: isPayoffBill = bill.is_payoff_bill ?? false;
 
   // Single-occurrence detection for "on Xth" display
-  $: occurrences = (bill as any).occurrences ?? [];
+  $: occurrences = (bill as unknown as BillInstanceExtended).occurrences ?? [];
   $: isSingleOccurrence = occurrences.length <= 1;
   $: firstOccurrenceDate = occurrences[0]?.expected_date || bill.due_date;
 
@@ -369,7 +376,8 @@
           {#if isSingleOccurrence && firstOccurrenceDate && !isClosed && !isPayoffBill}
             {#if isEditingDueDay}
               <span class="due-day-edit">
-                on <input
+                on
+                <input
                   type="number"
                   min="1"
                   max="31"
@@ -588,8 +596,6 @@
     aria-modal="true"
     tabindex="-1"
   >
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="confirm-dialog" on:click|stopPropagation>
       <h3>Delete Bill</h3>
       <p>Are you sure you want to delete "<strong>{bill.name}</strong>"?</p>
@@ -713,10 +719,12 @@
   .due-day-input::-webkit-outer-spin-button,
   .due-day-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
   }
   .due-day-input[type='number'] {
     -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   .badge {

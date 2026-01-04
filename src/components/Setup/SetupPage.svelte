@@ -11,19 +11,15 @@
     billsStore,
     loadBills,
     deleteBill,
-    activeBillsWithContribution,
     totalFixedCosts,
     billsByCategory,
-    calculateMonthlyContribution as calculateBillContribution,
   } from '../../stores/bills';
   import {
     incomesStore,
     loadIncomes,
     deleteIncome,
-    activeIncomesWithContribution,
     totalMonthlyIncome,
     incomesByCategory,
-    calculateMonthlyContribution as calculateIncomeContribution,
   } from '../../stores/incomes';
   import {
     categoriesStore,
@@ -250,7 +246,7 @@
     }
   }
 
-  function formatAmount(cents: number): string {
+  function _formatAmount(cents: number): string {
     return '$' + (cents / 100).toFixed(2);
   }
 
@@ -272,7 +268,7 @@
   <div class="setup-layout">
     <!-- Left Sidebar - Tabs -->
     <nav class="setup-sidebar">
-      {#each tabs as tab}
+      {#each tabs as tab (tab.id)}
         <button
           class="tab-button"
           class:active={activeTab === tab.id}

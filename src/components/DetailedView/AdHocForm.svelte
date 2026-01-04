@@ -23,16 +23,19 @@
   let categoryId = '';
   let saving = false;
   let error = '';
-  let loadingExisting = false;
+  let _loadingExisting = false;
 
   // Existing items from master list that have instances in this month
   // { master: Bill | Income, instanceId: string }
   type ExistingItem = { master: Bill | Income; instanceId: string; name: string; amount: number };
   let existingItems: ExistingItem[] = [];
 
+  // Track previous open state to detect when form opens
+  let prevOpen = false;
+
   // Filter categories by type
   $: filteredCategories = $categories.filter((c) => {
-    const catType = (c as any).type;
+    const catType = (c as { type?: string }).type;
     return catType === type || c.name === 'Ad-hoc';
   });
 
@@ -46,13 +49,16 @@
     categoryId = defaultCategoryId;
   }
 
-  // Build existing items when form opens
-  $: if (open && !loadingExisting) {
+  // Build existing items when form opens (only trigger once when open changes to true)
+  $: if (open && !prevOpen) {
+    prevOpen = true;
     buildExistingItems();
+  } else if (!open && prevOpen) {
+    prevOpen = false;
   }
 
   async function buildExistingItems() {
-    loadingExisting = true;
+    _loadingExisting = true;
     existingItems = [];
 
     try {
@@ -66,15 +72,25 @@
 
       const monthData = $detailedMonthData;
       if (!monthData) {
-        loadingExisting = false;
+        _loadingExisting = false;
         return;
+      }
+
+      // Type for section items
+      interface SectionItem {
+        id: string;
+        bill_id?: string;
+        income_id?: string;
+        is_adhoc?: boolean;
+        is_payoff_bill?: boolean;
       }
 
       if (type === 'bill') {
         // Build mapping: bill_id -> instance from billSections
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive
         const instanceByBillId = new Map<string, { id: string }>();
         for (const section of monthData.billSections) {
-          for (const inst of section.items as any[]) {
+          for (const inst of section.items as SectionItem[]) {
             if (inst.bill_id && !inst.is_adhoc && !inst.is_payoff_bill) {
               instanceByBillId.set(inst.bill_id, { id: inst.id });
             }
@@ -96,9 +112,10 @@
         }
       } else {
         // Build mapping: income_id -> instance from incomeSections
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive
         const instanceByIncomeId = new Map<string, { id: string }>();
         for (const section of monthData.incomeSections) {
-          for (const inst of section.items as any[]) {
+          for (const inst of section.items as SectionItem[]) {
             if (inst.income_id && !inst.is_adhoc) {
               instanceByIncomeId.set(inst.income_id, { id: inst.id });
             }
@@ -132,7 +149,7 @@
     } catch (err) {
       console.error('Failed to load existing items:', err);
     } finally {
-      loadingExisting = false;
+      _loadingExisting = false;
     }
   }
 
@@ -168,7 +185,7 @@
     mode = 'adhoc';
     error = '';
     existingItems = [];
-    loadingExisting = false;
+    _loadingExisting = false;
   }
 
   async function handleSubmit() {
@@ -228,7 +245,7 @@
             ? `/api/months/${month}/adhoc/bills`
             : `/api/months/${month}/adhoc/incomes`;
 
-        const payload: any = {
+        const payload: { name: string; amount: number; category_id?: string } = {
           name: name.trim(),
           amount: amountCents,
         };
@@ -268,7 +285,6 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="drawer-backdrop"
     role="presentation"
@@ -326,7 +342,7 @@
                       class:error={!!error && !selectedExistingId}
                     >
                       <option value="">-- Select --</option>
-                      {#each filteredExistingItems as item}
+                      {#each filteredExistingItems as item (item.instanceId)}
                         <option value={item.instanceId}>
                           {item.master.name} (${(item.master.amount / 100).toFixed(2)})
                         </option>
@@ -391,7 +407,7 @@
                     <label for="category">Category (Optional)</label>
                     <select id="category" bind:value={categoryId} disabled={saving}>
                       <option value="">-- Select Category --</option>
-                      {#each filteredCategories as category}
+                      {#each filteredCategories as category (category.id)}
                         <option value={category.id}>{category.name}</option>
                       {/each}
                     </select>
@@ -436,7 +452,7 @@
               <label for="category">Category (Optional)</label>
               <select id="category" bind:value={categoryId} disabled={saving}>
                 <option value="">-- Select Category --</option>
-                {#each filteredCategories as category}
+                {#each filteredCategories as category (category.id)}
                   <option value={category.id}>{category.name}</option>
                 {/each}
               </select>

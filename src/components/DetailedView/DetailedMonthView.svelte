@@ -21,7 +21,7 @@
   let restoreScrollAfterLoad = false;
   let isRefreshing = false; // Track if we're doing a soft refresh vs initial load
 
-  function formatCurrency(cents: number): string {
+  function _formatCurrency(cents: number): string {
     const dollars = cents / 100;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -109,6 +109,7 @@
     monthsStore.loadMonth(month);
   }
 
+  /* eslint-disable svelte/infinite-reactive-loop -- scroll restoration intentionally clears flags after execution */
   // Restore scroll position after data loads
   $: if ($detailedMonthData && restoreScrollAfterLoad && savedScrollY !== null) {
     restoreScrollPosition();
@@ -134,6 +135,7 @@
       });
     });
   }
+  /* eslint-enable svelte/infinite-reactive-loop */
 
   // Create month data
   let creating = false;
@@ -146,7 +148,7 @@
         // Reload detailed view
         detailedMonth.loadMonth(month);
       }
-    } catch (error) {
+    } catch {
       showError('Failed to create month');
     } finally {
       creating = false;

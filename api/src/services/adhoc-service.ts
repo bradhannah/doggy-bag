@@ -300,7 +300,16 @@ export class AdhocServiceImpl implements AdhocService {
 
     // Create the new recurring bill
     // For monthly bills, use due_day as day_of_month if provided, otherwise default to 1
-    const billData: any = {
+    const billData: {
+      name: string;
+      amount: number;
+      billing_period: BillingPeriod;
+      payment_source_id: string;
+      category_id: string;
+      due_day?: number;
+      day_of_month?: number;
+      start_date?: string;
+    } = {
       name: data.name,
       amount: data.amount,
       billing_period: data.billing_period,
@@ -496,7 +505,16 @@ export class AdhocServiceImpl implements AdhocService {
 
     // Create the new recurring income
     // For monthly incomes, use due_day as day_of_month if provided, otherwise default to 1
-    const incomeData: any = {
+    const incomeData: {
+      name: string;
+      amount: number;
+      billing_period: BillingPeriod;
+      payment_source_id: string;
+      category_id: string;
+      due_day?: number;
+      day_of_month?: number;
+      start_date?: string;
+    } = {
       name: data.name,
       amount: data.amount,
       billing_period: data.billing_period,

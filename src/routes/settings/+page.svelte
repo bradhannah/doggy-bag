@@ -15,8 +15,6 @@
     validateDirectory,
     migrateData,
     saveDataDirectorySetting,
-    updateDataDirectoryLocally,
-    restartSidecar,
     relaunchApp,
     getDebugModeSetting,
     toggleDebugMode,
@@ -25,8 +23,8 @@
     type MigrationMode,
   } from '../../stores/settings';
 
-  // Reactive check for Tauri environment
-  $: inTauri = isTauri();
+  // Store Tauri check result (reactive won't help since isTauri() doesn't depend on reactive values)
+  const inTauri = isTauri();
 
   // Modal states
   let showMigrationDialog = false;
@@ -200,7 +198,7 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       addToast('Backup exported successfully', 'success');
-    } catch (err) {
+    } catch {
       addToast('Failed to export backup', 'error');
     } finally {
       backupLoading = false;
@@ -252,7 +250,7 @@
       addToast('Backup imported successfully', 'success');
       // Refresh the page to load new data
       window.location.reload();
-    } catch (err) {
+    } catch {
       addToast('Failed to import backup: Invalid file format', 'error');
     } finally {
       backupLoading = false;
@@ -278,7 +276,7 @@
           : 'Debug mode disabled - restart app to take effect',
         'info'
       );
-    } catch (err) {
+    } catch {
       addToast('Failed to toggle debug mode', 'error');
     } finally {
       debugModeLoading = false;
@@ -314,7 +312,7 @@
         <h2>Data Storage</h2>
 
         <div class="setting-item">
-          <label>Data Directory</label>
+          <span class="setting-label">Data Directory</span>
           <div class="directory-input">
             <input type="text" value={$dataDirectory?.path || ''} readonly class="directory-path" />
             <button
@@ -415,7 +413,7 @@
       <section class="settings-section">
         <h2>Appearance</h2>
         <div class="setting-item">
-          <label>Zoom</label>
+          <span class="setting-label">Zoom</span>
           <p class="setting-description">
             Adjust the zoom level using the controls in the sidebar footer, or use keyboard
             shortcuts:
@@ -443,7 +441,7 @@
         </div>
 
         <div class="setting-item">
-          <label>Theme</label>
+          <span class="setting-label">Theme</span>
           <div class="radio-group">
             <label class="radio-label">
               <input type="radio" name="theme" value="dark" checked disabled />
@@ -469,7 +467,7 @@
         <div class="setting-item">
           <div class="toggle-row">
             <div class="toggle-info">
-              <label>Debug Mode</label>
+              <span class="setting-label">Debug Mode</span>
               <p class="setting-description">
                 Enables the "Inspect Element" option in the right-click context menu. Useful for
                 troubleshooting issues and inspecting the app's HTML/CSS.
@@ -535,14 +533,12 @@
 
 <!-- Migration Dialog Modal -->
 {#if showMigrationDialog}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="modal-overlay"
     on:click={closeModals}
     on:keydown={(e) => e.key === 'Escape' && closeModals()}
     role="presentation"
   >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="modal"
       on:click|stopPropagation
@@ -636,14 +632,12 @@
 
 <!-- Success Modal -->
 {#if showSuccessDialog}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="modal-overlay"
     on:click={handleDone}
     on:keydown={(e) => e.key === 'Escape' && handleDone()}
     role="presentation"
   >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="modal"
       on:click|stopPropagation
@@ -703,14 +697,12 @@
 
 <!-- Error Modal -->
 {#if showErrorDialog}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="modal-overlay"
     on:click={closeModals}
     on:keydown={(e) => e.key === 'Escape' && closeModals()}
     role="presentation"
   >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="modal"
       on:click|stopPropagation
@@ -875,7 +867,8 @@
     margin-bottom: 0;
   }
 
-  .setting-item label {
+  .setting-item label,
+  .setting-label {
     display: block;
     font-size: 0.875rem;
     color: #e4e4e7;
@@ -1347,7 +1340,7 @@
     flex: 1;
   }
 
-  .toggle-info label {
+  .toggle-info .setting-label {
     margin-bottom: 4px;
   }
 

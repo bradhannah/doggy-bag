@@ -136,8 +136,6 @@
               />
             </svg>
           </span>
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <span
             class="category-color"
             style="background-color: {cat.color}"
@@ -159,7 +157,6 @@
           {/if}
 
           <!-- Action buttons -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="item-actions" on:click|stopPropagation on:keydown|stopPropagation>
             {#if confirmingDeleteId === cat.id}
               <span class="confirm-text">Delete?</span>

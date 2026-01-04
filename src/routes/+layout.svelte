@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Navigation from '../components/Navigation.svelte';
   import ToastContainer from '../components/shared/ToastContainer.svelte';
-  import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom, ZOOM_CONFIG } from '../stores/settings';
+  import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom } from '../stores/settings';
   import { setApiPort } from '../lib/api/client';
   import { createLogger } from '../lib/logger';
 
@@ -83,7 +83,7 @@
               backendReady = true;
               return;
             }
-          } catch (e) {
+          } catch {
             // Command not available yet, keep polling
           }
 

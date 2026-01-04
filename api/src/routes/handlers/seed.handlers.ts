@@ -177,7 +177,7 @@ interface SeedResult {
 }
 
 export function createSeedDefaultsHandler() {
-  return async (req: Request): Promise<Response> => {
+  return async (_req: Request): Promise<Response> => {
     try {
       // Check if entities already exist
       const existingPaymentSources = await paymentSourcesService.getAll();

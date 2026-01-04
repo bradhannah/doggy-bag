@@ -12,7 +12,6 @@ import type { IncomesService } from './incomes-service';
 import type { CategoriesService } from './categories-service';
 import type { PaymentSourcesService } from './payment-sources-service';
 import type {
-  MonthlyData,
   BillInstance,
   IncomeInstance,
   Category,
@@ -25,12 +24,9 @@ import type {
   IncomeInstanceDetailed,
   SectionTally,
   PayoffSummary,
-  Payment,
 } from '../types';
 import { calculateDueDate, isOverdue, getDaysOverdue } from '../utils/due-date';
 import {
-  calculateBillsTally,
-  calculateIncomeTally,
   calculateRegularBillsTally,
   calculateAdhocBillsTally,
   calculateRegularIncomeTally,

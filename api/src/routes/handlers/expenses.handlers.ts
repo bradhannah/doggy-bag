@@ -3,7 +3,7 @@
 
 import { MonthsServiceImpl } from '../../services/months-service';
 import { LeftoverServiceImpl } from '../../services/leftover-service';
-import { formatErrorForUser, ReadOnlyError } from '../../utils/errors';
+import { formatErrorForUser } from '../../utils/errors';
 import type { VariableExpense } from '../../types';
 
 const monthsService = new MonthsServiceImpl();
