@@ -1,6 +1,6 @@
 /**
  * Settings Store - Manages app settings with Tauri Store plugin
- * 
+ *
  * In Tauri (production): Uses tauri-plugin-store for persistent storage
  * In browser (development): Uses localStorage fallback
  */
@@ -18,10 +18,10 @@ const log = createLogger('Settings');
 
 // Zoom configuration
 export const ZOOM_CONFIG = {
-  min: 0.5,      // 50%
-  max: 2.0,      // 200%
-  step: 0.1,     // 10% per increment
-  default: 1.0   // 100%
+  min: 0.5, // 50%
+  max: 2.0, // 200%
+  step: 0.1, // 10% per increment
+  default: 1.0, // 100%
 };
 
 // Preset zoom levels for UI buttons (kept for backward compat with Settings page)
@@ -31,19 +31,19 @@ export const FONT_SIZE_LABELS: Record<FontSize, string> = {
   small: 'Small',
   medium: 'Medium',
   large: 'Large',
-  xlarge: 'X-Large'
+  xlarge: 'X-Large',
 };
 
 export const FONT_SCALE_MAP: Record<FontSize, number> = {
-  small: 0.85,    // 85% zoom
-  medium: 1.0,    // 100% zoom (default)
-  large: 1.15,    // 115% zoom
-  xlarge: 1.30    // 130% zoom
+  small: 0.85, // 85% zoom
+  medium: 1.0, // 100% zoom (default)
+  large: 1.15, // 115% zoom
+  xlarge: 1.3, // 130% zoom
 };
 
 // Zoom level store - stores the actual numeric zoom factor (0.5 to 2.0)
 const zoomLevelWritable = writable<number>(ZOOM_CONFIG.default);
-export const zoomLevel = derived(zoomLevelWritable, z => z);
+export const zoomLevel = derived(zoomLevelWritable, (z) => z);
 
 // For backward compatibility - derive FontSize from zoom level
 export const uiScale = derived(zoomLevelWritable, (z): FontSize => {
@@ -63,7 +63,7 @@ export const uiScaleFactor = zoomLevel;
 export async function applyZoom(level: number): Promise<void> {
   // Clamp to valid range
   const clampedLevel = Math.max(ZOOM_CONFIG.min, Math.min(ZOOM_CONFIG.max, level));
-  
+
   if (isTauri()) {
     try {
       const { getCurrentWebview } = await import('@tauri-apps/api/webview');
@@ -84,12 +84,12 @@ export async function applyZoom(level: number): Promise<void> {
  */
 export async function loadZoom(): Promise<number> {
   let savedZoom = ZOOM_CONFIG.default;
-  
+
   if (isTauri()) {
     try {
       const { Store } = await import('@tauri-apps/plugin-store');
       const store = await Store.load('settings.json');
-      const value = await store.get('zoomLevel') as number | undefined;
+      const value = (await store.get('zoomLevel')) as number | undefined;
       if (value !== undefined && value >= ZOOM_CONFIG.min && value <= ZOOM_CONFIG.max) {
         savedZoom = value;
       }
@@ -106,7 +106,7 @@ export async function loadZoom(): Promise<number> {
       }
     }
   }
-  
+
   zoomLevelWritable.set(savedZoom);
   await applyZoom(savedZoom);
   return savedZoom;
@@ -117,7 +117,7 @@ export async function loadZoom(): Promise<number> {
  */
 async function saveZoom(level: number): Promise<void> {
   const clampedLevel = Math.max(ZOOM_CONFIG.min, Math.min(ZOOM_CONFIG.max, level));
-  
+
   if (isTauri()) {
     try {
       const { Store } = await import('@tauri-apps/plugin-store');
@@ -140,7 +140,7 @@ export async function setZoom(level: number): Promise<void> {
   const clampedLevel = Math.max(ZOOM_CONFIG.min, Math.min(ZOOM_CONFIG.max, level));
   // Round to 2 decimal places to avoid floating point issues
   const roundedLevel = Math.round(clampedLevel * 100) / 100;
-  
+
   zoomLevelWritable.set(roundedLevel);
   await applyZoom(roundedLevel);
   await saveZoom(roundedLevel);
@@ -151,7 +151,7 @@ export async function setZoom(level: number): Promise<void> {
  */
 export async function zoomIn(): Promise<void> {
   let current = ZOOM_CONFIG.default;
-  zoomLevelWritable.subscribe(v => current = v)();
+  zoomLevelWritable.subscribe((v) => (current = v))();
   await setZoom(current + ZOOM_CONFIG.step);
 }
 
@@ -160,7 +160,7 @@ export async function zoomIn(): Promise<void> {
  */
 export async function zoomOut(): Promise<void> {
   let current = ZOOM_CONFIG.default;
-  zoomLevelWritable.subscribe(v => current = v)();
+  zoomLevelWritable.subscribe((v) => (current = v))();
   await setZoom(current - ZOOM_CONFIG.step);
 }
 
@@ -244,43 +244,43 @@ const initialState: SettingsState = {
   dataDirectory: null,
   loading: false,
   error: null,
-  isDevelopment: true
+  isDevelopment: true,
 };
 
 const store = writable<SettingsState>(initialState);
 
 // Derived stores
-export const settings = derived(store, s => s.settings);
-export const dataDirectory = derived(store, s => s.dataDirectory);
-export const loading = derived(store, s => s.loading);
-export const error = derived(store, s => s.error);
-export const isDevelopment = derived(store, s => s.isDevelopment);
+export const settings = derived(store, (s) => s.settings);
+export const dataDirectory = derived(store, (s) => s.dataDirectory);
+export const loading = derived(store, (s) => s.loading);
+export const error = derived(store, (s) => s.error);
+export const isDevelopment = derived(store, (s) => s.isDevelopment);
 
 /**
  * Load current settings from the API
  */
 export async function loadSettings(): Promise<void> {
-  store.update(s => ({ ...s, loading: true, error: null }));
-  
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
   try {
     const [settingsData, dataDirData] = await Promise.all([
       apiClient.get('/api/settings') as Promise<AppSettings & { isDevelopment: boolean }>,
-      apiClient.get('/api/settings/data-directory') as Promise<DataDirectoryInfo>
+      apiClient.get('/api/settings/data-directory') as Promise<DataDirectoryInfo>,
     ]);
-    
-    store.update(s => ({
+
+    store.update((s) => ({
       ...s,
       settings: {
         dataDirectory: settingsData.dataDirectory,
-        version: settingsData.version
+        version: settingsData.version,
       },
       dataDirectory: dataDirData,
       isDevelopment: settingsData.isDevelopment,
-      loading: false
+      loading: false,
     }));
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load settings');
-    store.update(s => ({ ...s, loading: false, error: err.message }));
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
 }
@@ -289,7 +289,9 @@ export async function loadSettings(): Promise<void> {
  * Validate a directory for use as data storage
  */
 export async function validateDirectory(path: string): Promise<DirectoryValidation> {
-  const result = await apiClient.post('/api/settings/validate-directory', { path }) as DirectoryValidation;
+  const result = (await apiClient.post('/api/settings/validate-directory', {
+    path,
+  })) as DirectoryValidation;
   return result;
 }
 
@@ -297,15 +299,15 @@ export async function validateDirectory(path: string): Promise<DirectoryValidati
  * Migrate data to a new directory
  */
 export async function migrateData(
-  sourceDir: string, 
-  destDir: string, 
+  sourceDir: string,
+  destDir: string,
   mode: MigrationMode
 ): Promise<MigrationResult> {
-  const result = await apiClient.post('/api/settings/migrate-data', {
+  const result = (await apiClient.post('/api/settings/migrate-data', {
     sourceDir,
     destDir,
-    mode
-  }) as MigrationResult;
+    mode,
+  })) as MigrationResult;
   return result;
 }
 
@@ -316,14 +318,14 @@ export async function migrateData(
 export async function openFolderPicker(): Promise<string | null> {
   const inTauri = isTauri();
   log.debug(`openFolderPicker called, isTauri: ${inTauri}`);
-  
+
   if (!inTauri) {
     // In browser dev mode, show a prompt
     log.debug('Not in Tauri, using prompt fallback');
     const path = prompt('Enter folder path (browser dev mode):', '~/Documents/BudgetForFun');
     return path;
   }
-  
+
   try {
     log.debug('Importing @tauri-apps/plugin-dialog...');
     // Dynamic import for Tauri dialog
@@ -332,10 +334,10 @@ export async function openFolderPicker(): Promise<string | null> {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: 'Choose Data Directory'
+      title: 'Choose Data Directory',
     });
     log.debug(`Dialog returned: ${selected}`);
-    
+
     return selected as string | null;
   } catch (e) {
     log.error('Failed to open folder picker:', e);
@@ -350,7 +352,7 @@ export async function getDefaultDataDir(): Promise<string> {
   if (!isTauri()) {
     return '~/Documents/BudgetForFun';
   }
-  
+
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     return await invoke('get_default_data_dir');
@@ -370,7 +372,7 @@ export async function saveDataDirectorySetting(path: string): Promise<void> {
     localStorage.setItem('budgetforfun_data_dir', path);
     return;
   }
-  
+
   try {
     const { Store } = await import('@tauri-apps/plugin-store');
     const store = await Store.load('settings.json');
@@ -389,11 +391,11 @@ export async function getSavedDataDirectory(): Promise<string | null> {
   if (!isTauri()) {
     return localStorage.getItem('budgetforfun_data_dir');
   }
-  
+
   try {
     const { Store } = await import('@tauri-apps/plugin-store');
     const store = await Store.load('settings.json');
-    const value = await store.get('dataDirectory') as string | undefined;
+    const value = (await store.get('dataDirectory')) as string | undefined;
     return value || null;
   } catch (e) {
     log.error('Failed to get saved data directory:', e);
@@ -405,7 +407,7 @@ export async function getSavedDataDirectory(): Promise<string | null> {
  * Clear any errors
  */
 export function clearError(): void {
-  store.update(s => ({ ...s, error: null }));
+  store.update((s) => ({ ...s, error: null }));
 }
 
 /**
@@ -414,7 +416,7 @@ export function clearError(): void {
  */
 export function updateDataDirectoryLocally(newPath: string): void {
   log.debug(`updateDataDirectoryLocally called with: ${newPath}`);
-  store.update(s => {
+  store.update((s) => {
     const newState = {
       ...s,
       dataDirectory: {
@@ -422,9 +424,9 @@ export function updateDataDirectoryLocally(newPath: string): void {
         entitiesDir: `${newPath}/entities`,
         monthsDir: `${newPath}/months`,
         isDevelopment: false,
-        isWritable: true
+        isWritable: true,
       },
-      isDevelopment: false
+      isDevelopment: false,
     };
     log.debug(`New dataDirectory state: ${newState.dataDirectory?.path}`);
     return newState;
@@ -440,7 +442,7 @@ export async function restartSidecar(newDataDir: string): Promise<void> {
     log.debug('Not in Tauri, cannot restart sidecar');
     return;
   }
-  
+
   try {
     log.info(`Restarting sidecar with new data directory: ${newDataDir}`);
     const { invoke } = await import('@tauri-apps/api/core');
@@ -463,7 +465,7 @@ export async function relaunchApp(): Promise<void> {
     window.location.reload();
     return;
   }
-  
+
   try {
     log.info('Relaunching app...');
     const { invoke } = await import('@tauri-apps/api/core');
@@ -480,7 +482,7 @@ export const settingsStore = store;
 // Debug Mode - Enables "Inspect Element" context menu
 // ============================================================================
 // NOTE: Debug mode controls whether the right-click "Inspect Element" context
-// menu is available in production builds. This setting takes effect on app 
+// menu is available in production builds. This setting takes effect on app
 // restart because the devtools capability must be set when the window is created.
 //
 // In debug/dev builds, devtools is always enabled regardless of this setting.
@@ -494,7 +496,7 @@ export async function getDebugModeSetting(): Promise<boolean> {
     try {
       const { Store } = await import('@tauri-apps/plugin-store');
       const store = await Store.load('settings.json');
-      const value = await store.get('debugMode') as boolean | undefined;
+      const value = (await store.get('debugMode')) as boolean | undefined;
       return value === true;
     } catch (e) {
       log.error('Failed to get debug mode from Tauri Store:', e);
@@ -551,10 +553,10 @@ export async function toggleDevtools(): Promise<boolean> {
     log.debug('Not in Tauri, cannot toggle devtools');
     return false;
   }
-  
+
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const isOpen = await invoke('toggle_devtools') as boolean;
+    const isOpen = (await invoke('toggle_devtools')) as boolean;
     log.info(`DevTools toggled: ${isOpen ? 'open' : 'closed'}`);
     return isOpen;
   } catch (e) {
@@ -571,7 +573,7 @@ export async function openDevtools(): Promise<void> {
     log.debug('Not in Tauri, cannot open devtools');
     return;
   }
-  
+
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('open_devtools');
@@ -589,7 +591,7 @@ export async function closeDevtools(): Promise<void> {
     log.debug('Not in Tauri, cannot close devtools');
     return;
   }
-  
+
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('close_devtools');
@@ -606,10 +608,10 @@ export async function isDevtoolsOpen(): Promise<boolean> {
   if (!isTauri()) {
     return false;
   }
-  
+
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    return await invoke('is_devtools_open') as boolean;
+    return (await invoke('is_devtools_open')) as boolean;
   } catch (e) {
     log.error('Failed to check devtools state:', e);
     return false;

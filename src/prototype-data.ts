@@ -31,36 +31,36 @@ export const mockBills: MockBill[] = [
     name: 'Rent',
     amount: 150000,
     billing_period: 'monthly',
-    payment_source_id: '1'
+    payment_source_id: '1',
   },
   {
     id: '2',
     name: 'Internet',
     amount: 8000,
     billing_period: 'monthly',
-    payment_source_id: '1'
+    payment_source_id: '1',
   },
   {
     id: '3',
     name: 'Car Insurance',
     amount: 12000,
     billing_period: 'monthly',
-    payment_source_id: '2'
+    payment_source_id: '2',
   },
   {
     id: '4',
     name: 'Groceries Delivery',
     amount: 15000,
     billing_period: 'bi_weekly',
-    payment_source_id: '3'
+    payment_source_id: '3',
   },
   {
     id: '5',
     name: 'Netflix',
     amount: 1500,
     billing_period: 'monthly',
-    payment_source_id: '1'
-  }
+    payment_source_id: '1',
+  },
 ];
 
 export const mockIncomes: MockIncome[] = [
@@ -69,22 +69,22 @@ export const mockIncomes: MockIncome[] = [
     name: 'Salary',
     amount: 500000,
     billing_period: 'bi_weekly',
-    payment_source_id: '1'
+    payment_source_id: '1',
   },
   {
     id: '2',
     name: 'Freelance',
     amount: 50000,
     billing_period: 'monthly',
-    payment_source_id: '1'
+    payment_source_id: '1',
   },
   {
     id: '3',
     name: 'Bonus',
     amount: 100000,
     billing_period: 'semi_annually',
-    payment_source_id: '1'
-  }
+    payment_source_id: '1',
+  },
 ];
 
 export const mockPaymentSources: MockPaymentSource[] = [
@@ -92,27 +92,23 @@ export const mockPaymentSources: MockPaymentSource[] = [
     id: '1',
     name: 'Scotia Checking',
     type: 'bank_account',
-    balance: 250000
+    balance: 250000,
   },
   {
     id: '2',
     name: 'Visa',
     type: 'credit_card',
-    balance: -5000
+    balance: -5000,
   },
   {
     id: '3',
     name: 'Cash',
     type: 'cash',
-    balance: 20000
-  }
+    balance: 20000,
+  },
 ];
 
-export const mockMonths = [
-  '2025-01',
-  '2025-02',
-  '2025-03'
-];
+export const mockMonths = ['2025-01', '2025-02', '2025-03'];
 
 export const categories = [
   'Housing',
@@ -122,18 +118,18 @@ export const categories = [
   'Insurance',
   'Entertainment',
   'Healthcare',
-  'Other'
+  'Other',
 ];
 
 export const billingPeriods = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'bi_weekly', label: 'Bi-weekly' },
   { value: 'weekly', label: 'Weekly' },
-  { value: 'semi_annually', label: 'Semi-annually' }
+  { value: 'semi_annually', label: 'Semi-annually' },
 ];
 
 export const paymentSourceTypes = [
   { value: 'bank_account', label: 'Bank Account' },
   { value: 'credit_card', label: 'Credit Card' },
-  { value: 'cash', label: 'Cash' }
+  { value: 'cash', label: 'Cash' },
 ];

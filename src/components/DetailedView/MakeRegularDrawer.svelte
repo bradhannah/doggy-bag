@@ -4,16 +4,16 @@
   import { categories, loadCategories } from '../../stores/categories';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
-  
+
   export let open = false;
   export let month: string;
   export let type: 'bill' | 'income' = 'bill';
   export let instanceId: string;
   export let instanceName: string = '';
   export let instanceAmount: number = 0;
-  
+
   const dispatch = createEventDispatcher();
-  
+
   // Form fields - pre-filled from instance
   let name = '';
   let amount = '';
@@ -23,21 +23,21 @@
   let dueDay = '';
   let saving = false;
   let error = '';
-  
+
   // Filter categories by type
-  $: filteredCategories = $categories.filter(c => {
+  $: filteredCategories = $categories.filter((c) => {
     const catType = (c as any).type;
     return catType === type;
   });
-  
-  $: activePaymentSources = $paymentSources.filter(p => p.is_active);
-  
+
+  $: activePaymentSources = $paymentSources.filter((p) => p.is_active);
+
   // Pre-fill form when opened
   $: if (open) {
     name = instanceName;
     amount = (instanceAmount / 100).toFixed(2);
   }
-  
+
   onMount(async () => {
     const promises = [];
     if ($categories.length === 0) {
@@ -47,7 +47,7 @@
       promises.push(loadPaymentSources());
     }
     await Promise.all(promises);
-    
+
     // Set defaults after loading
     if (filteredCategories.length > 0 && !categoryId) {
       categoryId = filteredCategories[0].id;
@@ -56,18 +56,18 @@
       paymentSourceId = activePaymentSources[0].id;
     }
   });
-  
+
   function parseDollarsToCents(value: string): number {
     const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
     return isNaN(dollars) ? 0 : Math.round(dollars * 100);
   }
-  
+
   function handleClose() {
     open = false;
     resetForm();
     dispatch('close');
   }
-  
+
   function resetForm() {
     name = '';
     amount = '';
@@ -77,52 +77,53 @@
     dueDay = '';
     error = '';
   }
-  
+
   async function handleSubmit() {
     // Validation
     if (!name.trim()) {
       error = 'Name is required';
       return;
     }
-    
+
     const amountCents = parseDollarsToCents(amount);
     if (amountCents <= 0) {
       error = 'Please enter a valid amount';
       return;
     }
-    
+
     if (!categoryId) {
       error = 'Please select a category';
       return;
     }
-    
+
     if (!paymentSourceId) {
       error = 'Please select a payment source';
       return;
     }
-    
+
     saving = true;
     error = '';
-    
+
     try {
-      const endpoint = type === 'bill'
-        ? `/api/months/${month}/adhoc/bills/${instanceId}/make-regular`
-        : `/api/months/${month}/adhoc/incomes/${instanceId}/make-regular`;
-      
+      const endpoint =
+        type === 'bill'
+          ? `/api/months/${month}/adhoc/bills/${instanceId}/make-regular`
+          : `/api/months/${month}/adhoc/incomes/${instanceId}/make-regular`;
+
       const payload: any = {
         name: name.trim(),
         amount: amountCents,
         category_id: categoryId,
         payment_source_id: paymentSourceId,
-        billing_period: billingPeriod
+        billing_period: billingPeriod,
       };
-      
+
       if (dueDay) {
         payload.due_day = parseInt(dueDay, 10);
       }
-      
+
       await apiClient.post(endpoint, payload);
-      
+
       success(`Created recurring ${type}: ${name}`);
       dispatch('converted');
       handleClose();
@@ -133,13 +134,13 @@
       saving = false;
     }
   }
-  
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       handleClose();
     }
   }
-  
+
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       handleClose();
@@ -151,22 +152,38 @@
 
 {#if open}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div class="drawer-backdrop" role="presentation" on:click={handleBackdropClick} on:keydown={(e) => e.key === 'Escape' && handleClose()}>
-    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="make-regular-title" tabindex="-1">
+  <div
+    class="drawer-backdrop"
+    role="presentation"
+    on:click={handleBackdropClick}
+    on:keydown={(e) => e.key === 'Escape' && handleClose()}
+  >
+    <div
+      class="drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="make-regular-title"
+      tabindex="-1"
+    >
       <header class="drawer-header">
         <h3 id="make-regular-title">Make Regular {type === 'bill' ? 'Bill' : 'Income'}</h3>
         <button class="close-btn" on:click={handleClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </header>
-      
+
       <div class="drawer-content">
         <p class="description">
           Convert this ad-hoc {type} to a recurring {type}. It will appear in future months.
         </p>
-        
+
         <form on:submit|preventDefault={handleSubmit}>
           <div class="form-group">
             <label for="name">Name</label>
@@ -178,7 +195,7 @@
               disabled={saving}
             />
           </div>
-          
+
           <div class="form-group">
             <label for="amount">Amount</label>
             <div class="amount-input-group">
@@ -192,57 +209,41 @@
               />
             </div>
           </div>
-          
+
           <div class="form-group">
             <label for="category">Category</label>
-            <select
-              id="category"
-              bind:value={categoryId}
-              disabled={saving}
-            >
+            <select id="category" bind:value={categoryId} disabled={saving}>
               <option value="">-- Select Category --</option>
               {#each filteredCategories as category}
                 <option value={category.id}>{category.name}</option>
               {/each}
             </select>
           </div>
-          
+
           <div class="form-group">
             <label for="paymentSource">Payment Source</label>
-            <select
-              id="paymentSource"
-              bind:value={paymentSourceId}
-              disabled={saving}
-            >
+            <select id="paymentSource" bind:value={paymentSourceId} disabled={saving}>
               <option value="">-- Select Payment Source --</option>
               {#each activePaymentSources as source}
                 <option value={source.id}>{source.name}</option>
               {/each}
             </select>
           </div>
-          
+
           <div class="form-group">
             <label for="billingPeriod">Billing Period</label>
-            <select
-              id="billingPeriod"
-              bind:value={billingPeriod}
-              disabled={saving}
-            >
+            <select id="billingPeriod" bind:value={billingPeriod} disabled={saving}>
               <option value="monthly">Monthly</option>
               <option value="bi_weekly">Bi-weekly</option>
               <option value="weekly">Weekly</option>
               <option value="semi_annually">Semi-annually</option>
             </select>
           </div>
-          
+
           {#if billingPeriod === 'monthly'}
             <div class="form-group">
               <label for="dueDay">Due Day (Optional)</label>
-              <select
-                id="dueDay"
-                bind:value={dueDay}
-                disabled={saving}
-              >
+              <select id="dueDay" bind:value={dueDay} disabled={saving}>
                 <option value="">-- Not Set --</option>
                 {#each Array.from({ length: 31 }, (_, i) => i + 1) as day}
                   <option value={day}>{day}</option>
@@ -250,11 +251,11 @@
               </select>
             </div>
           {/if}
-          
+
           {#if error}
             <p class="error-message">{error}</p>
           {/if}
-          
+
           <div class="form-actions">
             <button type="button" class="cancel-btn" on:click={handleClose} disabled={saving}>
               Cancel
@@ -281,7 +282,7 @@
     justify-content: flex-end;
     z-index: 1000;
   }
-  
+
   .drawer {
     width: 100%;
     max-width: 400px;
@@ -292,7 +293,7 @@
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
   }
-  
+
   @keyframes slideIn {
     from {
       transform: translateX(100%);
@@ -301,7 +302,7 @@
       transform: translateX(0);
     }
   }
-  
+
   .drawer-header {
     display: flex;
     justify-content: space-between;
@@ -309,14 +310,14 @@
     padding: 20px;
     border-bottom: 1px solid #333355;
   }
-  
+
   .drawer-header h3 {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
     color: #e4e4e7;
   }
-  
+
   .close-btn {
     background: none;
     border: none;
@@ -328,35 +329,35 @@
     justify-content: center;
     transition: color 0.2s;
   }
-  
+
   .close-btn:hover {
     color: #e4e4e7;
   }
-  
+
   .drawer-content {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
   }
-  
+
   .description {
     color: #888;
     font-size: 0.875rem;
     margin-bottom: 24px;
   }
-  
+
   .form-group {
     margin-bottom: 20px;
   }
-  
+
   .form-group label {
     display: block;
     font-size: 0.875rem;
     color: #888;
     margin-bottom: 8px;
   }
-  
-  .form-group input[type="text"],
+
+  .form-group input[type='text'],
   .form-group select {
     width: 100%;
     padding: 10px 12px;
@@ -368,24 +369,24 @@
     height: 42px;
     box-sizing: border-box;
   }
-  
+
   .form-group input:focus,
   .form-group select:focus {
     outline: none;
     border-color: #24c8db;
   }
-  
+
   .amount-input-group {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  
+
   .amount-input-group .prefix {
     color: #888;
     font-size: 1rem;
   }
-  
+
   .amount-input-group input {
     flex: 1;
     padding: 10px 12px;
@@ -395,25 +396,26 @@
     color: #e4e4e7;
     font-size: 1rem;
   }
-  
+
   .amount-input-group input:focus {
     outline: none;
     border-color: #24c8db;
   }
-  
+
   .error-message {
     color: #f87171;
     font-size: 0.875rem;
     margin: 0 0 16px 0;
   }
-  
+
   .form-actions {
     display: flex;
     gap: 12px;
     margin-top: 24px;
   }
-  
-  .cancel-btn, .submit-btn {
+
+  .cancel-btn,
+  .submit-btn {
     flex: 1;
     padding: 12px;
     border-radius: 8px;
@@ -422,29 +424,30 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .cancel-btn {
     background: transparent;
     border: 1px solid #333355;
     color: #888;
   }
-  
+
   .cancel-btn:hover:not(:disabled) {
     border-color: #e4e4e7;
     color: #e4e4e7;
   }
-  
+
   .submit-btn {
     background: #a78bfa;
     border: none;
     color: #000;
   }
-  
+
   .submit-btn:hover:not(:disabled) {
     opacity: 0.9;
   }
-  
-  .cancel-btn:disabled, .submit-btn:disabled {
+
+  .cancel-btn:disabled,
+  .submit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }

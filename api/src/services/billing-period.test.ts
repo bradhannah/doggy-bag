@@ -1,10 +1,10 @@
 // Billing Period Tests
 import { describe, test, expect } from 'bun:test';
-import { 
-  getActualInstancesInMonth, 
+import {
+  getActualInstancesInMonth,
   getOccurrenceDatesInMonth,
   calculateActualMonthlyAmount,
-  getMonthlyInstanceCount
+  getMonthlyInstanceCount,
 } from '../utils/billing-period';
 
 describe('Billing Period Calculations', () => {

@@ -16,6 +16,7 @@ This guide helps you get started with the Monthly Budget Tracker application. By
 ### Required Tools
 
 **1. Rust Toolchain**
+
 ```bash
 # Check if Rust is installed
 rustc --version
@@ -26,6 +27,7 @@ source $HOME/.cargo/env
 ```
 
 **2. Bun Runtime**
+
 ```bash
 # Check if Bun is installed
 bun --version
@@ -35,6 +37,7 @@ curl -fsSL https://bun.sh/install | bash
 ```
 
 **3. Node.js** (for Tauri CLI tools only)
+
 ```bash
 # Check if Node.js is installed
 node --version
@@ -45,17 +48,20 @@ node --version
 **4. System Dependencies**
 
 **macOS**:
+
 ```bash
 # Install Xcode command line tools
 xcode-select --install
 ```
 
 **Windows**:
+
 - Microsoft Visual C++ Redistributable
 - WebView2 Runtime
 - Tauri CLI requirements (see Tauri docs)
 
 **Linux**:
+
 ```bash
 # Install webkit2gtk4.0-dev libraries (for WebView)
 sudo apt-get install libwebkit2gtk-4.0-dev
@@ -221,17 +227,20 @@ make test
 ### TypeScript
 
 **Type Safety**:
+
 - All code must use TypeScript (no `any` types without justification)
 - Enable strict mode in `tsconfig.json`
 - Use interfaces for all public API contracts
 
 **Naming Conventions**:
+
 - **Interfaces**: PascalCase (e.g., `Bill`, `IncomeSource`)
 - **Types**: PascalCase (e.g., `BillingPeriod`, `PaymentSourceType`)
 - **Variables**: camelCase (e.g., `billId`, `amount`)
 - **Constants**: SCREAMING_SNAKE_CASE (e.g., `MAX_UNDO_STACK_SIZE`)
 
 **File Organization**:
+
 - One public export per file
 - Barrel files for related exports (e.g., `models/index.ts`)
 - Keep files focused on single responsibility
@@ -239,12 +248,14 @@ make test
 ### Svelte
 
 **Component Structure**:
+
 - One concern per component (principle XX)
 - Props for data input, events for data output
 - Reactive declarations ($:) for derived state (principle XX)
 - Use Svelte stores for cross-component state only (principle XXI)
 
 **Naming Conventions**:
+
 - **Components**: PascalCase (e.g., `BillList.svelte`, `BudgetForm.svelte`)
 - **Props**: camelCase (e.g., `billId`, `onSave`)
 - **Events**: on:camelCase (e.g., `on:click`, `on:submit`)
@@ -253,6 +264,7 @@ make test
 ### Rust
 
 **Code Style**:
+
 - Use `cargo fmt` for formatting
 - Follow Rust naming conventions:
   - **Structs**: PascalCase (e.g., `Bill`, `Income`)
@@ -291,6 +303,7 @@ Users can edit any value in a month instance:
 - **Customization Tracking**: `is_default: false` flag marks deviations from defaults
 
 When generating future months:
+
 - Use original default definitions (not modified instances)
 - Users can optionally adopt new default values (not automatic)
 
@@ -313,6 +326,7 @@ Leftover = (sum of all bank balances + cash) - (sum of all credit card debt) + t
 ```
 
 **Example**:
+
 - Bank accounts: Scotia ($3,000), Checking ($2,000) → sum = $5,000
 - Credit cards: Visa (-$1,500 debt) → sum = -$1,500
 - Cash on hand: $500
@@ -327,6 +341,7 @@ Leftover = (sum of all bank balances + cash) - (sum of all credit card debt) + t
 ### File Locations
 
 **Default Entities**:
+
 ```text
 data/entities/bills.json           # Default bill definitions (templates)
 data/entities/incomes.json         # Default income definitions (templates)
@@ -335,6 +350,7 @@ data/entities/categories.json       # Bill categories
 ```
 
 **Monthly Data**:
+
 ```text
 data/months/2025-01.json      # January 2025 budget
 data/months/2025-02.json      # February 2025 budget
@@ -354,10 +370,12 @@ Every change triggers auto-save to appropriate file:
 ### Backup and Restore
 
 **Export**: User-triggered export of all data to single JSON file
+
 - Includes: All default entities, all monthly data, categories
 - User saves to their cloud drive (Google Drive, iCloud, Dropbox)
 
 **Import**: User selects backup file, line-by-line restore:
+
 - Parse JSON file
 - Display entities in selectable list
 - User selects which entities to restore
@@ -459,9 +477,11 @@ make build
 ### Data File Errors
 
 **Corrupt JSON**: App will show error and offer restore from backup
+
 - User manually restores from backup file using line-by-line restore
 
 **Missing Entity Files**: App creates default empty files on first run
+
 - No manual intervention required
 
 ---
@@ -479,6 +499,7 @@ After completing this quickstart:
 2. **Review data model**: `data-model.md` for entity relationships
 
 3. **Start implementation**:
+
    ```bash
    # Generate tasks from spec
    /speckit.tasks

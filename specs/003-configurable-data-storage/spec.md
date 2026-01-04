@@ -84,7 +84,7 @@ The Configurable Data Storage feature enables users to choose where their budget
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-*Note: This uses the native OS folder picker via Tauri's `dialog` plugin, not a custom UI.*
+_Note: This uses the native OS folder picker via Tauri's `dialog` plugin, not a custom UI._
 
 ### Wireframe 3: Data Migration Dialog
 
@@ -336,23 +336,27 @@ User wants to start with empty data at a new location (e.g., for testing or sepa
 ### Functional Requirements
 
 **Storage Configuration**:
+
 - **FR-001**: System MUST use `~/Documents/BudgetForFun/` as default data directory in production
 - **FR-002**: System MUST use `./api/data/` (project-relative) as data directory in development mode
 - **FR-003**: System MUST persist user's data directory preference using Tauri Store plugin
 - **FR-004**: System MUST pass data directory path to Bun sidecar via environment variable
 
 **Settings Page**:
+
 - **FR-005**: System MUST provide a Settings page accessible from main navigation
 - **FR-006**: System MUST display current data directory path in Settings
 - **FR-007**: System MUST provide Browse button to open native folder picker
 - **FR-008**: System MUST display placeholder sections for future settings (Appearance, About)
 
 **Directory Validation**:
+
 - **FR-009**: System MUST validate selected directory is writable before accepting
 - **FR-010**: System MUST show clear error message if directory is not usable
 - **FR-011**: System MUST create `entities/` and `months/` subdirectories if they don't exist
 
 **Data Migration**:
+
 - **FR-012**: System MUST offer "Copy existing data" option when changing directories
 - **FR-013**: System MUST offer "Start fresh" option when changing directories
 - **FR-014**: System MUST offer "Use existing data" option if data exists at new location
@@ -361,11 +365,13 @@ User wants to start with empty data at a new location (e.g., for testing or sepa
 - **FR-017**: System MUST show summary of copied files on completion
 
 **Backend Integration**:
+
 - **FR-018**: Storage service MUST accept base path as configuration
 - **FR-019**: All file paths in services MUST be relative to configured base path
 - **FR-020**: System MUST reload/restart backend when data directory changes
 
 **Tauri Integration**:
+
 - **FR-021**: System MUST use `@tauri-apps/plugin-dialog` for native folder picker
 - **FR-022**: System MUST use `@tauri-apps/plugin-store` for persisting settings
 - **FR-023**: System MUST use `@tauri-apps/api/path` for resolving user directories

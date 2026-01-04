@@ -7,7 +7,8 @@
 
 This feature consolidates 12 UI/UX improvements including window size persistence, responsive layout fixes (eliminating horizontal scrollbar), category visual states (crossed out when complete/empty, sorted to bottom), credit card payoff balance sync workflow, navigation reorganization, and developer tooling for generating anonymized example data.
 
-**Technical Approach**: 
+**Technical Approach**:
+
 - Window size persistence via Tauri window events and plugin-store
 - Responsive layout via CSS container queries with overflow detection
 - Category states via computed properties and sorting in Svelte stores
@@ -28,25 +29,25 @@ This feature consolidates 12 UI/UX improvements including window size persistenc
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| I. User-Centric Simplicity | ✅ PASS | All changes reduce friction and improve daily usability |
-| II. Test-First Development | ⚠️ PARTIAL | Manual testing for UI changes; script testing for data generation |
-| VI. Build and Run Locality | ✅ PASS | No cloud dependencies; all local storage |
-| VIII. Local File Storage | ✅ PASS | Settings via Tauri Store, data in local JSON |
-| X. Avoid Silly Libraries | ✅ PASS | Using native Tauri APIs, no new dependencies |
-| XI. Makefiles for Automation | ✅ PASS | Existing `make dev` workflow sufficient |
-| XVIII. Tauri Desktop Shell | ✅ PASS | Using Tauri window APIs for size persistence |
-| XIX. SvelteKit Frontend | ✅ PASS | Svelte components, scoped CSS |
-| XX. Component Structure | ✅ PASS | Single concern per component |
-| XXI. Reactive Declarations | ✅ PASS | Using Svelte stores for state |
-| XXIII. Styling via Scoped CSS | ✅ PASS | All styles in component `<style>` blocks |
-| XXIV. No External UI Libraries | ✅ PASS | Custom modal, native elements |
-| XXV. Tauri IPC Integration | ✅ PASS | Using @tauri-apps/api for window management |
-| XXVII. Backend Testing | ✅ PASS | Will test API endpoints with curl |
-| XXVIII. Developer Time | ✅ PASS | All changes are localized and testable |
+| Principle                      | Status     | Notes                                                             |
+| ------------------------------ | ---------- | ----------------------------------------------------------------- |
+| I. User-Centric Simplicity     | ✅ PASS    | All changes reduce friction and improve daily usability           |
+| II. Test-First Development     | ⚠️ PARTIAL | Manual testing for UI changes; script testing for data generation |
+| VI. Build and Run Locality     | ✅ PASS    | No cloud dependencies; all local storage                          |
+| VIII. Local File Storage       | ✅ PASS    | Settings via Tauri Store, data in local JSON                      |
+| X. Avoid Silly Libraries       | ✅ PASS    | Using native Tauri APIs, no new dependencies                      |
+| XI. Makefiles for Automation   | ✅ PASS    | Existing `make dev` workflow sufficient                           |
+| XVIII. Tauri Desktop Shell     | ✅ PASS    | Using Tauri window APIs for size persistence                      |
+| XIX. SvelteKit Frontend        | ✅ PASS    | Svelte components, scoped CSS                                     |
+| XX. Component Structure        | ✅ PASS    | Single concern per component                                      |
+| XXI. Reactive Declarations     | ✅ PASS    | Using Svelte stores for state                                     |
+| XXIII. Styling via Scoped CSS  | ✅ PASS    | All styles in component `<style>` blocks                          |
+| XXIV. No External UI Libraries | ✅ PASS    | Custom modal, native elements                                     |
+| XXV. Tauri IPC Integration     | ✅ PASS    | Using @tauri-apps/api for window management                       |
+| XXVII. Backend Testing         | ✅ PASS    | Will test API endpoints with curl                                 |
+| XXVIII. Developer Time         | ✅ PASS    | All changes are localized and testable                            |
 
 **Gate Result**: ✅ PASS - All principles satisfied or justified.
 
@@ -110,10 +111,10 @@ scripts/
 
 > No violations requiring justification. All changes use existing patterns and technologies.
 
-| Aspect | Complexity | Justification |
-|--------|------------|---------------|
-| Window size persistence | Low | Standard Tauri window API |
-| Responsive layout | Medium | CSS container queries + overflow detection |
-| Category sorting | Low | Computed property in Svelte |
-| CC sync modal | Medium | New modal + API endpoint |
-| Data scrubbing script | Low | Standalone TypeScript script |
+| Aspect                  | Complexity | Justification                              |
+| ----------------------- | ---------- | ------------------------------------------ |
+| Window size persistence | Low        | Standard Tauri window API                  |
+| Responsive layout       | Medium     | CSS container queries + overflow detection |
+| Category sorting        | Low        | Computed property in Svelte                |
+| CC sync modal           | Medium     | New modal + API endpoint                   |
+| Data scrubbing script   | Low        | Standalone TypeScript script               |

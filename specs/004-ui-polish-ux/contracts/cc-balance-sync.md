@@ -20,9 +20,9 @@ PUT /api/months/{month}/bank-balances
 
 **Path Parameters**:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `month` | string | Month in YYYY-MM format (e.g., "2026-01") |
+| Parameter | Type   | Description                               |
+| --------- | ------ | ----------------------------------------- |
+| `month`   | string | Month in YYYY-MM format (e.g., "2026-01") |
 
 **Request Body**:
 
@@ -122,21 +122,21 @@ This sets the Visa credit card balance to -$300.00 (owed $300).
 
 To show the sync modal, frontend needs:
 
-| Data | Source |
-|------|--------|
-| Payment source ID | `bill.payment_source_id` |
+| Data                | Source                                                           |
+| ------------------- | ---------------------------------------------------------------- |
+| Payment source ID   | `bill.payment_source_id`                                         |
 | Payment source name | `paymentSources.find(p => p.id === bill.payment_source_id).name` |
-| Current balance | `bankBalances[paymentSourceId]` or `paymentSource.balance` |
-| Payment amount | `result.instance.actual_amount` (from mark-paid response) |
+| Current balance     | `bankBalances[paymentSourceId]` or `paymentSource.balance`       |
+| Payment amount      | `result.instance.actual_amount` (from mark-paid response)        |
 
 ### New Balance Calculation
 
 ```typescript
 // For credit cards (debt accounts), balance is negative
 // Payment reduces the debt (makes it less negative)
-const currentBalance = -50000;  // Owes $500.00
-const paymentAmount = 20000;    // Paid $200.00
-const newBalance = currentBalance + paymentAmount;  // -30000 = Owes $300.00
+const currentBalance = -50000; // Owes $500.00
+const paymentAmount = 20000; // Paid $200.00
+const newBalance = currentBalance + paymentAmount; // -30000 = Owes $300.00
 ```
 
 ---
@@ -153,8 +153,8 @@ interface BillInstance {
   expected_amount: number;
   actual_amount?: number;
   is_paid: boolean;
-  is_cc_payoff?: boolean;       // True if this is a CC payoff entry
-  payment_source_id?: string;   // ID of the payment source
+  is_cc_payoff?: boolean; // True if this is a CC payoff entry
+  payment_source_id?: string; // ID of the payment source
 }
 ```
 
@@ -186,16 +186,17 @@ type BankBalances = Record<string, number>;
 
 ### Frontend Error States
 
-| Scenario | Handling |
-|----------|----------|
-| API call fails | Show toast error, keep modal open |
-| Invalid balance value | Validate before sending, show inline error |
-| Network timeout | Show retry option in modal |
-| Payment source not found | Log error, skip modal (edge case) |
+| Scenario                 | Handling                                   |
+| ------------------------ | ------------------------------------------ |
+| API call fails           | Show toast error, keep modal open          |
+| Invalid balance value    | Validate before sending, show inline error |
+| Network timeout          | Show retry option in modal                 |
+| Payment source not found | Log error, skip modal (edge case)          |
 
 ### Retry Strategy
 
 If the balance update fails, the modal should:
+
 1. Display the error message
 2. Keep the modal open with current values
 3. Allow user to retry or skip

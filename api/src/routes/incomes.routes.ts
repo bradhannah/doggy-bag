@@ -4,7 +4,7 @@ import {
   createIncomesHandlerGET,
   createIncomesHandlerPOST,
   createIncomesHandlerPUT,
-  createIncomesHandlerDELETE
+  createIncomesHandlerDELETE,
 } from './handlers/incomes.handlers';
 
 export const routes = new Map([

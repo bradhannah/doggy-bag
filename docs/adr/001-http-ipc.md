@@ -10,6 +10,7 @@
 BudgetForFun is a Tauri desktop application with a Svelte frontend and a Bun backend running as a sidecar process. We need to establish communication between the frontend (running in Tauri's WebView) and the backend (running as a separate Bun process).
 
 Options considered:
+
 1. **Tauri Commands** - Direct Rust function calls from frontend
 2. **Unix Domain Sockets** - Local socket communication
 3. **Tauri IPC Channels** - Tauri's built-in event system

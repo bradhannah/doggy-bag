@@ -10,7 +10,7 @@ import {
   Response,
   Tags,
   SuccessResponse,
-  Example
+  Example,
 } from 'tsoa';
 import type { Income } from '../types';
 import type { CreateIncomeRequest, UpdateIncomeRequest, ApiError } from '../types/requests';
@@ -22,25 +22,26 @@ import type { CreateIncomeRequest, UpdateIncomeRequest, ApiError } from '../type
 @Route('api/incomes')
 @Tags('Incomes')
 export class IncomesController extends Controller {
-  
   /**
    * Get all income definitions
    * @summary List all incomes
    */
   @Get()
   @SuccessResponse(200, 'OK')
-  @Example<Income[]>([{
-    id: 'inc-123',
-    name: 'Salary',
-    amount: 500000,
-    billing_period: 'bi_weekly',
-    start_date: '2025-01-03',
-    payment_source_id: 'ps-001',
-    category_id: 'cat-employment',
-    is_active: true,
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z'
-  }])
+  @Example<Income[]>([
+    {
+      id: 'inc-123',
+      name: 'Salary',
+      amount: 500000,
+      billing_period: 'bi_weekly',
+      start_date: '2025-01-03',
+      payment_source_id: 'ps-001',
+      category_id: 'cat-employment',
+      is_active: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    },
+  ])
   public async getIncomes(): Promise<Income[]> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -52,9 +53,7 @@ export class IncomesController extends Controller {
   @Post()
   @SuccessResponse(201, 'Created')
   @Response<ApiError>(400, 'Bad Request')
-  public async createIncome(
-    @Body() body: CreateIncomeRequest
-  ): Promise<Income> {
+  public async createIncome(@Body() body: CreateIncomeRequest): Promise<Income> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -82,9 +81,7 @@ export class IncomesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteIncome(
-    @Path() id: string
-  ): Promise<void> {
+  public async deleteIncome(@Path() id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

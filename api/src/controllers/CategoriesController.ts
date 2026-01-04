@@ -10,10 +10,15 @@ import {
   Response,
   Tags,
   SuccessResponse,
-  Example
+  Example,
 } from 'tsoa';
 import type { Category } from '../types';
-import type { CreateCategoryRequest, UpdateCategoryRequest, ReorderCategoriesRequest, ApiError } from '../types/requests';
+import type {
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
+  ReorderCategoriesRequest,
+  ApiError,
+} from '../types/requests';
 
 /**
  * Controller for managing categories for bills and incomes
@@ -21,23 +26,24 @@ import type { CreateCategoryRequest, UpdateCategoryRequest, ReorderCategoriesReq
 @Route('api/categories')
 @Tags('Categories')
 export class CategoriesController extends Controller {
-  
   /**
    * Get all categories
    * @summary List all categories
    */
   @Get()
   @SuccessResponse(200, 'OK')
-  @Example<Category[]>([{
-    id: 'cat-utilities',
-    name: 'Utilities',
-    type: 'bill',
-    color: '#3b82f6',
-    sort_order: 0,
-    is_predefined: true,
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z'
-  }])
+  @Example<Category[]>([
+    {
+      id: 'cat-utilities',
+      name: 'Utilities',
+      type: 'bill',
+      color: '#3b82f6',
+      sort_order: 0,
+      is_predefined: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    },
+  ])
   public async getCategories(): Promise<Category[]> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -49,9 +55,7 @@ export class CategoriesController extends Controller {
   @Post()
   @SuccessResponse(201, 'Created')
   @Response<ApiError>(400, 'Bad Request')
-  public async createCategory(
-    @Body() body: CreateCategoryRequest
-  ): Promise<Category> {
+  public async createCategory(@Body() body: CreateCategoryRequest): Promise<Category> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -79,9 +83,7 @@ export class CategoriesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteCategory(
-    @Path() id: string
-  ): Promise<void> {
+  public async deleteCategory(@Path() id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -92,9 +94,7 @@ export class CategoriesController extends Controller {
   @Put('reorder')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Bad Request')
-  public async reorderCategories(
-    @Body() body: ReorderCategoriesRequest
-  ): Promise<Category[]> {
+  public async reorderCategories(@Body() body: ReorderCategoriesRequest): Promise<Category[]> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

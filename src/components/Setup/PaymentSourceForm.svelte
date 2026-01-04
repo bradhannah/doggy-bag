@@ -1,12 +1,17 @@
 <script lang="ts">
   /**
    * PaymentSourceForm - Drawer-compatible form for payment sources
-   * 
+   *
    * @prop editingItem - Payment source being edited (null for new)
    * @prop onSave - Callback after successful save
    * @prop onCancel - Callback to close form without saving
    */
-  import { createPaymentSource, updatePaymentSource, isDebtAccount, type PaymentSourceType } from '../../stores/payment-sources';
+  import {
+    createPaymentSource,
+    updatePaymentSource,
+    isDebtAccount,
+    type PaymentSourceType,
+  } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import type { PaymentSource } from '../../stores/payment-sources';
 
@@ -20,21 +25,21 @@
   let balanceDollars = editingItem ? (editingItem.balance / 100).toFixed(2) : '0.00';
   let excludeFromLeftover = editingItem?.exclude_from_leftover ?? false;
   let payOffMonthly = editingItem?.pay_off_monthly ?? false;
-  
+
   // Reactive helper for debt account detection
   $: isDebt = isDebtAccount(type);
-  
+
   // When type changes to non-debt, reset the debt-only options
   $: if (!isDebt) {
     excludeFromLeftover = false;
     payOffMonthly = false;
   }
-  
+
   // pay_off_monthly implies exclude_from_leftover
   $: if (payOffMonthly) {
     excludeFromLeftover = true;
   }
-  
+
   let error = '';
   let saving = false;
 
@@ -67,21 +72,21 @@
 
     try {
       if (editingItem) {
-        await updatePaymentSource(editingItem.id, { 
-          name, 
-          type, 
+        await updatePaymentSource(editingItem.id, {
+          name,
+          type,
           balance: balanceCents,
           exclude_from_leftover: isDebt ? excludeFromLeftover : undefined,
-          pay_off_monthly: isDebt ? payOffMonthly : undefined
+          pay_off_monthly: isDebt ? payOffMonthly : undefined,
         });
         success(`Payment source "${name}" updated`);
       } else {
-        await createPaymentSource({ 
-          name, 
-          type, 
+        await createPaymentSource({
+          name,
+          type,
           balance: balanceCents,
           exclude_from_leftover: isDebt ? excludeFromLeftover : undefined,
-          pay_off_monthly: isDebt ? payOffMonthly : undefined
+          pay_off_monthly: isDebt ? payOffMonthly : undefined,
         });
         success(`Payment source "${name}" added`);
       }
@@ -136,7 +141,9 @@
       />
     </div>
     {#if isDebt}
-      <div class="help-text">Enter amount owed as positive. Enter negative if you have a credit balance.</div>
+      <div class="help-text">
+        Enter amount owed as positive. Enter negative if you have a credit balance.
+      </div>
     {/if}
   </div>
 
@@ -144,18 +151,16 @@
     <div class="debt-options">
       <div class="checkbox-group">
         <label class="checkbox-label">
-          <input
-            type="checkbox"
-            bind:checked={payOffMonthly}
-            disabled={saving}
-          />
+          <input type="checkbox" bind:checked={payOffMonthly} disabled={saving} />
           <span class="checkbox-text">
             <strong>Pay Off Monthly</strong>
-            <span class="checkbox-description">Auto-generate a payoff bill for this balance each month</span>
+            <span class="checkbox-description"
+              >Auto-generate a payoff bill for this balance each month</span
+            >
           </span>
         </label>
       </div>
-      
+
       <div class="checkbox-group">
         <label class="checkbox-label">
           <input
@@ -165,7 +170,9 @@
           />
           <span class="checkbox-text">
             <strong>Exclude from Leftover</strong>
-            <span class="checkbox-description">Don't include this balance in the leftover calculation</span>
+            <span class="checkbox-description"
+              >Don't include this balance in the leftover calculation</span
+            >
           </span>
         </label>
         {#if payOffMonthly}
@@ -180,7 +187,7 @@
       Cancel
     </button>
     <button type="submit" class="btn btn-primary" disabled={saving}>
-      {saving ? 'Saving...' : (editingItem ? 'Save Changes' : 'Add Payment Source')}
+      {saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Add Payment Source'}
     </button>
   </div>
 </form>
@@ -211,7 +218,8 @@
     color: #e4e4e7;
   }
 
-  input, select {
+  input,
+  select {
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #333355;
@@ -222,12 +230,14 @@
     box-sizing: border-box;
   }
 
-  input:focus, select:focus {
+  input:focus,
+  select:focus {
     outline: none;
     border-color: #24c8db;
   }
 
-  input:disabled, select:disabled {
+  input:disabled,
+  select:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
@@ -285,7 +295,7 @@
     cursor: pointer;
   }
 
-  .checkbox-label input[type="checkbox"] {
+  .checkbox-label input[type='checkbox'] {
     width: 20px;
     height: 20px;
     margin: 0;
@@ -294,7 +304,7 @@
     cursor: pointer;
   }
 
-  .checkbox-label input[type="checkbox"]:disabled {
+  .checkbox-label input[type='checkbox']:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }

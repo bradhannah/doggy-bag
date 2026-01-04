@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Route,
-  Get,
-  Post,
-  Response,
-  Body,
-  Tags,
-  SuccessResponse
-} from 'tsoa';
+import { Controller, Route, Get, Post, Response, Body, Tags, SuccessResponse } from 'tsoa';
 import type { UndoEntry } from '../types';
 import type { ApiError } from '../types/requests';
 
@@ -17,7 +8,6 @@ import type { ApiError } from '../types/requests';
 @Route('api/undo')
 @Tags('Undo')
 export class UndoController extends Controller {
-  
   /**
    * Get undo history (last 5 entries)
    * @summary Get undo history

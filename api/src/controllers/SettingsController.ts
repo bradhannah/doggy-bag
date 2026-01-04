@@ -1,24 +1,15 @@
-import {
-  Controller,
-  Route,
-  Get,
-  Post,
-  Body,
-  Response,
-  Tags,
-  SuccessResponse
-} from 'tsoa';
-import type { 
-  MigrateDataRequest, 
-  SwitchDirectoryRequest, 
+import { Controller, Route, Get, Post, Body, Response, Tags, SuccessResponse } from 'tsoa';
+import type {
+  MigrateDataRequest,
+  SwitchDirectoryRequest,
   ValidateDirectoryRequest,
-  ApiError 
+  ApiError,
 } from '../types/requests';
-import type { 
-  SettingsResponse, 
-  DataDirectoryResponse, 
-  DirectoryValidation, 
-  MigrationResult 
+import type {
+  SettingsResponse,
+  DataDirectoryResponse,
+  DirectoryValidation,
+  MigrationResult,
 } from '../models/settings';
 
 /**
@@ -27,7 +18,6 @@ import type {
 @Route('api/settings')
 @Tags('Settings')
 export class SettingsController extends Controller {
-  
   /**
    * Get current application settings
    * @summary Get settings
@@ -67,9 +57,7 @@ export class SettingsController extends Controller {
   @Post('migrate-data')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Migration failed')
-  public async migrateData(
-    @Body() body: MigrateDataRequest
-  ): Promise<MigrationResult> {
+  public async migrateData(@Body() body: MigrateDataRequest): Promise<MigrationResult> {
     throw new Error('Not implemented - use existing handlers');
   }
 

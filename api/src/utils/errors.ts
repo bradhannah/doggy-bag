@@ -1,7 +1,10 @@
 // Error Types - Standardized error handling for backend
 
 export class ValidationError extends Error {
-  constructor(message: string, public field?: string) {
+  constructor(
+    message: string,
+    public field?: string
+  ) {
     super(message);
     this.name = 'ValidationError';
   }
@@ -15,7 +18,10 @@ export class NotFoundError extends Error {
 }
 
 export class StorageError extends Error {
-  constructor(message: string, public path?: string) {
+  constructor(
+    message: string,
+    public path?: string
+  ) {
     super(message);
     this.name = 'StorageError';
   }
@@ -46,27 +52,27 @@ export function formatErrorForUser(error: unknown): string {
   if (error instanceof ValidationError) {
     return error.message;
   }
-  
+
   if (error instanceof NotFoundError) {
     return error.message;
   }
-  
+
   if (error instanceof StorageError) {
     return 'Failed to save data. Please try again.';
   }
-  
+
   if (error instanceof ConflictError) {
     return error.message;
   }
-  
+
   if (error instanceof ReadOnlyError) {
     return error.message;
   }
-  
+
   if (error instanceof Error) {
     return 'An error occurred. Please try again.';
   }
-  
+
   return 'An unknown error occurred';
 }
 
@@ -75,48 +81,48 @@ export function formatErrorForDev(error: unknown): ErrorDetails {
     return {
       message: error.message,
       type: 'ValidationError',
-      field: error.field
+      field: error.field,
     };
   }
-  
+
   if (error instanceof NotFoundError) {
     return {
       message: error.message,
-      type: 'NotFoundError'
+      type: 'NotFoundError',
     };
   }
-  
+
   if (error instanceof StorageError) {
     return {
       message: error.message,
       type: 'StorageError',
-      path: error.path
+      path: error.path,
     };
   }
-  
+
   if (error instanceof ConflictError) {
     return {
       message: error.message,
-      type: 'ConflictError'
+      type: 'ConflictError',
     };
   }
-  
+
   if (error instanceof ReadOnlyError) {
     return {
       message: error.message,
-      type: 'ReadOnlyError'
+      type: 'ReadOnlyError',
     };
   }
-  
+
   if (error instanceof Error) {
     return {
       message: error.message,
-      type: 'Error'
+      type: 'Error',
     };
   }
-  
+
   return {
     message: 'Unknown error',
-    type: 'Unknown'
+    type: 'Unknown',
   };
 }

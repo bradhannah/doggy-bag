@@ -25,11 +25,11 @@ import type {
   IncomeInstanceDetailed,
   SectionTally,
   PayoffSummary,
-  Payment
+  Payment,
 } from '../types';
 import { calculateDueDate, isOverdue, getDaysOverdue } from '../utils/due-date';
-import { 
-  calculateBillsTally, 
+import {
+  calculateBillsTally,
   calculateIncomeTally,
   calculateRegularBillsTally,
   calculateAdhocBillsTally,
@@ -37,7 +37,7 @@ import {
   calculateAdhocIncomeTally,
   combineTallies,
   getEffectiveBillAmount,
-  getEffectiveIncomeAmount
+  getEffectiveIncomeAmount,
 } from '../utils/tally';
 import { calculateUnifiedLeftover, hasActualsEntered } from '../utils/leftover';
 import { sumOccurrencePayments } from '../utils/occurrences';
@@ -68,7 +68,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       this.billsService.getAll(),
       this.incomesService.getAll(),
       this.categoriesService.getAll(),
-      this.paymentSourcesService.getAll()
+      this.paymentSourcesService.getAll(),
     ]);
 
     if (!monthlyData) {
@@ -76,12 +76,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     }
 
     // Create lookup maps
-    const billsMap = new Map(bills.map(b => [b.id, b]));
-    const incomesMap = new Map(incomes.map(i => [i.id, i]));
-    const paymentSourcesMap = new Map(paymentSources.map(ps => [ps.id, ps]));
+    const billsMap = new Map(bills.map((b) => [b.id, b]));
+    const incomesMap = new Map(incomes.map((i) => [i.id, i]));
+    const paymentSourcesMap = new Map(paymentSources.map((ps) => [ps.id, ps]));
     // Include both 'bill' and 'variable' category types for expenses
-    const billCategories = categories.filter(c => c.type === 'bill' || c.type === 'variable');
-    const incomeCategories = categories.filter(c => c.type === 'income');
+    const billCategories = categories.filter((c) => c.type === 'bill' || c.type === 'variable');
+    const incomeCategories = categories.filter((c) => c.type === 'income');
 
     // Build detailed bill instances
     const detailedBillInstances = this.buildDetailedBillInstances(
@@ -101,27 +101,34 @@ export class DetailedViewServiceImpl implements DetailedViewService {
 
     // Group by category
     const billSections = this.groupBillsByCategory(detailedBillInstances, billCategories, billsMap);
-    const incomeSections = this.groupIncomesByCategory(detailedIncomeInstances, incomeCategories, incomesMap);
+    const incomeSections = this.groupIncomesByCategory(
+      detailedIncomeInstances,
+      incomeCategories,
+      incomesMap
+    );
 
     // Calculate tallies with breakdown
     const billsTally = calculateRegularBillsTally(monthlyData.bill_instances);
     const adhocBillsTally = calculateAdhocBillsTally(monthlyData.bill_instances);
-    
+
     // Calculate CC Payoffs tally (bills with is_payoff_bill = true)
-    const payoffBills = monthlyData.bill_instances.filter(bi => bi.is_payoff_bill === true);
+    const payoffBills = monthlyData.bill_instances.filter((bi) => bi.is_payoff_bill === true);
     const ccPayoffsTally: SectionTally = {
       expected: payoffBills.reduce((sum, bi) => sum + (bi.expected_amount || 0), 0),
       actual: payoffBills.reduce((sum, bi) => {
         // Sum of all payments from occurrences
         return sum + sumOccurrencePayments(bi.occurrences || []);
       }, 0),
-      remaining: 0
+      remaining: 0,
     };
     ccPayoffsTally.remaining = ccPayoffsTally.expected - ccPayoffsTally.actual;
-    
+
     // Total expenses includes bills + adhoc + CC payoffs
-    const totalExpensesTally = combineTallies(combineTallies(billsTally, adhocBillsTally), ccPayoffsTally);
-    
+    const totalExpensesTally = combineTallies(
+      combineTallies(billsTally, adhocBillsTally),
+      ccPayoffsTally
+    );
+
     const incomeTally = calculateRegularIncomeTally(monthlyData.income_instances);
     const adhocIncomeTally = calculateAdhocIncomeTally(monthlyData.income_instances);
     const totalIncomeTally = combineTallies(incomeTally, adhocIncomeTally);
@@ -129,9 +136,9 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     // Calculate leftover using unified calculation (pass payment sources to filter excluded accounts)
     const leftoverResult = calculateUnifiedLeftover(monthlyData, paymentSources);
     const hasActuals = hasActualsEntered(monthlyData);
-    
+
     // Build payoff summaries
-    const payoffSummaries: PayoffSummary[] = payoffBills.map(bi => {
+    const payoffSummaries: PayoffSummary[] = payoffBills.map((bi) => {
       const paymentSource = bi.payoff_source_id ? paymentSourcesMap.get(bi.payoff_source_id) : null;
       // Sum payments from occurrences
       const paid = sumOccurrencePayments(bi.occurrences || []);
@@ -141,7 +148,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         paymentSourceName: paymentSource?.name || 'Unknown',
         balance,
         paid,
-        remaining: balance - paid
+        remaining: balance - paid,
       };
     });
 
@@ -156,7 +163,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         totalExpenses: totalExpensesTally,
         income: incomeTally,
         adhocIncome: adhocIncomeTally,
-        totalIncome: totalIncomeTally
+        totalIncome: totalIncomeTally,
       },
       leftover: leftoverResult.leftover,
       leftoverBreakdown: {
@@ -166,12 +173,13 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         leftover: leftoverResult.leftover,
         isValid: leftoverResult.isValid,
         hasActuals: hasActuals,
-        missingBalances: leftoverResult.missingBalances.length > 0 ? leftoverResult.missingBalances : undefined,
-        errorMessage: leftoverResult.errorMessage
+        missingBalances:
+          leftoverResult.missingBalances.length > 0 ? leftoverResult.missingBalances : undefined,
+        errorMessage: leftoverResult.errorMessage,
       },
       payoffSummaries,
       bankBalances: monthlyData.bank_balances,
-      lastUpdated: monthlyData.updated_at
+      lastUpdated: monthlyData.updated_at,
     };
   }
 
@@ -181,21 +189,21 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     paymentSourcesMap: Map<string, PaymentSource>,
     month: string
   ): BillInstanceDetailed[] {
-    return instances.map(instance => {
+    return instances.map((instance) => {
       const bill = instance.bill_id ? billsMap.get(instance.bill_id) : null;
       const paymentSourceId = instance.payment_source_id || bill?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
-      
+
       // Calculate due date from first occurrence or bill's due_day
       const firstOccurrence = instance.occurrences?.[0];
       const dueDay = bill?.due_day;
       const calculatedDueDate = calculateDueDate(month, dueDay);
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
-      
+
       // Calculate total paid and remaining
       const totalPaid = getEffectiveBillAmount(instance);
       const remaining = Math.max(0, instance.expected_amount - totalPaid);
-      
+
       // Determine if overdue
       const overdueStatus = isOverdue(dueDate || undefined, instance.is_closed);
       const daysOverdueValue = overdueStatus && dueDate ? getDaysOverdue(dueDate) : null;
@@ -212,11 +220,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         actual_amount: actualAmount,
         occurrences: instance.occurrences || [],
         occurrence_count: (instance.occurrences || []).length,
-        is_extra_occurrence_month: instance.billing_period === 'bi_weekly' 
-          ? (instance.occurrences || []).length > 2 
-          : instance.billing_period === 'weekly' 
-            ? (instance.occurrences || []).length > 4 
-            : false,
+        is_extra_occurrence_month:
+          instance.billing_period === 'bi_weekly'
+            ? (instance.occurrences || []).length > 2
+            : instance.billing_period === 'weekly'
+              ? (instance.occurrences || []).length > 4
+              : false,
         total_paid: totalPaid,
         remaining,
         is_closed: instance.is_closed,
@@ -227,7 +236,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         is_overdue: overdueStatus,
         days_overdue: daysOverdueValue,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
-        category_id: instance.category_id || bill?.category_id || ''
+        category_id: instance.category_id || bill?.category_id || '',
       };
     });
   }
@@ -238,20 +247,20 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     paymentSourcesMap: Map<string, PaymentSource>,
     month: string
   ): IncomeInstanceDetailed[] {
-    return instances.map(instance => {
+    return instances.map((instance) => {
       const income = instance.income_id ? incomesMap.get(instance.income_id) : null;
       const paymentSourceId = instance.payment_source_id || income?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
-      
+
       // Calculate due date from first occurrence or income's due_day
       const firstOccurrence = instance.occurrences?.[0];
       const dueDay = income?.due_day;
       const calculatedDueDate = calculateDueDate(month, dueDay);
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
-      
+
       // Determine if overdue (for income, this means "expected but not received")
       const overdueStatus = isOverdue(dueDate || undefined, instance.is_closed);
-      
+
       // Calculate total received from occurrence payments
       const totalReceived = getEffectiveIncomeAmount(instance);
       const remaining = Math.max(0, instance.expected_amount - totalReceived);
@@ -268,11 +277,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         actual_amount: actualAmount,
         occurrences: instance.occurrences || [],
         occurrence_count: (instance.occurrences || []).length,
-        is_extra_occurrence_month: instance.billing_period === 'bi_weekly' 
-          ? (instance.occurrences || []).length > 2 
-          : instance.billing_period === 'weekly' 
-            ? (instance.occurrences || []).length > 4 
-            : false,
+        is_extra_occurrence_month:
+          instance.billing_period === 'bi_weekly'
+            ? (instance.occurrences || []).length > 2
+            : instance.billing_period === 'weekly'
+              ? (instance.occurrences || []).length > 4
+              : false,
         total_received: totalReceived,
         remaining,
         is_closed: instance.is_closed,
@@ -280,7 +290,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
-        category_id: instance.category_id || income?.category_id || ''
+        category_id: instance.category_id || income?.category_id || '',
       };
     });
   }
@@ -292,12 +302,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
   ): CategorySection[] {
     // Create a map of category_id -> instances
     const categoryInstancesMap = new Map<string, BillInstanceDetailed[]>();
-    
+
     // Initialize with empty arrays for all categories
     for (const category of categories) {
       categoryInstancesMap.set(category.id, []);
     }
-    
+
     // Also create an "uncategorized" bucket
     const uncategorizedId = '__uncategorized__';
     categoryInstancesMap.set(uncategorizedId, []);
@@ -305,13 +315,13 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     // Assign instances to categories
     for (const instance of instances) {
       let categoryId = instance.category_id;
-      
+
       // If no category_id, try to get from the bill
       if (!categoryId && instance.bill_id) {
         const bill = billsMap.get(instance.bill_id);
         categoryId = bill?.category_id || '';
       }
-      
+
       if (categoryId && categoryInstancesMap.has(categoryId)) {
         categoryInstancesMap.get(categoryId)!.push(instance);
       } else {
@@ -322,7 +332,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     // Build sections, sorted by category sort_order
     // Variable category (type: 'variable') always appears last
     const sections: CategorySection[] = [];
-    
+
     const sortedCategories = [...categories].sort((a, b) => {
       // Variable type always last
       if (a.type === 'variable' && b.type !== 'variable') return 1;
@@ -330,48 +340,48 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       // Then by sort_order
       return a.sort_order - b.sort_order;
     });
-    
+
     for (const category of sortedCategories) {
       const items = categoryInstancesMap.get(category.id) || [];
       // Include empty categories so users can add ad-hoc items to them
-      
+
       // Sort items within category
       const sortedItems = this.sortBillInstances(items);
-      
+
       // Calculate subtotal
       const expected = items.reduce((sum, i) => sum + i.expected_amount, 0);
       const actual = items.reduce((sum, i) => sum + i.total_paid, 0);
-      
+
       sections.push({
         category: {
           id: category.id,
           name: category.name,
           color: category.color,
           sort_order: category.sort_order,
-          type: category.type
+          type: category.type,
         },
         items: sortedItems,
-        subtotal: { expected, actual }
+        subtotal: { expected, actual },
       });
     }
-    
+
     // Add uncategorized at the end if there are any
     const uncategorizedItems = categoryInstancesMap.get(uncategorizedId) || [];
     if (uncategorizedItems.length > 0) {
       const sortedItems = this.sortBillInstances(uncategorizedItems);
       const expected = uncategorizedItems.reduce((sum, i) => sum + i.expected_amount, 0);
       const actual = uncategorizedItems.reduce((sum, i) => sum + i.total_paid, 0);
-      
+
       sections.push({
         category: {
           id: uncategorizedId,
           name: 'Uncategorized',
           color: '#6b7280',
           sort_order: 999,
-          type: 'bill'
+          type: 'bill',
         },
         items: sortedItems,
-        subtotal: { expected, actual }
+        subtotal: { expected, actual },
       });
     }
 
@@ -385,12 +395,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
   ): CategorySection[] {
     // Create a map of category_id -> instances
     const categoryInstancesMap = new Map<string, IncomeInstanceDetailed[]>();
-    
+
     // Initialize with empty arrays for all categories
     for (const category of categories) {
       categoryInstancesMap.set(category.id, []);
     }
-    
+
     // Also create an "uncategorized" bucket
     const uncategorizedId = '__uncategorized__';
     categoryInstancesMap.set(uncategorizedId, []);
@@ -398,13 +408,13 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     // Assign instances to categories
     for (const instance of instances) {
       let categoryId = instance.category_id;
-      
+
       // If no category_id, try to get from the income
       if (!categoryId && instance.income_id) {
         const income = incomesMap.get(instance.income_id);
         categoryId = income?.category_id || '';
       }
-      
+
       if (categoryId && categoryInstancesMap.has(categoryId)) {
         categoryInstancesMap.get(categoryId)!.push(instance);
       } else {
@@ -414,50 +424,50 @@ export class DetailedViewServiceImpl implements DetailedViewService {
 
     // Build sections, sorted by category sort_order
     const sections: CategorySection[] = [];
-    
+
     const sortedCategories = [...categories].sort((a, b) => a.sort_order - b.sort_order);
-    
+
     for (const category of sortedCategories) {
       const items = categoryInstancesMap.get(category.id) || [];
       // Include empty categories so users can add ad-hoc items to them
-      
+
       // Sort items within category
       const sortedItems = this.sortIncomeInstances(items);
-      
+
       // Calculate subtotal
       const expected = items.reduce((sum, i) => sum + i.expected_amount, 0);
       const actual = items.reduce((sum, i) => sum + (i.actual_amount ?? 0), 0);
-      
+
       sections.push({
         category: {
           id: category.id,
           name: category.name,
           color: category.color,
           sort_order: category.sort_order,
-          type: category.type
+          type: category.type,
         },
         items: sortedItems,
-        subtotal: { expected, actual }
+        subtotal: { expected, actual },
       });
     }
-    
+
     // Add uncategorized at the end if there are any
     const uncategorizedItems = categoryInstancesMap.get(uncategorizedId) || [];
     if (uncategorizedItems.length > 0) {
       const sortedItems = this.sortIncomeInstances(uncategorizedItems);
       const expected = uncategorizedItems.reduce((sum, i) => sum + i.expected_amount, 0);
       const actual = uncategorizedItems.reduce((sum, i) => sum + (i.actual_amount ?? 0), 0);
-      
+
       sections.push({
         category: {
           id: uncategorizedId,
           name: 'Uncategorized',
           color: '#6b7280',
           sort_order: 999,
-          type: 'income'
+          type: 'income',
         },
         items: sortedItems,
-        subtotal: { expected, actual }
+        subtotal: { expected, actual },
       });
     }
 

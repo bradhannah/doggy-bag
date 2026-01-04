@@ -10,7 +10,7 @@ import type { BillsService } from './bills-service';
 import type { IncomesService } from './incomes-service';
 import type { CategoriesService } from './categories-service';
 import type { PaymentSourcesService } from './payment-sources-service';
-import type { 
+import type {
   MonthlyData,
   BillInstance,
   IncomeInstance,
@@ -19,14 +19,14 @@ import type {
   Bill,
   Income,
   Occurrence,
-  Payment
+  Payment,
 } from '../types';
 import { getMonthlyInstanceCount, calculateActualMonthlyAmount } from '../utils/billing-period';
-import { 
-  migrateBillInstance, 
+import {
+  migrateBillInstance,
   migrateIncomeInstance,
   needsBillInstanceMigration,
-  needsIncomeInstanceMigration 
+  needsIncomeInstanceMigration,
 } from '../utils/migration';
 import {
   generateBillOccurrences,
@@ -36,24 +36,24 @@ import {
   areAllOccurrencesClosed,
   isExtraOccurrenceMonth,
   createAdhocOccurrence,
-  resequenceOccurrences
+  resequenceOccurrences,
 } from '../utils/occurrences';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 
 // Summary for a single month in the list
 export interface MonthSummary {
   month: string;
-  exists: boolean;              // Whether the month file exists
-  is_read_only: boolean;        // Lock status
+  exists: boolean; // Whether the month file exists
+  is_read_only: boolean; // Lock status
   created_at: string;
   updated_at: string;
   // Unified leftover calculation results
   leftover: number;
-  isValid: boolean;             // False if required bank balances are missing
-  errorMessage?: string;        // Human-readable error message if not valid
-  bankBalances: number;         // Current cash position (snapshot)
-  remainingIncome: number;      // Income still expected to receive
-  remainingExpenses: number;    // Expenses still need to pay
+  isValid: boolean; // False if required bank balances are missing
+  errorMessage?: string; // Human-readable error message if not valid
+  bankBalances: number; // Current cash position (snapshot)
+  remainingIncome: number; // Income still expected to receive
+  remainingExpenses: number; // Expenses still need to pay
   // Legacy fields (deprecated)
   total_income: number;
   total_bills: number;
@@ -67,7 +67,7 @@ export interface MonthsService {
   syncMonthlyData(month: string): Promise<MonthlyData>;
   updateBankBalances(month: string, balances: Record<string, number>): Promise<MonthlyData>;
   saveMonthlyData(month: string, data: MonthlyData): Promise<void>;
-  
+
   // Month management
   monthExists(month: string): Promise<boolean>;
   createMonth(month: string): Promise<MonthlyData>;
@@ -75,61 +75,143 @@ export interface MonthsService {
   toggleReadOnly(month: string): Promise<MonthlyData>;
   isReadOnly(month: string): Promise<boolean>;
   getMonthsForManagement(): Promise<MonthSummary[]>;
-  
+
   getBillInstances(month: string): Promise<BillInstance[]>;
   getIncomeInstances(month: string): Promise<IncomeInstance[]>;
   getVariableExpenses(month: string): Promise<VariableExpense[]>;
   getFreeFlowingExpenses(month: string): Promise<FreeFlowingExpense[]>;
-  
+
   // Instance update methods
-  updateBillInstance(month: string, instanceId: string, amount: number): Promise<BillInstance | null>;
-  updateIncomeInstance(month: string, instanceId: string, amount: number): Promise<IncomeInstance | null>;
+  updateBillInstance(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<BillInstance | null>;
+  updateIncomeInstance(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<IncomeInstance | null>;
   resetBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
   resetIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null>;
-  
+
   // Mark as paid methods (DEPRECATED - use close/reopen instead)
   toggleBillInstancePaid(month: string, instanceId: string): Promise<BillInstance | null>;
-  toggleIncomeInstancePaid(month: string, instanceId: string, actualAmount?: number): Promise<IncomeInstance | null>;
-  
+  toggleIncomeInstancePaid(
+    month: string,
+    instanceId: string,
+    actualAmount?: number
+  ): Promise<IncomeInstance | null>;
+
   // Close/Reopen methods (new transaction-based flow)
   closeBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
   reopenBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
   closeIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null>;
   reopenIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null>;
-  
+
   // Expected amount update (inline edit)
-  updateBillExpectedAmount(month: string, instanceId: string, amount: number): Promise<BillInstance | null>;
-  updateIncomeExpectedAmount(month: string, instanceId: string, amount: number): Promise<IncomeInstance | null>;
-  
+  updateBillExpectedAmount(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<BillInstance | null>;
+  updateIncomeExpectedAmount(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<IncomeInstance | null>;
+
   // ============================================================================
   // Occurrence Methods
   // ============================================================================
-  
+
   // Update occurrence (expected_date, expected_amount)
-  updateBillOccurrence(month: string, instanceId: string, occurrenceId: string, updates: { expected_date?: string; expected_amount?: number }): Promise<BillInstance | null>;
-  updateIncomeOccurrence(month: string, instanceId: string, occurrenceId: string, updates: { expected_date?: string; expected_amount?: number }): Promise<IncomeInstance | null>;
-  
+  updateBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    updates: { expected_date?: string; expected_amount?: number }
+  ): Promise<BillInstance | null>;
+  updateIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    updates: { expected_date?: string; expected_amount?: number }
+  ): Promise<IncomeInstance | null>;
+
   // Close/Reopen occurrence
-  closeBillOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<BillInstance | null>;
-  reopenBillOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<BillInstance | null>;
-  closeIncomeOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<IncomeInstance | null>;
-  reopenIncomeOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<IncomeInstance | null>;
-  
+  closeBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<BillInstance | null>;
+  reopenBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<BillInstance | null>;
+  closeIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<IncomeInstance | null>;
+  reopenIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<IncomeInstance | null>;
+
   // Add payment to occurrence
-  addBillOccurrencePayment(month: string, instanceId: string, occurrenceId: string, payment: { amount: number; date: string; payment_source_id?: string }): Promise<BillInstance | null>;
-  addIncomeOccurrencePayment(month: string, instanceId: string, occurrenceId: string, payment: { amount: number; date: string; payment_source_id?: string }): Promise<IncomeInstance | null>;
-  
+  addBillOccurrencePayment(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    payment: { amount: number; date: string; payment_source_id?: string }
+  ): Promise<BillInstance | null>;
+  addIncomeOccurrencePayment(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    payment: { amount: number; date: string; payment_source_id?: string }
+  ): Promise<IncomeInstance | null>;
+
   // Remove payment from occurrence
-  removeBillOccurrencePayment(month: string, instanceId: string, occurrenceId: string, paymentId: string): Promise<BillInstance | null>;
-  removeIncomeOccurrencePayment(month: string, instanceId: string, occurrenceId: string, paymentId: string): Promise<IncomeInstance | null>;
-  
+  removeBillOccurrencePayment(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    paymentId: string
+  ): Promise<BillInstance | null>;
+  removeIncomeOccurrencePayment(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    paymentId: string
+  ): Promise<IncomeInstance | null>;
+
   // Add ad-hoc occurrence
-  addBillAdhocOccurrence(month: string, instanceId: string, occurrence: { expected_date: string; expected_amount: number }): Promise<BillInstance | null>;
-  addIncomeAdhocOccurrence(month: string, instanceId: string, occurrence: { expected_date: string; expected_amount: number }): Promise<IncomeInstance | null>;
-  
+  addBillAdhocOccurrence(
+    month: string,
+    instanceId: string,
+    occurrence: { expected_date: string; expected_amount: number }
+  ): Promise<BillInstance | null>;
+  addIncomeAdhocOccurrence(
+    month: string,
+    instanceId: string,
+    occurrence: { expected_date: string; expected_amount: number }
+  ): Promise<IncomeInstance | null>;
+
   // Remove ad-hoc occurrence
-  removeBillOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<BillInstance | null>;
-  removeIncomeOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<IncomeInstance | null>;
+  removeBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<BillInstance | null>;
+  removeIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<IncomeInstance | null>;
 }
 
 export class MonthsServiceImpl implements MonthsService {
@@ -138,7 +220,7 @@ export class MonthsServiceImpl implements MonthsService {
   private incomesService: IncomesService;
   private categoriesService: CategoriesService;
   private paymentSourcesService: PaymentSourcesService;
-  
+
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
     this.billsService = new BillsServiceImpl();
@@ -146,16 +228,16 @@ export class MonthsServiceImpl implements MonthsService {
     this.categoriesService = new CategoriesServiceImpl();
     this.paymentSourcesService = new PaymentSourcesServiceImpl();
   }
-  
+
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
     try {
       const data = await this.storage.readJSON<MonthlyData>(`data/months/${month}.json`);
-      
+
       if (!data) return null;
-      
+
       // Apply migration to instances if needed (002-detailed-monthly-view)
       let needsSave = false;
-      
+
       // Migrate bill instances
       const migratedBillInstances = data.bill_instances.map((bi: any) => {
         if (needsBillInstanceMigration(bi)) {
@@ -164,7 +246,7 @@ export class MonthsServiceImpl implements MonthsService {
         }
         return bi as BillInstance;
       });
-      
+
       // Migrate income instances
       const migratedIncomeInstances = data.income_instances.map((ii: any) => {
         if (needsIncomeInstanceMigration(ii)) {
@@ -173,50 +255,50 @@ export class MonthsServiceImpl implements MonthsService {
         }
         return ii as IncomeInstance;
       });
-      
+
       // Update data with migrated instances
       data.bill_instances = migratedBillInstances;
       data.income_instances = migratedIncomeInstances;
-      
+
       // Persist migrated data if changes were made
       if (needsSave) {
         await this.storage.writeJSON(`data/months/${month}.json`, data);
         console.log(`[MonthsService] Migrated instances for ${month} to new schema`);
       }
-      
+
       return data;
     } catch (error) {
       console.error('[MonthsService] Failed to load monthly data:', error);
       return null;
     }
   }
-  
+
   public async getAllMonths(): Promise<MonthSummary[]> {
     try {
       // Use storage service to list files (respects DATA_DIR)
       const files = await this.storage.listFiles('data/months');
-      
+
       // Load payment sources once for all months
       const paymentSources = await this.paymentSourcesService.getAll();
-      
+
       const summaries: MonthSummary[] = [];
-      
+
       for (const file of files) {
         // Skip non-JSON files and .gitkeep
         if (!file.endsWith('.json') || file === '.gitkeep') continue;
-        
+
         const month = file.replace('.json', '');
         const data = await this.getMonthlyData(month);
-        
+
         if (data) {
           // Use unified leftover calculation
           const leftoverResult = calculateUnifiedLeftover(data, paymentSources);
-          
+
           // Legacy totals for backward compatibility
           const totalIncome = data.income_instances.reduce((sum, i) => sum + i.expected_amount, 0);
           const totalBills = data.bill_instances.reduce((sum, b) => sum + b.expected_amount, 0);
           const totalExpenses = data.variable_expenses.reduce((sum, e) => sum + e.amount, 0);
-          
+
           summaries.push({
             month: data.month,
             exists: true,
@@ -233,40 +315,40 @@ export class MonthsServiceImpl implements MonthsService {
             // Legacy fields (deprecated)
             total_income: totalIncome,
             total_bills: totalBills,
-            total_expenses: totalExpenses
+            total_expenses: totalExpenses,
           });
         }
       }
-      
+
       // Sort by month descending (newest first)
       summaries.sort((a, b) => b.month.localeCompare(a.month));
-      
+
       return summaries;
     } catch (error) {
       console.error('[MonthsService] Failed to get all months:', error);
       return [];
     }
   }
-  
+
   public async generateMonthlyData(month: string): Promise<MonthlyData> {
     console.log(`[MonthsService] Generating data for ${month}`);
-    
+
     try {
       const bills = await this.billsService.getAll();
       const incomes = await this.incomesService.getAll();
-      
+
       const now = new Date().toISOString();
-      
+
       const billInstances: BillInstance[] = [];
       for (const bill of bills) {
         if (!bill.is_active) continue;
-        
+
         // Generate occurrences for this bill in this month
         const occurrences = generateBillOccurrences(bill, month);
-        
+
         // Calculate expected_amount as sum of all occurrence amounts
         const expectedAmount = sumOccurrenceExpectedAmounts(occurrences);
-        
+
         billInstances.push({
           id: crypto.randomUUID(),
           bill_id: bill.id,
@@ -278,18 +360,20 @@ export class MonthsServiceImpl implements MonthsService {
           is_closed: false,
           is_adhoc: false,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         });
       }
-      
+
       // Generate payoff bills for pay_off_monthly payment sources
       const paymentSources = await this.paymentSourcesService.getAll();
-      const payOffMonthlySources = paymentSources.filter(ps => ps.pay_off_monthly === true && ps.is_active);
-      
+      const payOffMonthlySources = paymentSources.filter(
+        (ps) => ps.pay_off_monthly === true && ps.is_active
+      );
+
       if (payOffMonthlySources.length > 0) {
         // Ensure the "Credit Card Payoffs" category exists
         const payoffCategory = await this.categoriesService.ensurePayoffCategory();
-        
+
         for (const source of payOffMonthlySources) {
           // Create a single occurrence for the payoff with the current balance as expected_amount
           const payoffOccurrence: Occurrence = {
@@ -301,12 +385,12 @@ export class MonthsServiceImpl implements MonthsService {
             payments: [],
             is_adhoc: false,
             created_at: now,
-            updated_at: now
+            updated_at: now,
           };
-          
+
           billInstances.push({
             id: crypto.randomUUID(),
-            bill_id: null,                     // No associated bill template
+            bill_id: null, // No associated bill template
             month,
             billing_period: 'monthly',
             expected_amount: Math.abs(source.balance),
@@ -314,29 +398,31 @@ export class MonthsServiceImpl implements MonthsService {
             is_default: true,
             is_closed: false,
             is_adhoc: false,
-            is_payoff_bill: true,              // Mark as auto-generated payoff
-            payoff_source_id: source.id,       // Reference to the payment source
-            name: `${source.name} Payoff`,     // Ad-hoc name since bill_id is null
-            category_id: payoffCategory.id,    // Assign to payoff category
-            payment_source_id: source.id,      // Payment comes from this source
+            is_payoff_bill: true, // Mark as auto-generated payoff
+            payoff_source_id: source.id, // Reference to the payment source
+            name: `${source.name} Payoff`, // Ad-hoc name since bill_id is null
+            category_id: payoffCategory.id, // Assign to payoff category
+            payment_source_id: source.id, // Payment comes from this source
             created_at: now,
-            updated_at: now
+            updated_at: now,
           });
         }
-        
-        console.log(`[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`);
+
+        console.log(
+          `[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`
+        );
       }
-      
+
       const incomeInstances: IncomeInstance[] = [];
       for (const income of incomes) {
         if (!income.is_active) continue;
-        
+
         // Generate occurrences for this income in this month
         const occurrences = generateIncomeOccurrences(income, month);
-        
+
         // Calculate expected_amount as sum of all occurrence amounts
         const expectedAmount = sumOccurrenceExpectedAmounts(occurrences);
-        
+
         incomeInstances.push({
           id: crypto.randomUUID(),
           income_id: income.id,
@@ -348,10 +434,10 @@ export class MonthsServiceImpl implements MonthsService {
           is_closed: false,
           is_adhoc: false,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         });
       }
-      
+
       const monthlyData: MonthlyData = {
         month,
         bill_instances: billInstances,
@@ -361,9 +447,9 @@ export class MonthsServiceImpl implements MonthsService {
         bank_balances: {},
         is_read_only: false,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       await this.saveMonthlyData(month, monthlyData);
       return monthlyData;
     } catch (error) {
@@ -371,37 +457,37 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async syncMonthlyData(month: string): Promise<MonthlyData> {
     console.log(`[MonthsService] Syncing data for ${month}`);
-    
+
     try {
       const existingData = await this.getMonthlyData(month);
-      
+
       if (!existingData) {
         // No existing data, just generate fresh
         return this.generateMonthlyData(month);
       }
-      
+
       const bills = await this.billsService.getAll();
       const incomes = await this.incomesService.getAll();
-      
+
       const now = new Date().toISOString();
-      
+
       // Find bills that don't have instances yet
-      const existingBillIds = new Set(existingData.bill_instances.map(bi => bi.bill_id));
+      const existingBillIds = new Set(existingData.bill_instances.map((bi) => bi.bill_id));
       const newBillInstances: BillInstance[] = [];
-      
+
       for (const bill of bills) {
         if (!bill.is_active) continue;
         if (existingBillIds.has(bill.id)) continue; // Already exists
-        
+
         // Generate occurrences for this bill in this month
         const occurrences = generateBillOccurrences(bill, month);
-        
+
         // Calculate expected_amount as sum of all occurrence amounts
         const expectedAmount = sumOccurrenceExpectedAmounts(occurrences);
-        
+
         newBillInstances.push({
           id: crypto.randomUUID(),
           bill_id: bill.id,
@@ -413,27 +499,31 @@ export class MonthsServiceImpl implements MonthsService {
           is_closed: false,
           is_adhoc: false,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         });
       }
-      
+
       // Sync payoff bills for pay_off_monthly payment sources
       const paymentSources = await this.paymentSourcesService.getAll();
-      const payOffMonthlySources = paymentSources.filter(ps => ps.pay_off_monthly === true && ps.is_active);
-      
+      const payOffMonthlySources = paymentSources.filter(
+        (ps) => ps.pay_off_monthly === true && ps.is_active
+      );
+
       // Find existing payoff bills by their payoff_source_id
       const existingPayoffSourceIds = new Set(
         existingData.bill_instances
-          .filter(bi => bi.is_payoff_bill === true && bi.payoff_source_id)
-          .map(bi => bi.payoff_source_id)
+          .filter((bi) => bi.is_payoff_bill === true && bi.payoff_source_id)
+          .map((bi) => bi.payoff_source_id)
       );
-      
+
       // Create payoff bills for sources that don't have one yet
-      const newPayoffSources = payOffMonthlySources.filter(ps => !existingPayoffSourceIds.has(ps.id));
-      
+      const newPayoffSources = payOffMonthlySources.filter(
+        (ps) => !existingPayoffSourceIds.has(ps.id)
+      );
+
       if (newPayoffSources.length > 0) {
         const payoffCategory = await this.categoriesService.ensurePayoffCategory();
-        
+
         for (const source of newPayoffSources) {
           const payoffOccurrence: Occurrence = {
             id: crypto.randomUUID(),
@@ -444,9 +534,9 @@ export class MonthsServiceImpl implements MonthsService {
             payments: [],
             is_adhoc: false,
             created_at: now,
-            updated_at: now
+            updated_at: now,
           };
-          
+
           newBillInstances.push({
             id: crypto.randomUUID(),
             bill_id: null,
@@ -463,27 +553,29 @@ export class MonthsServiceImpl implements MonthsService {
             category_id: payoffCategory.id,
             payment_source_id: source.id,
             created_at: now,
-            updated_at: now
+            updated_at: now,
           });
         }
-        
-        console.log(`[MonthsService] Synced ${newPayoffSources.length} new payoff bills for ${month}`);
+
+        console.log(
+          `[MonthsService] Synced ${newPayoffSources.length} new payoff bills for ${month}`
+        );
       }
-      
+
       // Find incomes that don't have instances yet
-      const existingIncomeIds = new Set(existingData.income_instances.map(ii => ii.income_id));
+      const existingIncomeIds = new Set(existingData.income_instances.map((ii) => ii.income_id));
       const newIncomeInstances: IncomeInstance[] = [];
-      
+
       for (const income of incomes) {
         if (!income.is_active) continue;
         if (existingIncomeIds.has(income.id)) continue; // Already exists
-        
+
         // Generate occurrences for this income in this month
         const occurrences = generateIncomeOccurrences(income, month);
-        
+
         // Calculate expected_amount as sum of all occurrence amounts
         const expectedAmount = sumOccurrenceExpectedAmounts(occurrences);
-        
+
         newIncomeInstances.push({
           id: crypto.randomUUID(),
           income_id: income.id,
@@ -495,41 +587,46 @@ export class MonthsServiceImpl implements MonthsService {
           is_closed: false,
           is_adhoc: false,
           created_at: now,
-          updated_at: now
+          updated_at: now,
         });
       }
-      
+
       // Only update if there are new instances
       if (newBillInstances.length > 0 || newIncomeInstances.length > 0) {
         existingData.bill_instances = [...existingData.bill_instances, ...newBillInstances];
         existingData.income_instances = [...existingData.income_instances, ...newIncomeInstances];
         existingData.updated_at = now;
-        
+
         await this.saveMonthlyData(month, existingData);
-        console.log(`[MonthsService] Added ${newBillInstances.length} bills, ${newIncomeInstances.length} incomes to ${month}`);
+        console.log(
+          `[MonthsService] Added ${newBillInstances.length} bills, ${newIncomeInstances.length} incomes to ${month}`
+        );
       }
-      
+
       return existingData;
     } catch (error) {
       console.error('[MonthsService] Failed to sync monthly data:', error);
       throw error;
     }
   }
-  
-  public async updateBankBalances(month: string, balances: Record<string, number>): Promise<MonthlyData> {
+
+  public async updateBankBalances(
+    month: string,
+    balances: Record<string, number>
+  ): Promise<MonthlyData> {
     try {
       const data = await this.getMonthlyData(month);
-      
+
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
+
       const now = new Date().toISOString();
-      
+
       // Update bank balances
       data.bank_balances = balances;
       data.updated_at = now;
-      
+
       // Also update payoff bills' expected_amount when their source's balance changes
       // Find all payoff bills and update their expected_amount to match the new balance
       for (let i = 0; i < data.bill_instances.length; i++) {
@@ -543,24 +640,26 @@ export class MonthsServiceImpl implements MonthsService {
             data.bill_instances[i] = {
               ...bi,
               expected_amount: expectedAmount,
-              updated_at: now
+              updated_at: now,
             };
-            
+
             // Also update all occurrences if they exist
             if (bi.occurrences && bi.occurrences.length > 0) {
               // For payoff bills, there should be just one occurrence
-              data.bill_instances[i].occurrences = bi.occurrences.map(occ => ({
+              data.bill_instances[i].occurrences = bi.occurrences.map((occ) => ({
                 ...occ,
                 expected_amount: expectedAmount,
-                updated_at: now
+                updated_at: now,
               }));
             }
-            
-            console.log(`[MonthsService] Updated payoff bill ${bi.id} expected_amount to ${expectedAmount} for source ${bi.payoff_source_id}`);
+
+            console.log(
+              `[MonthsService] Updated payoff bill ${bi.id} expected_amount to ${expectedAmount} for source ${bi.payoff_source_id}`
+            );
           }
         }
       }
-      
+
       await this.saveMonthlyData(month, data);
       return data;
     } catch (error) {
@@ -568,7 +667,7 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async saveMonthlyData(month: string, data: MonthlyData): Promise<void> {
     try {
       await this.storage.writeJSON(`data/months/${month}.json`, data);
@@ -578,48 +677,52 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async getBillInstances(month: string): Promise<BillInstance[]> {
     const data = await this.getMonthlyData(month);
     return data?.bill_instances || [];
   }
-  
+
   public async getIncomeInstances(month: string): Promise<IncomeInstance[]> {
     const data = await this.getMonthlyData(month);
     return data?.income_instances || [];
   }
-  
+
   public async getVariableExpenses(month: string): Promise<VariableExpense[]> {
     const data = await this.getMonthlyData(month);
     return data?.variable_expenses || [];
   }
-  
+
   public async getFreeFlowingExpenses(month: string): Promise<FreeFlowingExpense[]> {
     const data = await this.getMonthlyData(month);
     return data?.free_flowing_expenses || [];
   }
-  
-  public async updateBillInstance(month: string, instanceId: string, amount: number): Promise<BillInstance | null> {
+
+  public async updateBillInstance(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         expected_amount: amount,
         is_default: false,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.bill_instances[index];
     } catch (error) {
@@ -627,28 +730,32 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async updateIncomeInstance(month: string, instanceId: string, amount: number): Promise<IncomeInstance | null> {
+
+  public async updateIncomeInstance(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       data.income_instances[index] = {
         ...data.income_instances[index],
         expected_amount: amount,
         is_default: false,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.income_instances[index];
     } catch (error) {
@@ -656,33 +763,33 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async resetBillInstance(month: string, instanceId: string): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       // Get the original bill to calculate default amount
       const billId = data.bill_instances[index].bill_id;
-      
+
       // Ad-hoc bills (bill_id is null) cannot be reset to default
       if (!billId) {
         throw new Error('Cannot reset ad-hoc bill instance - no default bill reference');
       }
-      
+
       const bill = await this.billsService.getById(billId);
-      
+
       if (!bill) {
         throw new Error(`Bill ${billId} not found`);
       }
-      
+
       // Use actual calculation with start_date if available
       const defaultAmount = calculateActualMonthlyAmount(
         bill.amount,
@@ -690,10 +797,10 @@ export class MonthsServiceImpl implements MonthsService {
         bill.start_date,
         month
       );
-      
+
       // Regenerate occurrences from the bill template
       const occurrences = generateBillOccurrences(bill, month);
-      
+
       const now = new Date().toISOString();
       data.bill_instances[index] = {
         ...data.bill_instances[index],
@@ -701,10 +808,10 @@ export class MonthsServiceImpl implements MonthsService {
         occurrences,
         is_default: true,
         is_closed: false,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.bill_instances[index];
     } catch (error) {
@@ -712,33 +819,36 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async resetIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null> {
+
+  public async resetIncomeInstance(
+    month: string,
+    instanceId: string
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       // Get the original income to calculate default amount
       const incomeId = data.income_instances[index].income_id;
-      
+
       // Ad-hoc incomes (income_id is null) cannot be reset to default
       if (!incomeId) {
         throw new Error('Cannot reset ad-hoc income instance - no default income reference');
       }
-      
+
       const income = await this.incomesService.getById(incomeId);
-      
+
       if (!income) {
         throw new Error(`Income ${incomeId} not found`);
       }
-      
+
       // Use actual calculation with start_date if available
       const defaultAmount = calculateActualMonthlyAmount(
         income.amount,
@@ -746,10 +856,10 @@ export class MonthsServiceImpl implements MonthsService {
         income.start_date,
         month
       );
-      
+
       // Regenerate occurrences from the income template
       const occurrences = generateIncomeOccurrences(income, month);
-      
+
       const now = new Date().toISOString();
       data.income_instances[index] = {
         ...data.income_instances[index],
@@ -757,10 +867,10 @@ export class MonthsServiceImpl implements MonthsService {
         occurrences,
         is_default: true,
         is_closed: false,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.income_instances[index];
     } catch (error) {
@@ -768,28 +878,31 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async toggleBillInstancePaid(month: string, instanceId: string): Promise<BillInstance | null> {
+
+  public async toggleBillInstancePaid(
+    month: string,
+    instanceId: string
+  ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       const currentClosed = data.bill_instances[index].is_closed ?? false;
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: !currentClosed,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.bill_instances[index];
     } catch (error) {
@@ -797,30 +910,34 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async toggleIncomeInstancePaid(month: string, instanceId: string, actualAmount?: number): Promise<IncomeInstance | null> {
+
+  public async toggleIncomeInstancePaid(
+    month: string,
+    instanceId: string,
+    actualAmount?: number
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       const currentClosed = data.income_instances[index].is_closed ?? false;
-      
+
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: !currentClosed,
         is_default: !currentClosed ? false : data.income_instances[index].is_default,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.income_instances[index];
     } catch (error) {
@@ -828,34 +945,34 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   // ============================================================================
   // Close/Reopen Methods (New Transaction-Based Flow)
   // ============================================================================
-  
+
   public async closeBillInstance(month: string, instanceId: string): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       const today = now.split('T')[0]; // YYYY-MM-DD
-      
+
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: true,
         closed_date: today,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.bill_instances[index];
     } catch (error) {
@@ -863,29 +980,29 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async reopenBillInstance(month: string, instanceId: string): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
-      
+
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: false,
         closed_date: undefined,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.bill_instances[index];
     } catch (error) {
@@ -893,30 +1010,33 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async closeIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null> {
+
+  public async closeIncomeInstance(
+    month: string,
+    instanceId: string
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       const today = now.split('T')[0]; // YYYY-MM-DD
-      
+
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: true,
         closed_date: today,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.income_instances[index];
     } catch (error) {
@@ -924,29 +1044,32 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async reopenIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null> {
+
+  public async reopenIncomeInstance(
+    month: string,
+    instanceId: string
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
-      
+
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: false,
         closed_date: undefined,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.income_instances[index];
     } catch (error) {
@@ -954,32 +1077,36 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   // ============================================================================
   // Expected Amount Update Methods (Inline Edit)
   // ============================================================================
-  
-  public async updateBillExpectedAmount(month: string, instanceId: string, amount: number): Promise<BillInstance | null> {
+
+  public async updateBillExpectedAmount(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         expected_amount: amount,
         is_default: false,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.bill_instances[index];
     } catch (error) {
@@ -987,28 +1114,32 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async updateIncomeExpectedAmount(month: string, instanceId: string, amount: number): Promise<IncomeInstance | null> {
+
+  public async updateIncomeExpectedAmount(
+    month: string,
+    instanceId: string,
+    amount: number
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Monthly data for ${month} not found`);
       }
-      
-      const index = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (index === -1) {
         return null;
       }
-      
+
       const now = new Date().toISOString();
       data.income_instances[index] = {
         ...data.income_instances[index],
         expected_amount: amount,
         is_default: false,
-        updated_at: now
+        updated_at: now,
       };
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return data.income_instances[index];
     } catch (error) {
@@ -1016,11 +1147,11 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   // ============================================================================
   // Month Management Methods
   // ============================================================================
-  
+
   public async monthExists(month: string): Promise<boolean> {
     try {
       return await this.storage.fileExists(`data/months/${month}.json`);
@@ -1029,50 +1160,52 @@ export class MonthsServiceImpl implements MonthsService {
       return false;
     }
   }
-  
+
   public async createMonth(month: string): Promise<MonthlyData> {
     console.log(`[MonthsService] Creating month ${month}`);
-    
+
     // Check if month already exists
     const exists = await this.monthExists(month);
     if (exists) {
       throw new Error(`Month ${month} already exists`);
     }
-    
+
     // Validate month format (YYYY-MM)
     if (!/^\d{4}-\d{2}$/.test(month)) {
       throw new Error('Invalid month format. Expected YYYY-MM');
     }
-    
+
     // Validate month is current or next month only
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
-    
+
     if (month !== currentMonth && month !== nextMonth) {
       // Allow creating past months that don't exist (for flexibility)
       // But warn in logs
-      console.warn(`[MonthsService] Creating month ${month} which is not current (${currentMonth}) or next (${nextMonth})`);
+      console.warn(
+        `[MonthsService] Creating month ${month} which is not current (${currentMonth}) or next (${nextMonth})`
+      );
     }
-    
+
     try {
       const bills = await this.billsService.getAll();
       const incomes = await this.incomesService.getAll();
-      
+
       const nowIso = new Date().toISOString();
-      
+
       // Generate bill instances from active bills
       const billInstances: BillInstance[] = [];
       for (const bill of bills) {
         if (!bill.is_active) continue;
-        
+
         // Generate occurrences for this bill in this month
         const occurrences = generateBillOccurrences(bill, month);
-        
+
         // Calculate expected_amount as sum of all occurrence amounts
         const expectedAmount = sumOccurrenceExpectedAmounts(occurrences);
-        
+
         billInstances.push({
           id: crypto.randomUUID(),
           bill_id: bill.id,
@@ -1084,18 +1217,20 @@ export class MonthsServiceImpl implements MonthsService {
           is_closed: false,
           is_adhoc: false,
           created_at: nowIso,
-          updated_at: nowIso
+          updated_at: nowIso,
         });
       }
-      
+
       // Generate payoff bills for pay_off_monthly payment sources
       const paymentSources = await this.paymentSourcesService.getAll();
-      const payOffMonthlySources = paymentSources.filter(ps => ps.pay_off_monthly === true && ps.is_active);
-      
+      const payOffMonthlySources = paymentSources.filter(
+        (ps) => ps.pay_off_monthly === true && ps.is_active
+      );
+
       if (payOffMonthlySources.length > 0) {
         // Ensure the "Credit Card Payoffs" category exists
         const payoffCategory = await this.categoriesService.ensurePayoffCategory();
-        
+
         for (const source of payOffMonthlySources) {
           // Create a single occurrence for the payoff with the current balance as expected_amount
           const payoffOccurrence: Occurrence = {
@@ -1107,12 +1242,12 @@ export class MonthsServiceImpl implements MonthsService {
             payments: [],
             is_adhoc: false,
             created_at: nowIso,
-            updated_at: nowIso
+            updated_at: nowIso,
           };
-          
+
           billInstances.push({
             id: crypto.randomUUID(),
-            bill_id: null,                     // No associated bill template
+            bill_id: null, // No associated bill template
             month,
             billing_period: 'monthly',
             expected_amount: Math.abs(source.balance),
@@ -1120,30 +1255,32 @@ export class MonthsServiceImpl implements MonthsService {
             is_default: true,
             is_closed: false,
             is_adhoc: false,
-            is_payoff_bill: true,              // Mark as auto-generated payoff
-            payoff_source_id: source.id,       // Reference to the payment source
-            name: `${source.name} Payoff`,     // Ad-hoc name since bill_id is null
-            category_id: payoffCategory.id,    // Assign to payoff category
-            payment_source_id: source.id,      // Payment comes from this source
+            is_payoff_bill: true, // Mark as auto-generated payoff
+            payoff_source_id: source.id, // Reference to the payment source
+            name: `${source.name} Payoff`, // Ad-hoc name since bill_id is null
+            category_id: payoffCategory.id, // Assign to payoff category
+            payment_source_id: source.id, // Payment comes from this source
             created_at: nowIso,
-            updated_at: nowIso
+            updated_at: nowIso,
           });
         }
-        
-        console.log(`[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`);
+
+        console.log(
+          `[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`
+        );
       }
-      
+
       // Generate income instances from active incomes
       const incomeInstances: IncomeInstance[] = [];
       for (const income of incomes) {
         if (!income.is_active) continue;
-        
+
         // Generate occurrences for this income in this month
         const occurrences = generateIncomeOccurrences(income, month);
-        
+
         // Calculate expected_amount as sum of all occurrence amounts
         const expectedAmount = sumOccurrenceExpectedAmounts(occurrences);
-        
+
         incomeInstances.push({
           id: crypto.randomUUID(),
           income_id: income.id,
@@ -1155,13 +1292,13 @@ export class MonthsServiceImpl implements MonthsService {
           is_closed: false,
           is_adhoc: false,
           created_at: nowIso,
-          updated_at: nowIso
+          updated_at: nowIso,
         });
       }
-      
+
       // Variable expenses are now created via ad-hoc bills in the Variable Expenses category
       const variableExpenses: VariableExpense[] = [];
-      
+
       const monthlyData: MonthlyData = {
         month,
         bill_instances: billInstances,
@@ -1171,68 +1308,72 @@ export class MonthsServiceImpl implements MonthsService {
         bank_balances: {},
         is_read_only: false,
         created_at: nowIso,
-        updated_at: nowIso
+        updated_at: nowIso,
       };
-      
+
       await this.saveMonthlyData(month, monthlyData);
-      console.log(`[MonthsService] Created month ${month} with ${billInstances.length} bills, ${incomeInstances.length} incomes, ${variableExpenses.length} variable expenses`);
-      
+      console.log(
+        `[MonthsService] Created month ${month} with ${billInstances.length} bills, ${incomeInstances.length} incomes, ${variableExpenses.length} variable expenses`
+      );
+
       return monthlyData;
     } catch (error) {
       console.error('[MonthsService] Failed to create month:', error);
       throw error;
     }
   }
-  
+
   public async deleteMonth(month: string): Promise<void> {
     console.log(`[MonthsService] Deleting month ${month}`);
-    
+
     try {
       // Check if month exists
       const exists = await this.monthExists(month);
       if (!exists) {
         throw new Error(`Month ${month} does not exist`);
       }
-      
+
       // Check if month is read-only
       const data = await this.getMonthlyData(month);
       if (data?.is_read_only) {
         throw new Error(`Month ${month} is read-only. Unlock it before deleting.`);
       }
-      
+
       // Delete the file using storage service
       await this.storage.deleteFile(`data/months/${month}.json`);
-      
+
       console.log(`[MonthsService] Deleted month ${month}`);
     } catch (error) {
       console.error('[MonthsService] Failed to delete month:', error);
       throw error;
     }
   }
-  
+
   public async toggleReadOnly(month: string): Promise<MonthlyData> {
     console.log(`[MonthsService] Toggling read-only for ${month}`);
-    
+
     try {
       const data = await this.getMonthlyData(month);
       if (!data) {
         throw new Error(`Month ${month} does not exist`);
       }
-      
+
       const now = new Date().toISOString();
       data.is_read_only = !data.is_read_only;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
-      console.log(`[MonthsService] Month ${month} is now ${data.is_read_only ? 'read-only' : 'editable'}`);
-      
+      console.log(
+        `[MonthsService] Month ${month} is now ${data.is_read_only ? 'read-only' : 'editable'}`
+      );
+
       return data;
     } catch (error) {
       console.error('[MonthsService] Failed to toggle read-only:', error);
       throw error;
     }
   }
-  
+
   public async isReadOnly(month: string): Promise<boolean> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1242,21 +1383,21 @@ export class MonthsServiceImpl implements MonthsService {
       return false;
     }
   }
-  
+
   public async getMonthsForManagement(): Promise<MonthSummary[]> {
     try {
       // Get all existing months
       const existingMonths = await this.getAllMonths();
-      
+
       // Calculate current and next month
       const now = new Date();
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
-      
+
       // Build a set of existing month strings
-      const existingMonthSet = new Set(existingMonths.map(m => m.month));
-      
+      const existingMonthSet = new Set(existingMonths.map((m) => m.month));
+
       // Add current month placeholder if it doesn't exist
       if (!existingMonthSet.has(currentMonth)) {
         existingMonths.push({
@@ -1275,10 +1416,10 @@ export class MonthsServiceImpl implements MonthsService {
           // Legacy fields
           total_income: 0,
           total_bills: 0,
-          total_expenses: 0
+          total_expenses: 0,
         });
       }
-      
+
       // Add next month placeholder if it doesn't exist
       if (!existingMonthSet.has(nextMonth)) {
         existingMonths.push({
@@ -1297,62 +1438,62 @@ export class MonthsServiceImpl implements MonthsService {
           // Legacy fields
           total_income: 0,
           total_bills: 0,
-          total_expenses: 0
+          total_expenses: 0,
         });
       }
-      
+
       // Sort by month descending (newest first)
       existingMonths.sort((a, b) => b.month.localeCompare(a.month));
-      
+
       return existingMonths;
     } catch (error) {
       console.error('[MonthsService] Failed to get months for management:', error);
       return [];
     }
   }
-  
+
   // ============================================================================
   // Occurrence Methods Implementation
   // ============================================================================
-  
+
   public async updateBillOccurrence(
-    month: string, 
-    instanceId: string, 
-    occurrenceId: string, 
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
     updates: { expected_date?: string; expected_amount?: number }
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       // Update the occurrence
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         expected_date: updates.expected_date ?? instance.occurrences[occIndex].expected_date,
         expected_amount: updates.expected_amount ?? instance.occurrences[occIndex].expected_amount,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       // Resequence occurrences by date
       instance.occurrences = resequenceOccurrences(instance.occurrences);
-      
+
       // Update instance totals
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1360,45 +1501,45 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async updateIncomeOccurrence(
-    month: string, 
-    instanceId: string, 
-    occurrenceId: string, 
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
     updates: { expected_date?: string; expected_amount?: number }
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       // Update the occurrence
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         expected_date: updates.expected_date ?? instance.occurrences[occIndex].expected_date,
         expected_amount: updates.expected_amount ?? instance.occurrences[occIndex].expected_amount,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       // Resequence occurrences by date
       instance.occurrences = resequenceOccurrences(instance.occurrences);
-      
+
       // Update instance totals
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1406,39 +1547,43 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async closeBillOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<BillInstance | null> {
+
+  public async closeBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
       const today = now.split('T')[0];
-      
+
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: true,
         closed_date: today,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       // Update instance-level is_closed if all occurrences are closed
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       if (instance.is_closed) {
         instance.closed_date = today;
       }
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1446,36 +1591,40 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async reopenBillOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<BillInstance | null> {
+
+  public async reopenBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: false,
         closed_date: undefined,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       // Update instance-level is_closed (now false since one is open)
       instance.is_closed = false;
       instance.closed_date = undefined;
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1483,39 +1632,43 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async closeIncomeOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<IncomeInstance | null> {
+
+  public async closeIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
       const today = now.split('T')[0];
-      
+
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: true,
         closed_date: today,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       // Update instance-level is_closed if all occurrences are closed
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       if (instance.is_closed) {
         instance.closed_date = today;
       }
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1523,36 +1676,40 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async reopenIncomeOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<IncomeInstance | null> {
+
+  public async reopenIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: false,
         closed_date: undefined,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       // Update instance-level is_closed (now false since one is open)
       instance.is_closed = false;
       instance.closed_date = undefined;
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1560,43 +1717,43 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async addBillOccurrencePayment(
-    month: string, 
-    instanceId: string, 
-    occurrenceId: string, 
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
     payment: { amount: number; date: string; payment_source_id?: string }
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       const newPayment: Payment = {
         id: crypto.randomUUID(),
         amount: payment.amount,
         date: payment.date,
         payment_source_id: payment.payment_source_id,
-        created_at: now
+        created_at: now,
       };
-      
+
       instance.occurrences[occIndex].payments.push(newPayment);
       instance.occurrences[occIndex].updated_at = now;
-      
+
       // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1604,43 +1761,43 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async addIncomeOccurrencePayment(
-    month: string, 
-    instanceId: string, 
-    occurrenceId: string, 
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
     payment: { amount: number; date: string; payment_source_id?: string }
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       const newPayment: Payment = {
         id: crypto.randomUUID(),
         amount: payment.amount,
         date: payment.date,
         payment_source_id: payment.payment_source_id,
-        created_at: now
+        created_at: now,
       };
-      
+
       instance.occurrences[occIndex].payments.push(newPayment);
       instance.occurrences[occIndex].updated_at = now;
-      
+
       // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1648,39 +1805,41 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async removeBillOccurrencePayment(
-    month: string, 
-    instanceId: string, 
-    occurrenceId: string, 
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
     paymentId: string
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
-      const paymentIndex = instance.occurrences[occIndex].payments.findIndex(p => p.id === paymentId);
+
+      const paymentIndex = instance.occurrences[occIndex].payments.findIndex(
+        (p) => p.id === paymentId
+      );
       if (paymentIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       // Remove the payment
       instance.occurrences[occIndex].payments.splice(paymentIndex, 1);
       instance.occurrences[occIndex].updated_at = now;
-      
+
       // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1688,39 +1847,41 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async removeIncomeOccurrencePayment(
-    month: string, 
-    instanceId: string, 
-    occurrenceId: string, 
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
     paymentId: string
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
-      const paymentIndex = instance.occurrences[occIndex].payments.findIndex(p => p.id === paymentId);
+
+      const paymentIndex = instance.occurrences[occIndex].payments.findIndex(
+        (p) => p.id === paymentId
+      );
       if (paymentIndex === -1) return null;
-      
+
       const now = new Date().toISOString();
-      
+
       // Remove the payment
       instance.occurrences[occIndex].payments.splice(paymentIndex, 1);
       instance.occurrences[occIndex].updated_at = now;
-      
+
       // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1728,34 +1889,37 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async addBillAdhocOccurrence(
-    month: string, 
-    instanceId: string, 
+    month: string,
+    instanceId: string,
     occurrence: { expected_date: string; expected_amount: number }
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
       const now = new Date().toISOString();
-      
-      const newOccurrence = createAdhocOccurrence(occurrence.expected_date, occurrence.expected_amount);
+
+      const newOccurrence = createAdhocOccurrence(
+        occurrence.expected_date,
+        occurrence.expected_amount
+      );
       instance.occurrences.push(newOccurrence);
-      
+
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1763,34 +1927,37 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
+
   public async addIncomeAdhocOccurrence(
-    month: string, 
-    instanceId: string, 
+    month: string,
+    instanceId: string,
     occurrence: { expected_date: string; expected_amount: number }
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
       const now = new Date().toISOString();
-      
-      const newOccurrence = createAdhocOccurrence(occurrence.expected_date, occurrence.expected_amount);
+
+      const newOccurrence = createAdhocOccurrence(
+        occurrence.expected_date,
+        occurrence.expected_amount
+      );
       instance.occurrences.push(newOccurrence);
-      
+
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1798,37 +1965,41 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async removeBillOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<BillInstance | null> {
+
+  public async removeBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.bill_instances.findIndex(bi => bi.id === instanceId);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       // Only allow removing ad-hoc occurrences
       if (!instance.occurrences[occIndex].is_adhoc) {
         throw new Error('Can only remove ad-hoc occurrences');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       instance.occurrences.splice(occIndex, 1);
-      
+
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
-      
+
       data.bill_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {
@@ -1836,37 +2007,41 @@ export class MonthsServiceImpl implements MonthsService {
       throw error;
     }
   }
-  
-  public async removeIncomeOccurrence(month: string, instanceId: string, occurrenceId: string): Promise<IncomeInstance | null> {
+
+  public async removeIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string
+  ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
       if (!data) throw new Error(`Monthly data for ${month} not found`);
-      
-      const instanceIndex = data.income_instances.findIndex(ii => ii.id === instanceId);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
       if (instanceIndex === -1) return null;
-      
+
       const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex(o => o.id === occurrenceId);
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
-      
+
       // Only allow removing ad-hoc occurrences
       if (!instance.occurrences[occIndex].is_adhoc) {
         throw new Error('Can only remove ad-hoc occurrences');
       }
-      
+
       const now = new Date().toISOString();
-      
+
       instance.occurrences.splice(occIndex, 1);
-      
+
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
-      
+
       data.income_instances[instanceIndex] = instance;
       data.updated_at = now;
-      
+
       await this.saveMonthlyData(month, data);
       return instance;
     } catch (error) {

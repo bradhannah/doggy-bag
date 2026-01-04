@@ -11,12 +11,12 @@ With the type synchronization strategy (ADR-002) requiring shared request/respon
 
 Common conventions in the industry:
 
-| Convention | Example | Used By |
-|------------|---------|---------|
-| `Create*Request` / `Update*Request` | `CreateBillRequest` | Microsoft, Google APIs |
-| `*CreateDto` / `*UpdateDto` | `BillCreateDto` | NestJS, .NET |
-| `*Input` / `*Payload` | `BillInput` | GraphQL conventions |
-| `New*` / `*Patch` | `NewBill`, `BillPatch` | REST informal |
+| Convention                          | Example                | Used By                |
+| ----------------------------------- | ---------------------- | ---------------------- |
+| `Create*Request` / `Update*Request` | `CreateBillRequest`    | Microsoft, Google APIs |
+| `*CreateDto` / `*UpdateDto`         | `BillCreateDto`        | NestJS, .NET           |
+| `*Input` / `*Payload`               | `BillInput`            | GraphQL conventions    |
+| `New*` / `*Patch`                   | `NewBill`, `BillPatch` | REST informal          |
 
 ---
 

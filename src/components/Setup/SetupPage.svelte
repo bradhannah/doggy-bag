@@ -1,14 +1,40 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  
+
   // Stores
-  import { paymentSourcesStore, loadPaymentSources, deletePaymentSource } from '../../stores/payment-sources';
-  import { billsStore, loadBills, deleteBill, activeBillsWithContribution, totalFixedCosts, billsByCategory, calculateMonthlyContribution as calculateBillContribution } from '../../stores/bills';
-  import { incomesStore, loadIncomes, deleteIncome, activeIncomesWithContribution, totalMonthlyIncome, incomesByCategory, calculateMonthlyContribution as calculateIncomeContribution } from '../../stores/incomes';
-  import { categoriesStore, loadCategories, deleteCategory, billCategories, incomeCategories } from '../../stores/categories';
-  
+  import {
+    paymentSourcesStore,
+    loadPaymentSources,
+    deletePaymentSource,
+  } from '../../stores/payment-sources';
+  import {
+    billsStore,
+    loadBills,
+    deleteBill,
+    activeBillsWithContribution,
+    totalFixedCosts,
+    billsByCategory,
+    calculateMonthlyContribution as calculateBillContribution,
+  } from '../../stores/bills';
+  import {
+    incomesStore,
+    loadIncomes,
+    deleteIncome,
+    activeIncomesWithContribution,
+    totalMonthlyIncome,
+    incomesByCategory,
+    calculateMonthlyContribution as calculateIncomeContribution,
+  } from '../../stores/incomes';
+  import {
+    categoriesStore,
+    loadCategories,
+    deleteCategory,
+    billCategories,
+    incomeCategories,
+  } from '../../stores/categories';
+
   import { success, error as showError } from '../../stores/toast';
-  
+
   // Components
   import Drawer from './Drawer.svelte';
   import PaymentSourceForm from './PaymentSourceForm.svelte';
@@ -25,7 +51,7 @@
   import LoadDefaultsButton from '../shared/LoadDefaultsButton.svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   import CategoryOrderer from './CategoryOrderer.svelte';
-  
+
   // Types
   import type { PaymentSource } from '../../stores/payment-sources';
   import type { Bill } from '../../stores/bills';
@@ -58,34 +84,36 @@
     { id: 'payment-sources', label: 'Payment Sources' },
     { id: 'bills', label: 'Bills' },
     { id: 'incomes', label: 'Incomes' },
-    { id: 'categories', label: 'Categories' }
+    { id: 'categories', label: 'Categories' },
   ];
 
   // Load all data on mount
   onMount(async () => {
-    await Promise.all([
-      loadPaymentSources(),
-      loadBills(),
-      loadIncomes(),
-      loadCategories()
-    ]);
+    await Promise.all([loadPaymentSources(), loadBills(), loadIncomes(), loadCategories()]);
   });
 
   // Drawer title based on mode and active tab
   $: drawerTitle = (() => {
     switch (drawerMode) {
-      case 'add': return `Add ${getTabSingular(activeTab)}`;
-      case 'edit': return `Edit ${getTabSingular(activeTab)}`;
-      case 'view': return getTabSingular(activeTab);
+      case 'add':
+        return `Add ${getTabSingular(activeTab)}`;
+      case 'edit':
+        return `Edit ${getTabSingular(activeTab)}`;
+      case 'view':
+        return getTabSingular(activeTab);
     }
   })();
 
   function getTabSingular(tab: TabId): string {
     switch (tab) {
-      case 'payment-sources': return 'Payment Source';
-      case 'bills': return 'Bill';
-      case 'incomes': return 'Income';
-      case 'categories': return 'Category';
+      case 'payment-sources':
+        return 'Payment Source';
+      case 'bills':
+        return 'Bill';
+      case 'incomes':
+        return 'Income';
+      case 'categories':
+        return 'Category';
     }
   }
 
@@ -98,7 +126,7 @@
   function openViewDrawer(item: PaymentSource | Bill | Income | Category) {
     drawerMode = 'view';
     clearAllItems();
-    
+
     // Set the appropriate viewing item based on active tab
     switch (activeTab) {
       case 'payment-sources':
@@ -114,14 +142,14 @@
         viewingCategory = item as Category;
         break;
     }
-    
+
     drawerOpen = true;
   }
 
   function openEditDrawer(item: PaymentSource | Bill | Income | Category) {
     drawerMode = 'edit';
     clearAllItems();
-    
+
     // Set the appropriate editing item based on active tab
     switch (activeTab) {
       case 'payment-sources':
@@ -137,7 +165,7 @@
         editingCategory = item as Category;
         break;
     }
-    
+
     drawerOpen = true;
   }
 
@@ -147,13 +175,13 @@
     if (viewingBill) editingBill = viewingBill;
     if (viewingIncome) editingIncome = viewingIncome;
     if (viewingCategory) editingCategory = viewingCategory;
-    
+
     // Clear viewing items
     viewingPaymentSource = null;
     viewingBill = null;
     viewingIncome = null;
     viewingCategory = null;
-    
+
     drawerMode = 'edit';
   }
 
@@ -227,7 +255,7 @@
   }
 
   function getPaymentSourceName(id: string): string {
-    const ps = $paymentSourcesStore.paymentSources.find(p => p.id === id);
+    const ps = $paymentSourcesStore.paymentSources.find((p) => p.id === id);
     return ps?.name || 'Unknown';
   }
 </script>
@@ -235,9 +263,7 @@
 <div class="setup-page">
   <!-- Header -->
   <header class="setup-header">
-    <a href="/" class="back-link">
-      &larr; Dashboard
-    </a>
+    <a href="/" class="back-link"> &larr; Dashboard </a>
     <h1>Entity Configuration</h1>
     <div class="header-spacer"></div>
     <LoadDefaultsButton />
@@ -250,7 +276,10 @@
         <button
           class="tab-button"
           class:active={activeTab === tab.id}
-          on:click={() => { activeTab = tab.id; cancelDelete(); }}
+          on:click={() => {
+            activeTab = tab.id;
+            cancelDelete();
+          }}
         >
           {tab.label}
         </button>
@@ -262,7 +291,7 @@
       <!-- Content Header -->
       <div class="content-header">
         <h2>
-          {tabs.find(t => t.id === activeTab)?.label}
+          {tabs.find((t) => t.id === activeTab)?.label}
           <span class="count">
             ({#if activeTab === 'payment-sources'}
               {$paymentSourcesStore.paymentSources.length}
@@ -275,9 +304,7 @@
             {/if})
           </span>
         </h2>
-        <button class="btn btn-primary" on:click={openAddDrawer}>
-          + Add New
-        </button>
+        <button class="btn btn-primary" on:click={openAddDrawer}> + Add New </button>
       </div>
 
       <!-- Entity List -->
@@ -296,7 +323,6 @@
               onDelete={(ps) => confirmDelete({ id: ps.id, name: ps.name })}
             />
           {/if}
-
         {:else if activeTab === 'bills'}
           {#if $billsStore.bills.length === 0}
             <div class="empty-state">
@@ -313,7 +339,6 @@
               {getPaymentSourceName}
             />
           {/if}
-
         {:else if activeTab === 'incomes'}
           {#if $incomesStore.incomes.length === 0}
             <div class="empty-state">
@@ -330,22 +355,20 @@
               {getPaymentSourceName}
             />
           {/if}
-
         {:else if activeTab === 'categories'}
           <!-- Category Orderers for drag-and-drop reordering -->
           <div class="category-orderers">
-            <CategoryOrderer 
-              categories={$billCategories} 
+            <CategoryOrderer
+              categories={$billCategories}
               type="bill"
               on:edit={(e) => openEditDrawer(e.detail.category)}
             />
-            <CategoryOrderer 
-              categories={$incomeCategories} 
+            <CategoryOrderer
+              categories={$incomeCategories}
               type="income"
               on:edit={(e) => openEditDrawer(e.detail.category)}
             />
           </div>
-
         {/if}
       </div>
     </main>
@@ -355,7 +378,11 @@
   <Drawer isOpen={drawerOpen} title={drawerTitle} onClose={closeDrawer}>
     {#if drawerMode === 'view'}
       {#if activeTab === 'payment-sources' && viewingPaymentSource}
-        <PaymentSourceView item={viewingPaymentSource} onEdit={switchToEdit} onClose={closeDrawer} />
+        <PaymentSourceView
+          item={viewingPaymentSource}
+          onEdit={switchToEdit}
+          onClose={closeDrawer}
+        />
       {:else if activeTab === 'bills' && viewingBill}
         <BillView item={viewingBill} onEdit={switchToEdit} onClose={closeDrawer} />
       {:else if activeTab === 'incomes' && viewingIncome}
@@ -363,32 +390,18 @@
       {:else if activeTab === 'categories' && viewingCategory}
         <CategoryView item={viewingCategory} onEdit={switchToEdit} onClose={closeDrawer} />
       {/if}
-    {:else}
-      {#if activeTab === 'payment-sources'}
-        <PaymentSourceForm 
-          editingItem={editingPaymentSource} 
-          onSave={handleSave} 
-          onCancel={closeDrawer} 
-        />
-      {:else if activeTab === 'bills'}
-        <BillForm 
-          editingItem={editingBill} 
-          onSave={handleSave} 
-          onCancel={closeDrawer} 
-        />
-      {:else if activeTab === 'incomes'}
-        <IncomeForm 
-          editingItem={editingIncome} 
-          onSave={handleSave} 
-          onCancel={closeDrawer} 
-        />
-      {:else if activeTab === 'categories'}
-        <CategoryForm 
-          editingItem={editingCategory} 
-          onSave={handleSave} 
-          onCancel={closeDrawer} 
-        />
-      {/if}
+    {:else if activeTab === 'payment-sources'}
+      <PaymentSourceForm
+        editingItem={editingPaymentSource}
+        onSave={handleSave}
+        onCancel={closeDrawer}
+      />
+    {:else if activeTab === 'bills'}
+      <BillForm editingItem={editingBill} onSave={handleSave} onCancel={closeDrawer} />
+    {:else if activeTab === 'incomes'}
+      <IncomeForm editingItem={editingIncome} onSave={handleSave} onCancel={closeDrawer} />
+    {:else if activeTab === 'categories'}
+      <CategoryForm editingItem={editingCategory} onSave={handleSave} onCancel={closeDrawer} />
     {/if}
   </Drawer>
 

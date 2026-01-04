@@ -5,22 +5,22 @@
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom, ZOOM_CONFIG } from '../stores/settings';
   import { setApiPort } from '../lib/api/client';
   import { createLogger } from '../lib/logger';
-  
+
   const log = createLogger('Layout');
-  
+
   let backendReady = false;
   let backendError: string | null = null;
   let unlistenReady: (() => void) | null = null;
   let unlistenError: (() => void) | null = null;
-  
+
   // Handle keyboard shortcuts for zoom (Ctrl+/-/0)
   function handleKeydown(event: KeyboardEvent) {
     // Only handle zoom shortcuts in Tauri
     if (!isTauri()) return;
-    
+
     const isMod = event.ctrlKey || event.metaKey;
     if (!isMod) return;
-    
+
     // Zoom in: Ctrl/Cmd + = or Ctrl/Cmd + +
     if (event.key === '=' || event.key === '+') {
       event.preventDefault();
@@ -37,24 +37,24 @@
       resetZoom();
     }
   }
-  
+
   onMount(async () => {
     // Load zoom setting on startup (applies zoom in Tauri)
     await loadZoom();
-    
+
     // Add keyboard listener for zoom shortcuts
     window.addEventListener('keydown', handleKeydown);
-    
+
     // In browser dev mode, backend is always ready (separate process)
     if (!isTauri()) {
       backendReady = true;
       return;
     }
-    
+
     try {
       const { listen } = await import('@tauri-apps/api/event');
       const { invoke } = await import('@tauri-apps/api/core');
-      
+
       // Listen for sidecar ready event (payload contains port number)
       unlistenReady = await listen<number>('sidecar-ready', (event) => {
         const port = event.payload;
@@ -62,19 +62,19 @@
         setApiPort(port);
         backendReady = true;
       });
-      
+
       // Listen for sidecar error event
       unlistenError = await listen('sidecar-error', (event) => {
         log.error('Sidecar error:', event.payload);
         backendError = event.payload as string;
       });
-      
+
       // Check if we missed the sidecar-ready event (race condition)
       // Poll for the port - sidecar may have started before listener was ready
       const checkPort = async () => {
         for (let i = 0; i < 30; i++) {
           if (backendReady) return; // Already got the event
-          
+
           try {
             const port = await invoke<number | null>('get_sidecar_port');
             if (port) {
@@ -86,16 +86,16 @@
           } catch (e) {
             // Command not available yet, keep polling
           }
-          
-          await new Promise(resolve => setTimeout(resolve, 200));
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
-        
+
         // Timeout - show error
         if (!backendReady) {
           backendError = 'Backend failed to start (timeout)';
         }
       };
-      
+
       // Start polling in background
       checkPort();
     } catch (e) {
@@ -104,7 +104,7 @@
       backendReady = true;
     }
   });
-  
+
   onDestroy(() => {
     window.removeEventListener('keydown', handleKeydown);
     unlistenReady?.();
@@ -118,9 +118,9 @@
       {#if backendError}
         <div class="error-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-            <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="16" r="1" fill="currentColor"/>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+            <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <circle cx="12" cy="16" r="1" fill="currentColor" />
           </svg>
         </div>
         <h2>Failed to Start Backend</h2>
@@ -145,7 +145,7 @@
 <ToastContainer />
 
 <style>
-:global(:root) {
+  :global(:root) {
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
     font-size: 16px;
     line-height: 1.5;

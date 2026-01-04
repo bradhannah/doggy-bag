@@ -23,7 +23,7 @@ const initialState: UndoState = {
   stack: [],
   loading: false,
   error: null,
-  canUndo: false
+  canUndo: false,
 };
 
 function createUndoStore() {
@@ -33,99 +33,99 @@ function createUndoStore() {
     subscribe,
 
     async load(): Promise<void> {
-      update(state => ({ ...state, loading: true, error: null }));
+      update((state) => ({ ...state, loading: true, error: null }));
 
       try {
         const response = await fetch(apiUrl('/api/undo'));
         if (!response.ok) {
           throw new Error('Failed to load undo stack');
         }
-        
+
         const data = await response.json();
-        update(state => ({
+        update((state) => ({
           ...state,
           stack: data.stack || [],
           canUndo: data.canUndo || false,
-          loading: false
+          loading: false,
         }));
       } catch (error) {
-        update(state => ({
+        update((state) => ({
           ...state,
           loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         }));
       }
     },
 
     async undo(): Promise<{ success: boolean; entry?: UndoEntry }> {
-      update(state => ({ ...state, loading: true, error: null }));
+      update((state) => ({ ...state, loading: true, error: null }));
 
       try {
         const response = await fetch(apiUrl('/api/undo'), {
-          method: 'POST'
+          method: 'POST',
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to undo');
         }
-        
+
         const data = await response.json();
-        update(state => ({
+        update((state) => ({
           ...state,
           stack: data.stack || [],
           canUndo: data.canUndo || false,
-          loading: false
+          loading: false,
         }));
-        
+
         return { success: true, entry: data.undone };
       } catch (error) {
-        update(state => ({
+        update((state) => ({
           ...state,
           loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         }));
         return { success: false };
       }
     },
 
     async clear(): Promise<void> {
-      update(state => ({ ...state, loading: true, error: null }));
+      update((state) => ({ ...state, loading: true, error: null }));
 
       try {
         const response = await fetch(apiUrl('/api/undo'), {
-          method: 'DELETE'
+          method: 'DELETE',
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to clear undo stack');
         }
-        
-        update(state => ({
+
+        update((state) => ({
           ...state,
           stack: [],
           canUndo: false,
-          loading: false
+          loading: false,
         }));
       } catch (error) {
-        update(state => ({
+        update((state) => ({
           ...state,
           loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         }));
       }
     },
 
     reset() {
       set(initialState);
-    }
+    },
   };
 }
 
 export const undoStore = createUndoStore();
 
 // Derived stores for convenience
-export const undoStack = derived(undoStore, $store => $store.stack);
-export const canUndo = derived(undoStore, $store => $store.canUndo);
-export const undoLoading = derived(undoStore, $store => $store.loading);
-export const undoError = derived(undoStore, $store => $store.error);
+export const undoStack = derived(undoStore, ($store) => $store.stack);
+export const canUndo = derived(undoStore, ($store) => $store.canUndo);
+export const undoLoading = derived(undoStore, ($store) => $store.loading);
+export const undoError = derived(undoStore, ($store) => $store.error);

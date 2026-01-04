@@ -36,6 +36,7 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 ## Components
 
 **Leftover Display** (`components/Dashboard/LeftoverCard.svelte`)
+
 - Large, centered number displaying "leftover at end of month"
 - Color coding:
   - Positive (surplus): Green (configurable, default: [TO BE FILLED IN BY USER])
@@ -45,6 +46,7 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 - Tooltip: Shows calculation breakdown on hover
 
 **Month Navigation** (`components/Dashboard/MonthSelector.svelte`)
+
 - Year selector: Dropdown (native picker if available, otherwise custom)
 - Month selector: Side-by-side vertical list (January, February, March, ...)
 - Previous/Next navigation: Arrow buttons or month list clicks
@@ -53,12 +55,14 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 - Action: Clicking a month loads that month's data
 
 **Income Summary Card** (`components/Dashboard/IncomeSummary.svelte`)
+
 - Total Income: Display sum of all income instances for current month
 - Breakdown by payment source: List each source with its income
 - Icon: Income icon (arrow up or plus sign)
 - Color: Configurable income section color (default: [TO BE FILLED IN BY USER])
 
 **Expense Summary Card** (`components/Dashboard/ExpenseSummary.svelte`)
+
 - Total Expenses: Display sum of all bills and variable expenses
 - Breakdown:
   - Fixed Bills: Total of bill instances
@@ -68,12 +72,14 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 - Color: Configurable expenses section color (default: [TO BE FILLED IN BY USER])
 
 **Payment Sources Card** (`components/Dashboard/PaymentSourcesCard.svelte`)
+
 - Total Cash / Net Worth: Calculated value (sum of positive balances - sum of credit card debt)
 - Breakdown by payment source: List each source with current balance
 - Icons: Bank/Credit card icons
 - Color: Configurable payment sources section color (default: [TO BE FILLED IN BY USER])
 
 **Quick Actions** (`components/Dashboard/QuickActions.svelte`)
+
 - Button: "Add Bill" - Opens bill form (quick add or inline edit)
 - Button: "Add Expense" - Opens variable expense form
 - Button: "Add Income" - Opens income form
@@ -105,25 +111,30 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 ### User Actions
 
 **Add Bill**: Opens bill form (inline or modal)
+
 - Pre-fill: Payment source dropdown with default (first source)
 - Billing period: Default to 'monthly' (user can change)
 - On save: Update `billsStore.add()`, auto-save triggers
 
 **Add Expense**: Opens variable expense form
+
 - Payment source: Dropdown from payment sources
 - On save: Update `expensesStore.add()`, auto-save triggers
 
 **Add Income**: Opens income form
+
 - Payment source: Dropdown from payment sources
 - Billing period: Default to 'monthly'
 - On save: Update `incomesStore.add()`, auto-save triggers
 
 **Add Payment Source**: Opens payment source form
+
 - Type: Radio buttons (Bank Account, Credit Card, Cash)
 - Balance: Optional (can add later)
 - On save: Update `paymentSourcesStore.add()`, auto-save triggers
 
 **Undo**: Triggers `undoStore.undo()`
+
 - Reverts most recent change
 - All dashboard cards update to reflect reverted state
 - Undo button disabled if no changes to undo
@@ -131,6 +142,7 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 ### Month Navigation
 
 **Change Month**:
+
 1. User clicks month selector or Previous/Next
 2. `uiStore.setMonth(selectedMonth)` action dispatched
 3. Svelte store subscribers load new monthly data
@@ -138,6 +150,7 @@ Dashboard is the primary interface after onboarding. It displays the key questio
 5. Update `uiStore.setNavigation('dashboard')`
 
 **Generate Month**:
+
 1. User navigates to month that doesn't exist (e.g., future month)
 2. Backend or frontend generates month data:
    - Copy active Bills → create BillInstances
@@ -163,12 +176,19 @@ $: totalBills = calculateTotalBills($monthlyData);
 $: totalVariable = calculateTotalVariableExpenses($monthlyData);
 $: totalFreeFlowing = calculateTotalFreeFlowing($monthlyData);
 $: bankBalances = $monthlyData.bank_balances;
-$: leftover = calculateLeftover($bankBalances, $totalIncome, $totalBills, $totalVariable, $totalFreeFlowing);
+$: leftover = calculateLeftover(
+  $bankBalances,
+  $totalIncome,
+  $totalBills,
+  $totalVariable,
+  $totalFreeFlowing
+);
 ```
 
 ### Reactive Updates
 
 All cards listen to store changes:
+
 - `billsStore.subscribe()` → Update income/expense cards when bills change
 - `incomesStore.subscribe()` → Update income card when incomes change
 - `expensesStore.subscribe()` → Update expense cards when expenses change
@@ -248,18 +268,22 @@ All cards listen to store changes:
 ## Edge Cases
 
 **No Data for Month**:
+
 - Show empty state: "No budget data for [Month]. Generate month or add bills and incomes to get started."
 - "Generate Month" button available
 
 **All Values Zero**:
+
 - Leftover: $0 displayed in neutral color (no green or red)
 - Income/Expenses: $0 displayed normally
 
 **Very Large Numbers**:
+
 - Format with commas: $1,234,567.89
 - Truncate display if too wide for card: Show full value on hover/tooltip
 
 **Multiple Payment Sources**:
+
 - Payment Sources Card shows all sources
 - If no sources: "Add payment source to track where your money is"
 

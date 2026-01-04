@@ -220,6 +220,7 @@ The team implements dynamic port allocation to prevent port collisions when mult
 6. **Given** alternatives are evaluated, **When** recommendation is made, **Then** it includes feasibility rating, performance implications, and implementation complexity
 
 **Implementation Notes** (from Architecture Review):
+
 - Backend starts with port 0 (OS assigns available port)
 - Backend prints `PORT=XXXX` to stdout on startup
 - Rust captures port from sidecar stdout
@@ -232,23 +233,23 @@ The team implements dynamic port allocation to prevent port collisions when mult
 ### Edge Cases
 
 - What happens when linting rules conflict between frontend (.svelte) and backend (.ts) files?
-  - *Resolution: Separate ESLint configs per layer with shared base rules*
+  - _Resolution: Separate ESLint configs per layer with shared base rules_
 - How does the system handle pre-commit hook timeout for large changesets?
-  - *Resolution: Set reasonable timeout (120s), allow --no-verify escape hatch*
+  - _Resolution: Set reasonable timeout (120s), allow --no-verify escape hatch_
 - What happens when coverage thresholds are not met?
-  - *Resolution: Warning in local, blocking in CI (configurable)*
+  - _Resolution: Warning in local, blocking in CI (configurable)_
 - How are flaky tests identified and handled?
-  - *Resolution: CI retries once, persistent failures block merge*
+  - _Resolution: CI retries once, persistent failures block merge_
 - What if a developer doesn't have Rust installed for Clippy?
-  - *Resolution: Rust checks only run if cargo is available, skip gracefully otherwise*
+  - _Resolution: Rust checks only run if cargo is available, skip gracefully otherwise_
 - What happens when prettier and eslint have conflicting rules?
-  - *Resolution: Use eslint-config-prettier to disable conflicting rules*
+  - _Resolution: Use eslint-config-prettier to disable conflicting rules_
 - What if a critical tool (e.g., Husky) only works with Node.js?
-  - *Resolution: Evaluate Bun-compatible alternatives (e.g., lefthook, simple-git-hooks) or document workaround*
+  - _Resolution: Evaluate Bun-compatible alternatives (e.g., lefthook, simple-git-hooks) or document workaround_
 - What happens when a third-party dependency introduces new warnings?
-  - *Resolution: Pin dependency versions, address warnings before upgrading*
+  - _Resolution: Pin dependency versions, address warnings before upgrading_
 - What if some warnings are from generated code or vendor files?
-  - *Resolution: Configure exclusions in tsconfig/eslint for generated directories*
+  - _Resolution: Configure exclusions in tsconfig/eslint for generated directories_
 
 ---
 
@@ -374,23 +375,23 @@ The team implements dynamic port allocation to prevent port collisions when mult
 
 ## Tooling Summary
 
-| Category | Tool | Purpose |
-|----------|------|---------|
-| Runtime | Bun (sole JS runtime) | Package management, script execution, testing |
-| Linting (TS) | ESLint 9 + @typescript-eslint | TypeScript code quality |
-| Linting (Svelte) | eslint-plugin-svelte | Svelte component linting |
-| Linting (Rust) | Clippy | Rust code quality |
-| Formatting (TS/Svelte) | Prettier + prettier-plugin-svelte | Consistent formatting |
-| Formatting (Rust) | rustfmt | Rust formatting |
-| Testing (Frontend) | Vitest + @testing-library/svelte | Component unit tests |
-| Testing (Backend) | Bun test | API unit tests |
-| Testing (E2E) | Playwright | End-to-end tests |
-| Coverage | Vitest coverage + Bun coverage | Line coverage reporting |
-| Pre-commit | Husky or lefthook (Bun-compatible) | Local enforcement |
-| CI/CD | GitHub Actions (Bun runtime) | Automated validation |
-| Type Checking | svelte-check + tsc | TypeScript validation |
-| Security | bun audit / cargo audit | Dependency vulnerability scanning (light) |
-| Docs | Markdown + Mermaid | Architecture documentation |
+| Category               | Tool                               | Purpose                                       |
+| ---------------------- | ---------------------------------- | --------------------------------------------- |
+| Runtime                | Bun (sole JS runtime)              | Package management, script execution, testing |
+| Linting (TS)           | ESLint 9 + @typescript-eslint      | TypeScript code quality                       |
+| Linting (Svelte)       | eslint-plugin-svelte               | Svelte component linting                      |
+| Linting (Rust)         | Clippy                             | Rust code quality                             |
+| Formatting (TS/Svelte) | Prettier + prettier-plugin-svelte  | Consistent formatting                         |
+| Formatting (Rust)      | rustfmt                            | Rust formatting                               |
+| Testing (Frontend)     | Vitest + @testing-library/svelte   | Component unit tests                          |
+| Testing (Backend)      | Bun test                           | API unit tests                                |
+| Testing (E2E)          | Playwright                         | End-to-end tests                              |
+| Coverage               | Vitest coverage + Bun coverage     | Line coverage reporting                       |
+| Pre-commit             | Husky or lefthook (Bun-compatible) | Local enforcement                             |
+| CI/CD                  | GitHub Actions (Bun runtime)       | Automated validation                          |
+| Type Checking          | svelte-check + tsc                 | TypeScript validation                         |
+| Security               | bun audit / cargo audit            | Dependency vulnerability scanning (light)     |
+| Docs                   | Markdown + Mermaid                 | Architecture documentation                    |
 
 **Note**: All JavaScript tooling runs via Bun. Node.js is NOT required.
 

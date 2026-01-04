@@ -5,21 +5,21 @@ import type { BillInstance, IncomeInstance, Category, Payment } from '../types';
 
 // Default color palette for categories
 const DEFAULT_COLORS: Record<string, string> = {
-  'Home': '#3b82f6',
-  'Debt': '#ef4444',
-  'Utilities': '#f59e0b',
-  'Streaming': '#8b5cf6',
-  'Transportation': '#10b981',
-  'Entertainment': '#ec4899',
-  'Insurance': '#06b6d4',
-  'Subscriptions': '#6366f1',
-  'Variable': '#f97316',
+  Home: '#3b82f6',
+  Debt: '#ef4444',
+  Utilities: '#f59e0b',
+  Streaming: '#8b5cf6',
+  Transportation: '#10b981',
+  Entertainment: '#ec4899',
+  Insurance: '#06b6d4',
+  Subscriptions: '#6366f1',
+  Variable: '#f97316',
   'Ad-hoc': '#64748b',
-  'Salary': '#10b981',
+  Salary: '#10b981',
   'Freelance/Contract': '#8b5cf6',
-  'Investment': '#3b82f6',
-  'Government': '#f59e0b',
-  'Other': '#64748b'
+  Investment: '#3b82f6',
+  Government: '#f59e0b',
+  Other: '#64748b',
 };
 
 /**
@@ -35,21 +35,23 @@ export function getDefaultColor(name: string): string {
  */
 export function migrateBillInstance(instance: any): BillInstance {
   const now = new Date().toISOString();
-  
+
   // Create a default occurrence if occurrences is missing
-  const occurrences = instance.occurrences ?? [{
-    id: crypto.randomUUID(),
-    sequence: 1,
-    expected_date: instance.due_date || `${instance.month}-01`,
-    expected_amount: instance.expected_amount ?? instance.amount ?? 0,
-    is_closed: instance.is_closed ?? instance.is_paid ?? false,
-    closed_date: instance.closed_date,
-    payments: instance.payments ?? [],
-    is_adhoc: instance.is_adhoc ?? false,
-    created_at: instance.created_at ?? now,
-    updated_at: instance.updated_at ?? now
-  }];
-  
+  const occurrences = instance.occurrences ?? [
+    {
+      id: crypto.randomUUID(),
+      sequence: 1,
+      expected_date: instance.due_date || `${instance.month}-01`,
+      expected_amount: instance.expected_amount ?? instance.amount ?? 0,
+      is_closed: instance.is_closed ?? instance.is_paid ?? false,
+      closed_date: instance.closed_date,
+      payments: instance.payments ?? [],
+      is_adhoc: instance.is_adhoc ?? false,
+      created_at: instance.created_at ?? now,
+      updated_at: instance.updated_at ?? now,
+    },
+  ];
+
   return {
     id: instance.id,
     bill_id: instance.bill_id ?? null,
@@ -65,7 +67,7 @@ export function migrateBillInstance(instance: any): BillInstance {
     category_id: instance.category_id ?? undefined,
     payment_source_id: instance.payment_source_id ?? undefined,
     created_at: instance.created_at ?? now,
-    updated_at: instance.updated_at ?? now
+    updated_at: instance.updated_at ?? now,
   };
 }
 
@@ -75,21 +77,23 @@ export function migrateBillInstance(instance: any): BillInstance {
  */
 export function migrateIncomeInstance(instance: any): IncomeInstance {
   const now = new Date().toISOString();
-  
+
   // Create a default occurrence if occurrences is missing
-  const occurrences = instance.occurrences ?? [{
-    id: crypto.randomUUID(),
-    sequence: 1,
-    expected_date: instance.due_date || `${instance.month}-01`,
-    expected_amount: instance.expected_amount ?? instance.amount ?? 0,
-    is_closed: instance.is_closed ?? instance.is_paid ?? false,
-    closed_date: instance.closed_date,
-    payments: instance.payments ?? [],
-    is_adhoc: instance.is_adhoc ?? false,
-    created_at: instance.created_at ?? now,
-    updated_at: instance.updated_at ?? now
-  }];
-  
+  const occurrences = instance.occurrences ?? [
+    {
+      id: crypto.randomUUID(),
+      sequence: 1,
+      expected_date: instance.due_date || `${instance.month}-01`,
+      expected_amount: instance.expected_amount ?? instance.amount ?? 0,
+      is_closed: instance.is_closed ?? instance.is_paid ?? false,
+      closed_date: instance.closed_date,
+      payments: instance.payments ?? [],
+      is_adhoc: instance.is_adhoc ?? false,
+      created_at: instance.created_at ?? now,
+      updated_at: instance.updated_at ?? now,
+    },
+  ];
+
   return {
     id: instance.id,
     income_id: instance.income_id ?? null,
@@ -105,7 +109,7 @@ export function migrateIncomeInstance(instance: any): IncomeInstance {
     category_id: instance.category_id ?? undefined,
     payment_source_id: instance.payment_source_id ?? undefined,
     created_at: instance.created_at ?? now,
-    updated_at: instance.updated_at ?? now
+    updated_at: instance.updated_at ?? now,
   };
 }
 
@@ -122,7 +126,7 @@ export function migrateCategory(category: any, index: number): Category {
     color: category.color ?? getDefaultColor(category.name),
     type: category.type ?? 'bill', // Default to 'bill' for existing categories
     created_at: category.created_at ?? new Date().toISOString(),
-    updated_at: category.updated_at ?? new Date().toISOString()
+    updated_at: category.updated_at ?? new Date().toISOString(),
   };
 }
 
@@ -159,8 +163,6 @@ export function needsIncomeInstanceMigration(instance: any): boolean {
  */
 export function needsCategoryMigration(category: any): boolean {
   return (
-    category.sort_order === undefined ||
-    category.color === undefined ||
-    category.type === undefined
+    category.sort_order === undefined || category.color === undefined || category.type === undefined
   );
 }

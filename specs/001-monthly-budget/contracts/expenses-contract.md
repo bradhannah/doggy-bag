@@ -20,18 +20,20 @@ Expenses component handles both variable expenses (recurring monthly expenses li
 **Purpose**: Display and manage variable expenses for the current month.
 
 **Props**:
+
 ```typescript
 interface Props {
   expenses?: VariableExpense[];
   paymentSources?: PaymentSource[];
   categories?: Category[];
-  currentMonth?: string;  // 'YYYY-MM' format
+  currentMonth?: string; // 'YYYY-MM' format
   onEdit?: (expense: VariableExpense) => void;
   onDelete?: (id: string) => void;
 }
 ```
 
 **Display Format**:
+
 ```
 ┌──────────────────────────────────────────┐
 │  [Filter: All ▾]  [Sort: Date ↓]  [Add Expense]  │
@@ -55,6 +57,7 @@ interface Props {
 ```
 
 **Features**:
+
 - **Filter by Payment Source**: Dropdown (All, Scotia, Visa, Cash, etc.)
 - **Sort Options**: Date (newest first), Amount (high-low, low-high), Name (A-Z, Z-A)
 - **Search**: Filter expenses by name
@@ -66,6 +69,7 @@ interface Props {
 - **Date Display**: Show expense date (editable field)
 
 **Events**:
+
 - `on:click={onEdit(expense)}` - Opens inline edit form
 - `on:click={onDelete(expense.id)}` - Shows confirmation: "Delete [Expense Name]?"
 - Multi-select for delete (future): Checkboxes for batch delete
@@ -77,6 +81,7 @@ interface Props {
 **Purpose**: Display and manage free-flowing (ad-hoc, one-time) expenses.
 
 **Props**:
+
 ```typescript
 interface Props {
   freeFlowingExpenses?: FreeFlowingExpense[];
@@ -91,6 +96,7 @@ interface Props {
 **Display Format**: Similar to VariableExpenseList but separate toggle
 
 **Features**:
+
 - **Quick-Add Button**: "Add Free-Flowing Expense" - emphasized (larger, different color)
 - **Separate from Variable**: Distinct list with different color coding
 - **Filter by Payment Source**: Works same as variable expenses
@@ -106,6 +112,7 @@ interface Props {
 **Purpose**: Inline form for adding or editing variable expenses quickly.
 
 **Props**:
+
 ```typescript
 interface Props {
   expense?: VariableExpense | null;
@@ -118,6 +125,7 @@ interface Props {
 ```
 
 **Form Layout**:
+
 ```
 ┌──────────────────────────────────────────┐
 │                                                │
@@ -158,6 +166,7 @@ interface Props {
 ```
 
 **Fields**:
+
 - **Name**: Text input, required, max 100 chars, auto-focused
 - **Amount**: Currency input ($, , formatting), required, > 0, max 9 digits
 - **Payment Source**: Required dropdown (from payment sources store)
@@ -167,6 +176,7 @@ interface Props {
 - **[Cancel]** button - closes form
 
 **Behaviors**:
+
 - **Auto-focus**: Name field focused on mount or "Add Expense" click
 - **Currency formatting**: Auto-add $, commas as user types, strip on blur
 - **Enter key submits**: No need to click Save button (faster workflow)
@@ -180,6 +190,7 @@ interface Props {
 **Purpose**: Modal form for adding free-flowing (one-time) expenses with emphasis on their quick, ad-hoc nature.
 
 **Props**:
+
 ```typescript
 interface Props {
   expense?: FreeFlowingExpense | null;
@@ -191,6 +202,7 @@ interface Props {
 ```
 
 **Form Layout**:
+
 ```
 ┌───────────────────────────────────────────────────────────┐
 │  ┌───────────────────────────────────────────────────────────┐ │
@@ -250,6 +262,7 @@ interface Props {
 ```
 
 **Fields**:
+
 - **Name**: Text input, required, max 100 chars, auto-focused
 - **Amount**: Currency input ($, , formatting), required, > 0, max 9 digits
 - **Payment Source**: Required dropdown (from payment sources store)
@@ -259,6 +272,7 @@ interface Props {
 - **[Cancel]** button - closes modal
 
 **Behaviors**:
+
 - **Modal overlay**: Centers on screen with backdrop
 - **Escape key**: Closes modal without saving
 - **Click outside**: Closes modal (with confirmation if unsaved changes)
@@ -274,6 +288,7 @@ interface Props {
 **Purpose**: Floating action button for quickly adding an expense from anywhere in the app.
 
 **Props**:
+
 ```typescript
 interface Props {
   mode: 'variable' | 'free_flowing';
@@ -282,6 +297,7 @@ interface Props {
 ```
 
 **Display**:
+
 - **Variable Mode**: Icon + "Add Expense" (smaller)
 - **Free-Flowing Mode**: Icon + "Add Free-Flowing Expense" (larger, emphasized)
 
@@ -294,6 +310,7 @@ interface Props {
 **Purpose**: Combined component for filter dropdown and sort options.
 
 **Props**:
+
 ```typescript
 interface Props {
   filterType: 'payment_source' | 'category';
@@ -305,6 +322,7 @@ interface Props {
 ```
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Filter By:  [Payment Source ▾] [Category ▾]  [Clear] │
@@ -418,11 +436,12 @@ interface ExpensesStore extends Writable<ExpensesState> {
     addFreeFlowing: (expense: FreeFlowingExpense) => void;
     update: (id: string, updates: Partial<VariableExpense | FreeFlowingExpense>) => void;
     delete: (id: string) => void;
-  }
+  };
 }
 ```
 
 **Store Usage**:
+
 ```typescript
 // In ExpenseList components
 $: variable = expensesStore.variable;

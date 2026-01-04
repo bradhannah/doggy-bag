@@ -21,24 +21,24 @@ Create a Detailed Monthly View for day-to-day budget management that displays bi
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| I. User-Centric Simplicity | PASS | Spreadsheet-like but richer UX reduces cognitive load |
-| II. Test-First Development | PASS | Will write tests before implementation |
-| III. Incremental Delivery | PASS | 9 user stories, each independently testable |
-| IV. Specification Before Implementation | PASS | spec.md complete with all requirements |
-| V. Observability & Debuggability | PASS | Clear error messages, actionable next steps |
-| XVI. Bun Backend | PASS | Extends existing Bun API on localhost:3000 |
-| XVII. Backend Transparency | PASS | No user-facing logs, silent saves |
-| XVIII. Tauri Desktop Shell | PASS | Svelte + Tauri, single executable |
-| XIX. SvelteKit Frontend | PASS | Svelte components, Vite build |
-| XX. Component Structure | PASS | One concern per component |
-| XXI. Reactive Declarations | PASS | Svelte stores for cross-component state |
-| XXIII. Scoped CSS Only | PASS | No Tailwind/Bootstrap |
-| XXIV. No External UI Libraries | PASS | Custom components only |
-| XXVII. Backend Testing | PASS | curl testing before user testing |
+| Principle                               | Status | Notes                                                 |
+| --------------------------------------- | ------ | ----------------------------------------------------- |
+| I. User-Centric Simplicity              | PASS   | Spreadsheet-like but richer UX reduces cognitive load |
+| II. Test-First Development              | PASS   | Will write tests before implementation                |
+| III. Incremental Delivery               | PASS   | 9 user stories, each independently testable           |
+| IV. Specification Before Implementation | PASS   | spec.md complete with all requirements                |
+| V. Observability & Debuggability        | PASS   | Clear error messages, actionable next steps           |
+| XVI. Bun Backend                        | PASS   | Extends existing Bun API on localhost:3000            |
+| XVII. Backend Transparency              | PASS   | No user-facing logs, silent saves                     |
+| XVIII. Tauri Desktop Shell              | PASS   | Svelte + Tauri, single executable                     |
+| XIX. SvelteKit Frontend                 | PASS   | Svelte components, Vite build                         |
+| XX. Component Structure                 | PASS   | One concern per component                             |
+| XXI. Reactive Declarations              | PASS   | Svelte stores for cross-component state               |
+| XXIII. Scoped CSS Only                  | PASS   | No Tailwind/Bootstrap                                 |
+| XXIV. No External UI Libraries          | PASS   | Custom components only                                |
+| XXVII. Backend Testing                  | PASS   | curl testing before user testing                      |
 
 **All gates pass. No violations to justify.**
 
@@ -129,9 +129,9 @@ src/
 
 > No violations requiring justification.
 
-| Aspect | Complexity | Justification |
-|--------|------------|---------------|
-| New route | Low | Single new route `/month/[month]` |
-| Entity extensions | Low | Adding fields to existing entities |
-| New Payment entity | Medium | Required for partial payment tracking |
-| Category config UI | Medium | Drag-drop ordering, color picker |
+| Aspect             | Complexity | Justification                         |
+| ------------------ | ---------- | ------------------------------------- |
+| New route          | Low        | Single new route `/month/[month]`     |
+| Entity extensions  | Low        | Adding fields to existing entities    |
+| New Payment entity | Medium     | Required for partial payment tracking |
+| Category config UI | Medium     | Drag-drop ordering, color picker      |

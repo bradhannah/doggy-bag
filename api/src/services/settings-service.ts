@@ -6,7 +6,7 @@ import type {
   DataDirectoryResponse,
   DirectoryValidation,
   MigrationResult,
-  MigrationMode
+  MigrationMode,
 } from '../models/settings';
 import { access, constants, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -16,11 +16,11 @@ const APP_VERSION = '0.1.0';
 
 export class SettingsService {
   private storage: StorageService;
-  
+
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
   }
-  
+
   /**
    * Get current application settings.
    */
@@ -29,26 +29,26 @@ export class SettingsService {
     return {
       dataDirectory: config.basePath,
       isDevelopment: config.isDevelopment,
-      version: APP_VERSION
+      version: APP_VERSION,
     };
   }
-  
+
   /**
    * Get current data directory configuration.
    */
   async getDataDirectory(): Promise<DataDirectoryResponse> {
     const config = StorageServiceImpl.getConfig();
     const isWritable = await this.checkWritable(config.basePath);
-    
+
     return {
       path: config.basePath,
       entitiesDir: config.entitiesDir,
       monthsDir: config.monthsDir,
       isDevelopment: config.isDevelopment,
-      isWritable
+      isWritable,
     };
   }
-  
+
   /**
    * Check if a directory is writable.
    */
@@ -60,7 +60,7 @@ export class SettingsService {
       return false;
     }
   }
-  
+
   /**
    * Validate a directory for use as data storage.
    */
@@ -70,15 +70,15 @@ export class SettingsService {
       exists: false,
       isWritable: false,
       hasExistingData: false,
-      existingFiles: []
+      existingFiles: [],
     };
-    
+
     // Check if path is empty or invalid
     if (!path || typeof path !== 'string') {
       result.error = 'Invalid path: path is required';
       return result;
     }
-    
+
     // Check if directory exists
     try {
       await access(path, constants.F_OK);
@@ -96,7 +96,7 @@ export class SettingsService {
         return result;
       }
     }
-    
+
     // Check if directory is writable (if it exists)
     if (result.exists) {
       try {
@@ -107,31 +107,31 @@ export class SettingsService {
         return result;
       }
     }
-    
+
     // Check for existing data
     if (result.exists) {
       const entitiesDir = join(path, 'entities');
       const monthsDir = join(path, 'months');
-      
+
       try {
         const entityFiles = await this.storage.listFiles(entitiesDir);
         const monthFiles = await this.storage.listFiles(monthsDir);
-        
+
         result.existingFiles = [
-          ...entityFiles.map(f => `entities/${f}`),
-          ...monthFiles.map(f => `months/${f}`)
+          ...entityFiles.map((f) => `entities/${f}`),
+          ...monthFiles.map((f) => `months/${f}`),
         ];
-        
+
         result.hasExistingData = result.existingFiles.length > 0;
       } catch {
         // No existing data directories - that's fine
       }
     }
-    
+
     result.isValid = result.isWritable || !result.exists;
     return result;
   }
-  
+
   /**
    * Migrate data from one directory to another.
    */
@@ -146,31 +146,37 @@ export class SettingsService {
       monthFilesCopied: 0,
       filesCopied: [],
       sourceDir,
-      destDir
+      destDir,
     };
-    
+
     // Note: We no longer block migration based on "development mode".
     // The frontend controls access (only available in Tauri desktop app).
     // This allows migration to work regardless of whether DATA_DIR was set on startup.
-    
+
     // Validate destination directory
     const validation = await this.validateDirectory(destDir);
     if (!validation.isValid) {
       result.error = validation.error || 'Destination directory is not valid';
       return result;
     }
-    
+
     try {
       // Create destination directories
       const destEntities = join(destDir, 'entities');
       const destMonths = join(destDir, 'months');
-      
+
       await mkdir(destEntities, { recursive: true });
       await mkdir(destMonths, { recursive: true });
-      
+
       if (mode === 'fresh') {
         // Create empty data files
-        const emptyEntities = ['bills.json', 'incomes.json', 'categories.json', 'payment-sources.json', 'undo.json'];
+        const emptyEntities = [
+          'bills.json',
+          'incomes.json',
+          'categories.json',
+          'payment-sources.json',
+          'undo.json',
+        ];
         for (const file of emptyEntities) {
           await writeFile(join(destEntities, file), '[]', 'utf-8');
           result.filesCopied.push(`entities/${file}`);
@@ -179,7 +185,7 @@ export class SettingsService {
         result.success = true;
         return result;
       }
-      
+
       if (mode === 'use_existing') {
         // Just validate that data exists at destination
         if (!validation.hasExistingData) {
@@ -189,11 +195,11 @@ export class SettingsService {
         result.success = true;
         return result;
       }
-      
+
       // mode === 'copy': Copy all data from source to destination
       const sourceEntities = join(sourceDir, 'entities');
       const sourceMonths = join(sourceDir, 'months');
-      
+
       // Copy entity files
       try {
         const entityFiles = await this.storage.listFiles(sourceEntities);
@@ -209,7 +215,7 @@ export class SettingsService {
         result.error = `Failed to copy entity files: ${errorMessage}`;
         return result;
       }
-      
+
       // Copy month files
       try {
         const monthFiles = await this.storage.listFiles(sourceMonths);
@@ -225,10 +231,9 @@ export class SettingsService {
         result.error = `Failed to copy month files: ${errorMessage}`;
         return result;
       }
-      
+
       result.success = true;
       return result;
-      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       result.error = `Migration failed: ${errorMessage}`;

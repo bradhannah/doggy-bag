@@ -24,17 +24,13 @@
 
     try {
       const result: SeedResult = await apiClient.post('/api/seed-defaults', {});
-      
+
       if (result.seeded) {
         status = 'success';
         message = `Created ${result.created.paymentSources} payment sources, ${result.created.bills} bills, ${result.created.incomes} incomes`;
-        
+
         // Refresh all stores
-        await Promise.all([
-          loadPaymentSources(),
-          loadBills(),
-          loadIncomes()
-        ]);
+        await Promise.all([loadPaymentSources(), loadBills(), loadIncomes()]);
       } else {
         status = 'exists';
         message = result.message;
@@ -47,20 +43,21 @@
 </script>
 
 <div class="load-defaults">
-  <button 
-    class="btn btn-secondary"
-    on:click={handleClick}
-    disabled={status === 'loading'}
-  >
+  <button class="btn btn-secondary" on:click={handleClick} disabled={status === 'loading'}>
     {#if status === 'loading'}
       Loading...
     {:else}
       Load Example Data
     {/if}
   </button>
-  
+
   {#if message}
-    <span class="message" class:success={status === 'success'} class:error={status === 'error'} class:exists={status === 'exists'}>
+    <span
+      class="message"
+      class:success={status === 'success'}
+      class:error={status === 'error'}
+      class:exists={status === 'exists'}
+    >
       {message}
     </span>
   {/if}

@@ -24,6 +24,7 @@ cargo tauri dev
 ```
 
 Or use the Makefile:
+
 ```bash
 make dev
 ```
@@ -40,6 +41,7 @@ make dev
 ### Feature 1: Window Size Persistence
 
 **Test Steps** (Tauri only):
+
 1. Launch the Tauri app: `cargo tauri dev`
 2. Resize the window to a custom size (e.g., 1200x800)
 3. Close the app completely
@@ -47,12 +49,14 @@ make dev
 5. **Verify**: Window opens at the same size (1200x800)
 
 **Edge Cases**:
+
 - Maximize window, close, reopen - should restore maximized
 - Resize to minimum, close, reopen - should restore minimum
 
 ### Feature 2: Responsive Layout
 
 **Test Steps**:
+
 1. Navigate to Details view (`/month/2026-01`)
 2. Resize window width from wide to narrow
 3. **Verify**: Bills and Income sections stack vertically when narrow
@@ -61,12 +65,14 @@ make dev
 6. **Verify**: Sections return to side-by-side layout
 
 **Breakpoints to Test**:
+
 - 900px container width: Sections should stack
 - 1100px+ container width: Sections should be side-by-side
 
 ### Feature 3: Category Visual States
 
 **Test Steps**:
+
 1. Navigate to Details view
 2. Mark all items in a category as paid
 3. **Verify**: Category header becomes crossed out and grayed (opacity 0.6)
@@ -79,6 +85,7 @@ make dev
 ### Feature 4: CC Payoff Balance Sync
 
 **Test Steps**:
+
 1. Set up a credit card with `pay_off_monthly` enabled in Setup
 2. Navigate to Details view
 3. Find the CC payoff bill row
@@ -93,6 +100,7 @@ make dev
 ### Feature 5: Navigation Reorganization
 
 **Test Steps**:
+
 1. View the navigation sidebar
 2. **Verify** order: Dashboard, Details, (separator), Manage Months, Budget Config
 3. **Verify**: "Setup" is renamed to "Budget Config"
@@ -103,6 +111,7 @@ make dev
 ### Feature 6: Remove Duplicate Leftover
 
 **Test Steps**:
+
 1. Navigate to Details view
 2. **Verify**: No Leftover display in the header area
 3. **Verify**: Leftover is displayed only in the left sidebar box
@@ -110,6 +119,7 @@ make dev
 ### Feature 7: Bank Accounts Header Green
 
 **Test Steps**:
+
 1. Navigate to Details view
 2. Look at the left sidebar
 3. **Verify**: "BANK ACCOUNTS & CASH" header is green (#4ade80)
@@ -118,6 +128,7 @@ make dev
 ### Feature 8: Remove Net Worth
 
 **Test Steps**:
+
 1. Navigate to Details view
 2. Look at the left sidebar
 3. **Verify**: No "Net Worth" row after the debt accounts section
@@ -125,6 +136,7 @@ make dev
 ### Feature 9: Persist Compact Mode
 
 **Test Steps**:
+
 1. Navigate to Details view
 2. Click the Compact toggle button (two-line icon)
 3. **Verify**: View switches to compact mode
@@ -136,6 +148,7 @@ make dev
 ### Feature 10: Scroll Position Stability
 
 **Test Steps**:
+
 1. Navigate to Details view with many items
 2. Scroll down partway
 3. Click on a bill to open edit drawer
@@ -148,6 +161,7 @@ make dev
 ### Feature 11: Remove Delete from CC Payoffs
 
 **Test Steps**:
+
 1. Set up a credit card with `pay_off_monthly` enabled
 2. Navigate to Details view
 3. Find the CC payoff bill row
@@ -157,6 +171,7 @@ make dev
 ### Feature 12: Generate Anonymized Example Data
 
 **Test Steps**:
+
 ```bash
 # Run the script
 bun run scripts/generate-example-data.ts
@@ -175,33 +190,37 @@ cat data/example/entities/bills.json
 
 ## API Endpoints Used
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/months/{month}` | GET | Get detailed month data |
-| `/api/months/{month}/bills/{id}/paid` | POST | Toggle bill paid status |
-| `/api/months/{month}/bank-balances` | PUT | Update bank balances |
-| `/api/payment-sources` | GET | Get all payment sources |
+| Endpoint                              | Method | Description             |
+| ------------------------------------- | ------ | ----------------------- |
+| `/api/months/{month}`                 | GET    | Get detailed month data |
+| `/api/months/{month}/bills/{id}/paid` | POST   | Toggle bill paid status |
+| `/api/months/{month}/bank-balances`   | PUT    | Update bank balances    |
+| `/api/payment-sources`                | GET    | Get all payment sources |
 
 ---
 
 ## Common Issues
 
 ### Window size not persisting
+
 - Ensure you're testing in Tauri (`cargo tauri dev`), not browser
 - Check console for Tauri Store errors
 - Verify `settings.json` exists in app data directory
 
 ### Horizontal scrollbar still appears
+
 - Check DevTools for which element is causing overflow
 - Verify CSS changes were applied (hard refresh)
 - Test at exactly 900px container width
 
 ### CC sync modal not appearing
+
 - Verify the bill has `is_cc_payoff: true`
 - Check browser console for errors
 - Ensure payment source exists and has a balance
 
 ### Compact mode not persisting
+
 - Clear localStorage: `localStorage.removeItem('budgetforfun-compact-mode')`
 - Check browser console for storage errors
 - Verify in Dev Tools > Application > Local Storage
@@ -211,12 +230,14 @@ cat data/example/entities/bills.json
 ## Debugging
 
 ### Enable verbose logging
+
 ```typescript
 // In any component
 console.log('[Debug]', { value });
 ```
 
 ### Check Tauri Store contents
+
 ```typescript
 import { Store } from '@tauri-apps/plugin-store';
 const store = await Store.load('settings.json');
@@ -225,9 +246,10 @@ console.log('Store contents:', all);
 ```
 
 ### Check localStorage
+
 ```javascript
 // In browser console
-Object.entries(localStorage).filter(([k]) => k.startsWith('budgetforfun'))
+Object.entries(localStorage).filter(([k]) => k.startsWith('budgetforfun'));
 ```
 
 ---

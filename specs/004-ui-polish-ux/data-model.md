@@ -18,28 +18,30 @@ Stores the user's preferred window dimensions for restoration on app launch.
 
 ```typescript
 interface WindowState {
-  width: number;   // Window width in pixels
-  height: number;  // Window height in pixels
-  x?: number;      // Optional: Window X position
-  y?: number;      // Optional: Window Y position
+  width: number; // Window width in pixels
+  height: number; // Window height in pixels
+  x?: number; // Optional: Window X position
+  y?: number; // Optional: Window Y position
 }
 ```
 
 **Field Details**:
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `width` | number | Yes | 800 | Window width in logical pixels |
-| `height` | number | Yes | 600 | Window height in logical pixels |
-| `x` | number | No | - | Window X position (optional, for multi-monitor) |
-| `y` | number | No | - | Window Y position (optional, for multi-monitor) |
+| Field    | Type   | Required | Default | Description                                     |
+| -------- | ------ | -------- | ------- | ----------------------------------------------- |
+| `width`  | number | Yes      | 800     | Window width in logical pixels                  |
+| `height` | number | Yes      | 600     | Window height in logical pixels                 |
+| `x`      | number | No       | -       | Window X position (optional, for multi-monitor) |
+| `y`      | number | No       | -       | Window Y position (optional, for multi-monitor) |
 
 **Validation Rules**:
+
 - `width` must be >= 600 (minimum usable width)
 - `height` must be >= 400 (minimum usable height)
 - Position values are validated against current display bounds on restore
 
 **Example**:
+
 ```json
 {
   "windowState": {
@@ -55,28 +57,29 @@ interface WindowState {
 
 The existing settings store is extended with additional UI preferences.
 
-**Storage Location**: 
+**Storage Location**:
+
 - Tauri: `settings.json` via plugin-store
 - Browser: `localStorage`
 
 ```typescript
 interface UserPreferences {
   // Existing
-  zoomLevel: number;        // 0.5 to 2.0, default 1.0
-  dataDirectory?: string;   // Custom data directory path
-  
+  zoomLevel: number; // 0.5 to 2.0, default 1.0
+  dataDirectory?: string; // Custom data directory path
+
   // New for this feature
-  compactMode: boolean;     // Compact view toggle, default false
+  compactMode: boolean; // Compact view toggle, default false
   windowState?: WindowState; // Window dimensions
 }
 ```
 
 **New Fields**:
 
-| Field | Type | Required | Default | Storage |
-|-------|------|----------|---------|---------|
-| `compactMode` | boolean | No | false | localStorage |
-| `windowState` | WindowState | No | {width:800,height:600} | Tauri Store |
+| Field         | Type        | Required | Default                | Storage      |
+| ------------- | ----------- | -------- | ---------------------- | ------------ |
+| `compactMode` | boolean     | No       | false                  | localStorage |
+| `windowState` | WindowState | No       | {width:800,height:600} | Tauri Store  |
 
 **Note**: `compactMode` uses localStorage (not Tauri Store) for simplicity, following the existing `widthMode` pattern.
 
@@ -99,9 +102,9 @@ interface BillInstance {
   expected_amount: number;
   actual_amount?: number;
   is_paid: boolean;
-  
+
   // Existing (may not be consistently used)
-  is_cc_payoff?: boolean;  // True if this is a CC payoff entry
+  is_cc_payoff?: boolean; // True if this is a CC payoff entry
   payment_source_id?: string; // ID of the payment source (for CC sync)
 }
 ```
@@ -114,20 +117,20 @@ interface BillInstance {
 
 ### Tauri Store (`settings.json`)
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `zoomLevel` | number | WebView zoom factor (0.5-2.0) |
-| `dataDirectory` | string | Custom data directory path |
-| `windowState` | WindowState | Window size and position |
+| Key             | Type        | Description                   |
+| --------------- | ----------- | ----------------------------- |
+| `zoomLevel`     | number      | WebView zoom factor (0.5-2.0) |
+| `dataDirectory` | string      | Custom data directory path    |
+| `windowState`   | WindowState | Window size and position      |
 
 ### localStorage
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `budgetforfun-width-mode` | string | Width mode: "small", "medium", "wide" |
-| `budgetforfun-compact-mode` | string | Compact mode: "true" or "false" |
-| `budgetforfun_zoom` | string | Browser zoom fallback (numeric string) |
-| `budgetforfun_data_dir` | string | Browser data directory fallback |
+| Key                         | Type   | Description                            |
+| --------------------------- | ------ | -------------------------------------- |
+| `budgetforfun-width-mode`   | string | Width mode: "small", "medium", "wide"  |
+| `budgetforfun-compact-mode` | string | Compact mode: "true" or "false"        |
+| `budgetforfun_zoom`         | string | Browser zoom fallback (numeric string) |
+| `budgetforfun_data_dir`     | string | Browser data directory fallback        |
 
 ---
 
@@ -240,6 +243,7 @@ For the data generation script, here's the structure of anonymized output:
 ### No Migration Required
 
 This feature adds optional fields with sensible defaults:
+
 - `windowState`: Default to 800x600 (current default)
 - `compactMode`: Default to false (current behavior)
 

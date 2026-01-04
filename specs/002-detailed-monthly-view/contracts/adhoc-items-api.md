@@ -23,17 +23,19 @@ Endpoints for creating and managing one-time ad-hoc bills and incomes that don't
 | month | string | Yes | Month in YYYY-MM format |
 
 **Request Body**:
+
 ```typescript
 interface CreateAdhocBillRequest {
-  name: string;                  // Required, 1-100 characters
-  amount: number;                // Required, positive (in cents)
-  category_id?: string;          // Optional, defaults to "Ad-hoc" category
-  payment_source_id?: string;    // Optional
-  date?: string;                 // Optional, ISO date for when paid
+  name: string; // Required, 1-100 characters
+  amount: number; // Required, positive (in cents)
+  category_id?: string; // Optional, defaults to "Ad-hoc" category
+  payment_source_id?: string; // Optional
+  date?: string; // Optional, ISO date for when paid
 }
 ```
 
 **Response**: `201 Created`
+
 ```typescript
 interface CreateAdhocBillResponse {
   billInstance: BillInstance;
@@ -41,14 +43,14 @@ interface CreateAdhocBillResponse {
 
 interface BillInstance {
   id: string;
-  bill_id: null;                 // Always null for ad-hoc
+  bill_id: null; // Always null for ad-hoc
   month: string;
-  name: string;                  // From request
-  expected_amount: number;       // Set to 0 for ad-hoc
-  actual_amount: number;         // From request amount
-  payments: [];                  // Empty for new ad-hoc
+  name: string; // From request
+  expected_amount: number; // Set to 0 for ad-hoc
+  actual_amount: number; // From request amount
+  payments: []; // Empty for new ad-hoc
   is_default: false;
-  is_paid: boolean;              // true if date provided
+  is_paid: boolean; // true if date provided
   is_adhoc: true;
   due_date: null;
   category_id: string;
@@ -59,6 +61,7 @@ interface BillInstance {
 ```
 
 **Behavior**:
+
 - Creates BillInstance with `bill_id: null` and `is_adhoc: true`
 - Sets `expected_amount: 0` (ad-hoc items have no expected)
 - Sets `actual_amount` from request
@@ -66,10 +69,12 @@ interface BillInstance {
 - If no `category_id`, uses default "Ad-hoc" bill category
 
 **Errors**:
+
 - `400 Bad Request`: Missing name or invalid amount
 - `404 Not Found`: Month, category, or payment source not found
 
 **Example Request**:
+
 ```json
 {
   "name": "Car Repair",
@@ -92,17 +97,19 @@ interface BillInstance {
 | month | string | Yes | Month in YYYY-MM format |
 
 **Request Body**:
+
 ```typescript
 interface CreateAdhocIncomeRequest {
-  name: string;                  // Required, 1-100 characters
-  amount: number;                // Required, positive (in cents)
-  category_id?: string;          // Optional, defaults to "Ad-hoc" income category
-  payment_source_id?: string;    // Optional (where received)
-  date?: string;                 // Optional, ISO date for when received
+  name: string; // Required, 1-100 characters
+  amount: number; // Required, positive (in cents)
+  category_id?: string; // Optional, defaults to "Ad-hoc" income category
+  payment_source_id?: string; // Optional (where received)
+  date?: string; // Optional, ISO date for when received
 }
 ```
 
 **Response**: `201 Created`
+
 ```typescript
 interface CreateAdhocIncomeResponse {
   incomeInstance: IncomeInstance;
@@ -110,13 +117,13 @@ interface CreateAdhocIncomeResponse {
 
 interface IncomeInstance {
   id: string;
-  income_id: null;               // Always null for ad-hoc
+  income_id: null; // Always null for ad-hoc
   month: string;
   name: string;
-  expected_amount: number;       // Set to 0 for ad-hoc
-  actual_amount: number;         // From request amount
+  expected_amount: number; // Set to 0 for ad-hoc
+  actual_amount: number; // From request amount
   is_default: false;
-  is_paid: boolean;              // true if date provided
+  is_paid: boolean; // true if date provided
   is_adhoc: true;
   due_date: null;
   category_id: string;
@@ -127,6 +134,7 @@ interface IncomeInstance {
 ```
 
 **Example Request**:
+
 ```json
 {
   "name": "Sold old laptop",
@@ -149,6 +157,7 @@ interface IncomeInstance {
 | id | string | Yes | Bill instance ID |
 
 **Request Body**:
+
 ```typescript
 interface UpdateAdhocBillRequest {
   name?: string;
@@ -160,6 +169,7 @@ interface UpdateAdhocBillRequest {
 ```
 
 **Response**: `200 OK`
+
 ```typescript
 interface UpdateAdhocBillResponse {
   billInstance: BillInstance;
@@ -167,6 +177,7 @@ interface UpdateAdhocBillResponse {
 ```
 
 **Errors**:
+
 - `400 Bad Request`: Instance is not ad-hoc
 - `404 Not Found`: Month or instance not found
 
@@ -183,6 +194,7 @@ interface UpdateAdhocBillResponse {
 | id | string | Yes | Income instance ID |
 
 **Request Body**:
+
 ```typescript
 interface UpdateAdhocIncomeRequest {
   name?: string;
@@ -194,6 +206,7 @@ interface UpdateAdhocIncomeRequest {
 ```
 
 **Response**: `200 OK`
+
 ```typescript
 interface UpdateAdhocIncomeResponse {
   incomeInstance: IncomeInstance;
@@ -215,6 +228,7 @@ interface UpdateAdhocIncomeResponse {
 **Response**: `204 No Content`
 
 **Errors**:
+
 - `400 Bad Request`: Instance is not ad-hoc
 - `404 Not Found`: Month or instance not found
 
@@ -245,26 +259,29 @@ interface UpdateAdhocIncomeResponse {
 | id | string | Yes | Ad-hoc bill instance ID |
 
 **Request Body**:
+
 ```typescript
 interface MakeRegularBillRequest {
-  name: string;                   // Bill name (may differ from ad-hoc)
-  amount: number;                 // Default amount for recurring bill
-  category_id: string;            // Required for regular bill
-  payment_source_id: string;      // Required for regular bill
-  billing_period: BillingPeriod;  // 'monthly' | 'bi-weekly' | 'weekly' | 'semi-annually'
-  due_day?: number;               // Optional, 1-31
+  name: string; // Bill name (may differ from ad-hoc)
+  amount: number; // Default amount for recurring bill
+  category_id: string; // Required for regular bill
+  payment_source_id: string; // Required for regular bill
+  billing_period: BillingPeriod; // 'monthly' | 'bi-weekly' | 'weekly' | 'semi-annually'
+  due_day?: number; // Optional, 1-31
 }
 ```
 
 **Response**: `201 Created`
+
 ```typescript
 interface MakeRegularBillResponse {
-  bill: Bill;                     // Newly created recurring bill
-  billInstance: BillInstance;     // Updated instance (now references bill)
+  bill: Bill; // Newly created recurring bill
+  billInstance: BillInstance; // Updated instance (now references bill)
 }
 ```
 
 **Behavior**:
+
 1. Creates new Bill entity with provided details
 2. Updates BillInstance:
    - Sets `bill_id` to new bill's ID
@@ -273,11 +290,13 @@ interface MakeRegularBillResponse {
 3. Future months will include this bill as recurring
 
 **Errors**:
+
 - `400 Bad Request`: Instance is not ad-hoc
 - `400 Bad Request`: Missing required fields
 - `404 Not Found`: Month, instance, category, or payment source not found
 
 **Example Request**:
+
 ```json
 {
   "name": "Car Insurance",
@@ -302,6 +321,7 @@ interface MakeRegularBillResponse {
 | id | string | Yes | Ad-hoc income instance ID |
 
 **Request Body**:
+
 ```typescript
 interface MakeRegularIncomeRequest {
   name: string;
@@ -314,6 +334,7 @@ interface MakeRegularIncomeRequest {
 ```
 
 **Response**: `201 Created`
+
 ```typescript
 interface MakeRegularIncomeResponse {
   income: Income;
@@ -326,6 +347,7 @@ interface MakeRegularIncomeResponse {
 ## UI Flow: "Make Regular?"
 
 ### Drawer Pre-fill
+
 When user clicks "Make Regular?" on an ad-hoc item:
 
 ```typescript
@@ -334,12 +356,13 @@ const prefillData = {
   amount: adhocInstance.actual_amount,
   category_id: adhocInstance.category_id,
   payment_source_id: adhocInstance.payment_source_id,
-  billing_period: 'monthly',  // Default
-  due_day: undefined
+  billing_period: 'monthly', // Default
+  due_day: undefined,
 };
 ```
 
 ### Drawer Fields
+
 1. **Name** - Text input (pre-filled)
 2. **Amount** - Currency input (pre-filled)
 3. **Category** - Dropdown of bill/income categories (pre-filled)
@@ -348,6 +371,7 @@ const prefillData = {
 6. **Due Day** - Number input 1-31 (optional)
 
 ### Submit Flow
+
 1. Validate all required fields
 2. Call `/api/months/:month/adhoc/:type/:id/make-regular`
 3. Show success toast: "Created recurring bill: {name}"
@@ -359,15 +383,19 @@ const prefillData = {
 ## Ad-hoc Item Display
 
 ### In Category Groups
+
 Ad-hoc items appear under their assigned category (or "Ad-hoc" category by default).
 
 ### Visual Indicators
+
 - Italic text or badge indicating "one-time"
 - "Make Regular?" link/button
 - No expected amount column (shows "-" or blank)
 
 ### Sorting Within Category
+
 Ad-hoc items sort by:
+
 1. is_paid (unpaid first)
 2. created_at (newest first)
 
@@ -376,18 +404,22 @@ Ad-hoc items sort by:
 ## Validation Rules
 
 ### Name
+
 - Required, 1-100 characters
 - Trimmed of whitespace
 
 ### Amount
+
 - Required, positive integer (cents)
 - Must be > 0
 
 ### Category
+
 - Must exist and match type (bill category for bills, income for incomes)
 - If not provided, uses default "Ad-hoc" category
 
 ### Payment Source
+
 - Optional
 - If provided, must exist
 
@@ -396,6 +428,7 @@ Ad-hoc items sort by:
 ## Undo Support
 
 All ad-hoc operations support undo:
+
 - Create: Undo deletes the instance
 - Update: Undo reverts changes
 - Delete: Undo restores the instance

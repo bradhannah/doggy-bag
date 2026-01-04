@@ -6,11 +6,7 @@
   import { loadIncomes } from '../../stores/incomes';
 
   onMount(async () => {
-    await Promise.all([
-      loadPaymentSources(),
-      loadBills(),
-      loadIncomes()
-    ]);
+    await Promise.all([loadPaymentSources(), loadBills(), loadIncomes()]);
   });
 </script>
 

@@ -8,7 +8,7 @@ import type { Bill, Income, Occurrence, BillingPeriod } from '../types';
  */
 export function generateBillOccurrences(
   bill: Bill,
-  month: string  // "2026-01"
+  month: string // "2026-01"
 ): Occurrence[] {
   return generateOccurrences(
     bill.billing_period,
@@ -24,7 +24,7 @@ export function generateBillOccurrences(
  */
 export function generateIncomeOccurrences(
   income: Income,
-  month: string  // "2026-01"
+  month: string // "2026-01"
 ): Occurrence[] {
   return generateOccurrences(
     income.billing_period,
@@ -47,7 +47,7 @@ export function generateOccurrences(
 ): Occurrence[] {
   const now = new Date().toISOString();
   const dates = getOccurrenceDatesInMonth(billingPeriod, startDate, dueDay, month);
-  
+
   return dates.map((date, index) => ({
     id: crypto.randomUUID(),
     sequence: index + 1,
@@ -57,7 +57,7 @@ export function generateOccurrences(
     payments: [],
     is_adhoc: false,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   }));
 }
 
@@ -74,20 +74,20 @@ export function getOccurrenceDatesInMonth(
   const startOfMonth = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0); // Last day of month
   const lastDayOfMonth = endOfMonth.getDate();
-  
+
   switch (billingPeriod) {
     case 'monthly':
       return getMonthlyDates(dueDay, month, lastDayOfMonth);
-    
+
     case 'bi_weekly':
       return getBiWeeklyDatesInMonth(startDate, month);
-    
+
     case 'weekly':
       return getWeeklyDatesInMonth(startDate, month);
-    
+
     case 'semi_annually':
       return getSemiAnnuallyDatesInMonth(startDate, month);
-    
+
     default:
       // Default to monthly if unknown
       return getMonthlyDates(dueDay, month, lastDayOfMonth);
@@ -111,41 +111,38 @@ function getMonthlyDates(
  * Get bi-weekly (every 2 weeks) occurrence dates in a month
  * Requires start_date to calculate correctly
  */
-export function getBiWeeklyDatesInMonth(
-  startDate: string | undefined,
-  month: string
-): string[] {
+export function getBiWeeklyDatesInMonth(startDate: string | undefined, month: string): string[] {
   if (!startDate) {
     // If no start_date, default to 1st and 15th
     return [`${month}-01`, `${month}-15`];
   }
-  
+
   const [year, monthNum] = month.split('-').map(Number);
   const startOfMonth = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0);
-  
+
   const anchor = new Date(startDate);
   const dates: string[] = [];
-  
+
   // Calculate milliseconds in 14 days
   const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
-  
+
   // Find the first occurrence on or after the anchor date
   // that falls within this month
   let current = new Date(anchor);
-  
+
   // If anchor is after the month, we need to go backwards
   if (current > endOfMonth) {
     while (current > endOfMonth) {
       current = new Date(current.getTime() - twoWeeksMs);
     }
   }
-  
+
   // If anchor is before the start of month, advance to first occurrence in month
   while (current < startOfMonth) {
     current = new Date(current.getTime() + twoWeeksMs);
   }
-  
+
   // Collect all bi-weekly dates within the month
   while (current <= endOfMonth) {
     if (current >= startOfMonth) {
@@ -153,7 +150,7 @@ export function getBiWeeklyDatesInMonth(
     }
     current = new Date(current.getTime() + twoWeeksMs);
   }
-  
+
   return dates.sort();
 }
 
@@ -161,39 +158,36 @@ export function getBiWeeklyDatesInMonth(
  * Get weekly occurrence dates in a month
  * Requires start_date to calculate correctly
  */
-export function getWeeklyDatesInMonth(
-  startDate: string | undefined,
-  month: string
-): string[] {
+export function getWeeklyDatesInMonth(startDate: string | undefined, month: string): string[] {
   if (!startDate) {
     // If no start_date, return all Mondays in the month
     return getWeekdayDatesInMonth(month, 1); // 1 = Monday
   }
-  
+
   const [year, monthNum] = month.split('-').map(Number);
   const startOfMonth = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0);
-  
+
   const anchor = new Date(startDate);
   const dates: string[] = [];
-  
+
   // Calculate milliseconds in 7 days
   const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-  
+
   let current = new Date(anchor);
-  
+
   // If anchor is after the month, go backwards
   if (current > endOfMonth) {
     while (current > endOfMonth) {
       current = new Date(current.getTime() - oneWeekMs);
     }
   }
-  
+
   // If anchor is before the start of month, advance
   while (current < startOfMonth) {
     current = new Date(current.getTime() + oneWeekMs);
   }
-  
+
   // Collect all weekly dates within the month
   while (current <= endOfMonth) {
     if (current >= startOfMonth) {
@@ -201,7 +195,7 @@ export function getWeeklyDatesInMonth(
     }
     current = new Date(current.getTime() + oneWeekMs);
   }
-  
+
   return dates.sort();
 }
 
@@ -221,22 +215,22 @@ export function getSemiAnnuallyDatesInMonth(
     }
     return [];
   }
-  
+
   const [year, monthNum] = month.split('-').map(Number);
   const anchor = new Date(startDate);
   const anchorMonth = anchor.getMonth(); // 0-based
   const anchorDay = anchor.getDate();
-  
+
   // Semi-annually means every 6 months from start date
   // Check if this month is 0, 6, 12, 18... months from anchor
   const monthsDiff = (year - anchor.getFullYear()) * 12 + (monthNum - 1 - anchorMonth);
-  
+
   if (monthsDiff >= 0 && monthsDiff % 6 === 0) {
     const lastDayOfMonth = new Date(year, monthNum, 0).getDate();
     const day = Math.min(anchorDay, lastDayOfMonth);
     return [`${month}-${String(day).padStart(2, '0')}`];
   }
-  
+
   return [];
 }
 
@@ -246,21 +240,21 @@ export function getSemiAnnuallyDatesInMonth(
 function getWeekdayDatesInMonth(month: string, weekday: number): string[] {
   const [year, monthNum] = month.split('-').map(Number);
   const dates: string[] = [];
-  
+
   const current = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0);
-  
+
   // Find first occurrence of the weekday
   while (current.getDay() !== weekday) {
     current.setDate(current.getDate() + 1);
   }
-  
+
   // Collect all occurrences
   while (current <= endOfMonth) {
     dates.push(formatDate(current));
     current.setDate(current.getDate() + 7);
   }
-  
+
   return dates;
 }
 
@@ -287,11 +281,11 @@ export function isExtraOccurrenceMonth(
     case 'bi_weekly':
       // Normally 2 bi-weekly occurrences, 3 is extra
       return occurrenceCount > 2;
-    
+
     case 'weekly':
       // Normally 4 weekly occurrences, 5 is extra
       return occurrenceCount > 4;
-    
+
     default:
       return false;
   }
@@ -337,16 +331,13 @@ export function sumOccurrencePayments(occurrences: Occurrence[]): number {
  */
 export function areAllOccurrencesClosed(occurrences: Occurrence[]): boolean {
   if (occurrences.length === 0) return false;
-  return occurrences.every(occ => occ.is_closed);
+  return occurrences.every((occ) => occ.is_closed);
 }
 
 /**
  * Create a single ad-hoc occurrence (user-added)
  */
-export function createAdhocOccurrence(
-  expectedDate: string,
-  expectedAmount: number
-): Occurrence {
+export function createAdhocOccurrence(expectedDate: string, expectedAmount: number): Occurrence {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
@@ -357,7 +348,7 @@ export function createAdhocOccurrence(
     payments: [],
     is_adhoc: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   };
 }
 
@@ -370,6 +361,6 @@ export function resequenceOccurrences(occurrences: Occurrence[]): Occurrence[] {
     .sort((a, b) => a.expected_date.localeCompare(b.expected_date))
     .map((occ, index) => ({
       ...occ,
-      sequence: index + 1
+      sequence: index + 1,
     }));
 }

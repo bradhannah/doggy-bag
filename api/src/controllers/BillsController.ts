@@ -10,7 +10,7 @@ import {
   Response,
   Tags,
   SuccessResponse,
-  Example
+  Example,
 } from 'tsoa';
 import type { Bill } from '../types';
 import type { CreateBillRequest, UpdateBillRequest, ApiError } from '../types/requests';
@@ -22,25 +22,26 @@ import type { CreateBillRequest, UpdateBillRequest, ApiError } from '../types/re
 @Route('api/bills')
 @Tags('Bills')
 export class BillsController extends Controller {
-  
   /**
    * Get all bill definitions
    * @summary List all bills
    */
   @Get()
   @SuccessResponse(200, 'OK')
-  @Example<Bill[]>([{
-    id: 'bill-123',
-    name: 'Electric Bill',
-    amount: 15000,
-    billing_period: 'monthly',
-    day_of_month: 15,
-    payment_source_id: 'ps-001',
-    category_id: 'cat-utilities',
-    is_active: true,
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z'
-  }])
+  @Example<Bill[]>([
+    {
+      id: 'bill-123',
+      name: 'Electric Bill',
+      amount: 15000,
+      billing_period: 'monthly',
+      day_of_month: 15,
+      payment_source_id: 'ps-001',
+      category_id: 'cat-utilities',
+      is_active: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    },
+  ])
   public async getBills(): Promise<Bill[]> {
     // Implementation handled by existing route handlers
     throw new Error('Not implemented - use existing handlers');
@@ -63,11 +64,9 @@ export class BillsController extends Controller {
     category_id: 'cat-utilities',
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z'
+    updated_at: '2025-01-01T00:00:00Z',
   })
-  public async createBill(
-    @Body() body: CreateBillRequest
-  ): Promise<Bill> {
+  public async createBill(@Body() body: CreateBillRequest): Promise<Bill> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -80,10 +79,7 @@ export class BillsController extends Controller {
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(400, 'Bad Request')
   @Response<ApiError>(404, 'Not Found')
-  public async updateBill(
-    @Path() id: string,
-    @Body() body: UpdateBillRequest
-  ): Promise<Bill> {
+  public async updateBill(@Path() id: string, @Body() body: UpdateBillRequest): Promise<Bill> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -95,9 +91,7 @@ export class BillsController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteBill(
-    @Path() id: string
-  ): Promise<void> {
+  public async deleteBill(@Path() id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

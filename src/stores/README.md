@@ -32,17 +32,17 @@ export const entityStore = store;
 
 // Export actions
 export const addEntity = (entity: DataType) => {
-  entityStore.update(items => [...items, entity]);
+  entityStore.update((items) => [...items, entity]);
 };
 
 export const updateEntity = (id: string, updates: Partial<DataType>) => {
-  entityStore.update(items => 
-    items.map(item => item.id === id ? { ...item, ...updates } : item)
+  entityStore.update((items) =>
+    items.map((item) => (item.id === id ? { ...item, ...updates } : item))
   );
 };
 
 export const deleteEntity = (id: string) => {
-  entityStore.update(items => items.filter(item => item.id !== id));
+  entityStore.update((items) => items.filter((item) => item.id !== id));
 };
 ```
 
@@ -57,6 +57,7 @@ export const deleteEntity = (id: string) => {
 ## API Integration
 
 Each data store will:
+
 1. Fetch entities from backend API on mount
 2. Provide add/update/delete actions that call backend
 3. Re-fetch on backend changes (poll or event)

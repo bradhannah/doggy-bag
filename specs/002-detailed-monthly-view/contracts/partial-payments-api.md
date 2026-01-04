@@ -24,14 +24,16 @@ New endpoints for tracking partial payments toward bills. Payments are stored as
 | billInstanceId | string | Yes | Bill instance ID |
 
 **Request Body**:
+
 ```typescript
 interface AddPaymentRequest {
-  amount: number;      // Required, positive (in cents)
-  date: string;        // Required, ISO date (YYYY-MM-DD)
+  amount: number; // Required, positive (in cents)
+  date: string; // Required, ISO date (YYYY-MM-DD)
 }
 ```
 
 **Response**: `201 Created`
+
 ```typescript
 interface AddPaymentResponse {
   payment: Payment;
@@ -47,6 +49,7 @@ interface Payment {
 ```
 
 **Behavior**:
+
 - Generates UUID for payment id
 - Appends to billInstance.payments array
 - Updates billInstance.updated_at
@@ -54,11 +57,13 @@ interface Payment {
 - Total payments can exceed expected_amount (overpayment allowed)
 
 **Errors**:
+
 - `400 Bad Request`: Invalid amount (must be positive)
 - `400 Bad Request`: Invalid date format
 - `404 Not Found`: Month or bill instance not found
 
 **Example Request**:
+
 ```json
 {
   "amount": 12000,
@@ -67,6 +72,7 @@ interface Payment {
 ```
 
 **Example Response**:
+
 ```json
 {
   "payment": {
@@ -82,7 +88,12 @@ interface Payment {
     "expected_amount": 30000,
     "actual_amount": null,
     "payments": [
-      { "id": "pay-abc123", "amount": 12000, "date": "2025-01-05", "created_at": "2025-01-05T10:30:00Z" }
+      {
+        "id": "pay-abc123",
+        "amount": 12000,
+        "date": "2025-01-05",
+        "created_at": "2025-01-05T10:30:00Z"
+      }
     ],
     "is_paid": false,
     "is_adhoc": false,
@@ -105,6 +116,7 @@ interface Payment {
 | paymentId | string | Yes | Payment ID to remove |
 
 **Response**: `200 OK`
+
 ```typescript
 interface DeletePaymentResponse {
   billInstance: BillInstance;
@@ -112,9 +124,11 @@ interface DeletePaymentResponse {
 ```
 
 **Errors**:
+
 - `404 Not Found`: Month, bill instance, or payment not found
 
 **Behavior**:
+
 - Removes payment from payments array
 - Updates billInstance.updated_at
 - Supports undo (adds to undo stack)
@@ -133,14 +147,16 @@ interface DeletePaymentResponse {
 | paymentId | string | Yes | Payment ID to update |
 
 **Request Body**:
+
 ```typescript
 interface UpdatePaymentRequest {
-  amount?: number;     // Positive (in cents)
-  date?: string;       // ISO date (YYYY-MM-DD)
+  amount?: number; // Positive (in cents)
+  date?: string; // ISO date (YYYY-MM-DD)
 }
 ```
 
 **Response**: `200 OK`
+
 ```typescript
 interface UpdatePaymentResponse {
   payment: Payment;
@@ -149,6 +165,7 @@ interface UpdatePaymentResponse {
 ```
 
 **Errors**:
+
 - `400 Bad Request`: Invalid amount or date
 - `404 Not Found`: Month, bill instance, or payment not found
 
@@ -161,14 +178,16 @@ interface UpdatePaymentResponse {
 **Description**: Extended to support actual_amount and is_paid updates.
 
 **Extended Request Body**:
+
 ```typescript
 interface UpdateBillInstanceRequest {
-  actual_amount?: number;    // NEW: User-entered actual
-  is_paid?: boolean;         // Marks bill as fully paid
+  actual_amount?: number; // NEW: User-entered actual
+  is_paid?: boolean; // Marks bill as fully paid
 }
 ```
 
 **Behavior**:
+
 - Setting `actual_amount` is for non-partial payment bills
 - If payments array has entries, `actual_amount` is ignored (use payments instead)
 - Setting `is_paid: true` marks bill complete regardless of payments
@@ -186,6 +205,7 @@ interface UpdateBillInstanceRequest {
 ## Calculations
 
 ### Total Paid
+
 ```typescript
 function getTotalPaid(billInstance: BillInstance): number {
   if (billInstance.payments.length > 0) {
@@ -196,6 +216,7 @@ function getTotalPaid(billInstance: BillInstance): number {
 ```
 
 ### Remaining Balance
+
 ```typescript
 function getRemainingBalance(billInstance: BillInstance): number {
   const paid = getTotalPaid(billInstance);
@@ -204,14 +225,19 @@ function getRemainingBalance(billInstance: BillInstance): number {
 ```
 
 ### Payment Progress
+
 ```typescript
-function getPaymentProgress(billInstance: BillInstance): { paid: number; expected: number; percentage: number } {
+function getPaymentProgress(billInstance: BillInstance): {
+  paid: number;
+  expected: number;
+  percentage: number;
+} {
   const paid = getTotalPaid(billInstance);
   const expected = billInstance.expected_amount;
   return {
     paid,
     expected,
-    percentage: expected > 0 ? Math.min(100, (paid / expected) * 100) : 0
+    percentage: expected > 0 ? Math.min(100, (paid / expected) * 100) : 0,
   };
 }
 ```
@@ -221,16 +247,20 @@ function getPaymentProgress(billInstance: BillInstance): { paid: number; expecte
 ## UI Display Format
 
 ### Partial Payment Cell
+
 Display format: `$X / $Y` where X is paid, Y is expected
 
 Examples:
+
 - No payments: `$0 / $300`
 - Partial: `$120 / $300`
 - Complete: `$300 / $300` (or just `$300` with checkmark)
 - Overpaid: `$350 / $300` (highlight in green)
 
 ### Add Payment Button
+
 Show "Add Payment" button when:
+
 - Bill is not marked as paid (`is_paid: false`)
 - Remaining balance > 0
 
@@ -239,11 +269,13 @@ Show "Add Payment" button when:
 ## Validation Rules
 
 ### Payment Amount
+
 - Must be positive (> 0)
 - In cents (integers only)
 - No upper limit (overpayment allowed)
 
 ### Payment Date
+
 - Must be valid ISO date (YYYY-MM-DD)
 - Should be within the bill's month (warning only, not enforced)
 - Cannot be in the future (warning only, not enforced)
@@ -253,6 +285,7 @@ Show "Add Payment" button when:
 ## Undo Support
 
 All payment operations support undo:
+
 - Add payment: Undo removes the payment
 - Delete payment: Undo restores the payment
 - Update payment: Undo reverts to previous values

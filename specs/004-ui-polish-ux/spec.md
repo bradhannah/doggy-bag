@@ -89,6 +89,7 @@ This feature consolidates multiple UI/UX polish items to improve the daily exper
 ### Wireframe 4: Category States - All Paid (Crossed Out, Greyed, Proper Alignment)
 
 **ACTIVE Category (unpaid items remain):**
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ■ Utilities (3)  [+]                              Expected      Actual     │
@@ -101,6 +102,7 @@ This feature consolidates multiple UI/UX polish items to improve the daily exper
 ```
 
 **COMPLETED Category (all items paid - crossed out + greyed, [+] still visible):**
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ■ Utilities (3)  [+]                              Expected      Actual     │
@@ -115,6 +117,7 @@ This feature consolidates multiple UI/UX polish items to improve the daily exper
 ```
 
 **EMPTY Category (no items - crossed out + greyed, [+] still visible):**
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ■ Miscellaneous (0)  [+]                          Expected      Actual     │
@@ -176,6 +179,7 @@ COMPLETED/EMPTY CATEGORIES (sorted to bottom):
 ### Wireframe 7: Responsive Layout - Bills/Income Stacking
 
 **WIDE VIEW (side-by-side, no scrollbar):**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────────────┐  ┌─────────────────────────────┐          │
@@ -189,6 +193,7 @@ COMPLETED/EMPTY CATEGORIES (sorted to bottom):
 ```
 
 **NARROW VIEW (stacked, no horizontal scrollbar):**
+
 ```
 ┌───────────────────────────────────────┐
 │  ┌─────────────────────────────────┐  │
@@ -418,26 +423,31 @@ Developer can generate a varied, realistic example data set by scrubbing the use
 ### Functional Requirements
 
 **Window Management**:
+
 - **FR-001**: System MUST persist window dimensions (width, height) across app restarts
 - **FR-002**: System MUST use Tauri window APIs to save/restore window size
 - **FR-003**: System MUST use sensible default size on first launch
 
 **Responsive Layout**:
+
 - **FR-004**: System MUST stack Bills and Income sections vertically when horizontal scroll would occur
 - **FR-005**: System MUST use side-by-side layout when sufficient horizontal space exists
 - **FR-006**: System MUST NOT display horizontal scrollbar in main content area
 
 **Navigation**:
+
 - **FR-007**: System MUST rename "Setup" to "Budget Config" in navigation
 - **FR-008**: System MUST move "Manage Months" below separator, above "Budget Config"
 - **FR-009**: System MUST move "Settings" to footer area as small item
 
 **Visual Cleanup**:
+
 - **FR-010**: System MUST remove Leftover display from Details view header
 - **FR-011**: System MUST change "Bank Accounts & Cash" header to green (#4ade80)
 - **FR-012**: System MUST remove Net Worth row from left sidebar
 
 **Category States**:
+
 - **FR-013**: System MUST apply strikethrough and reduced opacity to fully-paid category headers
 - **FR-014**: System MUST apply strikethrough and reduced opacity to empty category headers
 - **FR-015**: System MUST sort completed/empty categories to bottom of list
@@ -445,21 +455,25 @@ Developer can generate a varied, realistic example data set by scrubbing the use
 - **FR-017**: System MUST keep [+] button functional on completed/empty categories
 
 **Persistence**:
+
 - **FR-018**: System MUST persist Compact mode setting using same mechanism as Zoom
 - **FR-019**: System MUST restore Compact mode preference on page load/app restart
 
 **Scroll Behavior**:
+
 - **FR-020**: System MUST maintain scroll position when opening edit drawers
 - **FR-021**: System MUST scroll to new item when ad-hoc item is created
 - **FR-022**: System MUST maintain scroll position when saving edits
 
 **Credit Card Payoffs**:
+
 - **FR-023**: System MUST NOT display delete button on CC payoff bill rows
 - **FR-024**: System MUST display sync modal after CC payoff payment is recorded
 - **FR-025**: System MUST offer to update CC balance by payment amount
 - **FR-026**: System MUST update CC balance if user confirms sync
 
 **Data Generation**:
+
 - **FR-027**: System MUST provide script to generate anonymized example data
 - **FR-028**: Script MUST anonymize names to generic labels
 - **FR-029**: Script MUST randomize amounts within ±20%

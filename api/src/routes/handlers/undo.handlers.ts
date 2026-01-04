@@ -18,26 +18,32 @@ export function createUndoHandlerGET() {
     try {
       const stack = await undoService.getStack();
       const isEmpty = stack.length === 0;
-      
-      return new Response(JSON.stringify({
-        stack,
-        count: stack.length,
-        isEmpty,
-        canUndo: !isEmpty
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          stack,
+          count: stack.length,
+          isEmpty,
+          canUndo: !isEmpty,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[UndoHandler] GET failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to get undo stack'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to get undo stack',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -47,21 +53,24 @@ export function createUndoHandlerPOST() {
   return async (_request: Request) => {
     try {
       const entry = await undoService.undo();
-      
+
       if (!entry) {
-        return new Response(JSON.stringify({
-          error: 'Nothing to undo',
-          message: 'The undo stack is empty'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Nothing to undo',
+            message: 'The undo stack is empty',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Actually restore the old value based on entity type
       let restored = false;
       let restoredEntity: unknown = null;
-      
+
       switch (entry.entity_type) {
         case 'bill':
           if (entry.old_value === null) {
@@ -71,9 +80,9 @@ export function createUndoHandlerPOST() {
           } else if (entry.new_value === null) {
             // Was deleted, need to restore
             // For soft delete, we need to reactivate
-            restoredEntity = await billsService.update(entry.entity_id, { 
+            restoredEntity = await billsService.update(entry.entity_id, {
               ...entry.old_value,
-              is_active: true 
+              is_active: true,
             });
             restored = true;
           } else {
@@ -82,7 +91,7 @@ export function createUndoHandlerPOST() {
             restored = true;
           }
           break;
-          
+
         case 'income':
           if (entry.old_value === null) {
             await incomesService.delete(entry.entity_id);
@@ -90,7 +99,7 @@ export function createUndoHandlerPOST() {
           } else if (entry.new_value === null) {
             restoredEntity = await incomesService.update(entry.entity_id, {
               ...entry.old_value,
-              is_active: true
+              is_active: true,
             });
             restored = true;
           } else {
@@ -98,7 +107,7 @@ export function createUndoHandlerPOST() {
             restored = true;
           }
           break;
-          
+
         case 'payment_source':
           if (entry.old_value === null) {
             await paymentSourcesService.delete(entry.entity_id);
@@ -106,7 +115,7 @@ export function createUndoHandlerPOST() {
           } else if (entry.new_value === null) {
             restoredEntity = await paymentSourcesService.update(entry.entity_id, {
               ...entry.old_value,
-              is_active: true
+              is_active: true,
             });
             restored = true;
           } else {
@@ -114,37 +123,43 @@ export function createUndoHandlerPOST() {
             restored = true;
           }
           break;
-          
+
         // For instances and expenses, we'd need month service
         // For now, just return the entry so the UI can handle it
         default:
           console.log(`[UndoHandler] Entity type ${entry.entity_type} requires manual restoration`);
       }
-      
+
       // Get updated stack
       const stack = await undoService.getStack();
-      
-      return new Response(JSON.stringify({
-        undone: entry,
-        restored,
-        restoredEntity,
-        stack,
-        count: stack.length,
-        canUndo: stack.length > 0
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          undone: entry,
+          restored,
+          restoredEntity,
+          stack,
+          count: stack.length,
+          canUndo: stack.length > 0,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[UndoHandler] POST failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to undo'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to undo',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -154,26 +169,32 @@ export function createUndoHandlerDELETE() {
   return async (_request: Request) => {
     try {
       await undoService.clear();
-      
-      return new Response(JSON.stringify({
-        message: 'Undo stack cleared',
-        stack: [],
-        count: 0,
-        canUndo: false
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          message: 'Undo stack cleared',
+          stack: [],
+          count: 0,
+          canUndo: false,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[UndoHandler] DELETE failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to clear undo stack'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to clear undo stack',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }

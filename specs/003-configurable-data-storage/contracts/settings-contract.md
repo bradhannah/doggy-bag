@@ -18,12 +18,14 @@ The Settings API provides endpoints for managing application settings, specifica
 Returns current application settings from the backend's perspective.
 
 **Request**:
+
 ```http
 GET /api/settings HTTP/1.1
 Host: localhost:3000
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "dataDirectory": "/Users/brad/Documents/BudgetForFun",
@@ -46,12 +48,14 @@ Host: localhost:3000
 Returns the current data directory configuration.
 
 **Request**:
+
 ```http
 GET /api/settings/data-directory HTTP/1.1
 Host: localhost:3000
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "path": "/Users/brad/Documents/BudgetForFun",
@@ -69,6 +73,7 @@ Host: localhost:3000
 Validates a directory for use as data storage.
 
 **Request**:
+
 ```http
 POST /api/settings/validate-directory HTTP/1.1
 Host: localhost:3000
@@ -80,6 +85,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK - Valid):
+
 ```json
 {
   "isValid": true,
@@ -91,21 +97,19 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK - Has Existing Data):
+
 ```json
 {
   "isValid": true,
   "exists": true,
   "isWritable": true,
   "hasExistingData": true,
-  "existingFiles": [
-    "entities/bills.json",
-    "entities/incomes.json",
-    "months/2025-01.json"
-  ]
+  "existingFiles": ["entities/bills.json", "entities/incomes.json", "months/2025-01.json"]
 }
 ```
 
 **Response** (200 OK - Invalid):
+
 ```json
 {
   "isValid": false,
@@ -124,6 +128,7 @@ Content-Type: application/json
 Copies data from current directory to a new directory.
 
 **Request**:
+
 ```http
 POST /api/settings/migrate-data HTTP/1.1
 Host: localhost:3000
@@ -144,6 +149,7 @@ Content-Type: application/json
 | mode | string | Yes | Migration mode: "copy", "fresh", or "use_existing" |
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -164,16 +170,14 @@ Content-Type: application/json
 ```
 
 **Response** (500 Error):
+
 ```json
 {
   "success": false,
   "error": "Failed to copy entities/bills.json: Disk full",
   "entityFilesCopied": 2,
   "monthFilesCopied": 0,
-  "filesCopied": [
-    "entities/incomes.json",
-    "entities/categories.json"
-  ],
+  "filesCopied": ["entities/incomes.json", "entities/categories.json"],
   "sourceDir": "/Users/brad/Documents/BudgetForFun",
   "destDir": "/Users/brad/iCloud Drive/BudgetForFun"
 }

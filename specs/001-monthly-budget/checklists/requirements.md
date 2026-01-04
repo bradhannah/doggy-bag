@@ -47,6 +47,7 @@ All checklist items pass. Specification is ready for planning phase (/speckit.pl
 **Major updates from user feedback and Excel analysis:**
 
 **User Stories (11 total, up from 6):**
+
 - Added Story 0: First-Time Setup (P1 onboarding)
 - Updated Story 1: Set Up Monthly Bills (added billing periods, payment sources)
 - Updated Story 2: Track Monthly Income (added billing periods, payment sources)
@@ -61,6 +62,7 @@ All checklist items pass. Specification is ready for planning phase (/speckit.pl
 - Added Story 11: Track Free-Flowing Expenses (P2, ad-hoc expenses)
 
 **Functional Requirements (48 total, up from 29):**
+
 - Added requirements for Setup/Onboarding (FR-020, FR-021)
 - Added requirements for Bill Categories (FR-003, FR-044-FR-046)
 - Updated requirements to clarify billing periods (FR-001, FR-002, FR-004)
@@ -74,6 +76,7 @@ All checklist items pass. Specification is ready for planning phase (/speckit.pl
 - Added semi-annually billing period (FR-004)
 
 **Key Entities (9 total, up from 6):**
+
 - Added: Bill Category entity with pre-defined categories
 - Added: Free-Flowing Expense entity
 - Added: Undo Stack entity
@@ -85,16 +88,19 @@ All checklist items pass. Specification is ready for planning phase (/speckit.pl
 - Updated: Bank Balance entity (clarified multi-source calculation)
 
 **Edge Cases (28 total, up from 14):**
+
 - Organized into 7 categories with 4 scenarios each
 - Added detailed scenarios for: Month Navigation, Data Entry, Billing Periods, Payment Sources, Month Editing, Backup/Restore, Undo, Empty States
 
 **New Sections:**
+
 - Added: "Bill Categories (Pre-Defined)" section with 8 default categories
 - Added: "Visual Design Requirements" section with default color scheme placeholders (user to fill in)
 - Added: "Definitions" section clarifying budget, billing periods, free-flowing expenses
 - Updated: Assumptions section with new categories
 
 **Clarifications:**
+
 - Budget definition: "A plan for how much money we will spend and how much we will make over a month"
 - Bi-weekly clarified: "Once every two weeks on a given day of the week"
 - Total cash/net worth: "Sum of all bank account balances + cash - credit card debt"
@@ -102,6 +108,7 @@ All checklist items pass. Specification is ready for planning phase (/speckit.pl
 - Month generation: "Use defaults for new month, adhere to billing periods, fill in what we know - user can modify afterwards"
 
 **Addressed All Previous Gaps:**
+
 - ✅ First-Time Onboarding (Story 0 added)
 - ✅ Edit Default Definitions (Story 6 scenario 5 covers this)
 - ✅ Data Backup/Restore (Story 10 added, line-by-line restore)
@@ -114,6 +121,7 @@ All checklist items pass. Specification is ready for planning phase (/speckit.pl
 - ✅ All contradictions resolved (updated Stories 1, 2, 5, 6; clarified FR-004, FR-027, FR-006)
 
 **Remaining User Action Required:**
+
 - 🎨 User needs to fill in default color scheme values in "Visual Design Requirements" section (marked as [TO BE FILLED IN BY USER])
 
 **Ready for planning**: ✅ All gaps, contradictions, and improvements have been addressed per user feedback.

@@ -8,11 +8,11 @@
 
 ## Prerequisites
 
-| Requirement | Version | Check Command |
-|-------------|---------|---------------|
-| Bun | 1.3.5+ | `bun --version` |
-| Rust/Cargo | 1.75+ | `cargo --version` |
-| Git | 2.x | `git --version` |
+| Requirement | Version | Check Command     |
+| ----------- | ------- | ----------------- |
+| Bun         | 1.3.5+  | `bun --version`   |
+| Rust/Cargo  | 1.75+   | `cargo --version` |
+| Git         | 2.x     | `git --version`   |
 
 **Note**: Node.js is NOT required. All tooling runs on Bun.
 
@@ -35,6 +35,7 @@ make lint && make test
 ```
 
 The `make install-dev` command will:
+
 - Install Bun dependencies (`bun install`)
 - Install pre-commit hooks (`bunx lefthook install`)
 - Verify all tools are working
@@ -45,29 +46,29 @@ The `make install-dev` command will:
 
 ### Quality Checks
 
-| Command | Purpose | Duration |
-|---------|---------|----------|
-| `make lint` | Run ESLint on all TypeScript/Svelte files | ~10-30s |
-| `make lint-fix` | Auto-fix linting issues where possible | ~10-30s |
-| `make format` | Format all files with Prettier | ~5-10s |
-| `make format-check` | Check formatting without modifying | ~5s |
-| `make check` | Run TypeScript type checking | ~10-20s |
+| Command             | Purpose                                   | Duration |
+| ------------------- | ----------------------------------------- | -------- |
+| `make lint`         | Run ESLint on all TypeScript/Svelte files | ~10-30s  |
+| `make lint-fix`     | Auto-fix linting issues where possible    | ~10-30s  |
+| `make format`       | Format all files with Prettier            | ~5-10s   |
+| `make format-check` | Check formatting without modifying        | ~5s      |
+| `make check`        | Run TypeScript type checking              | ~10-20s  |
 
 ### Testing
 
-| Command | Purpose | Duration |
-|---------|---------|----------|
-| `make test` | Run all tests with coverage | ~1-5min |
-| `make test-backend` | Run backend tests only (Bun) | ~30s |
-| `make test-frontend` | Run frontend tests only (Vitest) | ~1-2min |
-| `make test-e2e` | Run E2E tests (Playwright) | ~2-5min |
+| Command              | Purpose                          | Duration |
+| -------------------- | -------------------------------- | -------- |
+| `make test`          | Run all tests with coverage      | ~1-5min  |
+| `make test-backend`  | Run backend tests only (Bun)     | ~30s     |
+| `make test-frontend` | Run frontend tests only (Vitest) | ~1-2min  |
+| `make test-e2e`      | Run E2E tests (Playwright)       | ~2-5min  |
 
 ### Build
 
-| Command | Purpose | Duration |
-|---------|---------|----------|
-| `make build` | Build Tauri application | ~2-5min |
-| `make dev` | Start development server | N/A (ongoing) |
+| Command      | Purpose                  | Duration      |
+| ------------ | ------------------------ | ------------- |
+| `make build` | Build Tauri application  | ~2-5min       |
+| `make dev`   | Start development server | N/A (ongoing) |
 
 ---
 
@@ -108,26 +109,26 @@ All pull requests trigger the CI pipeline:
 
 ### CI Checks
 
-| Check | Blocking? | Details |
-|-------|-----------|---------|
-| Lint | Yes | Must pass ESLint |
-| Type Check | Yes | Must pass svelte-check |
-| Tests | Yes | Must pass all tests |
-| Coverage | Warning | Warns if below 80% |
-| Build | Yes | Must build successfully |
+| Check      | Blocking? | Details                 |
+| ---------- | --------- | ----------------------- |
+| Lint       | Yes       | Must pass ESLint        |
+| Type Check | Yes       | Must pass svelte-check  |
+| Tests      | Yes       | Must pass all tests     |
+| Coverage   | Warning   | Warns if below 80%      |
+| Build      | Yes       | Must build successfully |
 
 ---
 
 ## Configuration Files
 
-| File | Purpose |
-|------|---------|
-| `eslint.config.js` | ESLint 9 configuration |
-| `.prettierrc` | Prettier formatting rules |
-| `vitest.config.ts` | Vitest test configuration |
-| `playwright.config.ts` | E2E test configuration |
-| `lefthook.yml` | Pre-commit hook configuration |
-| `.github/workflows/ci.yml` | GitHub Actions CI workflow |
+| File                       | Purpose                       |
+| -------------------------- | ----------------------------- |
+| `eslint.config.js`         | ESLint 9 configuration        |
+| `.prettierrc`              | Prettier formatting rules     |
+| `vitest.config.ts`         | Vitest test configuration     |
+| `playwright.config.ts`     | E2E test configuration        |
+| `lefthook.yml`             | Pre-commit hook configuration |
+| `.github/workflows/ci.yml` | GitHub Actions CI workflow    |
 
 ---
 
@@ -136,6 +137,7 @@ All pull requests trigger the CI pipeline:
 ### "bunx: command not found"
 
 Ensure Bun is installed and in your PATH:
+
 ```bash
 curl -fsSL https://bun.sh/install | bash
 source ~/.bashrc  # or ~/.zshrc
@@ -144,6 +146,7 @@ source ~/.bashrc  # or ~/.zshrc
 ### Pre-commit hooks not running
 
 Reinstall hooks:
+
 ```bash
 bunx lefthook install
 ```
@@ -151,6 +154,7 @@ bunx lefthook install
 ### ESLint errors on fresh clone
 
 Install dependencies first:
+
 ```bash
 bun install
 ```
@@ -158,6 +162,7 @@ bun install
 ### Coverage below threshold
 
 The project requires 80% line coverage. Run with coverage report:
+
 ```bash
 bun run test -- --coverage
 ```
@@ -211,9 +216,9 @@ Architecture documentation is in the `docs/` directory:
 
 After setup, verify these work:
 
-| Criterion | Verification Command | Expected |
-|-----------|---------------------|----------|
-| Lint runs | `make lint` | Completes in <30s |
-| Tests run | `make test` | All pass, >80% coverage |
-| Build works | `make build` | Zero warnings |
-| Hooks work | `git commit` (with staged changes) | Hooks execute |
+| Criterion   | Verification Command               | Expected                |
+| ----------- | ---------------------------------- | ----------------------- |
+| Lint runs   | `make lint`                        | Completes in <30s       |
+| Tests run   | `make test`                        | All pass, >80% coverage |
+| Build works | `make build`                       | Zero warnings           |
+| Hooks work  | `git commit` (with staged changes) | Hooks execute           |

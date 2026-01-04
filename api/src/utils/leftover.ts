@@ -12,7 +12,13 @@
 //     if is_closed: 0 (already paid, reflected in bank balance)
 //     else: expected_amount - actual_paid (still need to pay the remainder)
 
-import type { MonthlyData, PaymentSource, UnifiedLeftoverResult, BillInstance, IncomeInstance } from '../types';
+import type {
+  MonthlyData,
+  PaymentSource,
+  UnifiedLeftoverResult,
+  BillInstance,
+  IncomeInstance,
+} from '../types';
 import { getEffectiveBillAmount, getEffectiveIncomeAmount } from './tally';
 
 /**
@@ -22,8 +28,8 @@ import { getEffectiveBillAmount, getEffectiveIncomeAmount } from './tally';
 function getExcludedSourceIds(paymentSources: PaymentSource[]): Set<string> {
   return new Set(
     paymentSources
-      .filter(ps => ps.pay_off_monthly === true || ps.exclude_from_leftover === true)
-      .map(ps => ps.id)
+      .filter((ps) => ps.pay_off_monthly === true || ps.exclude_from_leftover === true)
+      .map((ps) => ps.id)
   );
 }
 
@@ -33,8 +39,10 @@ function getExcludedSourceIds(paymentSources: PaymentSource[]): Set<string> {
  */
 function getIncludedSourceIds(paymentSources: PaymentSource[]): string[] {
   return paymentSources
-    .filter(ps => ps.is_active && ps.pay_off_monthly !== true && ps.exclude_from_leftover !== true)
-    .map(ps => ps.id);
+    .filter(
+      (ps) => ps.is_active && ps.pay_off_monthly !== true && ps.exclude_from_leftover !== true
+    )
+    .map((ps) => ps.id);
 }
 
 /**
@@ -44,8 +52,8 @@ function getIncludedSourceIds(paymentSources: PaymentSource[]): string[] {
 function getMissingBalances(monthData: MonthlyData, paymentSources: PaymentSource[]): string[] {
   const includedSourceIds = getIncludedSourceIds(paymentSources);
   const enteredBalanceIds = new Set(Object.keys(monthData.bank_balances));
-  
-  return includedSourceIds.filter(id => !enteredBalanceIds.has(id));
+
+  return includedSourceIds.filter((id) => !enteredBalanceIds.has(id));
 }
 
 /**
@@ -57,7 +65,7 @@ function getRemainingBillExpense(bill: BillInstance): number {
   if (bill.is_closed) {
     return 0; // Already paid, reflected in bank balance
   }
-  
+
   const paid = getEffectiveBillAmount(bill); // Sum of payments from occurrences
   return Math.max(0, bill.expected_amount - paid);
 }
@@ -71,17 +79,17 @@ function getRemainingIncomeAmount(income: IncomeInstance): number {
   if (income.is_closed) {
     return 0; // Already received, reflected in bank balance
   }
-  
+
   const received = getEffectiveIncomeAmount(income); // Sum of payments from occurrences
   return Math.max(0, income.expected_amount - received);
 }
 
 /**
  * Calculate unified leftover for a month
- * 
+ *
  * This is THE canonical leftover calculation for the entire application.
  * All other leftover displays should use this function.
- * 
+ *
  * @param monthData - Monthly data including all instances and balances
  * @param paymentSources - Array of payment sources (required for filtering)
  * @returns UnifiedLeftoverResult with breakdown and validation status
@@ -92,13 +100,13 @@ export function calculateUnifiedLeftover(
 ): UnifiedLeftoverResult {
   // Check for missing bank balances
   const missingBalances = getMissingBalances(monthData, paymentSources);
-  
+
   if (missingBalances.length > 0) {
     // Get names of missing sources for error message
     const missingNames = missingBalances
-      .map(id => paymentSources.find(ps => ps.id === id)?.name || id)
+      .map((id) => paymentSources.find((ps) => ps.id === id)?.name || id)
       .join(', ');
-    
+
     return {
       bankBalances: 0,
       remainingIncome: 0,
@@ -106,35 +114,39 @@ export function calculateUnifiedLeftover(
       leftover: 0,
       isValid: false,
       missingBalances,
-      errorMessage: `Enter bank balances to calculate leftover. Missing: ${missingNames}`
+      errorMessage: `Enter bank balances to calculate leftover. Missing: ${missingNames}`,
     };
   }
-  
+
   const excludedSourceIds = getExcludedSourceIds(paymentSources);
-  
+
   // Sum bank balances (excluding excluded sources)
   const bankBalances = Object.entries(monthData.bank_balances)
     .filter(([sourceId]) => !excludedSourceIds.has(sourceId))
     .reduce((sum, [, balance]) => sum + balance, 0);
-  
+
   // Calculate remaining income (what we still expect to receive)
-  const remainingIncome = monthData.income_instances
-    .reduce((sum, inc) => sum + getRemainingIncomeAmount(inc), 0);
-  
+  const remainingIncome = monthData.income_instances.reduce(
+    (sum, inc) => sum + getRemainingIncomeAmount(inc),
+    0
+  );
+
   // Calculate remaining expenses (what we still need to pay)
   // This includes ALL bill instances (regular bills AND payoff bills)
-  const remainingExpenses = monthData.bill_instances
-    .reduce((sum, bill) => sum + getRemainingBillExpense(bill), 0);
-  
+  const remainingExpenses = monthData.bill_instances.reduce(
+    (sum, bill) => sum + getRemainingBillExpense(bill),
+    0
+  );
+
   const leftover = bankBalances + remainingIncome - remainingExpenses;
-  
+
   return {
     bankBalances,
     remainingIncome,
     remainingExpenses,
     leftover,
     isValid: true,
-    missingBalances: []
+    missingBalances: [],
   };
 }
 
@@ -158,7 +170,7 @@ export function toLeftoverBreakdown(result: UnifiedLeftoverResult): {
     leftover: result.leftover,
     isValid: result.isValid,
     missingBalances: result.missingBalances.length > 0 ? result.missingBalances : undefined,
-    errorMessage: result.errorMessage
+    errorMessage: result.errorMessage,
   };
 }
 
@@ -170,7 +182,10 @@ export function toLeftoverBreakdown(result: UnifiedLeftoverResult): {
  * @deprecated Use calculateUnifiedLeftover instead
  * Calculate the leftover amount for a month using ONLY actual amounts
  */
-export function calculateLeftover(monthData: MonthlyData, paymentSources?: PaymentSource[]): number {
+export function calculateLeftover(
+  monthData: MonthlyData,
+  paymentSources?: PaymentSource[]
+): number {
   // Legacy behavior: just return the leftover value, don't validate
   const result = calculateUnifiedLeftover(monthData, paymentSources || []);
   return result.leftover;
@@ -180,7 +195,10 @@ export function calculateLeftover(monthData: MonthlyData, paymentSources?: Payme
  * @deprecated Use calculateUnifiedLeftover instead
  * Calculate leftover breakdown for detailed display
  */
-export function calculateLeftoverBreakdown(monthData: MonthlyData, paymentSources?: PaymentSource[]): {
+export function calculateLeftoverBreakdown(
+  monthData: MonthlyData,
+  paymentSources?: PaymentSource[]
+): {
   bankBalances: number;
   actualIncome: number;
   actualBills: number;
@@ -190,7 +208,7 @@ export function calculateLeftoverBreakdown(monthData: MonthlyData, paymentSource
   leftover: number;
 } {
   const result = calculateUnifiedLeftover(monthData, paymentSources || []);
-  
+
   // Map new structure to old structure for backward compatibility
   return {
     bankBalances: result.bankBalances,
@@ -199,35 +217,37 @@ export function calculateLeftoverBreakdown(monthData: MonthlyData, paymentSource
     variableExpenses: 0, // Now included in remainingExpenses via bills
     freeFlowingExpenses: 0, // Now included in remainingExpenses via bills
     totalExpenses: result.remainingExpenses,
-    leftover: result.leftover
+    leftover: result.leftover,
   };
 }
 
 /**
  * Check if any actual amounts have been entered
  * Used to determine if leftover calculation is meaningful
- * 
+ *
  * @param monthData - Monthly data
  * @returns true if at least one actual amount has been entered
  */
 export function hasActualsEntered(monthData: MonthlyData): boolean {
   // Check bill instances for payments or closed status
-  const hasBillActuals = monthData.bill_instances.some(bill => 
-    bill.is_closed ||
-    (bill.occurrences && bill.occurrences.some(occ => occ.payments && occ.payments.length > 0))
+  const hasBillActuals = monthData.bill_instances.some(
+    (bill) =>
+      bill.is_closed ||
+      (bill.occurrences && bill.occurrences.some((occ) => occ.payments && occ.payments.length > 0))
   );
-  
+
   // Check income instances
-  const hasIncomeActuals = monthData.income_instances.some(inc => 
-    inc.is_closed ||
-    (inc.occurrences && inc.occurrences.some(occ => occ.payments && occ.payments.length > 0))
+  const hasIncomeActuals = monthData.income_instances.some(
+    (inc) =>
+      inc.is_closed ||
+      (inc.occurrences && inc.occurrences.some((occ) => occ.payments && occ.payments.length > 0))
   );
-  
+
   // Check variable expenses (always count as actual)
   const hasVariableExpenses = monthData.variable_expenses.length > 0;
-  
+
   // Check free-flowing expenses (always count as actual)
   const hasFreeFlowingExpenses = monthData.free_flowing_expenses.length > 0;
-  
+
   return hasBillActuals || hasIncomeActuals || hasVariableExpenses || hasFreeFlowingExpenses;
 }

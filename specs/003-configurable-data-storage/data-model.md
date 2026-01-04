@@ -9,7 +9,8 @@
 
 Stored via Tauri Store plugin in the platform-specific application support directory. **NOT** in the user's data directory (this is intentional - settings should not sync).
 
-**Location**: 
+**Location**:
+
 - macOS: `~/Library/Application Support/com.bradhannah.budgetforfun/settings.json`
 - Windows: `%APPDATA%/com.bradhannah.budgetforfun/settings.json`
 - Linux: `~/.local/share/com.bradhannah.budgetforfun/settings.json`
@@ -18,21 +19,23 @@ Stored via Tauri Store plugin in the platform-specific application support direc
 interface AppSettings {
   /** Absolute path to user's data storage root */
   dataDirectory: string;
-  
+
   /** Settings format version for future migrations */
   version: string;
 }
 ```
 
 **Default Values**:
+
 ```typescript
 const DEFAULT_SETTINGS: AppSettings = {
   dataDirectory: '', // Empty = use default ~/Documents/BudgetForFun
-  version: '1.0.0'
+  version: '1.0.0',
 };
 ```
 
 **Notes**:
+
 - `dataDirectory` empty string means "use default location"
 - This allows distinguishing between "never set" and "explicitly set to X"
 
@@ -46,23 +49,24 @@ Runtime configuration object used by the storage service. Not persisted - derive
 interface StorageConfig {
   /** Root path for all file operations */
   basePath: string;
-  
+
   /** Path to entities directory: {basePath}/entities */
   entitiesDir: string;
-  
+
   /** Path to months directory: {basePath}/months */
   monthsDir: string;
-  
+
   /** Whether this is a development environment */
   isDevelopment: boolean;
 }
 ```
 
 **Resolution Logic**:
+
 ```typescript
 function resolveStorageConfig(): StorageConfig {
   let basePath: string;
-  
+
   if (process.env.DATA_DIR) {
     // Production: Tauri passed the path
     basePath = process.env.DATA_DIR;
@@ -70,12 +74,12 @@ function resolveStorageConfig(): StorageConfig {
     // Development: use project-relative path
     basePath = './data';
   }
-  
+
   return {
     basePath,
     entitiesDir: path.join(basePath, 'entities'),
     monthsDir: path.join(basePath, 'months'),
-    isDevelopment: !process.env.DATA_DIR
+    isDevelopment: !process.env.DATA_DIR,
   };
 }
 ```
@@ -90,22 +94,22 @@ Result of a data migration operation, used to display feedback to user.
 interface MigrationResult {
   /** Whether the migration succeeded */
   success: boolean;
-  
+
   /** Number of entity files copied */
   entityFilesCopied: number;
-  
+
   /** Number of month files copied */
   monthFilesCopied: number;
-  
+
   /** List of files that were copied */
   filesCopied: string[];
-  
+
   /** Error message if failed */
   error?: string;
-  
+
   /** Source directory */
   sourceDir: string;
-  
+
   /** Destination directory */
   destDir: string;
 }
@@ -121,19 +125,19 @@ Result of validating a directory for use as data storage.
 interface DirectoryValidation {
   /** Whether the directory can be used */
   isValid: boolean;
-  
+
   /** Whether the directory exists */
   exists: boolean;
-  
+
   /** Whether the directory is writable */
   isWritable: boolean;
-  
+
   /** Whether data already exists at this location */
   hasExistingData: boolean;
-  
+
   /** List of existing data files found */
   existingFiles: string[];
-  
+
   /** Error message if not valid */
   error?: string;
 }
@@ -237,21 +241,21 @@ interface DirectoryValidation {
 
 ### dataDirectory (AppSettings)
 
-| Rule | Validation |
-|------|------------|
-| Format | Must be absolute path or empty string |
-| Existence | Directory must exist or be creatable |
-| Permissions | Must be writable by current user |
-| Content | Optional - can have existing data or be empty |
+| Rule        | Validation                                    |
+| ----------- | --------------------------------------------- |
+| Format      | Must be absolute path or empty string         |
+| Existence   | Directory must exist or be creatable          |
+| Permissions | Must be writable by current user              |
+| Content     | Optional - can have existing data or be empty |
 
 ### Migration
 
-| Rule | Validation |
-|------|------------|
-| Source | Must exist and contain data |
-| Destination | Must be writable |
-| Conflict | If destination has data, user must acknowledge |
-| Atomicity | If copy fails, settings are not updated |
+| Rule        | Validation                                     |
+| ----------- | ---------------------------------------------- |
+| Source      | Must exist and contain data                    |
+| Destination | Must be writable                               |
+| Conflict    | If destination has data, user must acknowledge |
+| Atomicity   | If copy fails, settings are not updated        |
 
 ---
 

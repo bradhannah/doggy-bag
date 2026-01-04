@@ -1,0 +1,14 @@
+dist/
+build/
+.svelte-kit/
+src-tauri/target/
+src-tauri/gen/
+node_modules/
+api/node_modules/
+bun.lock
+*.lock
+package-lock.json
+api/openapi/
+src/types/api-generated.ts
+tauri-test.conf.json
+.vscode/

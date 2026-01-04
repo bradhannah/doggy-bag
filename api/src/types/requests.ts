@@ -1,11 +1,7 @@
 // API Request/Response Types
 // These types define the API contract for OpenAPI generation
 
-import type {
-  BillingPeriod,
-  PaymentSourceType,
-  CategoryType
-} from './index';
+import type { BillingPeriod, PaymentSourceType, CategoryType } from './index';
 
 // ============================================================================
 // Common Response Types

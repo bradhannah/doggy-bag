@@ -14,27 +14,27 @@ export class AutoSaveServiceImpl implements AutoSaveService {
   private storage: StorageService;
   private saveQueue: Map<string, { data: unknown; timeout: NodeJS.Timeout }>;
   private debounceMs: number;
-  
+
   public static getInstance(debounceMs: number = 500): AutoSaveService {
     if (!AutoSaveServiceImpl.instance) {
       AutoSaveServiceImpl.instance = new AutoSaveServiceImpl(debounceMs);
     }
     return AutoSaveServiceImpl.instance;
   }
-  
+
   constructor(debounceMs: number = 500) {
     this.storage = StorageServiceImpl.getInstance();
     this.saveQueue = new Map();
     this.debounceMs = debounceMs;
   }
-  
+
   public queueSave(entityType: string, data: unknown): void {
     const existing = this.saveQueue.get(entityType);
-    
+
     if (existing) {
       clearTimeout(existing.timeout);
     }
-    
+
     const timeout = setTimeout(async () => {
       try {
         await this.performSave(entityType, data);
@@ -43,11 +43,11 @@ export class AutoSaveServiceImpl implements AutoSaveService {
         console.error(`[AutoSaveService] Failed to save ${entityType}:`, error);
       }
     }, this.debounceMs);
-    
+
     this.saveQueue.set(entityType, { data, timeout });
     console.log(`[AutoSaveService] Queued save for ${entityType} (debounce: ${this.debounceMs}ms)`);
   }
-  
+
   public clearQueue(): void {
     for (const [entityType, { timeout }] of this.saveQueue.entries()) {
       clearTimeout(timeout);
@@ -55,15 +55,15 @@ export class AutoSaveServiceImpl implements AutoSaveService {
     }
     this.saveQueue.clear();
   }
-  
+
   public shutdown(): void {
     console.log('[AutoSaveService] Shutting down - flushing pending saves...');
     this.clearQueue();
   }
-  
+
   private async performSave(entityType: string, data: unknown): Promise<void> {
     const filePath = `data/entities/${entityType}.json`;
-    
+
     try {
       await this.storage.writeJSON(filePath, data);
       console.log(`[AutoSaveService] Saved ${entityType}`);

@@ -1,13 +1,18 @@
 <script lang="ts">
   /**
    * PaymentSourceView - Read-only view of a payment source
-   * 
+   *
    * @prop item - The payment source to display
    * @prop onEdit - Callback to switch to edit mode
    * @prop onClose - Callback to close the drawer
    */
   import type { PaymentSource } from '../../stores/payment-sources';
-  import { isDebtAccount, formatBalanceForDisplay, getTypeDisplayName, getTypeIcon } from '../../stores/payment-sources';
+  import {
+    isDebtAccount,
+    formatBalanceForDisplay,
+    getTypeDisplayName,
+    getTypeIcon,
+  } from '../../stores/payment-sources';
 
   export let item: PaymentSource;
   export let onEdit: () => void = () => {};
@@ -59,12 +64,8 @@
   </div>
 
   <div class="view-actions">
-    <button class="btn btn-secondary" on:click={onClose}>
-      Close
-    </button>
-    <button class="btn btn-primary" on:click={onEdit}>
-      Edit
-    </button>
+    <button class="btn btn-secondary" on:click={onClose}> Close </button>
+    <button class="btn btn-primary" on:click={onEdit}> Edit </button>
   </div>
 </div>
 

@@ -11,14 +11,14 @@ import {
   Response,
   Tags,
   SuccessResponse,
-  Example
+  Example,
 } from 'tsoa';
 import type { MonthlyData, DetailedMonthResponse } from '../types';
-import type { 
-  UpdateBankBalancesRequest, 
+import type {
+  UpdateBankBalancesRequest,
   GenerateMonthRequest,
   LockMonthRequest,
-  ApiError 
+  ApiError,
 } from '../types/requests';
 
 interface MonthSummary {
@@ -47,7 +47,6 @@ interface MonthExistsResponse {
 @Route('api/months')
 @Tags('Months')
 export class MonthsController extends Controller {
-  
   /**
    * List all available months
    * @summary List months
@@ -66,9 +65,7 @@ export class MonthsController extends Controller {
   @Get('{month}')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(404, 'Not Found')
-  public async getMonth(
-    @Path() month: string
-  ): Promise<MonthlyData> {
+  public async getMonth(@Path() month: string): Promise<MonthlyData> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -80,9 +77,7 @@ export class MonthsController extends Controller {
   @Get('detailed/{month}')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(404, 'Not Found')
-  public async getDetailedMonth(
-    @Path() month: string
-  ): Promise<DetailedMonthResponse> {
+  public async getDetailedMonth(@Path() month: string): Promise<DetailedMonthResponse> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -94,9 +89,7 @@ export class MonthsController extends Controller {
   @Get('summary/{month}')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(404, 'Not Found')
-  public async getMonthSummary(
-    @Path() month: string
-  ): Promise<MonthSummary> {
+  public async getMonthSummary(@Path() month: string): Promise<MonthSummary> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -107,9 +100,7 @@ export class MonthsController extends Controller {
    */
   @Get('exists/{month}')
   @SuccessResponse(200, 'OK')
-  public async monthExists(
-    @Path() month: string
-  ): Promise<MonthExistsResponse> {
+  public async monthExists(@Path() month: string): Promise<MonthExistsResponse> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -146,9 +137,7 @@ export class MonthsController extends Controller {
   @Post('create/{month}')
   @SuccessResponse(201, 'Created')
   @Response<ApiError>(400, 'Bad Request')
-  public async createMonth(
-    @Path() month: string
-  ): Promise<MonthlyData> {
+  public async createMonth(@Path() month: string): Promise<MonthlyData> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -160,9 +149,7 @@ export class MonthsController extends Controller {
   @Post('sync/{month}')
   @SuccessResponse(200, 'OK')
   @Response<ApiError>(404, 'Not Found')
-  public async syncMonth(
-    @Path() month: string
-  ): Promise<MonthlyData> {
+  public async syncMonth(@Path() month: string): Promise<MonthlyData> {
     throw new Error('Not implemented - use existing handlers');
   }
 
@@ -204,9 +191,7 @@ export class MonthsController extends Controller {
   @Delete('{month}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteMonth(
-    @Path() month: string
-  ): Promise<void> {
+  public async deleteMonth(@Path() month: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

@@ -6,55 +6,55 @@
   import { incomes, loadIncomes, type Income } from '../../stores/incomes';
   import { detailedMonthData } from '../../stores/detailed-month';
   import { success, error as showError } from '../../stores/toast';
-  
+
   export let open = false;
   export let month: string;
   export let type: 'bill' | 'income' = 'bill';
   export let defaultCategoryId: string = '';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   // Mode: 'existing' to add occurrence to existing item, 'adhoc' to create new
   let mode: 'existing' | 'adhoc' = 'adhoc';
   let selectedExistingId = ''; // The instanceId of the selected existing item
-  
+
   let name = '';
   let amount = '';
   let categoryId = '';
   let saving = false;
   let error = '';
   let loadingExisting = false;
-  
+
   // Existing items from master list that have instances in this month
   // { master: Bill | Income, instanceId: string }
   type ExistingItem = { master: Bill | Income; instanceId: string; name: string; amount: number };
   let existingItems: ExistingItem[] = [];
-  
+
   // Filter categories by type
-  $: filteredCategories = $categories.filter(c => {
+  $: filteredCategories = $categories.filter((c) => {
     const catType = (c as any).type;
     return catType === type || c.name === 'Ad-hoc';
   });
-  
+
   // Filter existing items by the current category
-  $: filteredExistingItems = defaultCategoryId 
-    ? existingItems.filter(item => item.master.category_id === defaultCategoryId)
+  $: filteredExistingItems = defaultCategoryId
+    ? existingItems.filter((item) => item.master.category_id === defaultCategoryId)
     : existingItems;
-  
+
   // Set default category when form opens
   $: if (open && defaultCategoryId && categoryId === '') {
     categoryId = defaultCategoryId;
   }
-  
+
   // Build existing items when form opens
   $: if (open && !loadingExisting) {
     buildExistingItems();
   }
-  
+
   async function buildExistingItems() {
     loadingExisting = true;
     existingItems = [];
-    
+
     try {
       // Ensure master lists are loaded
       if ($bills.length === 0 && type === 'bill') {
@@ -63,13 +63,13 @@
       if ($incomes.length === 0 && type === 'income') {
         await loadIncomes();
       }
-      
+
       const monthData = $detailedMonthData;
       if (!monthData) {
         loadingExisting = false;
         return;
       }
-      
+
       if (type === 'bill') {
         // Build mapping: bill_id -> instance from billSections
         const instanceByBillId = new Map<string, { id: string }>();
@@ -80,7 +80,7 @@
             }
           }
         }
-        
+
         // For each master bill in this category, find its instance
         for (const bill of $bills) {
           if (!bill.is_active) continue;
@@ -90,7 +90,7 @@
               master: bill,
               instanceId: instance.id,
               name: bill.name,
-              amount: bill.amount
+              amount: bill.amount,
             });
           }
         }
@@ -104,7 +104,7 @@
             }
           }
         }
-        
+
         // For each master income in this category, find its instance
         for (const income of $incomes) {
           if (!income.is_active) continue;
@@ -114,12 +114,12 @@
               master: income,
               instanceId: instance.id,
               name: income.name,
-              amount: income.amount
+              amount: income.amount,
             });
           }
         }
       }
-      
+
       // Set default mode based on available items for this category
       // Need to wait for reactive update of filteredExistingItems
       setTimeout(() => {
@@ -135,31 +135,31 @@
       loadingExisting = false;
     }
   }
-  
+
   onMount(async () => {
     if ($categories.length === 0) {
       await loadCategories();
     }
   });
-  
+
   // Helper to get last day of month
   function getLastDayOfMonth(monthStr: string): string {
     const [year, monthNum] = monthStr.split('-').map(Number);
     const lastDay = new Date(year, monthNum, 0).getDate();
     return `${monthStr}-${String(lastDay).padStart(2, '0')}`;
   }
-  
+
   function parseDollarsToCents(value: string): number {
     const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
     return isNaN(dollars) ? 0 : Math.round(dollars * 100);
   }
-  
+
   function handleClose() {
     open = false;
     resetForm();
     dispatch('close');
   }
-  
+
   function resetForm() {
     name = '';
     amount = '';
@@ -170,11 +170,11 @@
     existingItems = [];
     loadingExisting = false;
   }
-  
+
   async function handleSubmit() {
     saving = true;
     error = '';
-    
+
     try {
       if (mode === 'existing') {
         // Add occurrence to existing item
@@ -183,27 +183,30 @@
           saving = false;
           return;
         }
-        
+
         // Find the selected item to get its amount
-        const selectedItem = filteredExistingItems.find(item => item.instanceId === selectedExistingId);
+        const selectedItem = filteredExistingItems.find(
+          (item) => item.instanceId === selectedExistingId
+        );
         if (!selectedItem) {
           error = 'Selected item not found';
           saving = false;
           return;
         }
-        
+
         const expectedDate = getLastDayOfMonth(month);
         const expectedAmount = Math.floor(selectedItem.master.amount / 2); // Half of master amount
-        
-        const endpoint = type === 'bill'
-          ? `/api/months/${month}/bills/${selectedExistingId}/occurrences`
-          : `/api/months/${month}/incomes/${selectedExistingId}/occurrences`;
-        
+
+        const endpoint =
+          type === 'bill'
+            ? `/api/months/${month}/bills/${selectedExistingId}/occurrences`
+            : `/api/months/${month}/incomes/${selectedExistingId}/occurrences`;
+
         await apiClient.post(endpoint, {
           expected_date: expectedDate,
-          expected_amount: expectedAmount
+          expected_amount: expectedAmount,
         });
-        
+
         success(`Occurrence added to ${selectedItem.master.name}`);
       } else {
         // Create new ad-hoc item (original behavior)
@@ -212,32 +215,33 @@
           saving = false;
           return;
         }
-        
+
         const amountCents = parseDollarsToCents(amount);
         if (amountCents <= 0) {
           error = 'Please enter a valid amount';
           saving = false;
           return;
         }
-        
-        const endpoint = type === 'bill' 
-          ? `/api/months/${month}/adhoc/bills`
-          : `/api/months/${month}/adhoc/incomes`;
-        
+
+        const endpoint =
+          type === 'bill'
+            ? `/api/months/${month}/adhoc/bills`
+            : `/api/months/${month}/adhoc/incomes`;
+
         const payload: any = {
           name: name.trim(),
-          amount: amountCents
+          amount: amountCents,
         };
-        
+
         if (categoryId) {
           payload.category_id = categoryId;
         }
-        
+
         await apiClient.post(endpoint, payload);
-        
+
         success(`Ad-hoc ${type} added`);
       }
-      
+
       dispatch('created');
       handleClose();
     } catch (err) {
@@ -247,13 +251,13 @@
       saving = false;
     }
   }
-  
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       handleClose();
     }
   }
-  
+
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       handleClose();
@@ -265,34 +269,49 @@
 
 {#if open}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div class="drawer-backdrop" role="presentation" on:click={handleBackdropClick} on:keydown={(e) => e.key === 'Escape' && handleClose()}>
-    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="adhoc-form-title" tabindex="-1">
+  <div
+    class="drawer-backdrop"
+    role="presentation"
+    on:click={handleBackdropClick}
+    on:keydown={(e) => e.key === 'Escape' && handleClose()}
+  >
+    <div
+      class="drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adhoc-form-title"
+      tabindex="-1"
+    >
       <header class="drawer-header">
         <h3 id="adhoc-form-title">Add {type === 'bill' ? 'Bill' : 'Income'}</h3>
         <button class="close-btn" on:click={handleClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </header>
-      
+
       <div class="drawer-content">
         <form on:submit|preventDefault={handleSubmit}>
-          
           {#if filteredExistingItems.length > 0}
             <!-- Mode: Add occurrence to existing item -->
             <div class="mode-section">
               <div class="mode-header">
-                <input 
-                  type="radio" 
-                  id="mode-existing" 
-                  value="existing" 
+                <input
+                  type="radio"
+                  id="mode-existing"
+                  value="existing"
                   bind:group={mode}
                   disabled={saving}
                 />
                 <label for="mode-existing">Add occurrence to existing {type}</label>
               </div>
-              
+
               {#if mode === 'existing'}
                 <div class="mode-content">
                   <p class="mode-description">
@@ -317,30 +336,30 @@
                 </div>
               {/if}
             </div>
-            
+
             <div class="mode-divider">
               <span>OR</span>
             </div>
-            
+
             <!-- Mode: Create new ad-hoc item -->
             <div class="mode-section">
               <div class="mode-header">
-                <input 
-                  type="radio" 
-                  id="mode-adhoc" 
-                  value="adhoc" 
+                <input
+                  type="radio"
+                  id="mode-adhoc"
+                  value="adhoc"
                   bind:group={mode}
                   disabled={saving}
                 />
                 <label for="mode-adhoc">Create new ad-hoc {type}</label>
               </div>
-              
+
               {#if mode === 'adhoc'}
                 <div class="mode-content">
                   <p class="mode-description">
                     Add a one-time {type} for this month only.
                   </p>
-                  
+
                   <div class="form-group">
                     <label for="name">Name</label>
                     <input
@@ -352,7 +371,7 @@
                       class:error={!!error && !name.trim()}
                     />
                   </div>
-                  
+
                   <div class="form-group">
                     <label for="amount">Amount</label>
                     <div class="amount-input-group">
@@ -367,14 +386,10 @@
                       />
                     </div>
                   </div>
-                  
+
                   <div class="form-group">
                     <label for="category">Category (Optional)</label>
-                    <select
-                      id="category"
-                      bind:value={categoryId}
-                      disabled={saving}
-                    >
+                    <select id="category" bind:value={categoryId} disabled={saving}>
                       <option value="">-- Select Category --</option>
                       {#each filteredCategories as category}
                         <option value={category.id}>{category.name}</option>
@@ -389,7 +404,7 @@
             <p class="description">
               Add a one-time {type} for this month only. You can convert it to a recurring {type} later.
             </p>
-            
+
             <div class="form-group">
               <label for="name">Name</label>
               <input
@@ -401,7 +416,7 @@
                 class:error={!!error && !name.trim()}
               />
             </div>
-            
+
             <div class="form-group">
               <label for="amount">Amount</label>
               <div class="amount-input-group">
@@ -416,14 +431,10 @@
                 />
               </div>
             </div>
-            
+
             <div class="form-group">
               <label for="category">Category (Optional)</label>
-              <select
-                id="category"
-                bind:value={categoryId}
-                disabled={saving}
-              >
+              <select id="category" bind:value={categoryId} disabled={saving}>
                 <option value="">-- Select Category --</option>
                 {#each filteredCategories as category}
                   <option value={category.id}>{category.name}</option>
@@ -431,11 +442,11 @@
               </select>
             </div>
           {/if}
-          
+
           {#if error}
             <p class="error-message">{error}</p>
           {/if}
-          
+
           <div class="form-actions">
             <button type="button" class="cancel-btn" on:click={handleClose} disabled={saving}>
               Cancel
@@ -462,7 +473,7 @@
     justify-content: flex-end;
     z-index: 1000;
   }
-  
+
   .drawer {
     width: 100%;
     max-width: 400px;
@@ -473,7 +484,7 @@
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
   }
-  
+
   @keyframes slideIn {
     from {
       transform: translateX(100%);
@@ -482,7 +493,7 @@
       transform: translateX(0);
     }
   }
-  
+
   .drawer-header {
     display: flex;
     justify-content: space-between;
@@ -490,14 +501,14 @@
     padding: 20px;
     border-bottom: 1px solid #333355;
   }
-  
+
   .drawer-header h3 {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
     color: #e4e4e7;
   }
-  
+
   .close-btn {
     background: none;
     border: none;
@@ -509,23 +520,23 @@
     justify-content: center;
     transition: color 0.2s;
   }
-  
+
   .close-btn:hover {
     color: #e4e4e7;
   }
-  
+
   .drawer-content {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
   }
-  
+
   .description {
     color: #888;
     font-size: 0.875rem;
     margin-bottom: 24px;
   }
-  
+
   /* Mode selection styles */
   .mode-section {
     margin-bottom: 16px;
@@ -534,45 +545,45 @@
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.02);
   }
-  
-  .mode-section:has(input[type="radio"]:checked) {
+
+  .mode-section:has(input[type='radio']:checked) {
     border-color: #24c8db;
     background: rgba(36, 200, 219, 0.05);
   }
-  
+
   .mode-header {
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
   }
-  
-  .mode-header input[type="radio"] {
+
+  .mode-header input[type='radio'] {
     width: 18px;
     height: 18px;
     accent-color: #24c8db;
     cursor: pointer;
   }
-  
+
   .mode-header label {
     font-size: 0.9rem;
     font-weight: 500;
     color: #e4e4e7;
     cursor: pointer;
   }
-  
+
   .mode-content {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid #333355;
   }
-  
+
   .mode-description {
     color: #888;
     font-size: 0.8rem;
     margin: 0 0 16px 0;
   }
-  
+
   .mode-divider {
     display: flex;
     align-items: center;
@@ -583,7 +594,7 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
-  
+
   .mode-divider::before,
   .mode-divider::after {
     content: '';
@@ -592,19 +603,19 @@
     background: #333355;
     margin: 0 12px;
   }
-  
+
   .form-group {
     margin-bottom: 20px;
   }
-  
+
   .form-group label {
     display: block;
     font-size: 0.875rem;
     color: #888;
     margin-bottom: 8px;
   }
-  
-  .form-group input[type="text"],
+
+  .form-group input[type='text'],
   .form-group select {
     width: 100%;
     padding: 10px 12px;
@@ -616,29 +627,29 @@
     height: 42px;
     box-sizing: border-box;
   }
-  
+
   .form-group input:focus,
   .form-group select:focus {
     outline: none;
     border-color: #24c8db;
   }
-  
+
   .form-group input.error,
   .form-group select.error {
     border-color: #f87171;
   }
-  
+
   .amount-input-group {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  
+
   .amount-input-group .prefix {
     color: #888;
     font-size: 1rem;
   }
-  
+
   .amount-input-group input {
     flex: 1;
     padding: 10px 12px;
@@ -648,29 +659,30 @@
     color: #e4e4e7;
     font-size: 1rem;
   }
-  
+
   .amount-input-group input:focus {
     outline: none;
     border-color: #24c8db;
   }
-  
+
   .amount-input-group input.error {
     border-color: #f87171;
   }
-  
+
   .error-message {
     color: #f87171;
     font-size: 0.875rem;
     margin: 0 0 16px 0;
   }
-  
+
   .form-actions {
     display: flex;
     gap: 12px;
     margin-top: 24px;
   }
-  
-  .cancel-btn, .submit-btn {
+
+  .cancel-btn,
+  .submit-btn {
     flex: 1;
     padding: 12px;
     border-radius: 8px;
@@ -679,29 +691,30 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .cancel-btn {
     background: transparent;
     border: 1px solid #333355;
     color: #888;
   }
-  
+
   .cancel-btn:hover:not(:disabled) {
     border-color: #e4e4e7;
     color: #e4e4e7;
   }
-  
+
   .submit-btn {
     background: #24c8db;
     border: none;
     color: #000;
   }
-  
+
   .submit-btn:hover:not(:disabled) {
     opacity: 0.9;
   }
-  
-  .cancel-btn:disabled, .submit-btn:disabled {
+
+  .cancel-btn:disabled,
+  .submit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }

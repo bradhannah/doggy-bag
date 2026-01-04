@@ -29,22 +29,22 @@ Establish comprehensive code quality infrastructure including linting (ESLint, P
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principle | Status | Evidence/Notes |
-|-----------|--------|----------------|
-| II. Test-First Development | PASS | This feature establishes testing infrastructure; will write tests for any utility code created |
-| III. Incremental Delivery | PASS | 8 user stories prioritized P1-P3, each independently testable |
-| IV. Specification Before Implementation | PASS | Spec complete with 45 FRs, 14 SCs |
-| X. Avoid Silly Libraries | PASS | Using standard tools (ESLint, Prettier, Vitest) - no unnecessary dependencies |
-| XI. Makefiles for Automation | PASS | All quality commands via Makefile (make lint, make test, make format) |
-| XIV. API Documentation | N/A | No new APIs in this feature |
-| XV. No Containers | PASS | All tooling runs locally, no Docker |
-| XVI. Bun Backend | PASS | Bun test runner for backend, Bun package management throughout |
-| XIX. SvelteKit Frontend | PASS | Vitest + testing-library/svelte for component tests |
-| XXIII. Styling via Scoped CSS | N/A | No styling changes in this feature |
-| XXIV. No External UI Libraries | N/A | No UI components in this feature |
-| XXVII. Backend Testing | PASS | Backend tests via Bun test runner with coverage |
+| Principle                               | Status | Evidence/Notes                                                                                 |
+| --------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| II. Test-First Development              | PASS   | This feature establishes testing infrastructure; will write tests for any utility code created |
+| III. Incremental Delivery               | PASS   | 8 user stories prioritized P1-P3, each independently testable                                  |
+| IV. Specification Before Implementation | PASS   | Spec complete with 45 FRs, 14 SCs                                                              |
+| X. Avoid Silly Libraries                | PASS   | Using standard tools (ESLint, Prettier, Vitest) - no unnecessary dependencies                  |
+| XI. Makefiles for Automation            | PASS   | All quality commands via Makefile (make lint, make test, make format)                          |
+| XIV. API Documentation                  | N/A    | No new APIs in this feature                                                                    |
+| XV. No Containers                       | PASS   | All tooling runs locally, no Docker                                                            |
+| XVI. Bun Backend                        | PASS   | Bun test runner for backend, Bun package management throughout                                 |
+| XIX. SvelteKit Frontend                 | PASS   | Vitest + testing-library/svelte for component tests                                            |
+| XXIII. Styling via Scoped CSS           | N/A    | No styling changes in this feature                                                             |
+| XXIV. No External UI Libraries          | N/A    | No UI components in this feature                                                               |
+| XXVII. Backend Testing                  | PASS   | Backend tests via Bun test runner with coverage                                                |
 
 **Gate Result**: PASS - All applicable principles satisfied
 
@@ -114,8 +114,8 @@ playwright.config.ts     # Playwright E2E config
 > No constitution violations requiring justification.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| None | N/A | N/A |
+| --------- | ---------- | ------------------------------------ |
+| None      | N/A        | N/A                                  |
 
 ## Phase Dependencies
 
@@ -143,6 +143,7 @@ graph TD
 **Purpose**: Comprehensive understanding of existing architecture before implementing quality tooling
 
 This phase is a prerequisite to all other work. It ensures the team has validated understanding of:
+
 - System structure and component relationships
 - Code patterns and conventions in use
 - Technical debt that needs addressing

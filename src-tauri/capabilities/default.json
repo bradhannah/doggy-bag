@@ -33,11 +33,7 @@
     "fs:allow-copy-file",
     {
       "identifier": "fs:scope",
-      "allow": [
-        "$HOME/**",
-        "$DOCUMENT/**",
-        "$APPCONFIG/**"
-      ]
+      "allow": ["$HOME/**", "$DOCUMENT/**", "$APPCONFIG/**"]
     },
     "window-state:default",
     "window-state:allow-restore-state",

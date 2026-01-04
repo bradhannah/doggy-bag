@@ -13,12 +13,15 @@ const leftoverService = new LeftoverServiceImpl();
 async function checkReadOnly(month: string): Promise<Response | null> {
   const isReadOnly = await monthsService.isReadOnly(month);
   if (isReadOnly) {
-    return new Response(JSON.stringify({
-      error: `Month ${month} is read-only. Unlock it to make changes.`
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 403
-    });
+    return new Response(
+      JSON.stringify({
+        error: `Month ${month} is read-only. Unlock it to make changes.`,
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 403,
+      }
+    );
   }
   return null;
 }
@@ -41,39 +44,48 @@ export function createExpensesHandlerGET() {
     try {
       const url = new URL(request.url);
       const month = extractMonth(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.getMonthlyData(month);
-      
+
       if (!monthlyData) {
-        return new Response(JSON.stringify({
-          error: `Monthly data for ${month} not found`
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Monthly data for ${month} not found`,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
+
       return new Response(JSON.stringify(monthlyData.variable_expenses), {
         headers: { 'Content-Type': 'application/json' },
-        status: 200
+        status: 200,
       });
     } catch (error) {
       console.error('[ExpensesHandler] GET failed:', error);
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error)
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -84,52 +96,64 @@ export function createExpensesHandlerPOST() {
     try {
       const url = new URL(request.url);
       const month = extractMonth(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.getMonthlyData(month);
-      
+
       if (!monthlyData) {
-        return new Response(JSON.stringify({
-          error: `Monthly data for ${month} not found. Generate it first.`
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Monthly data for ${month} not found. Generate it first.`,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
+
       const body = await request.json();
-      
+
       // Validate required fields
       if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
-        return new Response(JSON.stringify({
-          error: 'Name is required'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Name is required',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       if (typeof body.amount !== 'number' || body.amount <= 0) {
-        return new Response(JSON.stringify({
-          error: 'Amount must be a positive number'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Amount must be a positive number',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const now = new Date().toISOString();
       const newExpense: VariableExpense = {
         id: crypto.randomUUID(),
@@ -138,32 +162,38 @@ export function createExpensesHandlerPOST() {
         payment_source_id: body.payment_source_id || '',
         month,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       };
-      
+
       monthlyData.variable_expenses.push(newExpense);
       monthlyData.updated_at = now;
-      
+
       await monthsService.saveMonthlyData(month, monthlyData);
-      
+
       // Return the new expense with updated summary
       const summary = await leftoverService.calculateLeftover(month);
-      
-      return new Response(JSON.stringify({
-        expense: newExpense,
-        summary
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 201
-      });
+
+      return new Response(
+        JSON.stringify({
+          expense: newExpense,
+          summary,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 201,
+        }
+      );
     } catch (error) {
       console.error('[ExpensesHandler] POST failed:', error);
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error)
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -175,84 +205,106 @@ export function createExpensesHandlerPUT() {
       const url = new URL(request.url);
       const month = extractMonth(url.pathname);
       const expenseId = extractExpenseId(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       if (!expenseId) {
-        return new Response(JSON.stringify({
-          error: 'Expense ID is required'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Expense ID is required',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.getMonthlyData(month);
-      
+
       if (!monthlyData) {
-        return new Response(JSON.stringify({
-          error: `Monthly data for ${month} not found`
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Monthly data for ${month} not found`,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
-      const expenseIndex = monthlyData.variable_expenses.findIndex(e => e.id === expenseId);
-      
+
+      const expenseIndex = monthlyData.variable_expenses.findIndex((e) => e.id === expenseId);
+
       if (expenseIndex === -1) {
-        return new Response(JSON.stringify({
-          error: 'Expense not found'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Expense not found',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
+
       const body = await request.json();
       const now = new Date().toISOString();
-      
+
       const updatedExpense: VariableExpense = {
         ...monthlyData.variable_expenses[expenseIndex],
         name: body.name?.trim() || monthlyData.variable_expenses[expenseIndex].name,
-        amount: typeof body.amount === 'number' ? Math.round(body.amount) : monthlyData.variable_expenses[expenseIndex].amount,
-        payment_source_id: body.payment_source_id ?? monthlyData.variable_expenses[expenseIndex].payment_source_id,
-        updated_at: now
+        amount:
+          typeof body.amount === 'number'
+            ? Math.round(body.amount)
+            : monthlyData.variable_expenses[expenseIndex].amount,
+        payment_source_id:
+          body.payment_source_id ?? monthlyData.variable_expenses[expenseIndex].payment_source_id,
+        updated_at: now,
       };
-      
+
       monthlyData.variable_expenses[expenseIndex] = updatedExpense;
       monthlyData.updated_at = now;
-      
+
       await monthsService.saveMonthlyData(month, monthlyData);
-      
+
       const summary = await leftoverService.calculateLeftover(month);
-      
-      return new Response(JSON.stringify({
-        expense: updatedExpense,
-        summary
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          expense: updatedExpense,
+          summary,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[ExpensesHandler] PUT failed:', error);
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error)
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -264,73 +316,91 @@ export function createExpensesHandlerDELETE() {
       const url = new URL(request.url);
       const month = extractMonth(url.pathname);
       const expenseId = extractExpenseId(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       if (!expenseId) {
-        return new Response(JSON.stringify({
-          error: 'Expense ID is required'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Expense ID is required',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.getMonthlyData(month);
-      
+
       if (!monthlyData) {
-        return new Response(JSON.stringify({
-          error: `Monthly data for ${month} not found`
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Monthly data for ${month} not found`,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
-      const expenseIndex = monthlyData.variable_expenses.findIndex(e => e.id === expenseId);
-      
+
+      const expenseIndex = monthlyData.variable_expenses.findIndex((e) => e.id === expenseId);
+
       if (expenseIndex === -1) {
-        return new Response(JSON.stringify({
-          error: 'Expense not found'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Expense not found',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
+
       monthlyData.variable_expenses.splice(expenseIndex, 1);
       monthlyData.updated_at = new Date().toISOString();
-      
+
       await monthsService.saveMonthlyData(month, monthlyData);
-      
+
       const summary = await leftoverService.calculateLeftover(month);
-      
-      return new Response(JSON.stringify({
-        success: true,
-        summary
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          summary,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[ExpensesHandler] DELETE failed:', error);
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error)
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }

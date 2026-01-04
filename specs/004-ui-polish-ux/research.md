@@ -22,6 +22,7 @@ This document covers technical research for implementing the 12 UI/UX improvemen
 ### Tauri Window API Research
 
 **Reading Window Size:**
+
 ```typescript
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -31,33 +32,38 @@ const position = await window.outerPosition(); // { x: number, y: number }
 ```
 
 **Setting Window Size on Startup:**
+
 ```typescript
 await window.setSize(new LogicalSize(savedWidth, savedHeight));
 ```
 
 **Detecting Window Close:**
 Two approaches:
+
 1. **Rust-side (preferred)**: Use `on_window_event` in `lib.rs` to capture `CloseRequested` event
 2. **Frontend-side**: Listen to `beforeunload` event (less reliable)
 
 ### Recommended Implementation
 
 **Store settings in `settings.json`** (same as zoom):
+
 ```typescript
 interface WindowState {
   width: number;
   height: number;
-  x?: number;  // Optional position
+  x?: number; // Optional position
   y?: number;
 }
 ```
 
 **Load on app start** (`src/routes/+layout.svelte`):
+
 1. Load saved WindowState from Tauri Store
 2. Call `window.setSize()` if saved dimensions exist
 3. Validate window is visible on current display
 
 **Save on window close** (Rust side in `lib.rs`):
+
 ```rust
 .on_window_event(|window, event| {
     if let tauri::WindowEvent::CloseRequested { .. } = event {
@@ -99,6 +105,7 @@ The layout uses CSS container queries in `DetailedMonthView.svelte`:
 ### Problem Analysis
 
 The current breakpoint (1100px) may not account for:
+
 1. Left sidebar (260px for SummarySidebar)
 2. Nav sidebar (220px)
 3. Gap spacing (24px)
@@ -111,18 +118,19 @@ For 800px per section = 1600px + 544px = 2144px viewport minimum
 ### Root Cause Investigation
 
 Looking at the CSS:
+
 - `.sections-container` defaults to `grid-template-columns: 1fr` (single column)
 - Only becomes 2-column at `@container content (min-width: 1100px)`
 - The issue may be individual section content causing overflow
 
 ### Solution Options
 
-| Option | Approach | Pros | Cons |
-|--------|----------|------|------|
-| A | Lower breakpoint to ~900px | Simple CSS change | May not fix root cause |
-| B | Add `overflow-x: hidden` to container | Hides overflow | May cut off content |
-| C | Fix internal component min-widths | Addresses root cause | More investigation needed |
-| D | Use `flex-wrap` instead of grid | More flexible | Larger refactor |
+| Option | Approach                              | Pros                 | Cons                      |
+| ------ | ------------------------------------- | -------------------- | ------------------------- |
+| A      | Lower breakpoint to ~900px            | Simple CSS change    | May not fix root cause    |
+| B      | Add `overflow-x: hidden` to container | Hides overflow       | May cut off content       |
+| C      | Fix internal component min-widths     | Addresses root cause | More investigation needed |
+| D      | Use `flex-wrap` instead of grid       | More flexible        | Larger refactor           |
 
 ### Decision: Option C + A
 
@@ -161,6 +169,7 @@ Looking at the CSS:
 ### Current State
 
 `CategorySection.svelte` renders categories with items. Need to add:
+
 1. Detection of "all paid" or "empty" state
 2. Visual styling (strikethrough, opacity)
 3. Sorting logic
@@ -169,7 +178,7 @@ Looking at the CSS:
 
 ```typescript
 // Computed in CategorySection.svelte
-$: allPaid = section.items.length > 0 && section.items.every(item => item.is_paid);
+$: allPaid = section.items.length > 0 && section.items.every((item) => item.is_paid);
 $: isEmpty = section.items.length === 0;
 $: isComplete = allPaid || isEmpty;
 ```
@@ -216,7 +225,7 @@ $: sortedBillSections = [...$detailedMonthData.billSections].sort((a, b) => {
 
 ### Current State
 
-- CC payoff payments are recorded via `/api/months/{month}/bills/{instanceId}/paid` 
+- CC payoff payments are recorded via `/api/months/{month}/bills/{instanceId}/paid`
 - Payment sources have `balance` field (stored in cents, negative for debt)
 - No current mechanism to prompt balance update after payment
 
@@ -232,6 +241,7 @@ $: sortedBillSections = [...$detailedMonthData.billSections].sort((a, b) => {
 ### API Endpoint (existing)
 
 Balance updates already work via:
+
 ```
 PUT /api/months/{month}/bank-balances
 Body: { [paymentSourceId]: newBalanceCents }
@@ -245,10 +255,10 @@ Create `CCBalanceSyncModal.svelte`:
 <script>
   export let paymentSourceName: string;
   export let currentBalance: number; // cents, negative
-  export let paymentAmount: number;  // cents, positive
+  export let paymentAmount: number; // cents, positive
   export let onConfirm: (newBalance: number) => void;
   export let onSkip: () => void;
-  
+
   $: newBalance = currentBalance + paymentAmount; // Less negative
 </script>
 ```
@@ -260,7 +270,7 @@ In `BillRow.svelte` or parent, after successful mark-paid for CC payoff:
 ```typescript
 if (bill.is_cc_payoff && result.success) {
   // Find payment source
-  const ps = paymentSources.find(p => p.id === bill.payment_source_id);
+  const ps = paymentSources.find((p) => p.id === bill.payment_source_id);
   if (ps) {
     showCCSyncModal = true;
     syncModalData = { ps, paymentAmount: bill.actual_amount };
@@ -298,16 +308,16 @@ function getStoredCompactMode(): boolean {
 
 function createCompactModeStore() {
   const { subscribe, set } = writable<boolean>(false);
-  
+
   if (typeof window !== 'undefined') {
     set(getStoredCompactMode());
   }
-  
+
   return {
     subscribe,
     toggle: () => {
       let current = false;
-      subscribe(v => current = v)();
+      subscribe((v) => (current = v))();
       const next = !current;
       set(next);
       localStorage.setItem('budgetforfun-compact-mode', String(next));
@@ -315,7 +325,7 @@ function createCompactModeStore() {
     set: (value: boolean) => {
       set(value);
       localStorage.setItem('budgetforfun-compact-mode', String(value));
-    }
+    },
   };
 }
 
@@ -336,6 +346,7 @@ export const compactMode = createCompactModeStore();
 ### Problem Analysis
 
 Page may jump to top when:
+
 1. Opening edit drawer (modal)
 2. Saving edits (data refresh)
 3. Adding new items (data refresh)
@@ -346,15 +357,16 @@ Likely culprit: `detailedMonth.refresh()` triggers full re-render, causing scrol
 
 ### Solution Approaches
 
-| Approach | Implementation | When to Use |
-|----------|----------------|-------------|
-| Save/Restore | Store `scrollY` before refresh, restore after | Edit saves |
-| ScrollIntoView | Call `element.scrollIntoView()` on new item | New item creation |
-| Keyed blocks | Ensure Svelte `{#each}` has stable keys | All cases |
+| Approach       | Implementation                                | When to Use       |
+| -------------- | --------------------------------------------- | ----------------- |
+| Save/Restore   | Store `scrollY` before refresh, restore after | Edit saves        |
+| ScrollIntoView | Call `element.scrollIntoView()` on new item   | New item creation |
+| Keyed blocks   | Ensure Svelte `{#each}` has stable keys       | All cases         |
 
 ### Implementation
 
 **For edits (maintain position):**
+
 ```typescript
 async function handleSave() {
   const scrollY = window.scrollY;
@@ -367,6 +379,7 @@ async function handleSave() {
 ```
 
 **For new items (scroll to new item):**
+
 ```typescript
 async function handleCreate() {
   const result = await createItem();
@@ -391,6 +404,7 @@ async function handleCreate() {
 ### Current State
 
 `Navigation.svelte` structure (lines 175-256):
+
 1. Main nav: Dashboard, Details, Manage Months
 2. Separator
 3. Bottom nav: Setup, Settings
@@ -405,6 +419,7 @@ async function handleCreate() {
 ### Implementation
 
 Restructure nav-list sections:
+
 ```svelte
 <!-- Main navigation -->
 <ul class="nav-list">
@@ -416,7 +431,8 @@ Restructure nav-list sections:
 
 <ul class="nav-list secondary-nav">
   <li>Manage Months</li>
-  <li>Budget Config</li>  <!-- Renamed from Setup -->
+  <li>Budget Config</li>
+  <!-- Renamed from Setup -->
 </ul>
 
 <!-- Footer (existing) with Settings added -->
@@ -443,23 +459,31 @@ Restructure nav-list sections:
 ### Bank Accounts Header Green (FR-011)
 
 Current in `SummarySidebar.svelte` line 194:
+
 ```svelte
 <h3 class="box-title">Bank Accounts & Cash</h3>
 ```
 
 Current CSS (line 462):
+
 ```css
-.box-title { color: #888; }
+.box-title {
+  color: #888;
+}
 ```
 
 Fix:
+
 ```css
-.box-title.asset-title { color: #4ade80; }
+.box-title.asset-title {
+  color: #4ade80;
+}
 ```
 
 ### Remove Net Worth (FR-012)
 
 Current in `SummarySidebar.svelte` lines 357-367:
+
 ```svelte
 <div class="box-section">
   <div class="section-subtotal networth-row">
@@ -474,6 +498,7 @@ Simply remove this entire block.
 ### Remove Header Leftover (FR-010)
 
 Current in `DetailedMonthView.svelte` lines 227-237:
+
 ```svelte
 <div class="leftover-display" class:negative={...}>
   ...
@@ -493,6 +518,7 @@ CC payoff bills are dynamically generated based on `pay_off_monthly` flag on pay
 ### Detection
 
 Bill rows need to identify if they're CC payoff entries:
+
 ```typescript
 // In bill instance data
 $: isCCPayoff = bill.is_cc_payoff ?? false;
@@ -501,6 +527,7 @@ $: isCCPayoff = bill.is_cc_payoff ?? false;
 ### Implementation
 
 In `BillRow.svelte`:
+
 ```svelte
 {#if !readOnly && !isCCPayoff}
   <button class="delete-btn" on:click={handleDelete}>Delete</button>
@@ -524,6 +551,7 @@ In `BillRow.svelte`:
    - Categories: Keep original (not sensitive)
 
 2. **Amounts**: Randomize ±20%
+
    ```typescript
    function randomizeAmount(cents: number): number {
      const factor = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
@@ -549,7 +577,7 @@ async function generateExampleData() {
   const bills = JSON.parse(await readFile('data/entities/bills.json', 'utf-8'));
   const incomes = JSON.parse(await readFile('data/entities/incomes.json', 'utf-8'));
   // ... etc
-  
+
   // Anonymize
   const anonBills = bills.map((b, i) => ({
     ...b,
@@ -557,7 +585,7 @@ async function generateExampleData() {
     name: `Bill ${i + 1}`,
     amount: randomizeAmount(b.amount),
   }));
-  
+
   // Write to example directory
   await mkdir('data/example/entities', { recursive: true });
   await writeFile('data/example/entities/bills.json', JSON.stringify(anonBills, null, 2));
@@ -568,26 +596,27 @@ async function generateExampleData() {
 
 ## Summary of Decisions
 
-| Feature | Decision | Rationale |
-|---------|----------|-----------|
-| Window size | Rust save, Frontend restore | Reliability + consistency |
-| Responsive | Lower breakpoint + min-width fix | Address root cause |
-| Category states | Component styling, parent sorting | Clean separation |
-| CC sync modal | New modal component | Isolated feature |
-| Compact mode | localStorage store | Simple, matches widthMode |
-| Scroll position | Save/restore + scrollIntoView | Different needs for edit vs create |
-| Navigation | Simple restructure | Minimal changes |
-| Bank header | Add CSS class | One-line change |
-| Net Worth | Remove block | Simple deletion |
-| Header leftover | Remove block | Simple deletion |
-| CC delete | Conditional render | Check isCCPayoff flag |
-| Example data | Standalone script | Non-invasive |
+| Feature         | Decision                          | Rationale                          |
+| --------------- | --------------------------------- | ---------------------------------- |
+| Window size     | Rust save, Frontend restore       | Reliability + consistency          |
+| Responsive      | Lower breakpoint + min-width fix  | Address root cause                 |
+| Category states | Component styling, parent sorting | Clean separation                   |
+| CC sync modal   | New modal component               | Isolated feature                   |
+| Compact mode    | localStorage store                | Simple, matches widthMode          |
+| Scroll position | Save/restore + scrollIntoView     | Different needs for edit vs create |
+| Navigation      | Simple restructure                | Minimal changes                    |
+| Bank header     | Add CSS class                     | One-line change                    |
+| Net Worth       | Remove block                      | Simple deletion                    |
+| Header leftover | Remove block                      | Simple deletion                    |
+| CC delete       | Conditional render                | Check isCCPayoff flag              |
+| Example data    | Standalone script                 | Non-invasive                       |
 
 ---
 
 ## Files to Modify
 
 ### Frontend (src/)
+
 - `routes/+layout.svelte` - Window size restore
 - `stores/ui.ts` - Add compactMode store
 - `stores/settings.ts` - Add windowState load/save helpers
@@ -598,12 +627,15 @@ async function generateExampleData() {
 - `components/DetailedView/BillRow.svelte` - Hide delete for CC payoffs
 
 ### New Components
+
 - `components/DetailedView/CCBalanceSyncModal.svelte`
 
 ### Tauri (src-tauri/)
+
 - `src/lib.rs` - Window size save on close
 
 ### Scripts
+
 - `scripts/generate-example-data.ts` (new)
 
 ---

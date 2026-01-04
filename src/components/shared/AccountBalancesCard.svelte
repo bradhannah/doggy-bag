@@ -2,11 +2,11 @@
   /**
    * AccountBalancesCard - Shows payment sources with editable balances
    * Designed for placement at top of Dashboard and Details views
-   * 
+   *
    * Separates accounts into:
    * - Assets: Bank Accounts & Cash (positive balances = money you have)
    * - Debt: Credit Cards & Lines of Credit (displayed as negative = money you owe)
-   * 
+   *
    * @prop paymentSources - List of all payment sources
    * @prop bankBalances - Per-month balance overrides (from monthly data)
    * @prop month - Current month (YYYY-MM)
@@ -16,18 +16,18 @@
   import { createEventDispatcher } from 'svelte';
   import type { PaymentSource } from '../../stores/payment-sources';
   import { isDebtAccount, formatBalanceForDisplay } from '../../stores/payment-sources';
-  
+
   export let paymentSources: PaymentSource[] = [];
   export let bankBalances: Record<string, number> = {};
   export let month: string = '';
   export let loading: boolean = false;
-  
+
   const dispatch = createEventDispatcher();
-  
+
   // Editing state
   let editingId: string | null = null;
   let editValue: string = '';
-  
+
   // Get effective balance for a payment source
   // Use per-month override if available, otherwise use the source's current balance
   function getEffectiveBalance(source: PaymentSource): number {
@@ -36,62 +36,62 @@
     }
     return source.balance;
   }
-  
+
   // Calculate totals from effective balances
-  $: effectiveBalances = paymentSources.map(ps => ({
+  $: effectiveBalances = paymentSources.map((ps) => ({
     ...ps,
     effectiveBalance: getEffectiveBalance(ps),
-    displayBalance: formatBalanceForDisplay(getEffectiveBalance(ps), ps.type)
+    displayBalance: formatBalanceForDisplay(getEffectiveBalance(ps), ps.type),
   }));
-  
+
   // Separate by type - Assets vs Debt
-  $: assetAccounts = effectiveBalances.filter(ps => !isDebtAccount(ps.type));
-  $: debtAccounts = effectiveBalances.filter(ps => isDebtAccount(ps.type));
-  
+  $: assetAccounts = effectiveBalances.filter((ps) => !isDebtAccount(ps.type));
+  $: debtAccounts = effectiveBalances.filter((ps) => isDebtAccount(ps.type));
+
   // Totals - assets are positive, debt is already stored as positive (owed)
   $: totalAssets = assetAccounts.reduce((sum, ps) => sum + ps.effectiveBalance, 0);
   $: totalDebt = debtAccounts.reduce((sum, ps) => sum + ps.effectiveBalance, 0);
   $: netWorth = totalAssets - totalDebt;
-  
+
   // Format amount in cents to dollars (handles negative values)
   function formatCurrency(cents: number): string {
     const dollars = Math.abs(cents) / 100;
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
     }).format(dollars);
     return cents < 0 ? '-' + formatted : formatted;
   }
-  
+
   // Parse currency input to cents
   function parseCurrency(value: string): number {
     const cleaned = value.replace(/[^0-9.-]/g, '');
     const dollars = parseFloat(cleaned) || 0;
     return Math.round(dollars * 100);
   }
-  
+
   // Start editing a balance
   function startEdit(source: PaymentSource & { effectiveBalance: number }) {
     editingId = source.id;
     editValue = (source.effectiveBalance / 100).toFixed(2);
   }
-  
+
   // Save edited balance
   async function saveEdit(source: PaymentSource) {
     const newBalance = parseCurrency(editValue);
     const newBalances = { ...bankBalances, [source.id]: newBalance };
-    
+
     dispatch('updateBalances', { balances: newBalances });
     editingId = null;
   }
-  
+
   // Cancel editing
   function cancelEdit() {
     editingId = null;
     editValue = '';
   }
-  
+
   // Handle keyboard events
   function handleKeydown(event: KeyboardEvent, source: PaymentSource) {
     if (event.key === 'Enter') {
@@ -100,7 +100,7 @@
       cancelEdit();
     }
   }
-  
+
   // Get icon for payment source type
   function getTypeIcon(type: string) {
     switch (type) {
@@ -116,7 +116,7 @@
         return '💰';
     }
   }
-  
+
   // Check if balance has been customized for this month
   function isCustomized(source: PaymentSource): boolean {
     return bankBalances[source.id] !== undefined;
@@ -125,14 +125,12 @@
 
 <div class="account-balances-card">
   <div class="card-header">
-    <h3 class="card-title">
-      Account Balances
-    </h3>
+    <h3 class="card-title">Account Balances</h3>
     {#if month}
       <span class="month-label">{month}</span>
     {/if}
   </div>
-  
+
   {#if loading}
     <div class="loading-state">Loading...</div>
   {:else if paymentSources.length === 0}
@@ -150,7 +148,7 @@
               <span class="account-icon">{getTypeIcon(source.type)}</span>
               <span class="account-name">{source.name}</span>
             </div>
-            
+
             {#if editingId === source.id}
               <div class="edit-container">
                 <span class="currency-prefix">$</span>
@@ -164,7 +162,7 @@
                 />
               </div>
             {:else}
-              <button 
+              <button
                 class="balance-button positive"
                 on:click={() => startEdit(source)}
                 title="Click to edit"
@@ -176,7 +174,7 @@
         {/each}
       </div>
     {/if}
-    
+
     <!-- Debt Section - Credit Cards & Lines of Credit -->
     {#if debtAccounts.length > 0}
       <div class="section-header">
@@ -190,7 +188,7 @@
               <span class="account-icon">{getTypeIcon(source.type)}</span>
               <span class="account-name">{source.name}</span>
             </div>
-            
+
             {#if editingId === source.id}
               <div class="edit-container">
                 <span class="currency-prefix">$</span>
@@ -204,7 +202,7 @@
                 />
               </div>
             {:else}
-              <button 
+              <button
                 class="balance-button negative"
                 on:click={() => startEdit(source)}
                 title="Click to edit - displayed as negative (amount owed)"
@@ -216,7 +214,7 @@
         {/each}
       </div>
     {/if}
-    
+
     <!-- Summary Totals - horizontal -->
     <div class="totals-row">
       <div class="total-item">
@@ -246,14 +244,14 @@
     border: 1px solid #333355;
     padding: 16px 20px;
   }
-  
+
   .card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
   }
-  
+
   .card-title {
     font-size: 0.875rem;
     font-weight: 600;
@@ -262,7 +260,7 @@
     display: flex;
     align-items: center;
   }
-  
+
   .month-label {
     font-size: 0.75rem;
     color: #666;
@@ -270,14 +268,14 @@
     padding: 4px 8px;
     border-radius: 4px;
   }
-  
+
   .loading-state {
     color: #888;
     font-size: 0.875rem;
     text-align: center;
     padding: 20px;
   }
-  
+
   .empty-message {
     color: #666;
     font-size: 0.875rem;
@@ -285,16 +283,16 @@
     padding: 16px;
     margin: 0;
   }
-  
+
   .empty-message a {
     color: #24c8db;
     text-decoration: none;
   }
-  
+
   .empty-message a:hover {
     text-decoration: underline;
   }
-  
+
   /* Section headers */
   .section-header {
     display: flex;
@@ -303,11 +301,11 @@
     margin-bottom: 8px;
     margin-top: 12px;
   }
-  
+
   .section-header:first-of-type {
     margin-top: 0;
   }
-  
+
   .section-title {
     font-size: 0.75rem;
     font-weight: 600;
@@ -315,13 +313,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  
+
   .section-subtitle {
     font-size: 0.65rem;
     color: #666;
     font-style: italic;
   }
-  
+
   /* Accounts grid - horizontal layout */
   .accounts-grid {
     display: flex;
@@ -329,7 +327,7 @@
     gap: 12px;
     margin-bottom: 16px;
   }
-  
+
   .account-item {
     display: flex;
     align-items: center;
@@ -343,32 +341,32 @@
     flex: 1;
     max-width: 280px;
   }
-  
+
   .account-item.customized {
     border-color: rgba(36, 200, 219, 0.3);
     background: rgba(36, 200, 219, 0.05);
   }
-  
+
   .account-item.debt {
     border-color: rgba(248, 113, 113, 0.2);
   }
-  
+
   .account-info {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  
+
   .account-icon {
     font-size: 1rem;
   }
-  
+
   .account-name {
     font-size: 0.8rem;
     color: #a0a0a0;
     font-weight: 500;
   }
-  
+
   .balance-button {
     background: none;
     border: 1px solid transparent;
@@ -380,20 +378,20 @@
     transition: all 0.15s;
     font-family: inherit;
   }
-  
+
   .balance-button:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: #444466;
   }
-  
+
   .balance-button.positive {
     color: #4ade80;
   }
-  
+
   .balance-button.negative {
     color: #f87171;
   }
-  
+
   .edit-container {
     display: flex;
     align-items: center;
@@ -402,13 +400,13 @@
     border-radius: 4px;
     padding: 2px 6px;
   }
-  
+
   .currency-prefix {
     color: #888;
     font-size: 0.875rem;
     margin-right: 2px;
   }
-  
+
   .balance-input {
     width: 80px;
     background: transparent;
@@ -419,7 +417,7 @@
     text-align: right;
     outline: none;
   }
-  
+
   /* Totals row - horizontal */
   .totals-row {
     display: flex;
@@ -431,56 +429,56 @@
     border-radius: 8px;
     border-top: 1px solid #333355;
   }
-  
+
   .total-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 2px;
   }
-  
+
   .total-label {
     font-size: 0.7rem;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  
+
   .total-value {
     font-size: 1rem;
     font-weight: 700;
     color: #e4e4e7;
   }
-  
+
   .total-value.positive {
     color: #4ade80;
   }
-  
+
   .total-value.negative {
     color: #f87171;
   }
-  
+
   .total-divider {
     width: 1px;
     height: 30px;
     background: #333355;
   }
-  
+
   /* Responsive */
   @media (max-width: 768px) {
     .accounts-grid {
       flex-direction: column;
     }
-    
+
     .account-item {
       max-width: none;
     }
-    
+
     .totals-row {
       flex-wrap: wrap;
       gap: 16px;
     }
-    
+
     .total-divider {
       display: none;
     }

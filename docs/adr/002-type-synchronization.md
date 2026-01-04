@@ -17,14 +17,17 @@ The BudgetForFun application has types defined in the backend (`api/src/types/in
 We evaluated two approaches:
 
 **Option A: Full tsoa Runtime** - Use tsoa to generate both OpenAPI spec AND route handlers
+
 - Pros: Single source of truth, auto-generated everything
 - Cons: Requires replacing working custom routing, Bun adapter complexity
 
 **Option C: Shared Types Package** - Extract types to a monorepo package
+
 - Pros: Simple, no generation step, works with existing routing
 - Cons: No OpenAPI spec, need to set up bun workspaces
 
 **Option A2: tsoa for Spec Generation Only** (Hybrid)
+
 - Pros: Keeps working routing, generates OpenAPI for future web version
 - Cons: Controllers must stay in sync with handlers
 

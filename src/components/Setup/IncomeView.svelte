@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * IncomeView - Read-only view of an income
-   * 
+   *
    * @prop item - The income to display
    * @prop onEdit - Callback to switch to edit mode
    * @prop onClose - Callback to close the drawer
@@ -19,11 +19,16 @@
 
   function formatPeriod(period: string): string {
     switch (period) {
-      case 'monthly': return 'Monthly';
-      case 'bi_weekly': return 'Bi-Weekly';
-      case 'weekly': return 'Weekly';
-      case 'semi_annually': return 'Semi-Annually';
-      default: return period;
+      case 'monthly':
+        return 'Monthly';
+      case 'bi_weekly':
+        return 'Bi-Weekly';
+      case 'weekly':
+        return 'Weekly';
+      case 'semi_annually':
+        return 'Semi-Annually';
+      default:
+        return period;
     }
   }
 
@@ -32,7 +37,7 @@
   }
 
   function getPaymentSourceName(id: string): string {
-    const ps = $paymentSourcesStore.paymentSources.find(p => p.id === id);
+    const ps = $paymentSourcesStore.paymentSources.find((p) => p.id === id);
     return ps?.name || 'Unknown';
   }
 </script>
@@ -78,12 +83,8 @@
   </div>
 
   <div class="view-actions">
-    <button class="btn btn-secondary" on:click={onClose}>
-      Close
-    </button>
-    <button class="btn btn-primary" on:click={onEdit}>
-      Edit
-    </button>
+    <button class="btn btn-secondary" on:click={onClose}> Close </button>
+    <button class="btn btn-primary" on:click={onEdit}> Edit </button>
   </div>
 </div>
 

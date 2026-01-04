@@ -8,13 +8,13 @@ Users can change where BudgetForFun stores data. Default: `~/Documents/BudgetFor
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `api/src/services/storage.ts` | Storage with configurable base path |
-| `api/src/services/settings-service.ts` | Settings management |
-| `src/routes/settings/+page.svelte` | Settings UI |
-| `src/stores/settings.ts` | Tauri Store wrapper |
-| `src-tauri/src/lib.rs` | Pass DATA_DIR to sidecar |
+| File                                   | Purpose                             |
+| -------------------------------------- | ----------------------------------- |
+| `api/src/services/storage.ts`          | Storage with configurable base path |
+| `api/src/services/settings-service.ts` | Settings management                 |
+| `src/routes/settings/+page.svelte`     | Settings UI                         |
+| `src/stores/settings.ts`               | Tauri Store wrapper                 |
+| `src-tauri/src/lib.rs`                 | Pass DATA_DIR to sidecar            |
 
 ## Environment Variable
 
@@ -63,9 +63,9 @@ curl -X POST http://localhost:3000/api/settings/migrate-data \
 
 ## Development vs Production
 
-| Aspect | Development | Production |
-|--------|-------------|------------|
-| Data location | `./api/data/` | `~/Documents/BudgetForFun/` |
-| Configurable | No | Yes |
-| DATA_DIR env | Not set | Set by Tauri |
-| Settings page | Shows path (read-only) | Full functionality |
+| Aspect        | Development            | Production                  |
+| ------------- | ---------------------- | --------------------------- |
+| Data location | `./api/data/`          | `~/Documents/BudgetForFun/` |
+| Configurable  | No                     | Yes                         |
+| DATA_DIR env  | Not set                | Set by Tauri                |
+| Settings page | Shows path (read-only) | Full functionality          |

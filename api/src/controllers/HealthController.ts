@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Route,
-  Get,
-  SuccessResponse,
-  Tags,
-} from 'tsoa';
+import { Controller, Route, Get, SuccessResponse, Tags } from 'tsoa';
 
 interface HealthResponse {
   status: string;

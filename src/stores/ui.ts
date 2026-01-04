@@ -39,17 +39,17 @@ function formatMonthDisplay(month: string): string {
 export const currentMonth = writable<string>(getCurrentMonth());
 
 // Derived store for display format
-export const currentMonthDisplay = derived(currentMonth, ($currentMonth) => 
+export const currentMonthDisplay = derived(currentMonth, ($currentMonth) =>
   formatMonthDisplay($currentMonth)
 );
 
 // Navigation actions
 export function goToPreviousMonth() {
-  currentMonth.update(m => getPreviousMonth(m));
+  currentMonth.update((m) => getPreviousMonth(m));
 }
 
 export function goToNextMonth() {
-  currentMonth.update(m => getNextMonth(m));
+  currentMonth.update((m) => getNextMonth(m));
 }
 
 export function goToMonth(month: string) {
@@ -76,18 +76,19 @@ function getStoredWidthMode(): WidthMode {
 
 function createWidthModeStore() {
   const { subscribe, set, update } = writable<WidthMode>('medium');
-  
+
   // Initialize from localStorage on client side
   if (typeof window !== 'undefined') {
     set(getStoredWidthMode());
   }
-  
+
   return {
     subscribe,
     // Cycle through modes: small -> medium -> wide -> small
     cycle: () => {
-      update(current => {
-        const nextMode: WidthMode = current === 'small' ? 'medium' : current === 'medium' ? 'wide' : 'small';
+      update((current) => {
+        const nextMode: WidthMode =
+          current === 'small' ? 'medium' : current === 'medium' ? 'wide' : 'small';
         if (typeof window !== 'undefined') {
           localStorage.setItem('budgetforfun-width-mode', nextMode);
         }
@@ -99,7 +100,7 @@ function createWidthModeStore() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('budgetforfun-width-mode', value);
       }
-    }
+    },
   };
 }
 
@@ -113,16 +114,16 @@ function getStoredCompactMode(): boolean {
 
 function createCompactModeStore() {
   const { subscribe, set, update } = writable<boolean>(false);
-  
+
   // Initialize from localStorage on client side
   if (typeof window !== 'undefined') {
     set(getStoredCompactMode());
   }
-  
+
   return {
     subscribe,
     toggle: () => {
-      update(current => {
+      update((current) => {
         const next = !current;
         if (typeof window !== 'undefined') {
           localStorage.setItem('budgetforfun-compact-mode', String(next));
@@ -135,7 +136,7 @@ function createCompactModeStore() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('budgetforfun-compact-mode', String(value));
       }
-    }
+    },
   };
 }
 
@@ -144,7 +145,7 @@ export const compactMode = createCompactModeStore();
 // Legacy alias for backwards compatibility (if needed)
 export const wideMode = {
   subscribe: widthMode.subscribe,
-  toggle: widthMode.cycle
+  toggle: widthMode.cycle,
 };
 
 // UI state store for sidebar, drawers, etc.
@@ -159,29 +160,29 @@ const initialUIState: UIState = {
   sidebarOpen: true,
   drawerOpen: false,
   drawerContent: 'none',
-  editingId: null
+  editingId: null,
 };
 
 export const uiState = writable<UIState>(initialUIState);
 
 export function toggleSidebar() {
-  uiState.update(state => ({ ...state, sidebarOpen: !state.sidebarOpen }));
+  uiState.update((state) => ({ ...state, sidebarOpen: !state.sidebarOpen }));
 }
 
 export function openDrawer(content: UIState['drawerContent'], id?: string) {
-  uiState.update(state => ({
+  uiState.update((state) => ({
     ...state,
     drawerOpen: true,
     drawerContent: content,
-    editingId: id || null
+    editingId: id || null,
   }));
 }
 
 export function closeDrawer() {
-  uiState.update(state => ({
+  uiState.update((state) => ({
     ...state,
     drawerOpen: false,
     drawerContent: 'none',
-    editingId: null
+    editingId: null,
   }));
 }

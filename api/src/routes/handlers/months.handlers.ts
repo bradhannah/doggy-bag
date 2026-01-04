@@ -20,39 +20,36 @@ function extractMonth(url: string): string | null {
 
 // Enrich monthly data with bill/income names for frontend display
 async function enrichMonthlyData(monthlyData: MonthlyData) {
-  const [bills, incomes] = await Promise.all([
-    billsService.getAll(),
-    incomesService.getAll()
-  ]);
-  
+  const [bills, incomes] = await Promise.all([billsService.getAll(), incomesService.getAll()]);
+
   // Create lookup maps
-  const billsMap = new Map(bills.map(b => [b.id, b]));
-  const incomesMap = new Map(incomes.map(i => [i.id, i]));
-  
+  const billsMap = new Map(bills.map((b) => [b.id, b]));
+  const incomesMap = new Map(incomes.map((i) => [i.id, i]));
+
   // Enrich bill instances with bill details
-  const enrichedBillInstances = monthlyData.bill_instances.map(instance => {
+  const enrichedBillInstances = monthlyData.bill_instances.map((instance) => {
     const bill = instance.bill_id ? billsMap.get(instance.bill_id) : null;
     return {
       ...instance,
       name: instance.name || bill?.name || 'Unknown Bill',
-      billing_period: bill?.billing_period || 'monthly'
+      billing_period: bill?.billing_period || 'monthly',
     };
   });
-  
+
   // Enrich income instances with income details
-  const enrichedIncomeInstances = monthlyData.income_instances.map(instance => {
+  const enrichedIncomeInstances = monthlyData.income_instances.map((instance) => {
     const income = instance.income_id ? incomesMap.get(instance.income_id) : null;
     return {
       ...instance,
       name: instance.name || income?.name || 'Unknown Income',
-      billing_period: income?.billing_period || 'monthly'
+      billing_period: income?.billing_period || 'monthly',
     };
   });
-  
+
   return {
     ...monthlyData,
     bill_instances: enrichedBillInstances,
-    income_instances: enrichedIncomeInstances
+    income_instances: enrichedIncomeInstances,
   };
 }
 
@@ -62,50 +59,62 @@ export function createMonthsHandlerGET() {
     try {
       const url = new URL(request.url);
       const month = extractMonth(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.getMonthlyData(month);
-      
+
       if (!monthlyData) {
-        return new Response(JSON.stringify({
-          error: `Monthly data for ${month} not found. Generate it first with POST /api/months/${month}/generate`
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Monthly data for ${month} not found. Generate it first with POST /api/months/${month}/generate`,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
+
       // Enrich with bill/income names and calculate leftover
       const [enrichedData, leftoverResult] = await Promise.all([
         enrichMonthlyData(monthlyData),
-        leftoverService.calculateLeftover(month)
+        leftoverService.calculateLeftover(month),
       ]);
-      
-      return new Response(JSON.stringify({
-        ...enrichedData,
-        summary: leftoverResult
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          ...enrichedData,
+          summary: leftoverResult,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] GET failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to load monthly data'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to load monthly data',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -118,53 +127,65 @@ export function createMonthsHandlerGenerate() {
       // Extract month from /api/months/2025-01/generate
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/generate/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month already exists
       const existingData = await monthsService.getMonthlyData(month);
       if (existingData) {
-        return new Response(JSON.stringify({
-          error: `Monthly data for ${month} already exists. Use POST /api/months/${month}/sync to add missing bills/incomes.`,
-          data: existingData
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 409
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Monthly data for ${month} already exists. Use POST /api/months/${month}/sync to add missing bills/incomes.`,
+            data: existingData,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 409,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.generateMonthlyData(month);
-      
+
       // Enrich with bill/income names and calculate leftover
       const [enrichedData, leftoverResult] = await Promise.all([
         enrichMonthlyData(monthlyData),
-        leftoverService.calculateLeftover(month)
+        leftoverService.calculateLeftover(month),
       ]);
-      
-      return new Response(JSON.stringify({
-        ...enrichedData,
-        summary: leftoverResult
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 201
-      });
+
+      return new Response(
+        JSON.stringify({
+          ...enrichedData,
+          summary: leftoverResult,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 201,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] Generate failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to generate monthly data'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to generate monthly data',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -177,41 +198,50 @@ export function createMonthsHandlerSync() {
       // Extract month from /api/months/2025-01/sync
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/sync/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.syncMonthlyData(month);
-      
+
       // Enrich with bill/income names and calculate leftover
       const [enrichedData, leftoverResult] = await Promise.all([
         enrichMonthlyData(monthlyData),
-        leftoverService.calculateLeftover(month)
+        leftoverService.calculateLeftover(month),
       ]);
-      
-      return new Response(JSON.stringify({
-        ...enrichedData,
-        summary: leftoverResult
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          ...enrichedData,
+          summary: leftoverResult,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] Sync failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to sync monthly data'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to sync monthly data',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -224,47 +254,60 @@ export function createMonthsHandlerUpdateBalances() {
       // Extract month from /api/months/2025-01/bank-balances
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/bank-balances/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const body = await request.json();
-      
+
       if (typeof body !== 'object' || body === null) {
-        return new Response(JSON.stringify({
-          error: 'Request body must be an object with payment source IDs as keys and balances as values'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error:
+              'Request body must be an object with payment source IDs as keys and balances as values',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.updateBankBalances(month, body);
       const leftoverResult = await leftoverService.calculateLeftover(month);
-      
-      return new Response(JSON.stringify({
-        ...monthlyData,
-        summary: leftoverResult
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          ...monthlyData,
+          summary: leftoverResult,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] UpdateBalances failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to update bank balances'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update bank balances',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -277,32 +320,38 @@ export function createMonthsHandlerSummary() {
       // Extract month from /api/months/2025-01/summary
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/summary/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const leftoverResult = await leftoverService.calculateLeftover(month);
-      
+
       return new Response(JSON.stringify(leftoverResult), {
         headers: { 'Content-Type': 'application/json' },
-        status: 200
+        status: 200,
       });
     } catch (error) {
       console.error('[MonthsHandler] Summary failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to calculate summary'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to calculate summary',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -312,24 +361,30 @@ export function createMonthsHandlerList() {
   return async (_request: Request) => {
     try {
       const months = await monthsService.getAllMonths();
-      
-      return new Response(JSON.stringify({
-        months,
-        count: months.length
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          months,
+          count: months.length,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] List failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to list months'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to list months',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -339,24 +394,30 @@ export function createMonthsHandlerManage() {
   return async (_request: Request) => {
     try {
       const months = await monthsService.getMonthsForManagement();
-      
-      return new Response(JSON.stringify({
-        months,
-        count: months.length
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          months,
+          count: months.length,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] Manage failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to list months for management'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to list months for management',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -368,37 +429,46 @@ export function createMonthsHandlerExists() {
       const url = new URL(request.url);
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/exists/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const exists = await monthsService.monthExists(month);
       const data = exists ? await monthsService.getMonthlyData(month) : null;
-      
-      return new Response(JSON.stringify({
-        month,
-        exists,
-        is_read_only: data?.is_read_only ?? false
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          month,
+          exists,
+          is_read_only: data?.is_read_only ?? false,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] Exists check failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to check month existence'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to check month existence',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -410,44 +480,53 @@ export function createMonthsHandlerCreate() {
       const url = new URL(request.url);
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/create/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.createMonth(month);
-      
+
       // Enrich with bill/income names and calculate leftover
       const [enrichedData, leftoverResult] = await Promise.all([
         enrichMonthlyData(monthlyData),
-        leftoverService.calculateLeftover(month)
+        leftoverService.calculateLeftover(month),
       ]);
-      
-      return new Response(JSON.stringify({
-        ...enrichedData,
-        summary: leftoverResult
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 201
-      });
+
+      return new Response(
+        JSON.stringify({
+          ...enrichedData,
+          summary: leftoverResult,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 201,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] Create failed:', error);
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const status = errorMessage.includes('already exists') ? 409 : 500;
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to create month'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to create month',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status,
+        }
+      );
     }
   };
 }
@@ -459,35 +538,44 @@ export function createMonthsHandlerDelete() {
       const url = new URL(request.url);
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})$/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       await monthsService.deleteMonth(month);
-      
+
       return new Response(null, {
-        status: 204
+        status: 204,
       });
     } catch (error) {
       console.error('[MonthsHandler] Delete failed:', error);
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const status = errorMessage.includes('read-only') ? 403 : 
-                     errorMessage.includes('does not exist') ? 404 : 500;
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to delete month'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status
-      });
+      const status = errorMessage.includes('read-only')
+        ? 403
+        : errorMessage.includes('does not exist')
+          ? 404
+          : 500;
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to delete month',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status,
+        }
+      );
     }
   };
 }
@@ -499,36 +587,47 @@ export function createMonthsHandlerLock() {
       const url = new URL(request.url);
       const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/lock/);
       const month = match ? match[1] : null;
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const monthlyData = await monthsService.toggleReadOnly(month);
-      
-      return new Response(JSON.stringify({
-        month,
-        is_read_only: monthlyData.is_read_only,
-        message: monthlyData.is_read_only ? 'Month is now locked (read-only)' : 'Month is now unlocked (editable)'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      });
+
+      return new Response(
+        JSON.stringify({
+          month,
+          is_read_only: monthlyData.is_read_only,
+          message: monthlyData.is_read_only
+            ? 'Month is now locked (read-only)'
+            : 'Month is now unlocked (editable)',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } catch (error) {
       console.error('[MonthsHandler] Lock toggle failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to toggle lock status'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to toggle lock status',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }

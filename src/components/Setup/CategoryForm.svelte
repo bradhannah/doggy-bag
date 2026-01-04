@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * CategoryForm - Drawer-compatible form for categories
-   * 
+   *
    * @prop editingItem - Category being edited (null for new)
    * @prop onSave - Callback after successful save
    * @prop onCancel - Callback to close form without saving
@@ -24,7 +24,7 @@
 
   // Check if this is a predefined category (can't edit predefined categories)
   $: isPredefined = editingItem?.is_predefined || false;
-  
+
   // Check if this is the Variable Expenses category (special system category)
   $: isVariableCategory = (editingItem as any)?.type === 'variable';
 
@@ -73,12 +73,11 @@
 <form class="entity-form" on:submit|preventDefault={handleSubmit}>
   {#if isVariableCategory}
     <div class="info-message variable">
-      <strong>Variable Expenses</strong> is a system category. Add ad-hoc items to this category from the monthly view.
+      <strong>Variable Expenses</strong> is a system category. Add ad-hoc items to this category from
+      the monthly view.
     </div>
   {:else if isPredefined}
-    <div class="info-message">
-      This is a predefined category and cannot be edited.
-    </div>
+    <div class="info-message">This is a predefined category and cannot be edited.</div>
   {/if}
 
   {#if error}
@@ -99,9 +98,9 @@
 
   <div class="form-group">
     <label for="cat-type">Category Type</label>
-    <select 
-      id="cat-type" 
-      bind:value={type} 
+    <select
+      id="cat-type"
+      bind:value={type}
       disabled={saving || isPredefined || isVariableCategory || !!editingItem}
     >
       <option value="bill">Bill Category</option>
@@ -128,12 +127,7 @@
   <div class="form-group">
     <label for="cat-color">Color</label>
     <div class="color-input-wrapper">
-      <input
-        id="cat-color"
-        type="color"
-        bind:value={color}
-        disabled={saving || isPredefined}
-      />
+      <input id="cat-color" type="color" bind:value={color} disabled={saving || isPredefined} />
       <span class="color-preview" style="background-color: {color}">{color}</span>
     </div>
     <div class="help-text">Used for the category header accent color</div>
@@ -145,7 +139,7 @@
     </button>
     {#if !isPredefined}
       <button type="submit" class="btn btn-primary" disabled={saving}>
-        {saving ? 'Saving...' : (editingItem ? 'Save Changes' : 'Add Category')}
+        {saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Add Category'}
       </button>
     {/if}
   </div>
@@ -191,7 +185,8 @@
     color: #e4e4e7;
   }
 
-  input, select {
+  input,
+  select {
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #333355;
@@ -200,12 +195,14 @@
     font-size: 0.9375rem;
   }
 
-  input:focus, select:focus {
+  input:focus,
+  select:focus {
     outline: none;
     border-color: #24c8db;
   }
 
-  input:disabled, select:disabled {
+  input:disabled,
+  select:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
@@ -226,7 +223,7 @@
     gap: 12px;
   }
 
-  input[type="color"] {
+  input[type='color'] {
     width: 50px;
     height: 40px;
     padding: 2px;

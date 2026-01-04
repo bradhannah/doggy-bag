@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * CategoryView - Read-only view of a category
-   * 
+   *
    * @prop item - The category to display
    * @prop onEdit - Callback to switch to edit mode
    * @prop onClose - Callback to close the drawer
@@ -45,20 +45,14 @@
   </div>
 
   <div class="view-actions">
-    <button class="btn btn-secondary" on:click={onClose}>
-      Close
-    </button>
+    <button class="btn btn-secondary" on:click={onClose}> Close </button>
     {#if !item.is_predefined}
-      <button class="btn btn-primary" on:click={onEdit}>
-        Edit
-      </button>
+      <button class="btn btn-primary" on:click={onEdit}> Edit </button>
     {/if}
   </div>
 
   {#if item.is_predefined}
-    <div class="info-message">
-      Predefined categories cannot be edited.
-    </div>
+    <div class="info-message">Predefined categories cannot be edited.</div>
   {/if}
 </div>
 

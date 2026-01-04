@@ -10,10 +10,14 @@ import {
   Response,
   Tags,
   SuccessResponse,
-  Example
+  Example,
 } from 'tsoa';
 import type { PaymentSource } from '../types';
-import type { CreatePaymentSourceRequest, UpdatePaymentSourceRequest, ApiError } from '../types/requests';
+import type {
+  CreatePaymentSourceRequest,
+  UpdatePaymentSourceRequest,
+  ApiError,
+} from '../types/requests';
 
 /**
  * Controller for managing payment sources (bank accounts, credit cards, etc.)
@@ -21,24 +25,25 @@ import type { CreatePaymentSourceRequest, UpdatePaymentSourceRequest, ApiError }
 @Route('api/payment-sources')
 @Tags('Payment Sources')
 export class PaymentSourcesController extends Controller {
-  
   /**
    * Get all payment sources
    * @summary List all payment sources
    */
   @Get()
   @SuccessResponse(200, 'OK')
-  @Example<PaymentSource[]>([{
-    id: 'ps-001',
-    name: 'Checking Account',
-    type: 'bank_account',
-    balance: 250000,
-    is_active: true,
-    exclude_from_leftover: false,
-    pay_off_monthly: false,
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z'
-  }])
+  @Example<PaymentSource[]>([
+    {
+      id: 'ps-001',
+      name: 'Checking Account',
+      type: 'bank_account',
+      balance: 250000,
+      is_active: true,
+      exclude_from_leftover: false,
+      pay_off_monthly: false,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    },
+  ])
   public async getPaymentSources(): Promise<PaymentSource[]> {
     throw new Error('Not implemented - use existing handlers');
   }
@@ -80,9 +85,7 @@ export class PaymentSourcesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deletePaymentSource(
-    @Path() id: string
-  ): Promise<void> {
+  public async deletePaymentSource(@Path() id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

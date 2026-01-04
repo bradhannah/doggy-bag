@@ -23,6 +23,7 @@ Endpoints for the Detailed Monthly View page, including extended bill/income ins
 | month | string | Yes | Month in YYYY-MM format |
 
 **Response**: `200 OK`
+
 ```typescript
 interface DetailedMonthResponse {
   month: string;
@@ -54,17 +55,17 @@ interface CategorySection {
 interface BillInstanceDetailed {
   id: string;
   bill_id: string | null;
-  name: string;                  // From Bill or ad-hoc name
+  name: string; // From Bill or ad-hoc name
   expected_amount: number;
   actual_amount: number | null;
   payments: Payment[];
-  total_paid: number;            // Calculated: sum of payments or actual_amount
-  remaining: number;             // Calculated: expected - total_paid
+  total_paid: number; // Calculated: sum of payments or actual_amount
+  remaining: number; // Calculated: expected - total_paid
   is_paid: boolean;
   is_adhoc: boolean;
-  due_date: string | null;       // Calculated from Bill.due_day
-  is_overdue: boolean;           // Calculated: past due + unpaid
-  days_overdue: number | null;   // Calculated: days past due_date
+  due_date: string | null; // Calculated from Bill.due_day
+  is_overdue: boolean; // Calculated: past due + unpaid
+  days_overdue: number | null; // Calculated: days past due_date
   payment_source: {
     id: string;
     name: string;
@@ -78,10 +79,10 @@ interface IncomeInstanceDetailed {
   name: string;
   expected_amount: number;
   actual_amount: number | null;
-  is_paid: boolean;              // "received"
+  is_paid: boolean; // "received"
   is_adhoc: boolean;
   due_date: string | null;
-  is_overdue: boolean;           // Past expected date + not received
+  is_overdue: boolean; // Past expected date + not received
   payment_source: {
     id: string;
     name: string;
@@ -97,6 +98,7 @@ interface SectionTally {
 ```
 
 **Behavior**:
+
 - Groups bill instances by category, sorted by category.sort_order
 - Groups income instances by category
 - Calculates derived fields (total_paid, remaining, is_overdue)
@@ -105,6 +107,7 @@ interface SectionTally {
 - Calculates leftover using actuals only
 
 **Example Response** (abbreviated):
+
 ```json
 {
   "month": "2025-01",
@@ -175,13 +178,15 @@ interface SectionTally {
 | id | string | Yes | Bill instance ID |
 
 **Request Body**:
+
 ```typescript
 interface UpdateActualAmountRequest {
-  actual_amount: number;    // In cents, positive
+  actual_amount: number; // In cents, positive
 }
 ```
 
 **Response**: `200 OK`
+
 ```typescript
 interface UpdateActualAmountResponse {
   billInstance: BillInstanceDetailed;
@@ -189,6 +194,7 @@ interface UpdateActualAmountResponse {
 ```
 
 **Behavior**:
+
 - Sets actual_amount on the instance
 - Clears any partial payments (either use actual_amount OR payments, not both)
 - Recalculates derived fields
@@ -206,6 +212,7 @@ interface UpdateActualAmountResponse {
 | id | string | Yes | Income instance ID |
 
 **Request Body**:
+
 ```typescript
 interface UpdateIncomeActualRequest {
   actual_amount: number;
@@ -221,14 +228,16 @@ interface UpdateIncomeActualRequest {
 **Description**: Extended to support due_day field.
 
 **Extended Request Body**:
+
 ```typescript
 interface UpdateBillRequest {
   // ... existing fields
-  due_day?: number;    // NEW: 1-31 or null to clear
+  due_day?: number; // NEW: 1-31 or null to clear
 }
 ```
 
 **Validation**:
+
 - `due_day` must be 1-31 if provided
 - Set to `null` or omit to clear due date
 
@@ -239,11 +248,12 @@ interface UpdateBillRequest {
 **Description**: Extended to support due_day and category_id fields.
 
 **Extended Request Body**:
+
 ```typescript
 interface UpdateIncomeRequest {
   // ... existing fields
-  due_day?: number;        // NEW: 1-31 or null to clear
-  category_id?: string;    // NEW: income category reference
+  due_day?: number; // NEW: 1-31 or null to clear
+  category_id?: string; // NEW: income category reference
 }
 ```
 
@@ -252,19 +262,21 @@ interface UpdateIncomeRequest {
 ## Calculations Reference
 
 ### Due Date Calculation
+
 ```typescript
 function calculateDueDate(month: string, dueDay: number | undefined): string | null {
   if (!dueDay) return null;
-  
+
   const [year, monthNum] = month.split('-').map(Number);
   const daysInMonth = new Date(year, monthNum, 0).getDate();
   const actualDay = Math.min(dueDay, daysInMonth);
-  
+
   return `${month}-${String(actualDay).padStart(2, '0')}`;
 }
 ```
 
 ### Overdue Check
+
 ```typescript
 function isOverdue(dueDate: string | null, isPaid: boolean): boolean {
   if (!dueDate || isPaid) return false;
@@ -276,41 +288,53 @@ function getDaysOverdue(dueDate: string): number | null {
   const today = new Date();
   const due = new Date(dueDate);
   if (due >= today) return null;
-  
+
   const diffTime = today.getTime() - due.getTime();
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 }
 ```
 
 ### Leftover Calculation
+
 ```typescript
 function calculateLeftover(monthData: MonthlyData): number {
-  const totalBankBalances = Object.values(monthData.bank_balances)
-    .reduce((sum, balance) => sum + balance, 0);
-  
-  const totalActualIncome = monthData.income_instances
-    .reduce((sum, inc) => sum + (inc.actual_amount ?? 0), 0);
-  
-  const totalActualBills = monthData.bill_instances
-    .reduce((sum, bill) => {
-      if (bill.payments.length > 0) {
-        return sum + bill.payments.reduce((s, p) => s + p.amount, 0);
-      }
-      return sum + (bill.actual_amount ?? 0);
-    }, 0);
-  
-  const totalVariableExpenses = monthData.variable_expenses
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  
-  const totalFreeFlowing = monthData.free_flowing_expenses
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  
-  return totalBankBalances + totalActualIncome - 
-         (totalActualBills + totalVariableExpenses + totalFreeFlowing);
+  const totalBankBalances = Object.values(monthData.bank_balances).reduce(
+    (sum, balance) => sum + balance,
+    0
+  );
+
+  const totalActualIncome = monthData.income_instances.reduce(
+    (sum, inc) => sum + (inc.actual_amount ?? 0),
+    0
+  );
+
+  const totalActualBills = monthData.bill_instances.reduce((sum, bill) => {
+    if (bill.payments.length > 0) {
+      return sum + bill.payments.reduce((s, p) => s + p.amount, 0);
+    }
+    return sum + (bill.actual_amount ?? 0);
+  }, 0);
+
+  const totalVariableExpenses = monthData.variable_expenses.reduce(
+    (sum, exp) => sum + exp.amount,
+    0
+  );
+
+  const totalFreeFlowing = monthData.free_flowing_expenses.reduce(
+    (sum, exp) => sum + exp.amount,
+    0
+  );
+
+  return (
+    totalBankBalances +
+    totalActualIncome -
+    (totalActualBills + totalVariableExpenses + totalFreeFlowing)
+  );
 }
 ```
 
 ### Section Tally Calculation
+
 ```typescript
 function calculateBillsTally(bills: BillInstance[]): SectionTally {
   return {
@@ -330,7 +354,7 @@ function calculateBillsTally(bills: BillInstance[]): SectionTally {
         return sum + b.expected_amount;
       }
       return sum;
-    }, 0)
+    }, 0),
   };
 }
 ```
@@ -349,6 +373,7 @@ function shouldHighlightActual(instance: BillInstanceDetailed): boolean {
 ```
 
 Visual treatment:
+
 - Amber text color (`#f59e0b`)
 - Or amber background with dark text
 - Tooltip: "Differs from expected by $X"
@@ -358,9 +383,11 @@ Visual treatment:
 ## Sorting Rules
 
 ### Categories
+
 - Sort by `category.sort_order` ascending
 
 ### Items Within Category
+
 1. is_adhoc (regular first, ad-hoc last)
 2. is_paid (unpaid first)
 3. due_date (soonest first, null last)

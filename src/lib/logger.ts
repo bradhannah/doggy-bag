@@ -5,7 +5,7 @@ export enum LogLevel {
   DEBUG = 'DEBUG',
   INFO = 'INFO',
   WARN = 'WARN',
-  ERROR = 'ERROR'
+  ERROR = 'ERROR',
 }
 
 export interface LogEntry {
@@ -23,15 +23,15 @@ const isDev = (): boolean => {
 
 class Logger {
   private context: string;
-  
+
   constructor(context: string) {
     this.context = context;
   }
-  
+
   private formatMessage(level: LogLevel, message: string): string {
     return `[${level}] [${this.context}] ${message}`;
   }
-  
+
   public debug(message: string, data?: unknown): void {
     if (isDev()) {
       const formatted = this.formatMessage(LogLevel.DEBUG, message);
@@ -42,7 +42,7 @@ class Logger {
       }
     }
   }
-  
+
   public info(message: string, data?: unknown): void {
     const formatted = this.formatMessage(LogLevel.INFO, message);
     if (data !== undefined) {
@@ -51,7 +51,7 @@ class Logger {
       console.info(formatted);
     }
   }
-  
+
   public warn(message: string, data?: unknown): void {
     const formatted = this.formatMessage(LogLevel.WARN, message);
     if (data !== undefined) {
@@ -60,7 +60,7 @@ class Logger {
       console.warn(formatted);
     }
   }
-  
+
   public error(message: string, data?: unknown): void {
     const formatted = this.formatMessage(LogLevel.ERROR, message);
     if (data !== undefined) {

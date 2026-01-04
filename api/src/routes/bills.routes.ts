@@ -4,7 +4,7 @@ import {
   createBillsHandlerGET,
   createBillsHandlerPOST,
   createBillsHandlerPUT,
-  createBillsHandlerDELETE
+  createBillsHandlerDELETE,
 } from './handlers/bills.handlers';
 
 export const routes = new Map([

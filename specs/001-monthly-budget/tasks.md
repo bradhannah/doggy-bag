@@ -13,30 +13,30 @@
 
 ### Completed Phases
 
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 1: Build System Setup | COMPLETE | Tauri + Svelte + Bun architecture working |
-| Phase 2: OpenAPI Type Coordination | COMPLETE | tsoa, openapi-typescript, openapi-fetch integrated |
-| Phase 3: Build System Validation | COMPLETE | Sidecar setup, production build tested |
+| Phase                               | Status   | Notes                                                |
+| ----------------------------------- | -------- | ---------------------------------------------------- |
+| Phase 1: Build System Setup         | COMPLETE | Tauri + Svelte + Bun architecture working            |
+| Phase 2: OpenAPI Type Coordination  | COMPLETE | tsoa, openapi-typescript, openapi-fetch integrated   |
+| Phase 3: Build System Validation    | COMPLETE | Sidecar setup, production build tested               |
 | Phase 3.5: UI Component Prototyping | COMPLETE | All decisions documented in prototyping-decisions.md |
-| Phase 4: Foundational Services | COMPLETE | All services implemented |
+| Phase 4: Foundational Services      | COMPLETE | All services implemented                             |
 
 ### Completed User Stories
 
-| User Story | Status | Notes |
-|------------|--------|-------|
-| US0: First-Time Setup | COMPLETE | Setup page with tabs for Bills/Incomes/Payment Sources |
-| US1: Set Up Monthly Bills | COMPLETE | CRUD operations, billing periods working |
-| US2: Track Monthly Income | COMPLETE | CRUD operations, billing periods working |
-| US3: Calculate Monthly Surplus | COMPLETE | Dashboard with leftover calculation |
-| US4: Track Variable Expenses | COMPLETE | Expenses CRUD in monthly data |
-| US5: Manage Payment Sources | COMPLETE | CRUD operations with balance tracking |
-| US6: Generate Month With Flexible Editing | COMPLETE | Month generation, instance editing |
-| US7: View Month-by-Month Breakdown | COMPLETE | Month navigation and data isolation |
-| US8: Manage Bill Categories | COMPLETE | 8 pre-defined categories, custom categories |
-| US9: Undo Changes | COMPLETE | 5-entry undo stack with Ctrl+Z shortcut |
-| US10: Backup/Restore | COMPLETE | Export/Import with validation |
-| US11: Free-Flowing Expenses (as Variable) | COMPLETE | Combined with variable expenses |
+| User Story                                | Status   | Notes                                                  |
+| ----------------------------------------- | -------- | ------------------------------------------------------ |
+| US0: First-Time Setup                     | COMPLETE | Setup page with tabs for Bills/Incomes/Payment Sources |
+| US1: Set Up Monthly Bills                 | COMPLETE | CRUD operations, billing periods working               |
+| US2: Track Monthly Income                 | COMPLETE | CRUD operations, billing periods working               |
+| US3: Calculate Monthly Surplus            | COMPLETE | Dashboard with leftover calculation                    |
+| US4: Track Variable Expenses              | COMPLETE | Expenses CRUD in monthly data                          |
+| US5: Manage Payment Sources               | COMPLETE | CRUD operations with balance tracking                  |
+| US6: Generate Month With Flexible Editing | COMPLETE | Month generation, instance editing                     |
+| US7: View Month-by-Month Breakdown        | COMPLETE | Month navigation and data isolation                    |
+| US8: Manage Bill Categories               | COMPLETE | 8 pre-defined categories, custom categories            |
+| US9: Undo Changes                         | COMPLETE | 5-entry undo stack with Ctrl+Z shortcut                |
+| US10: Backup/Restore                      | COMPLETE | Export/Import with validation                          |
+| US11: Free-Flowing Expenses (as Variable) | COMPLETE | Combined with variable expenses                        |
 
 ### Recently Completed Features (This Session)
 
@@ -177,6 +177,7 @@
 **Context**: This phase lets you rapidly prototype different component variations side-by-side and select the best approaches. No business logic yet - just UI exploration.
 
 **Deliverable**: Documented decisions for:
+
 - Widget library choices (native HTML vs custom components)
 - Input component configurations (currency inputs, date pickers, dropdowns)
 - Modal vs inline editing approaches
@@ -1143,6 +1144,7 @@ Task: "Create mock data service for testing components"
 ```
 
 **Team Work Session**: All team members gather together to:
+
 1. Open prototype.svelte in Tauri app
 2. Navigate through each widget category
 3. Test each variation with real data entry
@@ -1283,6 +1285,7 @@ With multiple developers:
 **Total Tasks**: 313
 
 **Task Count by Phase**:
+
 - Phase 1 (Build System Setup): 23 tasks (T001-T023)
 - Phase 2 (OpenAPI Type Coordination): 9 tasks (T024-T032)
 - Phase 3 (Build System Validation): 8 tasks (T033-T040)
@@ -1304,12 +1307,14 @@ With multiple developers:
 - Phase 17 (Polish): 28 tasks (T263-T290)
 
 **Task Count by Priority**:
+
 - **P1 (MVP)**: 169 tasks (Setup + OpenAPI + Validation + Testing Infra + Prototyping + Foundational + US0-US3)
 - **P2**: 119 tasks (US4-US9, US11)
 - **P3**: 13 tasks (US10)
 - **Polish**: 28 tasks (cross-cutting)
 
 **Parallel Opportunities Identified**:
+
 - 50+ tasks marked with [P] can run in parallel within their phases
 - Contract tests for each user story can run in parallel (6-8 per story)
 - Model implementations within stories can run in parallel (3-4 per story)
@@ -1317,6 +1322,7 @@ With multiple developers:
 - Polish tasks can run in parallel (responsive design, Makefile targets, utilities)
 
 **Independent Test Criteria for Each Story**:
+
 - **US0 (Setup)**: Add bill, income, payment source in under 5 minutes
 - **US1 (Bills)**: Add bills with billing periods, verify total fixed cost
 - **US2 (Incomes)**: Add incomes with billing periods, verify total income
@@ -1331,6 +1337,7 @@ With multiple developers:
 - **US11 (Free-Flowing)**: Add ad-hoc expense, verify in current month only
 
 **Suggested MVP Scope**: User Stories 0-3 (Setup, Bills, Income, Surplus Calculation)
+
 - **MVP Task Count**: 155 tasks (includes UI prototyping phase)
 - **Estimated Time**: 2-3 weeks with 2-3 developers (includes prototyping work session)
 - **Value Delivered**: Users can set up budget, add bills/incomes, see "leftover" calculation

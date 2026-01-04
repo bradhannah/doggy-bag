@@ -17,25 +17,28 @@ This data model extends the 001-monthly-budget entities to support the Detailed 
 ### Category (Extended)
 
 **New Fields**:
+
 ```typescript
 interface Category {
   id: string;
   name: string;
   is_predefined: boolean;
-  sort_order: number;        // NEW: Display order (0 = first)
-  color: string;             // NEW: Hex color for header accent (e.g., "#3b82f6")
-  type: 'bill' | 'income';   // NEW: Distinguishes bill vs income categories
+  sort_order: number; // NEW: Display order (0 = first)
+  color: string; // NEW: Hex color for header accent (e.g., "#3b82f6")
+  type: 'bill' | 'income'; // NEW: Distinguishes bill vs income categories
   created_at: string;
   updated_at: string;
 }
 ```
 
 **Validation Rules (New)**:
+
 - `sort_order` must be >= 0
 - `color` must be valid hex format (#RRGGBB or #RGB)
 - `type` must be 'bill' or 'income'
 
 **Migration**:
+
 - Existing categories get `sort_order` based on current array position
 - Existing categories get default `color` from palette
 - Existing categories get `type: 'bill'` (all existing are bill categories)
@@ -70,6 +73,7 @@ interface Category {
 ### Bill (Extended)
 
 **New Fields**:
+
 ```typescript
 interface Bill {
   id: string;
@@ -82,7 +86,7 @@ interface Bill {
   recurrence_day?: number;
   payment_source_id: string;
   category_id?: string;
-  due_day?: number;          // NEW: Day of month when due (1-31)
+  due_day?: number; // NEW: Day of month when due (1-31)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -90,10 +94,12 @@ interface Bill {
 ```
 
 **Validation Rules (New)**:
+
 - `due_day` must be 1-31 if provided
 - Due day 31 in short months → use last day of month
 
 **Migration**:
+
 - Existing bills get `due_day: undefined` (no due date)
 
 ---
@@ -101,6 +107,7 @@ interface Bill {
 ### Income (Extended)
 
 **New Fields**:
+
 ```typescript
 interface Income {
   id: string;
@@ -112,8 +119,8 @@ interface Income {
   recurrence_week?: number;
   recurrence_day?: number;
   payment_source_id: string;
-  category_id?: string;       // NEW: Reference to income category
-  due_day?: number;           // NEW: Day of month when expected (1-31)
+  category_id?: string; // NEW: Reference to income category
+  due_day?: number; // NEW: Day of month when expected (1-31)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -121,10 +128,12 @@ interface Income {
 ```
 
 **Validation Rules (New)**:
+
 - `category_id` must reference a category with `type: 'income'`
 - `due_day` must be 1-31 if provided
 
 **Migration**:
+
 - Existing incomes get `category_id: undefined` (uncategorized)
 - Existing incomes get `due_day: undefined` (no due date)
 
@@ -135,16 +144,18 @@ interface Income {
 **Description**: Represents a single payment toward a bill (for partial payment tracking).
 
 **Fields**:
+
 ```typescript
 interface Payment {
-  id: string;                 // Unique identifier (UUID)
-  amount: number;             // Payment amount (positive)
-  date: string;               // Date of payment (ISO YYYY-MM-DD)
-  created_at: string;         // ISO 8601 timestamp
+  id: string; // Unique identifier (UUID)
+  amount: number; // Payment amount (positive)
+  date: string; // Date of payment (ISO YYYY-MM-DD)
+  created_at: string; // ISO 8601 timestamp
 }
 ```
 
 **Validation Rules**:
+
 - `amount` must be positive (> 0)
 - `date` must be valid ISO date format
 
@@ -155,21 +166,22 @@ interface Payment {
 ### BillInstance (Extended)
 
 **New/Modified Fields**:
+
 ```typescript
 interface BillInstance {
   id: string;
-  bill_id: string | null;     // MODIFIED: null for ad-hoc bills
+  bill_id: string | null; // MODIFIED: null for ad-hoc bills
   month: string;
-  amount: number;             // DEPRECATED: use expected_amount
-  expected_amount: number;    // NEW: From default bill (read-only in Detailed View)
-  actual_amount?: number;     // NEW: User-entered actual (for non-partial)
-  payments: Payment[];        // NEW: Array of partial payments
+  amount: number; // DEPRECATED: use expected_amount
+  expected_amount: number; // NEW: From default bill (read-only in Detailed View)
+  actual_amount?: number; // NEW: User-entered actual (for non-partial)
+  payments: Payment[]; // NEW: Array of partial payments
   is_default: boolean;
   is_paid: boolean;
-  is_adhoc: boolean;          // NEW: True for one-time ad-hoc items
-  due_date?: string;          // NEW: Calculated from Bill.due_day + month
-  name?: string;              // NEW: For ad-hoc items (bill_id is null)
-  category_id?: string;       // NEW: For ad-hoc items (no bill reference)
+  is_adhoc: boolean; // NEW: True for one-time ad-hoc items
+  due_date?: string; // NEW: Calculated from Bill.due_day + month
+  name?: string; // NEW: For ad-hoc items (bill_id is null)
+  category_id?: string; // NEW: For ad-hoc items (no bill reference)
   payment_source_id?: string; // NEW: For ad-hoc items (no bill reference)
   created_at: string;
   updated_at: string;
@@ -177,6 +189,7 @@ interface BillInstance {
 ```
 
 **Validation Rules (New)**:
+
 - If `is_adhoc: true`: `bill_id` must be null, `name` required
 - If `is_adhoc: false`: `bill_id` must reference existing Bill
 - `expected_amount` must be positive (> 0)
@@ -184,10 +197,12 @@ interface BillInstance {
 - `payments` array can be empty (non-partial bill)
 
 **Calculated Fields**:
+
 - `due_date`: Computed as `{month}-{Bill.due_day}` (e.g., "2025-01-15")
 - Effective amount for leftover: `sum(payments)` if partial, else `actual_amount`, else 0
 
 **Migration**:
+
 - Existing instances: `expected_amount = amount`, `payments = []`, `is_adhoc = false`
 - `amount` field preserved for backward compatibility but deprecated
 
@@ -196,20 +211,21 @@ interface BillInstance {
 ### IncomeInstance (Extended)
 
 **New/Modified Fields**:
+
 ```typescript
 interface IncomeInstance {
   id: string;
-  income_id: string | null;   // MODIFIED: null for ad-hoc income
+  income_id: string | null; // MODIFIED: null for ad-hoc income
   month: string;
-  amount: number;             // DEPRECATED: use expected_amount
-  expected_amount: number;    // NEW: From default income
-  actual_amount?: number;     // NEW: User-entered actual
+  amount: number; // DEPRECATED: use expected_amount
+  expected_amount: number; // NEW: From default income
+  actual_amount?: number; // NEW: User-entered actual
   is_default: boolean;
-  is_paid: boolean;           // Represents "received"
-  is_adhoc: boolean;          // NEW: True for one-time ad-hoc items
-  due_date?: string;          // NEW: Calculated from Income.due_day + month
-  name?: string;              // NEW: For ad-hoc items (income_id is null)
-  category_id?: string;       // NEW: For ad-hoc items (no income reference)
+  is_paid: boolean; // Represents "received"
+  is_adhoc: boolean; // NEW: True for one-time ad-hoc items
+  due_date?: string; // NEW: Calculated from Income.due_day + month
+  name?: string; // NEW: For ad-hoc items (income_id is null)
+  category_id?: string; // NEW: For ad-hoc items (no income reference)
   payment_source_id?: string; // NEW: For ad-hoc items (no income reference)
   created_at: string;
   updated_at: string;
@@ -217,12 +233,14 @@ interface IncomeInstance {
 ```
 
 **Validation Rules (New)**:
+
 - If `is_adhoc: true`: `income_id` must be null, `name` required
 - If `is_adhoc: false`: `income_id` must reference existing Income
 - `expected_amount` must be positive (> 0)
 - `actual_amount` must be positive if provided
 
 **Migration**:
+
 - Existing instances: `expected_amount = amount`, `is_adhoc = false`
 
 ---
@@ -230,11 +248,12 @@ interface IncomeInstance {
 ### MonthlyData (Extended)
 
 **Updated Structure**:
+
 ```typescript
 interface MonthlyData {
   month: string;
-  bill_instances: BillInstance[];      // Extended structure
-  income_instances: IncomeInstance[];  // Extended structure
+  bill_instances: BillInstance[]; // Extended structure
+  income_instances: IncomeInstance[]; // Extended structure
   variable_expenses: VariableExpense[];
   free_flowing_expenses: FreeFlowingExpense[];
   bank_balances: Record<string, number>;
@@ -252,47 +271,59 @@ interface MonthlyData {
 ### Leftover Calculation (Updated)
 
 **Uses actuals only**:
+
 ```typescript
 function calculateLeftover(monthData: MonthlyData): number {
   // Bank balances (same as before)
-  const totalBankBalances = Object.values(monthData.bank_balances)
-    .reduce((sum, balance) => sum + balance, 0);
-  
+  const totalBankBalances = Object.values(monthData.bank_balances).reduce(
+    (sum, balance) => sum + balance,
+    0
+  );
+
   // Actual income (only count actuals entered)
-  const totalActualIncome = monthData.income_instances
-    .reduce((sum, inc) => sum + (inc.actual_amount ?? 0), 0);
-  
+  const totalActualIncome = monthData.income_instances.reduce(
+    (sum, inc) => sum + (inc.actual_amount ?? 0),
+    0
+  );
+
   // Actual expenses from bills (partial payments or actual_amount)
-  const totalActualBills = monthData.bill_instances
-    .reduce((sum, bill) => {
-      if (bill.payments.length > 0) {
-        return sum + bill.payments.reduce((s, p) => s + p.amount, 0);
-      }
-      return sum + (bill.actual_amount ?? 0);
-    }, 0);
-  
+  const totalActualBills = monthData.bill_instances.reduce((sum, bill) => {
+    if (bill.payments.length > 0) {
+      return sum + bill.payments.reduce((s, p) => s + p.amount, 0);
+    }
+    return sum + (bill.actual_amount ?? 0);
+  }, 0);
+
   // Variable expenses (always actual)
-  const totalVariableExpenses = monthData.variable_expenses
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  
+  const totalVariableExpenses = monthData.variable_expenses.reduce(
+    (sum, exp) => sum + exp.amount,
+    0
+  );
+
   // Free-flowing expenses (always actual)
-  const totalFreeFlowing = monthData.free_flowing_expenses
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  
+  const totalFreeFlowing = monthData.free_flowing_expenses.reduce(
+    (sum, exp) => sum + exp.amount,
+    0
+  );
+
   // Leftover = bank balances + actual income - actual expenses
-  return totalBankBalances + totalActualIncome - 
-         (totalActualBills + totalVariableExpenses + totalFreeFlowing);
+  return (
+    totalBankBalances +
+    totalActualIncome -
+    (totalActualBills + totalVariableExpenses + totalFreeFlowing)
+  );
 }
 ```
 
 ### Section Tallies
 
 **Bills & Expenses Tally**:
+
 ```typescript
 interface SectionTally {
-  expected: number;   // Sum of expected_amount
-  actual: number;     // Sum of effective amounts (payments or actual_amount)
-  remaining: number;  // Unpaid expected + partial payment remainders
+  expected: number; // Sum of expected_amount
+  actual: number; // Sum of effective amounts (payments or actual_amount)
+  remaining: number; // Unpaid expected + partial payment remainders
 }
 
 function calculateBillsTally(bills: BillInstance[]): SectionTally {
@@ -315,7 +346,7 @@ function calculateBillsTally(bills: BillInstance[]): SectionTally {
         return sum + b.expected_amount;
       }
       return sum;
-    }, 0)
+    }, 0),
   };
 }
 ```
@@ -325,11 +356,11 @@ function calculateBillsTally(bills: BillInstance[]): SectionTally {
 ```typescript
 function calculateDueDate(month: string, dueDay: number | undefined): string | undefined {
   if (!dueDay) return undefined;
-  
+
   const [year, monthNum] = month.split('-').map(Number);
   const daysInMonth = new Date(year, monthNum, 0).getDate();
   const actualDay = Math.min(dueDay, daysInMonth);
-  
+
   return `${month}-${String(actualDay).padStart(2, '0')}`;
 }
 
@@ -407,8 +438,18 @@ function getDaysOverdue(dueDate: string): number {
       "expected_amount": 30000,
       "actual_amount": null,
       "payments": [
-        { "id": "pay-1", "amount": 12000, "date": "2025-01-05", "created_at": "2025-01-05T00:00:00Z" },
-        { "id": "pay-2", "amount": 8000, "date": "2025-01-15", "created_at": "2025-01-15T00:00:00Z" }
+        {
+          "id": "pay-1",
+          "amount": 12000,
+          "date": "2025-01-05",
+          "created_at": "2025-01-05T00:00:00Z"
+        },
+        {
+          "id": "pay-2",
+          "amount": 8000,
+          "date": "2025-01-15",
+          "created_at": "2025-01-15T00:00:00Z"
+        }
       ],
       "is_default": true,
       "is_paid": false,
@@ -478,7 +519,7 @@ function migrateBillInstance(instance: any): BillInstance {
     actual_amount: instance.actual_amount ?? (instance.is_paid ? instance.amount : undefined),
     payments: instance.payments ?? [],
     is_adhoc: instance.is_adhoc ?? false,
-    due_date: instance.due_date ?? null
+    due_date: instance.due_date ?? null,
   };
 }
 
@@ -487,7 +528,7 @@ function migrateCategory(category: any, index: number): Category {
     ...category,
     sort_order: category.sort_order ?? index,
     color: category.color ?? getDefaultColor(category.name),
-    type: category.type ?? 'bill'
+    type: category.type ?? 'bill',
   };
 }
 ```
@@ -498,12 +539,54 @@ On first load, if no income categories exist, create defaults:
 
 ```typescript
 const defaultIncomeCategories: Category[] = [
-  { id: 'cat-salary', name: 'Salary', sort_order: 0, color: '#10b981', type: 'income', is_predefined: true },
-  { id: 'cat-freelance', name: 'Freelance/Contract', sort_order: 1, color: '#8b5cf6', type: 'income', is_predefined: true },
-  { id: 'cat-investment', name: 'Investment', sort_order: 2, color: '#3b82f6', type: 'income', is_predefined: true },
-  { id: 'cat-government', name: 'Government', sort_order: 3, color: '#f59e0b', type: 'income', is_predefined: true },
-  { id: 'cat-other-income', name: 'Other', sort_order: 4, color: '#64748b', type: 'income', is_predefined: true },
-  { id: 'cat-adhoc-income', name: 'Ad-hoc', sort_order: 5, color: '#ec4899', type: 'income', is_predefined: true }
+  {
+    id: 'cat-salary',
+    name: 'Salary',
+    sort_order: 0,
+    color: '#10b981',
+    type: 'income',
+    is_predefined: true,
+  },
+  {
+    id: 'cat-freelance',
+    name: 'Freelance/Contract',
+    sort_order: 1,
+    color: '#8b5cf6',
+    type: 'income',
+    is_predefined: true,
+  },
+  {
+    id: 'cat-investment',
+    name: 'Investment',
+    sort_order: 2,
+    color: '#3b82f6',
+    type: 'income',
+    is_predefined: true,
+  },
+  {
+    id: 'cat-government',
+    name: 'Government',
+    sort_order: 3,
+    color: '#f59e0b',
+    type: 'income',
+    is_predefined: true,
+  },
+  {
+    id: 'cat-other-income',
+    name: 'Other',
+    sort_order: 4,
+    color: '#64748b',
+    type: 'income',
+    is_predefined: true,
+  },
+  {
+    id: 'cat-adhoc-income',
+    name: 'Ad-hoc',
+    sort_order: 5,
+    color: '#ec4899',
+    type: 'income',
+    is_predefined: true,
+  },
 ];
 ```
 

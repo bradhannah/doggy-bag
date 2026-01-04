@@ -32,15 +32,27 @@
     "svelte-dnd-action": "^0.9.69"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.9.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tauri-apps/cli": "^2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "eslint": "^9.39.2",
+    "eslint-plugin-svelte": "^3.13.1",
+    "globals": "^17.0.0",
+    "jsdom": "^27.4.0",
+    "lefthook": "^2.0.13",
     "openapi-fetch": "^0.15.0",
     "openapi-typescript": "^7.10.1",
+    "prettier": "^3.7.4",
+    "prettier-plugin-svelte": "^3.4.1",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "typescript-eslint": "^8.51.0",
+    "vite": "^6.0.3",
+    "vitest": "^4.0.16"
   }
 }

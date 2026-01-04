@@ -9,15 +9,43 @@ import { sumOccurrencePayments, areAllOccurrencesClosed } from '../utils/occurre
 
 export interface PaymentsService {
   // Bill payments (at occurrence level)
-  addPayment(month: string, billInstanceId: string, amount: number, date: string, occurrenceId?: string): Promise<BillInstance>;
-  updatePayment(month: string, billInstanceId: string, paymentId: string, amount: number, date: string): Promise<BillInstance>;
+  addPayment(
+    month: string,
+    billInstanceId: string,
+    amount: number,
+    date: string,
+    occurrenceId?: string
+  ): Promise<BillInstance>;
+  updatePayment(
+    month: string,
+    billInstanceId: string,
+    paymentId: string,
+    amount: number,
+    date: string
+  ): Promise<BillInstance>;
   removePayment(month: string, billInstanceId: string, paymentId: string): Promise<BillInstance>;
   getPayments(month: string, billInstanceId: string): Promise<Payment[]>;
-  
+
   // Income payments (at occurrence level)
-  addIncomePayment(month: string, incomeInstanceId: string, amount: number, date: string, occurrenceId?: string): Promise<IncomeInstance>;
-  updateIncomePayment(month: string, incomeInstanceId: string, paymentId: string, amount: number, date: string): Promise<IncomeInstance>;
-  removeIncomePayment(month: string, incomeInstanceId: string, paymentId: string): Promise<IncomeInstance>;
+  addIncomePayment(
+    month: string,
+    incomeInstanceId: string,
+    amount: number,
+    date: string,
+    occurrenceId?: string
+  ): Promise<IncomeInstance>;
+  updateIncomePayment(
+    month: string,
+    incomeInstanceId: string,
+    paymentId: string,
+    amount: number,
+    date: string
+  ): Promise<IncomeInstance>;
+  removeIncomePayment(
+    month: string,
+    incomeInstanceId: string,
+    paymentId: string
+  ): Promise<IncomeInstance>;
   getIncomePayments(month: string, incomeInstanceId: string): Promise<Payment[]>;
 }
 
@@ -39,7 +67,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     if (amount <= 0) {
       throw new ValidationError('Payment amount must be positive');
     }
-    
+
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new ValidationError('Payment date must be in YYYY-MM-DD format');
     }
@@ -49,18 +77,18 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const billIndex = monthlyData.bill_instances.findIndex(b => b.id === billInstanceId);
+    const billIndex = monthlyData.bill_instances.findIndex((b) => b.id === billInstanceId);
     if (billIndex === -1) {
       throw new NotFoundError(`Bill instance ${billInstanceId} not found in ${month}`);
     }
 
     const billInstance = monthlyData.bill_instances[billIndex];
-    
+
     // Find the target occurrence (use first if not specified)
-    let targetOccurrence = occurrenceId 
-      ? billInstance.occurrences.find(o => o.id === occurrenceId)
+    const targetOccurrence = occurrenceId
+      ? billInstance.occurrences.find((o) => o.id === occurrenceId)
       : billInstance.occurrences[0];
-    
+
     if (!targetOccurrence) {
       throw new NotFoundError(`Occurrence not found for bill instance ${billInstanceId}`);
     }
@@ -70,19 +98,19 @@ export class PaymentsServiceImpl implements PaymentsService {
       id: crypto.randomUUID(),
       amount,
       date,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
 
     targetOccurrence.payments.push(newPayment);
     targetOccurrence.updated_at = new Date().toISOString();
-    
+
     // Check if this occurrence should be marked closed
     const occTotalPaid = targetOccurrence.payments.reduce((sum, p) => sum + p.amount, 0);
     if (occTotalPaid >= targetOccurrence.expected_amount) {
       targetOccurrence.is_closed = true;
       targetOccurrence.closed_date = date;
     }
-    
+
     // Update instance-level is_closed based on all occurrences
     billInstance.is_closed = areAllOccurrencesClosed(billInstance.occurrences);
     if (billInstance.is_closed && !billInstance.closed_date) {
@@ -108,7 +136,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     if (amount <= 0) {
       throw new ValidationError('Payment amount must be positive');
     }
-    
+
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new ValidationError('Payment date must be in YYYY-MM-DD format');
     }
@@ -118,25 +146,25 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const billIndex = monthlyData.bill_instances.findIndex(b => b.id === billInstanceId);
+    const billIndex = monthlyData.bill_instances.findIndex((b) => b.id === billInstanceId);
     if (billIndex === -1) {
       throw new NotFoundError(`Bill instance ${billInstanceId} not found in ${month}`);
     }
 
     const billInstance = monthlyData.bill_instances[billIndex];
-    
+
     // Find the occurrence containing this payment
     let targetOccurrence = null;
     let paymentIndex = -1;
-    
+
     for (const occ of billInstance.occurrences) {
-      paymentIndex = occ.payments.findIndex(p => p.id === paymentId);
+      paymentIndex = occ.payments.findIndex((p) => p.id === paymentId);
       if (paymentIndex !== -1) {
         targetOccurrence = occ;
         break;
       }
     }
-    
+
     if (!targetOccurrence || paymentIndex === -1) {
       throw new NotFoundError(`Payment ${paymentId} not found`);
     }
@@ -145,7 +173,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     targetOccurrence.payments[paymentIndex] = {
       ...targetOccurrence.payments[paymentIndex],
       amount,
-      date
+      date,
     };
     targetOccurrence.updated_at = new Date().toISOString();
 
@@ -157,7 +185,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     } else if (!targetOccurrence.is_closed) {
       targetOccurrence.closed_date = undefined;
     }
-    
+
     // Update instance-level is_closed based on all occurrences
     billInstance.is_closed = areAllOccurrencesClosed(billInstance.occurrences);
     if (billInstance.is_closed && !billInstance.closed_date) {
@@ -184,25 +212,25 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const billIndex = monthlyData.bill_instances.findIndex(b => b.id === billInstanceId);
+    const billIndex = monthlyData.bill_instances.findIndex((b) => b.id === billInstanceId);
     if (billIndex === -1) {
       throw new NotFoundError(`Bill instance ${billInstanceId} not found in ${month}`);
     }
 
     const billInstance = monthlyData.bill_instances[billIndex];
-    
+
     // Find the occurrence containing this payment
     let targetOccurrence = null;
     let paymentIndex = -1;
-    
+
     for (const occ of billInstance.occurrences) {
-      paymentIndex = occ.payments.findIndex(p => p.id === paymentId);
+      paymentIndex = occ.payments.findIndex((p) => p.id === paymentId);
       if (paymentIndex !== -1) {
         targetOccurrence = occ;
         break;
       }
     }
-    
+
     if (!targetOccurrence || paymentIndex === -1) {
       throw new NotFoundError(`Payment ${paymentId} not found`);
     }
@@ -217,7 +245,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     if (!targetOccurrence.is_closed) {
       targetOccurrence.closed_date = undefined;
     }
-    
+
     // Update instance-level is_closed based on all occurrences
     billInstance.is_closed = areAllOccurrencesClosed(billInstance.occurrences);
     if (!billInstance.is_closed) {
@@ -238,13 +266,13 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const billInstance = monthlyData.bill_instances.find(b => b.id === billInstanceId);
+    const billInstance = monthlyData.bill_instances.find((b) => b.id === billInstanceId);
     if (!billInstance) {
       throw new NotFoundError(`Bill instance ${billInstanceId} not found in ${month}`);
     }
 
     // Collect all payments from all occurrences
-    return billInstance.occurrences.flatMap(occ => occ.payments || []);
+    return billInstance.occurrences.flatMap((occ) => occ.payments || []);
   }
 
   // ============================================================================
@@ -262,7 +290,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     if (amount <= 0) {
       throw new ValidationError('Payment amount must be positive');
     }
-    
+
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new ValidationError('Payment date must be in YYYY-MM-DD format');
     }
@@ -272,18 +300,18 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const incomeIndex = monthlyData.income_instances.findIndex(i => i.id === incomeInstanceId);
+    const incomeIndex = monthlyData.income_instances.findIndex((i) => i.id === incomeInstanceId);
     if (incomeIndex === -1) {
       throw new NotFoundError(`Income instance ${incomeInstanceId} not found in ${month}`);
     }
 
     const incomeInstance = monthlyData.income_instances[incomeIndex];
-    
+
     // Find the target occurrence (use first if not specified)
-    let targetOccurrence = occurrenceId 
-      ? incomeInstance.occurrences.find(o => o.id === occurrenceId)
+    const targetOccurrence = occurrenceId
+      ? incomeInstance.occurrences.find((o) => o.id === occurrenceId)
       : incomeInstance.occurrences[0];
-    
+
     if (!targetOccurrence) {
       throw new NotFoundError(`Occurrence not found for income instance ${incomeInstanceId}`);
     }
@@ -293,19 +321,19 @@ export class PaymentsServiceImpl implements PaymentsService {
       id: crypto.randomUUID(),
       amount,
       date,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
 
     targetOccurrence.payments.push(newPayment);
     targetOccurrence.updated_at = new Date().toISOString();
-    
+
     // Check if this occurrence should be marked closed
     const occTotalReceived = targetOccurrence.payments.reduce((sum, p) => sum + p.amount, 0);
     if (occTotalReceived >= targetOccurrence.expected_amount) {
       targetOccurrence.is_closed = true;
       targetOccurrence.closed_date = date;
     }
-    
+
     // Update instance-level is_closed based on all occurrences
     incomeInstance.is_closed = areAllOccurrencesClosed(incomeInstance.occurrences);
     if (incomeInstance.is_closed && !incomeInstance.closed_date) {
@@ -331,7 +359,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     if (amount <= 0) {
       throw new ValidationError('Payment amount must be positive');
     }
-    
+
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new ValidationError('Payment date must be in YYYY-MM-DD format');
     }
@@ -341,25 +369,25 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const incomeIndex = monthlyData.income_instances.findIndex(i => i.id === incomeInstanceId);
+    const incomeIndex = monthlyData.income_instances.findIndex((i) => i.id === incomeInstanceId);
     if (incomeIndex === -1) {
       throw new NotFoundError(`Income instance ${incomeInstanceId} not found in ${month}`);
     }
 
     const incomeInstance = monthlyData.income_instances[incomeIndex];
-    
+
     // Find the occurrence containing this payment
     let targetOccurrence = null;
     let paymentIndex = -1;
-    
+
     for (const occ of incomeInstance.occurrences) {
-      paymentIndex = occ.payments.findIndex(p => p.id === paymentId);
+      paymentIndex = occ.payments.findIndex((p) => p.id === paymentId);
       if (paymentIndex !== -1) {
         targetOccurrence = occ;
         break;
       }
     }
-    
+
     if (!targetOccurrence || paymentIndex === -1) {
       throw new NotFoundError(`Payment ${paymentId} not found`);
     }
@@ -368,7 +396,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     targetOccurrence.payments[paymentIndex] = {
       ...targetOccurrence.payments[paymentIndex],
       amount,
-      date
+      date,
     };
     targetOccurrence.updated_at = new Date().toISOString();
 
@@ -380,7 +408,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     } else if (!targetOccurrence.is_closed) {
       targetOccurrence.closed_date = undefined;
     }
-    
+
     // Update instance-level is_closed based on all occurrences
     incomeInstance.is_closed = areAllOccurrencesClosed(incomeInstance.occurrences);
     if (incomeInstance.is_closed && !incomeInstance.closed_date) {
@@ -407,25 +435,25 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const incomeIndex = monthlyData.income_instances.findIndex(i => i.id === incomeInstanceId);
+    const incomeIndex = monthlyData.income_instances.findIndex((i) => i.id === incomeInstanceId);
     if (incomeIndex === -1) {
       throw new NotFoundError(`Income instance ${incomeInstanceId} not found in ${month}`);
     }
 
     const incomeInstance = monthlyData.income_instances[incomeIndex];
-    
+
     // Find the occurrence containing this payment
     let targetOccurrence = null;
     let paymentIndex = -1;
-    
+
     for (const occ of incomeInstance.occurrences) {
-      paymentIndex = occ.payments.findIndex(p => p.id === paymentId);
+      paymentIndex = occ.payments.findIndex((p) => p.id === paymentId);
       if (paymentIndex !== -1) {
         targetOccurrence = occ;
         break;
       }
     }
-    
+
     if (!targetOccurrence || paymentIndex === -1) {
       throw new NotFoundError(`Payment ${paymentId} not found`);
     }
@@ -440,7 +468,7 @@ export class PaymentsServiceImpl implements PaymentsService {
     if (!targetOccurrence.is_closed) {
       targetOccurrence.closed_date = undefined;
     }
-    
+
     // Update instance-level is_closed based on all occurrences
     incomeInstance.is_closed = areAllOccurrencesClosed(incomeInstance.occurrences);
     if (!incomeInstance.is_closed) {
@@ -461,12 +489,12 @@ export class PaymentsServiceImpl implements PaymentsService {
       throw new NotFoundError(`Monthly data for ${month} not found`);
     }
 
-    const incomeInstance = monthlyData.income_instances.find(i => i.id === incomeInstanceId);
+    const incomeInstance = monthlyData.income_instances.find((i) => i.id === incomeInstanceId);
     if (!incomeInstance) {
       throw new NotFoundError(`Income instance ${incomeInstanceId} not found in ${month}`);
     }
 
     // Collect all payments from all occurrences
-    return incomeInstance.occurrences.flatMap(occ => occ.payments || []);
+    return incomeInstance.occurrences.flatMap((occ) => occ.payments || []);
   }
 }

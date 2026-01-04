@@ -261,6 +261,7 @@ User needs to see income organized by categories (Salary, Freelance, Other, Ad-h
 ### Functional Requirements
 
 **Detailed View Layout**:
+
 - **FR-001**: System MUST display bills and expenses grouped by category with colored header accents
 - **FR-002**: System MUST display category headers inline with items indented/offset to the right
 - **FR-003**: System MUST show Expected and Actual columns for each bill/income
@@ -270,6 +271,7 @@ User needs to see income organized by categories (Salary, Freelance, Other, Ad-h
 - **FR-007**: System MUST feel like a spreadsheet but with richer visual polish and bespoke design
 
 **Section Tallies**:
+
 - **FR-008**: System MUST display section tallies at bottom of Bills & Expenses section
 - **FR-009**: System MUST display section tally at bottom of Income section
 - **FR-010**: System MUST show Expected, Actual, and Remaining columns in tallies
@@ -277,18 +279,21 @@ User needs to see income organized by categories (Salary, Freelance, Other, Ad-h
 - **FR-012**: System MUST update tallies immediately when values change
 
 **Partial Payments**:
+
 - **FR-013**: System MUST allow users to add multiple payments toward a single bill
 - **FR-014**: System MUST display partial payment progress as "Paid / Expected" format
 - **FR-015**: System MUST show remaining amount for partially paid bills
 - **FR-016**: System MUST display partial indicator (half-filled) for partially paid bills
 
 **Due Dates**:
+
 - **FR-017**: System MUST allow users to set due_day (1-31) on bill and income entities in Setup
 - **FR-018**: System MUST display due dates in Detailed View as "Mon DD" format
 - **FR-019**: System MUST show overdue indicator with tooltip for past-due unpaid items
 - **FR-020**: System MUST apply overdue styling (color/icon) to past-due unpaid items
 
 **Ad-hoc Items**:
+
 - **FR-021**: System MUST allow users to add ad-hoc bills that exist only in current month
 - **FR-022**: System MUST allow users to add ad-hoc income that exists only in current month
 - **FR-023**: System MUST provide "Make Regular?" option to convert ad-hoc to regular entity
@@ -296,6 +301,7 @@ User needs to see income organized by categories (Salary, Freelance, Other, Ad-h
 - **FR-025**: System MUST include ad-hoc items in section tallies
 
 **Category Configuration**:
+
 - **FR-026**: System MUST allow users to reorder categories via drag-and-drop in Setup
 - **FR-027**: System MUST persist category order and apply it to Detailed View
 - **FR-028**: System MUST allow users to assign custom colors to categories via color picker
@@ -303,16 +309,19 @@ User needs to see income organized by categories (Salary, Freelance, Other, Ad-h
 - **FR-030**: System MUST provide default income categories: Salary, Freelance/Contract, Investment, Government, Other
 
 **Leftover Calculation**:
+
 - **FR-031**: System MUST calculate leftover using ONLY actual amounts (not expected)
 - **FR-032**: System MUST include partial payments in leftover calculation (amount actually paid)
 - **FR-033**: System MUST display leftover summary at bottom of Detailed View with breakdown
 - **FR-034**: System MUST show formula: Actual Income + Bank Balances - Actual Expenses = Leftover
 
 **Snapshot Behavior**:
+
 - **FR-035**: System MUST NOT modify default bill/income entities when editing month instances
 - **FR-036**: System MUST NOT allow editing Expected amounts in Detailed View (read-only from Setup)
 
 **Navigation**:
+
 - **FR-037**: System MUST provide clear navigation back to Dashboard
 - **FR-038**: System MUST allow month selection/navigation within Detailed View
 
@@ -367,14 +376,14 @@ User needs to see income organized by categories (Salary, Freelance, Other, Ad-h
 
 This feature builds on and enhances the existing 001-monthly-budget implementation:
 
-| Existing (001) | Enhanced (002) |
-|----------------|----------------|
-| Dashboard with cards | Dashboard remains as high-level summary |
-| Mark as paid (checkbox) | Enhanced with partial payments, due dates |
-| Bill/Income instances | Extended with actual_amount, is_adhoc |
-| Categories (8 pre-defined) | Extended with sort_order, color, type |
-| Variable expenses | Displayed in VARIABLE category section |
-| Free-flowing expenses | Consolidated into AD-HOC category |
+| Existing (001)             | Enhanced (002)                            |
+| -------------------------- | ----------------------------------------- |
+| Dashboard with cards       | Dashboard remains as high-level summary   |
+| Mark as paid (checkbox)    | Enhanced with partial payments, due dates |
+| Bill/Income instances      | Extended with actual_amount, is_adhoc     |
+| Categories (8 pre-defined) | Extended with sort_order, color, type     |
+| Variable expenses          | Displayed in VARIABLE category section    |
+| Free-flowing expenses      | Consolidated into AD-HOC category         |
 
 ---
 

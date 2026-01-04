@@ -15,13 +15,13 @@ export interface Payment {
 // Occurrence - individual payment instance within a billing period (for bi-weekly/weekly)
 export interface Occurrence {
   id: string;
-  sequence: number;           // 1, 2, 3... for ordering within the month
-  expected_date: string;      // YYYY-MM-DD - when this occurrence is expected
-  expected_amount: number;    // Cents - can be edited independently per occurrence
-  is_closed: boolean;         // Close/Open status for this occurrence
-  closed_date?: string;       // When closed (YYYY-MM-DD)
-  payments: Payment[];        // Payments toward this specific occurrence
-  is_adhoc: boolean;          // True if manually added by user
+  sequence: number; // 1, 2, 3... for ordering within the month
+  expected_date: string; // YYYY-MM-DD - when this occurrence is expected
+  expected_amount: number; // Cents - can be edited independently per occurrence
+  is_closed: boolean; // Close/Open status for this occurrence
+  closed_date?: string; // When closed (YYYY-MM-DD)
+  payments: Payment[]; // Payments toward this specific occurrence
+  is_adhoc: boolean; // True if manually added by user
   created_at: string;
   updated_at: string;
 }
@@ -35,18 +35,18 @@ export interface BillInstanceDetailed {
   billing_period: BillingPeriod; // NEW: billing period type
   expected_amount: number;
   actual_amount: number | null;
-  payments: Payment[];          // DEPRECATED: use occurrences
-  occurrences: Occurrence[];    // NEW: Individual occurrences for this instance
-  occurrence_count: number;     // NEW: How many occurrences in this month
+  payments: Payment[]; // DEPRECATED: use occurrences
+  occurrences: Occurrence[]; // NEW: Individual occurrences for this instance
+  occurrence_count: number; // NEW: How many occurrences in this month
   is_extra_occurrence_month: boolean; // NEW: True if more occurrences than usual
   total_paid: number;
   remaining: number;
   is_paid: boolean;
   is_closed: boolean;
   is_adhoc: boolean;
-  is_payoff_bill: boolean;      // True if auto-generated from pay_off_monthly payment source
-  payoff_source_id?: string;    // Reference to the payment source this payoff bill is for
-  due_date: string | null;      // DEPRECATED: use occurrence expected_date
+  is_payoff_bill: boolean; // True if auto-generated from pay_off_monthly payment source
+  payoff_source_id?: string; // Reference to the payment source this payoff bill is for
+  due_date: string | null; // DEPRECATED: use occurrence expected_date
   closed_date: string | null;
   is_overdue: boolean;
   days_overdue: number | null;
@@ -64,16 +64,16 @@ export interface IncomeInstanceDetailed {
   billing_period: BillingPeriod; // NEW: billing period type
   expected_amount: number;
   actual_amount: number | null;
-  payments: Payment[];          // DEPRECATED: use occurrences
-  occurrences: Occurrence[];    // NEW: Individual occurrences for this instance
-  occurrence_count: number;     // NEW: How many occurrences in this month
+  payments: Payment[]; // DEPRECATED: use occurrences
+  occurrences: Occurrence[]; // NEW: Individual occurrences for this instance
+  occurrence_count: number; // NEW: How many occurrences in this month
   is_extra_occurrence_month: boolean; // NEW: True if more occurrences than usual (3-paycheck month!)
   total_received: number;
   remaining: number;
   is_paid: boolean;
   is_closed: boolean;
   is_adhoc: boolean;
-  due_date: string | null;      // DEPRECATED: use occurrence expected_date
+  due_date: string | null; // DEPRECATED: use occurrence expected_date
   closed_date: string | null;
   is_overdue: boolean;
   payment_source: {
@@ -105,22 +105,22 @@ export interface SectionTally {
 }
 
 export interface LeftoverBreakdown {
-  bankBalances: number;        // Current cash position (snapshot from bank_balances)
-  remainingIncome: number;     // Income still expected to receive
-  remainingExpenses: number;   // Expenses still need to pay (including payoff bills)
-  leftover: number;            // bank + remainingIncome - remainingExpenses
-  isValid: boolean;            // False if required bank balances are missing
-  hasActuals?: boolean;        // True if any actuals have been entered
-  missingBalances?: string[];  // IDs of payment sources missing balances
-  errorMessage?: string;       // Human-readable error message
+  bankBalances: number; // Current cash position (snapshot from bank_balances)
+  remainingIncome: number; // Income still expected to receive
+  remainingExpenses: number; // Expenses still need to pay (including payoff bills)
+  leftover: number; // bank + remainingIncome - remainingExpenses
+  isValid: boolean; // False if required bank balances are missing
+  hasActuals?: boolean; // True if any actuals have been entered
+  missingBalances?: string[]; // IDs of payment sources missing balances
+  errorMessage?: string; // Human-readable error message
 }
 
 export interface PayoffSummary {
   paymentSourceId: string;
   paymentSourceName: string;
-  balance: number;         // Current CC balance (expected payoff)
-  paid: number;            // Sum of payments made this month toward payoff
-  remaining: number;       // balance - paid
+  balance: number; // Current CC balance (expected payoff)
+  paid: number; // Sum of payments made this month toward payoff
+  remaining: number; // balance - paid
 }
 
 export interface DetailedMonthData {
@@ -128,17 +128,17 @@ export interface DetailedMonthData {
   billSections: CategorySection[];
   incomeSections: CategorySection[];
   tallies: {
-    bills: SectionTally;           // Regular bills (with expected amounts)
-    adhocBills: SectionTally;      // Ad-hoc bills (actual only)
-    ccPayoffs: SectionTally;       // Credit card payoff bills
-    totalExpenses: SectionTally;   // Combined total
-    income: SectionTally;          // Regular income
-    adhocIncome: SectionTally;     // Ad-hoc income
-    totalIncome: SectionTally;     // Combined total
+    bills: SectionTally; // Regular bills (with expected amounts)
+    adhocBills: SectionTally; // Ad-hoc bills (actual only)
+    ccPayoffs: SectionTally; // Credit card payoff bills
+    totalExpenses: SectionTally; // Combined total
+    income: SectionTally; // Regular income
+    adhocIncome: SectionTally; // Ad-hoc income
+    totalIncome: SectionTally; // Combined total
   };
   leftover: number;
   leftoverBreakdown: LeftoverBreakdown;
-  payoffSummaries: PayoffSummary[];  // Summary of each CC payoff status
+  payoffSummaries: PayoffSummary[]; // Summary of each CC payoff status
   bankBalances: Record<string, number>;
   lastUpdated: string;
 }
@@ -155,29 +155,29 @@ function createDetailedMonthStore() {
     data: null,
     loading: false,
     error: null,
-    currentMonth: null
+    currentMonth: null,
   });
 
   return {
     subscribe,
 
     async loadMonth(month: string): Promise<void> {
-      update(state => ({ ...state, loading: true, error: null, currentMonth: month }));
-      
+      update((state) => ({ ...state, loading: true, error: null, currentMonth: month }));
+
       try {
         const data = await apiClient.get(`/api/months/${month}/detailed`);
-        update(state => ({
+        update((state) => ({
           ...state,
           data,
           loading: false,
-          error: null
+          error: null,
         }));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load detailed month data';
-        update(state => ({
+        update((state) => ({
           ...state,
           loading: false,
-          error: message
+          error: message,
         }));
       }
     },
@@ -185,11 +185,11 @@ function createDetailedMonthStore() {
     async refresh(): Promise<void> {
       // Get current state synchronously
       let currentMonth: string | null = null;
-      const unsubscribe = subscribe(state => {
+      const unsubscribe = subscribe((state) => {
         currentMonth = state.currentMonth;
       });
       unsubscribe(); // Immediately unsubscribe after getting the value
-      
+
       if (currentMonth) {
         await this.loadMonth(currentMonth);
       }
@@ -197,83 +197,85 @@ function createDetailedMonthStore() {
 
     // Optimistic update for bill paid status - updates locally without re-sorting
     updateBillPaidStatus(instanceId: string, isPaid: boolean, actualAmount: number | null): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
-        const newBillSections: CategorySection[] = state.data.billSections.map(section => {
+
+        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
           const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.map(item => {
+          const newItems = billItems.map((item) => {
             if (item.id === instanceId) {
               return {
                 ...item,
                 is_paid: isPaid,
                 actual_amount: actualAmount,
                 total_paid: actualAmount ?? item.expected_amount,
-                remaining: isPaid ? 0 : item.expected_amount - (actualAmount ?? 0)
+                remaining: isPaid ? 0 : item.expected_amount - (actualAmount ?? 0),
               };
             }
             return item;
           });
-          
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         return {
           ...state,
           data: {
             ...state.data,
-            billSections: newBillSections
-          }
+            billSections: newBillSections,
+          },
         };
       });
     },
 
     // Optimistic update for income paid status - updates locally without re-sorting
     updateIncomePaidStatus(instanceId: string, isPaid: boolean, actualAmount?: number): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map(section => {
+
+        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
           const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.map(item => {
+          const newItems = incomeItems.map((item) => {
             if (item.id === instanceId) {
               // Use provided actualAmount, or default to expected if marking paid without amount
-              const newActualAmount = isPaid 
-                ? (actualAmount !== undefined ? actualAmount : item.expected_amount)
+              const newActualAmount = isPaid
+                ? actualAmount !== undefined
+                  ? actualAmount
+                  : item.expected_amount
                 : null;
               return {
                 ...item,
                 is_paid: isPaid,
-                actual_amount: newActualAmount
+                actual_amount: newActualAmount,
               };
             }
             return item;
           });
-          
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + (i.actual_amount ?? 0), 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         // Recalculate income tallies
         let regularIncomeActual = 0;
         let adhocIncomeActual = 0;
-        newIncomeSections.forEach(section => {
-          (section.items as IncomeInstanceDetailed[]).forEach(item => {
+        newIncomeSections.forEach((section) => {
+          (section.items as IncomeInstanceDetailed[]).forEach((item) => {
             if (item.is_adhoc) {
               adhocIncomeActual += item.actual_amount ?? 0;
             } else {
@@ -281,35 +283,41 @@ function createDetailedMonthStore() {
             }
           });
         });
-        
+
         const newTallies = {
           ...state.data.tallies,
           income: {
             ...state.data.tallies.income,
-            actual: regularIncomeActual
+            actual: regularIncomeActual,
           },
           adhocIncome: {
             ...state.data.tallies.adhocIncome,
-            actual: adhocIncomeActual
+            actual: adhocIncomeActual,
           },
           totalIncome: {
             ...state.data.tallies.totalIncome,
-            actual: regularIncomeActual + adhocIncomeActual
-          }
+            actual: regularIncomeActual + adhocIncomeActual,
+          },
         };
-        
+
         // Also update leftover breakdown
         // Note: For optimistic updates, we approximate remaining income
         // The server will recalculate on next fetch
         const newLeftoverBreakdown = {
           ...state.data.leftoverBreakdown,
-          remainingIncome: state.data.tallies.totalIncome.remaining
+          remainingIncome: state.data.tallies.totalIncome.remaining,
         };
-        
+
         // Recalculate leftover: bankBalances + remainingIncome - remainingExpenses
-        const bankBalancesTotal = Object.values(state.data.bankBalances).reduce((sum, val) => sum + val, 0);
-        const newLeftover = bankBalancesTotal + state.data.tallies.totalIncome.remaining - state.data.leftoverBreakdown.remainingExpenses;
-        
+        const bankBalancesTotal = Object.values(state.data.bankBalances).reduce(
+          (sum, val) => sum + val,
+          0
+        );
+        const newLeftover =
+          bankBalancesTotal +
+          state.data.tallies.totalIncome.remaining -
+          state.data.leftoverBreakdown.remainingExpenses;
+
         return {
           ...state,
           data: {
@@ -319,9 +327,9 @@ function createDetailedMonthStore() {
             leftover: newLeftover,
             leftoverBreakdown: {
               ...newLeftoverBreakdown,
-              leftover: newLeftover
-            }
-          }
+              leftover: newLeftover,
+            },
+          },
         };
       });
     },
@@ -329,14 +337,14 @@ function createDetailedMonthStore() {
     // Optimistic update for bill close/reopen
     // When totalPaid is provided (e.g., from Pay Full), also update payment totals
     updateBillClosedStatus(instanceId: string, isClosed: boolean, totalPaid?: number): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
+
         const today = new Date().toISOString().split('T')[0];
-        
-        const newBillSections: CategorySection[] = state.data.billSections.map(section => {
+
+        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
           const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.map(item => {
+          const newItems = billItems.map((item) => {
             if (item.id === instanceId) {
               const newTotalPaid = totalPaid !== undefined ? totalPaid : item.total_paid;
               return {
@@ -345,29 +353,29 @@ function createDetailedMonthStore() {
                 is_paid: isClosed,
                 closed_date: isClosed ? today : null,
                 total_paid: newTotalPaid,
-                remaining: Math.max(0, item.expected_amount - newTotalPaid)
+                remaining: Math.max(0, item.expected_amount - newTotalPaid),
               };
             }
             return item;
           });
-          
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         return {
           ...state,
           data: {
             ...state.data,
-            billSections: newBillSections
-          }
+            billSections: newBillSections,
+          },
         };
       });
     },
@@ -375,189 +383,192 @@ function createDetailedMonthStore() {
     // Optimistic update for income close/reopen
     // When totalReceived is provided (e.g., from Receive Full), also update payment totals
     updateIncomeClosedStatus(instanceId: string, isClosed: boolean, totalReceived?: number): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
+
         const today = new Date().toISOString().split('T')[0];
-        
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map(section => {
+
+        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
           const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.map(item => {
+          const newItems = incomeItems.map((item) => {
             if (item.id === instanceId) {
-              const newTotalReceived = totalReceived !== undefined ? totalReceived : item.total_received;
+              const newTotalReceived =
+                totalReceived !== undefined ? totalReceived : item.total_received;
               return {
                 ...item,
                 is_closed: isClosed,
                 is_paid: isClosed,
                 closed_date: isClosed ? today : null,
                 total_received: newTotalReceived,
-                remaining: Math.max(0, item.expected_amount - newTotalReceived)
+                remaining: Math.max(0, item.expected_amount - newTotalReceived),
               };
             }
             return item;
           });
-          
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         return {
           ...state,
           data: {
             ...state.data,
-            incomeSections: newIncomeSections
-          }
+            incomeSections: newIncomeSections,
+          },
         };
       });
     },
 
     // Optimistic update for expected amount change
     updateBillExpectedAmount(instanceId: string, newExpected: number): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
-        const newBillSections: CategorySection[] = state.data.billSections.map(section => {
+
+        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
           const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.map(item => {
+          const newItems = billItems.map((item) => {
             if (item.id === instanceId) {
               return {
                 ...item,
                 expected_amount: newExpected,
-                remaining: Math.max(0, newExpected - item.total_paid)
+                remaining: Math.max(0, newExpected - item.total_paid),
               };
             }
             return item;
           });
-          
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         return {
           ...state,
           data: {
             ...state.data,
-            billSections: newBillSections
-          }
+            billSections: newBillSections,
+          },
         };
       });
     },
 
     // Optimistic update for income expected amount change
     updateIncomeExpectedAmount(instanceId: string, newExpected: number): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map(section => {
+
+        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
           const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.map(item => {
+          const newItems = incomeItems.map((item) => {
             if (item.id === instanceId) {
               return {
                 ...item,
                 expected_amount: newExpected,
-                remaining: Math.max(0, newExpected - item.total_received)
+                remaining: Math.max(0, newExpected - item.total_received),
               };
             }
             return item;
           });
-          
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         return {
           ...state,
           data: {
             ...state.data,
-            incomeSections: newIncomeSections
-          }
+            incomeSections: newIncomeSections,
+          },
         };
       });
     },
 
     // Optimistic removal of a bill instance from the store
     removeBillInstance(instanceId: string): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
-        const newBillSections: CategorySection[] = state.data.billSections.map(section => {
+
+        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
           const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.filter(item => item.id !== instanceId);
-          
+          const newItems = billItems.filter((item) => item.id !== instanceId);
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         // Filter out empty sections
-        const filteredBillSections = newBillSections.filter(section => section.items.length > 0);
-        
+        const filteredBillSections = newBillSections.filter((section) => section.items.length > 0);
+
         return {
           ...state,
           data: {
             ...state.data,
-            billSections: filteredBillSections
-          }
+            billSections: filteredBillSections,
+          },
         };
       });
     },
 
     // Optimistic removal of an income instance from the store
     removeIncomeInstance(instanceId: string): void {
-      update(state => {
+      update((state) => {
         if (!state.data) return state;
-        
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map(section => {
+
+        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
           const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.filter(item => item.id !== instanceId);
-          
+          const newItems = incomeItems.filter((item) => item.id !== instanceId);
+
           // Recalculate subtotal
           const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
           const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
-          
+
           return {
             ...section,
             items: newItems,
-            subtotal: { expected, actual }
+            subtotal: { expected, actual },
           };
         });
-        
+
         // Filter out empty sections
-        const filteredIncomeSections = newIncomeSections.filter(section => section.items.length > 0);
-        
+        const filteredIncomeSections = newIncomeSections.filter(
+          (section) => section.items.length > 0
+        );
+
         return {
           ...state,
           data: {
             ...state.data,
-            incomeSections: filteredIncomeSections
-          }
+            incomeSections: filteredIncomeSections,
+          },
         };
       });
     },
@@ -567,15 +578,15 @@ function createDetailedMonthStore() {
         data: null,
         loading: false,
         error: null,
-        currentMonth: null
+        currentMonth: null,
       });
-    }
+    },
   };
 }
 
 export const detailedMonth = createDetailedMonthStore();
 
 // Derived stores for convenient access
-export const detailedMonthData = derived(detailedMonth, $state => $state.data);
-export const detailedMonthLoading = derived(detailedMonth, $state => $state.loading);
-export const detailedMonthError = derived(detailedMonth, $state => $state.error);
+export const detailedMonthData = derived(detailedMonth, ($state) => $state.data);
+export const detailedMonthLoading = derived(detailedMonth, ($state) => $state.loading);
+export const detailedMonthError = derived(detailedMonth, ($state) => $state.error);

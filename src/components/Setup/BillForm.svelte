@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * BillForm - Drawer-compatible form for bills
-   * 
+   *
    * @prop editingItem - Bill being edited (null for new)
    * @prop onSave - Callback after successful save
    * @prop onCancel - Callback to close form without saving
@@ -20,21 +20,23 @@
   // Form state - amount is stored in dollars for user input
   let name = editingItem?.name || '';
   let amountDollars = editingItem ? (editingItem.amount / 100).toFixed(2) : '';
-  let billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually' = editingItem?.billing_period || 'monthly';
+  let billing_period: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually' =
+    editingItem?.billing_period || 'monthly';
   let start_date = editingItem?.start_date || '';
   let payment_source_id = editingItem?.payment_source_id || '';
   let category_id = editingItem?.category_id || '';
-  
+
   // Monthly recurrence options
   type MonthlyType = 'day_of_month' | 'nth_weekday';
-  let monthly_type: MonthlyType = editingItem?.recurrence_week !== undefined ? 'nth_weekday' : 'day_of_month';
+  let monthly_type: MonthlyType =
+    editingItem?.recurrence_week !== undefined ? 'nth_weekday' : 'day_of_month';
   let day_of_month = editingItem?.day_of_month || 1;
   let recurrence_week = editingItem?.recurrence_week || 1;
   let recurrence_day = editingItem?.recurrence_day || 0;
-  
+
   // Due date (optional)
   let due_day: number | '' = editingItem?.due_day || '';
-  
+
   let error = '';
   let saving = false;
 
@@ -80,13 +82,13 @@
       error = 'Name is required';
       return;
     }
-    
+
     const amountCents = dollarsToCents(amountDollars);
     if (amountCents < 100) {
       error = 'Amount must be at least $1.00';
       return;
     }
-    
+
     if (!payment_source_id) {
       error = 'Payment source is required';
       return;
@@ -104,7 +106,7 @@
         name,
         amount: amountCents,
         billing_period,
-        payment_source_id
+        payment_source_id,
       };
 
       // Add category_id if selected
@@ -116,7 +118,7 @@
       if (billing_period !== 'monthly' && start_date) {
         billData.start_date = start_date;
       }
-      
+
       // Add monthly recurrence fields
       if (billing_period === 'monthly') {
         if (monthly_type === 'day_of_month') {
@@ -126,7 +128,7 @@
           billData.recurrence_day = recurrence_day;
         }
       }
-      
+
       // Add due_day if specified
       if (due_day !== '' && typeof due_day === 'number') {
         billData.due_day = due_day;
@@ -154,9 +156,7 @@
 
 <form class="entity-form" on:submit|preventDefault={handleSubmit}>
   {#if !hasPaymentSources}
-    <div class="warning-message">
-      You need to add at least one payment source first.
-    </div>
+    <div class="warning-message">You need to add at least one payment source first.</div>
   {/if}
 
   {#if error}
@@ -227,11 +227,21 @@
       <label>When does this bill occur?</label>
       <div class="radio-group">
         <label class="radio-label">
-          <input type="radio" bind:group={monthly_type} value="day_of_month" disabled={saving || !hasPaymentSources} />
+          <input
+            type="radio"
+            bind:group={monthly_type}
+            value="day_of_month"
+            disabled={saving || !hasPaymentSources}
+          />
           Specific day of month
         </label>
         <label class="radio-label">
-          <input type="radio" bind:group={monthly_type} value="nth_weekday" disabled={saving || !hasPaymentSources} />
+          <input
+            type="radio"
+            bind:group={monthly_type}
+            value="nth_weekday"
+            disabled={saving || !hasPaymentSources}
+          />
           Nth weekday of month
         </label>
       </div>
@@ -240,8 +250,12 @@
     {#if monthly_type === 'day_of_month'}
       <div class="form-group">
         <label for="bill-day-of-month">Day of Month</label>
-        <select id="bill-day-of-month" bind:value={day_of_month} disabled={saving || !hasPaymentSources}>
-          {#each Array.from({length: 31}, (_, i) => i + 1) as day}
+        <select
+          id="bill-day-of-month"
+          bind:value={day_of_month}
+          disabled={saving || !hasPaymentSources}
+        >
+          {#each Array.from({ length: 31 }, (_, i) => i + 1) as day}
             <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
           {/each}
         </select>
@@ -249,7 +263,11 @@
     {:else}
       <div class="form-group">
         <label for="bill-recurrence-week">Which week?</label>
-        <select id="bill-recurrence-week" bind:value={recurrence_week} disabled={saving || !hasPaymentSources}>
+        <select
+          id="bill-recurrence-week"
+          bind:value={recurrence_week}
+          disabled={saving || !hasPaymentSources}
+        >
           {#each WEEK_ORDINALS as label, i}
             <option value={i + 1}>{label}</option>
           {/each}
@@ -257,21 +275,31 @@
       </div>
       <div class="form-group">
         <label for="bill-recurrence-day">Which day?</label>
-        <select id="bill-recurrence-day" bind:value={recurrence_day} disabled={saving || !hasPaymentSources}>
+        <select
+          id="bill-recurrence-day"
+          bind:value={recurrence_day}
+          disabled={saving || !hasPaymentSources}
+        >
           {#each WEEKDAYS as label, i}
             <option value={i}>{label}</option>
           {/each}
         </select>
       </div>
       <div class="help-text">
-        Example: "{WEEK_ORDINALS[recurrence_week - 1]} {WEEKDAYS[recurrence_day]}" of every month
+        Example: "{WEEK_ORDINALS[recurrence_week - 1]}
+        {WEEKDAYS[recurrence_day]}" of every month
       </div>
     {/if}
   {/if}
 
   <div class="form-group">
     <label for="bill-payment-source">Payment Source</label>
-    <select id="bill-payment-source" bind:value={payment_source_id} required disabled={saving || !hasPaymentSources}>
+    <select
+      id="bill-payment-source"
+      bind:value={payment_source_id}
+      required
+      disabled={saving || !hasPaymentSources}
+    >
       <option value="">-- Select Payment Source --</option>
       {#each $paymentSourcesStore.paymentSources as ps}
         <option value={ps.id}>{ps.name}</option>
@@ -294,7 +322,7 @@
     <label for="bill-due-day">Due Day (Optional)</label>
     <select id="bill-due-day" bind:value={due_day} disabled={saving || !hasPaymentSources}>
       <option value="">-- No due date --</option>
-      {#each Array.from({length: 31}, (_, i) => i + 1) as day}
+      {#each Array.from({ length: 31 }, (_, i) => i + 1) as day}
         <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
       {/each}
     </select>
@@ -306,7 +334,7 @@
       Cancel
     </button>
     <button type="submit" class="btn btn-primary" disabled={saving || !hasPaymentSources}>
-      {saving ? 'Saving...' : (editingItem ? 'Save Changes' : 'Add Bill')}
+      {saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Add Bill'}
     </button>
   </div>
 </form>
@@ -345,7 +373,8 @@
     color: #e4e4e7;
   }
 
-  input, select {
+  input,
+  select {
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #333355;
@@ -356,12 +385,14 @@
     box-sizing: border-box;
   }
 
-  input:focus, select:focus {
+  input:focus,
+  select:focus {
     outline: none;
     border-color: #24c8db;
   }
 
-  input:disabled, select:disabled {
+  input:disabled,
+  select:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
@@ -406,7 +437,7 @@
     font-size: 0.875rem;
   }
 
-  .radio-label input[type="radio"] {
+  .radio-label input[type='radio'] {
     width: 18px;
     height: 18px;
     accent-color: #24c8db;

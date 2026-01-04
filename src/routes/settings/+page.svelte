@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { addToast } from '../../stores/toast';
   import { apiClient } from '../../lib/api/client';
-import {
+  import {
     loadSettings,
     settings,
     dataDirectory,
@@ -22,19 +22,19 @@ import {
     toggleDebugMode,
     type DirectoryValidation,
     type MigrationResult,
-    type MigrationMode
+    type MigrationMode,
   } from '../../stores/settings';
-  
+
   // Reactive check for Tauri environment
   $: inTauri = isTauri();
-  
+
   // Modal states
   let showMigrationDialog = false;
   let showProgressDialog = false;
   let showSuccessDialog = false;
   let showErrorDialog = false;
   let showRestartDialog = false;
-  
+
   // Migration state
   let pendingNewPath: string = '';
   let selectedMode: MigrationMode = 'copy';
@@ -43,66 +43,66 @@ import {
   let migrationProgress = 0;
   let migrationStatus = '';
   let errorMessage = '';
-  
+
   // Backup state
   let backupLoading = false;
   let fileInput: HTMLInputElement | null = null;
-  
+
   // Debug mode state
   let debugModeEnabled = false;
   let debugModeLoading = false;
   let debugModeChanged = false; // Track if user changed the setting (restart needed)
-  
+
   onMount(async () => {
-    loadSettings().catch(err => {
+    loadSettings().catch((err) => {
       console.error('Failed to load settings:', err);
     });
-    
+
     // Load debug mode setting (the saved preference, not current devtools state)
     if (isTauri()) {
       debugModeEnabled = await getDebugModeSetting();
     }
   });
-  
+
   // Handle Browse button click
   async function handleBrowse() {
     const tauriEnv = isTauri();
     console.log('[Settings Page] handleBrowse called');
     console.log('[Settings Page] isTauri:', tauriEnv);
     console.log('[Settings Page] isDevelopment (from API):', $isDevelopment);
-    
+
     // Only allow changing data directory in Tauri (not browser)
     if (!tauriEnv) {
       addToast('Data directory can only be changed in the desktop app', 'error');
       return;
     }
-    
+
     console.log('[Settings Page] Calling openFolderPicker...');
     const selected = await openFolderPicker();
     console.log('[Settings Page] openFolderPicker returned:', selected);
-    
+
     if (!selected) {
       console.log('[Settings Page] No folder selected (cancelled or error)');
       return;
     }
-    
+
     // Validate the selected directory
     try {
       validation = await validateDirectory(selected);
       pendingNewPath = selected;
-      
+
       if (!validation.isValid) {
         errorMessage = validation.error || 'Directory is not valid';
         showErrorDialog = true;
         return;
       }
-      
+
       // If it's the same directory, do nothing
       if (selected === $dataDirectory?.path) {
         addToast('This is already your current data directory', 'info');
         return;
       }
-      
+
       // Show migration dialog
       showMigrationDialog = true;
     } catch (err) {
@@ -110,14 +110,14 @@ import {
       showErrorDialog = true;
     }
   }
-  
+
   // Handle migration confirmation
   async function handleMigrate() {
     showMigrationDialog = false;
     showProgressDialog = true;
     migrationProgress = 0;
     migrationStatus = 'Starting migration...';
-    
+
     try {
       // Simulate progress updates
       const progressInterval = setInterval(() => {
@@ -126,26 +126,22 @@ import {
           migrationStatus = `Copying files... ${migrationProgress}%`;
         }
       }, 200);
-      
-      const result = await migrateData(
-        $dataDirectory?.path || '',
-        pendingNewPath,
-        selectedMode
-      );
-      
+
+      const result = await migrateData($dataDirectory?.path || '', pendingNewPath, selectedMode);
+
       clearInterval(progressInterval);
       migrationResult = result;
-      
+
       if (result.success) {
         migrationProgress = 80;
         migrationStatus = 'Saving settings...';
-        
+
         // Save the new path to Tauri Store
         await saveDataDirectorySetting(pendingNewPath);
-        
+
         migrationProgress = 100;
         migrationStatus = 'Done!';
-        
+
         showProgressDialog = false;
         showRestartDialog = true;
       } else {
@@ -159,7 +155,7 @@ import {
       showErrorDialog = true;
     }
   }
-  
+
   // Handle restart button click
   async function handleRestart() {
     try {
@@ -169,7 +165,7 @@ import {
       addToast('Please restart the app manually', 'info');
     }
   }
-  
+
   // Close all modals
   function closeModals() {
     showMigrationDialog = false;
@@ -182,13 +178,13 @@ import {
     validation = null;
     migrationResult = null;
   }
-  
+
   // Handle success dialog done
   function handleDone() {
     closeModals();
     addToast('Data directory updated successfully', 'success');
   }
-  
+
   // Export backup
   async function handleExport() {
     backupLoading = true;
@@ -210,43 +206,47 @@ import {
       backupLoading = false;
     }
   }
-  
+
   // Import backup - trigger file picker
   function handleImportClick() {
     fileInput?.click();
   }
-  
+
   // Handle file selection for import
   async function handleFileSelect(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    
+
     backupLoading = true;
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      
+
       // Validate first
-      const validationResult = await apiClient.post('/api/backup/validate', data) as { isValid: boolean; errors: string[]; summary: Record<string, number> };
+      const validationResult = (await apiClient.post('/api/backup/validate', data)) as {
+        isValid: boolean;
+        errors: string[];
+        summary: Record<string, number>;
+      };
       if (!validationResult.isValid) {
         addToast(`Invalid backup: ${validationResult.errors.join(', ')}`, 'error');
         return;
       }
-      
+
       // Confirm import
       const confirmed = confirm(
         `Import backup from ${data.export_date}?\n\n` +
-        `This will overwrite:\n` +
-        `- ${validationResult.summary.bills} bills\n` +
-        `- ${validationResult.summary.incomes} incomes\n` +
-        `- ${validationResult.summary.payment_sources} payment sources\n` +
-        `- ${validationResult.summary.categories} categories\n\n` +
-        `This action cannot be undone.`
+          `This will overwrite:\n` +
+          `- ${validationResult.summary.bills} bills\n` +
+          `- ${validationResult.summary.incomes} incomes\n` +
+          `- ${validationResult.summary.payment_sources} payment sources\n` +
+          `- ${validationResult.summary.categories} categories\n\n` +
+          `This action cannot be undone.`
       );
-      
+
       if (!confirmed) return;
-      
+
       // Import the backup
       await apiClient.post('/api/backup', data);
       addToast('Backup imported successfully', 'success');
@@ -260,12 +260,12 @@ import {
       input.value = '';
     }
   }
-  
+
   // Go back to previous page
   function goBack() {
     goto('/');
   }
-  
+
   // Toggle debug mode (devtools)
   async function handleToggleDebugMode() {
     debugModeLoading = true;
@@ -273,9 +273,9 @@ import {
       debugModeEnabled = await toggleDebugMode();
       debugModeChanged = true; // Mark that restart is needed
       addToast(
-        debugModeEnabled 
-          ? 'Debug mode enabled - restart app to take effect' 
-          : 'Debug mode disabled - restart app to take effect', 
+        debugModeEnabled
+          ? 'Debug mode enabled - restart app to take effect'
+          : 'Debug mode disabled - restart app to take effect',
         'info'
       );
     } catch (err) {
@@ -290,13 +290,19 @@ import {
   <header class="settings-header">
     <button class="back-button" on:click={goBack}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path
+          d="M19 12H5M12 19L5 12L12 5"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
       Back
     </button>
     <h1>Settings</h1>
   </header>
-  
+
   {#if $loading}
     <div class="loading">Loading settings...</div>
   {:else if $error}
@@ -306,18 +312,13 @@ import {
       <!-- Data Storage Section -->
       <section class="settings-section">
         <h2>Data Storage</h2>
-        
+
         <div class="setting-item">
           <label>Data Directory</label>
           <div class="directory-input">
-            <input 
-              type="text" 
-              value={$dataDirectory?.path || ''} 
-              readonly 
-              class="directory-path"
-            />
-            <button 
-              class="browse-button" 
+            <input type="text" value={$dataDirectory?.path || ''} readonly class="directory-path" />
+            <button
+              class="browse-button"
               on:click={handleBrowse}
               disabled={!inTauri}
               title={!inTauri ? 'Only available in desktop app' : 'Choose data directory'}
@@ -336,38 +337,66 @@ import {
           {/if}
         </div>
       </section>
-      
+
       <!-- Backup & Restore Section -->
       <section class="settings-section">
         <h2>Backup & Restore</h2>
-        
+
         <div class="button-row">
-          <button 
-            class="action-button" 
-            on:click={handleExport}
-            disabled={backupLoading}
-          >
+          <button class="action-button" on:click={handleExport} disabled={backupLoading}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M7 10L12 15L17 10"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M12 15V3"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
             Export Backup
           </button>
-          <button 
-            class="action-button" 
-            on:click={handleImportClick}
-            disabled={backupLoading}
-          >
+          <button class="action-button" on:click={handleImportClick} disabled={backupLoading}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M17 8L12 3L7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M17 8L12 3L7 8"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M12 3V15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
             Import Backup
           </button>
         </div>
-        
+
         <!-- Hidden file input for import -->
         <input
           type="file"
@@ -376,19 +405,20 @@ import {
           on:change={handleFileSelect}
           style="display: none;"
         />
-        
+
         {#if backupLoading}
           <p class="setting-hint">Processing...</p>
         {/if}
       </section>
-      
+
       <!-- Appearance Section -->
       <section class="settings-section">
         <h2>Appearance</h2>
         <div class="setting-item">
           <label>Zoom</label>
           <p class="setting-description">
-            Adjust the zoom level using the controls in the sidebar footer, or use keyboard shortcuts:
+            Adjust the zoom level using the controls in the sidebar footer, or use keyboard
+            shortcuts:
           </p>
           <div class="keyboard-shortcuts">
             <div class="shortcut-row">
@@ -406,11 +436,12 @@ import {
           </div>
           {#if !inTauri}
             <p class="setting-hint warning">
-              Note: Native zoom only works in the desktop app. Use your browser's zoom controls in browser mode.
+              Note: Native zoom only works in the desktop app. Use your browser's zoom controls in
+              browser mode.
             </p>
           {/if}
         </div>
-        
+
         <div class="setting-item">
           <label>Theme</label>
           <div class="radio-group">
@@ -430,18 +461,18 @@ import {
           <p class="setting-hint">(Coming soon)</p>
         </div>
       </section>
-      
+
       <!-- Developer Section -->
       <section class="settings-section">
         <h2>Developer</h2>
-        
+
         <div class="setting-item">
           <div class="toggle-row">
             <div class="toggle-info">
               <label>Debug Mode</label>
               <p class="setting-description">
-                Enables the "Inspect Element" option in the right-click context menu. 
-                Useful for troubleshooting issues and inspecting the app's HTML/CSS.
+                Enables the "Inspect Element" option in the right-click context menu. Useful for
+                troubleshooting issues and inspecting the app's HTML/CSS.
               </p>
             </div>
             <button
@@ -449,7 +480,11 @@ import {
               class:active={debugModeEnabled}
               on:click={handleToggleDebugMode}
               disabled={!inTauri || debugModeLoading}
-              title={!inTauri ? 'Only available in desktop app' : (debugModeEnabled ? 'Disable debug mode' : 'Enable debug mode')}
+              title={!inTauri
+                ? 'Only available in desktop app'
+                : debugModeEnabled
+                  ? 'Disable debug mode'
+                  : 'Enable debug mode'}
             >
               <span class="toggle-slider"></span>
             </button>
@@ -457,12 +492,16 @@ import {
           {#if debugModeChanged}
             <div class="restart-notice">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
               <span>Restart the app for changes to take effect</span>
-              <button class="restart-button" on:click={handleRestart}>
-                Restart Now
-              </button>
+              <button class="restart-button" on:click={handleRestart}> Restart Now </button>
             </div>
           {:else if !inTauri}
             <p class="setting-hint warning">
@@ -471,7 +510,7 @@ import {
           {/if}
         </div>
       </section>
-      
+
       <!-- About Section -->
       <section class="settings-section">
         <h2>About</h2>
@@ -497,9 +536,21 @@ import {
 <!-- Migration Dialog Modal -->
 {#if showMigrationDialog}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div class="modal-overlay" on:click={closeModals} on:keydown={(e) => e.key === 'Escape' && closeModals()} role="presentation">
+  <div
+    class="modal-overlay"
+    on:click={closeModals}
+    on:keydown={(e) => e.key === 'Escape' && closeModals()}
+    role="presentation"
+  >
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true" tabindex="-1">
+    <div
+      class="modal"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+    >
       <div class="modal-header">
         <h3>Move Data to New Location?</h3>
         <button class="modal-close" on:click={closeModals}>&times;</button>
@@ -516,9 +567,9 @@ import {
             <span class="path-value">{pendingNewPath}</span>
           </div>
         </div>
-        
+
         <p class="modal-section-title">What would you like to do with your existing data?</p>
-        
+
         <div class="radio-options">
           <label class="radio-option">
             <input type="radio" bind:group={selectedMode} value="copy" />
@@ -527,20 +578,22 @@ import {
               <span class="radio-desc">Your data will be copied. Original stays intact.</span>
             </div>
           </label>
-          
+
           <label class="radio-option">
             <input type="radio" bind:group={selectedMode} value="fresh" />
             <div class="radio-content">
               <span class="radio-title">Start fresh (empty)</span>
-              <span class="radio-desc">New location will have empty data. Original stays intact.</span>
+              <span class="radio-desc"
+                >New location will have empty data. Original stays intact.</span
+              >
             </div>
           </label>
-          
+
           <label class="radio-option" class:disabled={!validation?.hasExistingData}>
-            <input 
-              type="radio" 
-              bind:group={selectedMode} 
-              value="use_existing" 
+            <input
+              type="radio"
+              bind:group={selectedMode}
+              value="use_existing"
               disabled={!validation?.hasExistingData}
             />
             <div class="radio-content">
@@ -584,13 +637,37 @@ import {
 <!-- Success Modal -->
 {#if showSuccessDialog}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div class="modal-overlay" on:click={handleDone} on:keydown={(e) => e.key === 'Escape' && handleDone()} role="presentation">
+  <div
+    class="modal-overlay"
+    on:click={handleDone}
+    on:keydown={(e) => e.key === 'Escape' && handleDone()}
+    role="presentation"
+  >
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true" tabindex="-1">
+    <div
+      class="modal"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+    >
       <div class="modal-header success">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.709 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18457 2.99721 7.13633 4.39828 5.49707C5.79935 3.85782 7.69279 2.71538 9.79619 2.24015C11.8996 1.76491 14.1003 1.98234 16.07 2.86" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path
+            d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.709 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18457 2.99721 7.13633 4.39828 5.49707C5.79935 3.85782 7.69279 2.71538 9.79619 2.24015C11.8996 1.76491 14.1003 1.98234 16.07 2.86"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M22 4L12 14.01L9 11.01"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
         <h3>Data Moved Successfully</h3>
         <button class="modal-close" on:click={handleDone}>&times;</button>
@@ -598,20 +675,22 @@ import {
       <div class="modal-body">
         <p>Your data has been copied to:</p>
         <div class="path-highlight">{pendingNewPath}</div>
-        
+
         {#if migrationResult}
           <div class="migration-summary">
             <p><strong>Copied:</strong></p>
             <ul>
-              <li>{migrationResult.entityFilesCopied} entity files (bills, incomes, categories...)</li>
+              <li>
+                {migrationResult.entityFilesCopied} entity files (bills, incomes, categories...)
+              </li>
               <li>{migrationResult.monthFilesCopied} month files</li>
             </ul>
           </div>
         {/if}
-        
+
         <p class="note">
-          Your original data is still at:<br/>
-          <code>{$dataDirectory?.path}</code><br/>
+          Your original data is still at:<br />
+          <code>{$dataDirectory?.path}</code><br />
           You can delete it manually once you've verified everything works.
         </p>
       </div>
@@ -625,14 +704,26 @@ import {
 <!-- Error Modal -->
 {#if showErrorDialog}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div class="modal-overlay" on:click={closeModals} on:keydown={(e) => e.key === 'Escape' && closeModals()} role="presentation">
+  <div
+    class="modal-overlay"
+    on:click={closeModals}
+    on:keydown={(e) => e.key === 'Escape' && closeModals()}
+    role="presentation"
+  >
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true" tabindex="-1">
+    <div
+      class="modal"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+    >
       <div class="modal-header error">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-          <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="12" cy="16" r="1" fill="currentColor"/>
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+          <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <circle cx="12" cy="16" r="1" fill="currentColor" />
         </svg>
         <h3>Cannot Use This Directory</h3>
         <button class="modal-close" on:click={closeModals}>&times;</button>
@@ -641,7 +732,7 @@ import {
         <p>The selected directory cannot be used:</p>
         <div class="path-highlight error">{pendingNewPath}</div>
         <p class="error-reason"><strong>Reason:</strong> {errorMessage}</p>
-        
+
         <p>Please choose a directory where you have write permissions, such as:</p>
         <ul class="suggestion-list">
           <li>~/Documents/BudgetForFun</li>
@@ -662,15 +753,27 @@ import {
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header success">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.709 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18457 2.99721 7.13633 4.39828 5.49707C5.79935 3.85782 7.69279 2.71538 9.79619 2.24015C11.8996 1.76491 14.1003 1.98234 16.07 2.86" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path
+            d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.709 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18457 2.99721 7.13633 4.39828 5.49707C5.79935 3.85782 7.69279 2.71538 9.79619 2.24015C11.8996 1.76491 14.1003 1.98234 16.07 2.86"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M22 4L12 14.01L9 11.01"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
         <h3>Restart Required</h3>
       </div>
       <div class="modal-body">
         <p>Your data has been migrated to:</p>
         <div class="path-highlight">{pendingNewPath}</div>
-        
+
         {#if migrationResult}
           <div class="migration-summary">
             <p><strong>Copied:</strong></p>
@@ -680,7 +783,7 @@ import {
             </ul>
           </div>
         {/if}
-        
+
         <p>The app needs to restart to use the new data location.</p>
       </div>
       <div class="modal-footer">
@@ -696,21 +799,21 @@ import {
     margin: 0 auto;
     padding: 24px;
   }
-  
+
   .settings-header {
     display: flex;
     align-items: center;
     gap: 16px;
     margin-bottom: 32px;
   }
-  
+
   .settings-header h1 {
     font-size: 1.5rem;
     font-weight: 600;
     color: #e4e4e7;
     margin: 0;
   }
-  
+
   .back-button {
     display: flex;
     align-items: center;
@@ -724,36 +827,37 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .back-button:hover {
     background: rgba(36, 200, 219, 0.1);
     border-color: #24c8db;
     color: #e4e4e7;
   }
-  
-  .loading, .error-message {
+
+  .loading,
+  .error-message {
     text-align: center;
     padding: 48px;
     color: #888;
   }
-  
+
   .error-message {
     color: #ff6b6b;
   }
-  
+
   .settings-content {
     display: flex;
     flex-direction: column;
     gap: 32px;
   }
-  
+
   .settings-section {
     background: #1a1a2e;
     border: 1px solid #333355;
     border-radius: 12px;
     padding: 24px;
   }
-  
+
   .settings-section h2 {
     font-size: 1rem;
     font-weight: 600;
@@ -762,27 +866,27 @@ import {
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  
+
   .setting-item {
     margin-bottom: 16px;
   }
-  
+
   .setting-item:last-child {
     margin-bottom: 0;
   }
-  
+
   .setting-item label {
     display: block;
     font-size: 0.875rem;
     color: #e4e4e7;
     margin-bottom: 8px;
   }
-  
+
   .directory-input {
     display: flex;
     gap: 8px;
   }
-  
+
   .directory-path {
     flex: 1;
     padding: 12px 16px;
@@ -793,7 +897,7 @@ import {
     font-family: monospace;
     font-size: 0.875rem;
   }
-  
+
   .browse-button {
     padding: 12px 24px;
     background: #24c8db;
@@ -804,32 +908,32 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .browse-button:hover:not(:disabled) {
     background: #1ba8b8;
   }
-  
+
   .browse-button:disabled {
     background: #333355;
     color: #666;
     cursor: not-allowed;
   }
-  
+
   .setting-hint {
     font-size: 0.75rem;
     color: #888;
     margin-top: 8px;
   }
-  
+
   .setting-hint.warning {
     color: #f0ad4e;
   }
-  
+
   .button-row {
     display: flex;
     gap: 12px;
   }
-  
+
   .action-button {
     display: flex;
     align-items: center;
@@ -843,22 +947,22 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .action-button:hover:not(:disabled) {
     background: rgba(36, 200, 219, 0.1);
     border-color: #24c8db;
   }
-  
+
   .action-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   .radio-group {
     display: flex;
     gap: 24px;
   }
-  
+
   .radio-label {
     display: flex;
     align-items: center;
@@ -867,33 +971,33 @@ import {
     font-size: 0.875rem;
     cursor: pointer;
   }
-  
+
   .radio-label input {
     accent-color: #24c8db;
   }
-  
+
   .about-info {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .about-row {
     display: flex;
     gap: 16px;
   }
-  
+
   .about-label {
     color: #888;
     font-size: 0.875rem;
     min-width: 100px;
   }
-  
+
   .about-value {
     color: #e4e4e7;
     font-size: 0.875rem;
   }
-  
+
   /* Modal styles */
   .modal-overlay {
     position: fixed;
@@ -907,7 +1011,7 @@ import {
     justify-content: center;
     z-index: 1000;
   }
-  
+
   .modal {
     background: #1a1a2e;
     border: 1px solid #333355;
@@ -917,11 +1021,11 @@ import {
     max-height: 90vh;
     overflow-y: auto;
   }
-  
+
   .modal-small {
     max-width: 350px;
   }
-  
+
   .modal-header {
     display: flex;
     align-items: center;
@@ -929,30 +1033,30 @@ import {
     padding: 20px 24px;
     border-bottom: 1px solid #333355;
   }
-  
+
   .modal-header h3 {
     flex: 1;
     margin: 0;
     font-size: 1.125rem;
     color: #e4e4e7;
   }
-  
+
   .modal-header.success {
     color: #4ade80;
   }
-  
+
   .modal-header.success h3 {
     color: #4ade80;
   }
-  
+
   .modal-header.error {
     color: #ff6b6b;
   }
-  
+
   .modal-header.error h3 {
     color: #ff6b6b;
   }
-  
+
   .modal-close {
     background: none;
     border: none;
@@ -962,24 +1066,24 @@ import {
     padding: 0;
     line-height: 1;
   }
-  
+
   .modal-close:hover {
     color: #e4e4e7;
   }
-  
+
   .modal-body {
     padding: 24px;
   }
-  
+
   .modal-body.center {
     text-align: center;
   }
-  
+
   .modal-body p {
     margin: 0 0 16px 0;
     color: #e4e4e7;
   }
-  
+
   .modal-footer {
     display: flex;
     justify-content: flex-end;
@@ -987,7 +1091,7 @@ import {
     padding: 16px 24px;
     border-top: 1px solid #333355;
   }
-  
+
   .btn-primary {
     padding: 10px 24px;
     background: #24c8db;
@@ -998,11 +1102,11 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .btn-primary:hover {
     background: #1ba8b8;
   }
-  
+
   .btn-secondary {
     padding: 10px 24px;
     background: transparent;
@@ -1012,53 +1116,53 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .btn-secondary:hover {
     border-color: #24c8db;
     color: #e4e4e7;
   }
-  
+
   .path-change {
     background: #0f0f1a;
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 16px;
   }
-  
+
   .path-item {
     display: flex;
     gap: 12px;
     margin-bottom: 8px;
   }
-  
+
   .path-item:last-child {
     margin-bottom: 0;
   }
-  
+
   .path-label {
     color: #888;
     font-size: 0.75rem;
     min-width: 50px;
   }
-  
+
   .path-value {
     color: #e4e4e7;
     font-family: monospace;
     font-size: 0.875rem;
     word-break: break-all;
   }
-  
+
   .modal-section-title {
     font-weight: 600;
     margin-top: 24px !important;
   }
-  
+
   .radio-options {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .radio-option {
     display: flex;
     align-items: flex-start;
@@ -1070,38 +1174,38 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .radio-option:hover:not(.disabled) {
     border-color: #24c8db;
   }
-  
+
   .radio-option.disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   .radio-option input {
     margin-top: 2px;
     accent-color: #24c8db;
   }
-  
+
   .radio-content {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
-  
+
   .radio-title {
     color: #e4e4e7;
     font-size: 0.875rem;
     font-weight: 500;
   }
-  
+
   .radio-desc {
     color: #888;
     font-size: 0.75rem;
   }
-  
+
   .progress-bar {
     height: 8px;
     background: #333355;
@@ -1109,18 +1213,18 @@ import {
     overflow: hidden;
     margin-bottom: 16px;
   }
-  
+
   .progress-fill {
     height: 100%;
     background: #24c8db;
     transition: width 0.3s ease;
   }
-  
+
   .progress-status {
     color: #888;
     font-size: 0.875rem;
   }
-  
+
   .path-highlight {
     background: #0f0f1a;
     border: 1px solid #333355;
@@ -1131,38 +1235,38 @@ import {
     margin-bottom: 16px;
     word-break: break-all;
   }
-  
+
   .path-highlight.error {
     color: #ff6b6b;
     border-color: #ff6b6b;
   }
-  
+
   .migration-summary {
     background: #0f0f1a;
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 16px;
   }
-  
+
   .migration-summary p {
     margin-bottom: 8px !important;
   }
-  
+
   .migration-summary ul {
     margin: 0;
     padding-left: 20px;
     color: #888;
   }
-  
+
   .migration-summary li {
     margin-bottom: 4px;
   }
-  
+
   .note {
     font-size: 0.75rem;
     color: #888;
   }
-  
+
   .note code {
     display: inline-block;
     background: #0f0f1a;
@@ -1172,30 +1276,30 @@ import {
     color: #e4e4e7;
     font-size: 0.75rem;
   }
-  
+
   .error-reason {
     color: #ff6b6b !important;
   }
-  
+
   .suggestion-list {
     margin: 8px 0 0 0;
     padding-left: 20px;
     color: #888;
   }
-  
+
   .suggestion-list li {
     margin-bottom: 4px;
     font-family: monospace;
     font-size: 0.875rem;
   }
-  
+
   /* Font Size Options */
   .setting-description {
     font-size: 0.75rem;
     color: #888;
     margin: 0 0 12px 0;
   }
-  
+
   /* Keyboard shortcuts display */
   .keyboard-shortcuts {
     background: #0f0f1a;
@@ -1203,18 +1307,18 @@ import {
     border-radius: 8px;
     padding: 12px 16px;
   }
-  
+
   .shortcut-row {
     display: flex;
     align-items: center;
     gap: 16px;
     padding: 6px 0;
   }
-  
+
   .shortcut-row:not(:last-child) {
     border-bottom: 1px solid #333355;
   }
-  
+
   .shortcut-key {
     font-family: monospace;
     font-size: 0.75rem;
@@ -1225,12 +1329,12 @@ import {
     min-width: 100px;
     text-align: center;
   }
-  
+
   .shortcut-desc {
     font-size: 0.75rem;
     color: #888;
   }
-  
+
   /* Toggle Switch Styles */
   .toggle-row {
     display: flex;
@@ -1238,19 +1342,19 @@ import {
     justify-content: space-between;
     gap: 24px;
   }
-  
+
   .toggle-info {
     flex: 1;
   }
-  
+
   .toggle-info label {
     margin-bottom: 4px;
   }
-  
+
   .toggle-info .setting-description {
     margin-bottom: 0;
   }
-  
+
   .toggle-switch {
     flex-shrink: 0;
     width: 48px;
@@ -1263,20 +1367,20 @@ import {
     transition: background 0.2s;
     padding: 0;
   }
-  
+
   .toggle-switch:hover:not(:disabled) {
     background: #444466;
   }
-  
+
   .toggle-switch.active {
     background: #24c8db;
   }
-  
+
   .toggle-switch:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   .toggle-slider {
     position: absolute;
     top: 3px;
@@ -1287,11 +1391,11 @@ import {
     border-radius: 50%;
     transition: transform 0.2s;
   }
-  
+
   .toggle-switch.active .toggle-slider {
     transform: translateX(22px);
   }
-  
+
   /* Restart Notice */
   .restart-notice {
     display: flex;
@@ -1305,15 +1409,15 @@ import {
     color: #24c8db;
     font-size: 0.875rem;
   }
-  
+
   .restart-notice svg {
     flex-shrink: 0;
   }
-  
+
   .restart-notice span {
     flex: 1;
   }
-  
+
   .restart-button {
     padding: 6px 16px;
     background: #24c8db;
@@ -1325,7 +1429,7 @@ import {
     cursor: pointer;
     transition: all 0.2s;
   }
-  
+
   .restart-button:hover {
     background: #1ba8b8;
   }

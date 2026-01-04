@@ -25,7 +25,7 @@
   let months: MonthSummary[] = [];
   let loading = true;
   let error = '';
-  
+
   // Confirm dialog state
   let showConfirm = false;
   let confirmTitle = '';
@@ -41,7 +41,7 @@
     loading = true;
     error = '';
     try {
-      const data = await apiClient.get('/api/months/manage') as MonthsResponse;
+      const data = (await apiClient.get('/api/months/manage')) as MonthsResponse;
       months = data.months;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load months';
@@ -59,7 +59,8 @@
 
   function formatAmount(cents: number): string {
     const amount = Math.abs(cents / 100);
-    const formatted = '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatted =
+      '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return cents < 0 ? '-' + formatted : formatted;
   }
 
@@ -94,13 +95,16 @@
   async function handleToggleLock(month: MonthSummary) {
     const action = month.is_read_only ? 'Unlock' : 'Lock';
     confirmTitle = `${action} Month`;
-    confirmMessage = month.is_read_only 
+    confirmMessage = month.is_read_only
       ? `Unlock ${formatMonth(month.month)}? You will be able to make changes again.`
       : `Lock ${formatMonth(month.month)}? This will prevent any changes to this month's data.`;
     confirmAction = async () => {
       try {
         await apiClient.post(`/api/months/${month.month}/lock`, {});
-        addToast(`${formatMonth(month.month)} ${month.is_read_only ? 'unlocked' : 'locked'}`, 'success');
+        addToast(
+          `${formatMonth(month.month)} ${month.is_read_only ? 'unlocked' : 'locked'}`,
+          'success'
+        );
         await loadMonths();
       } catch (e) {
         const msg = e instanceof Error ? e.message : `Failed to ${action.toLowerCase()} month`;
@@ -116,7 +120,7 @@
       addToast('Cannot delete a locked month. Unlock it first.', 'error');
       return;
     }
-    
+
     confirmTitle = 'Delete Month';
     confirmMessage = `Delete ${formatMonth(month.month)}? All bills, incomes, expenses, and payment records for this month will be permanently deleted. This cannot be undone.`;
     confirmAction = async () => {
@@ -181,7 +185,7 @@
                 {getStatusBadge(month).text}
               </span>
             </div>
-            
+
             {#if month.exists}
               <div class="month-stats">
                 <div class="stat">
@@ -198,23 +202,24 @@
                 </div>
                 <div class="stat">
                   <span class="stat-label">Leftover</span>
-                  <span class="stat-value" class:positive={month.leftover >= 0} class:negative={month.leftover < 0}>
+                  <span
+                    class="stat-value"
+                    class:positive={month.leftover >= 0}
+                    class:negative={month.leftover < 0}
+                  >
                     {formatAmount(month.leftover)}
                   </span>
                 </div>
               </div>
-              
+
               <div class="month-actions">
                 <button class="btn btn-secondary" on:click={() => navigateToMonth(month.month)}>
                   View Details
                 </button>
-                <button 
-                  class="btn btn-outline"
-                  on:click={() => handleToggleLock(month)}
-                >
+                <button class="btn btn-outline" on:click={() => handleToggleLock(month)}>
                   {month.is_read_only ? 'Unlock' : 'Lock'}
                 </button>
-                <button 
+                <button
                   class="btn btn-danger"
                   disabled={month.is_read_only}
                   title={month.is_read_only ? 'Unlock to delete' : 'Delete month'}

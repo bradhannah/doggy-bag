@@ -1,19 +1,10 @@
-import {
-  Controller,
-  Route,
-  Get,
-  Post,
-  Body,
-  Response,
-  Tags,
-  SuccessResponse
-} from 'tsoa';
+import { Controller, Route, Get, Post, Body, Response, Tags, SuccessResponse } from 'tsoa';
 import type { BackupFileData } from '../types';
-import type { 
-  RestoreBackupRequest, 
-  ValidateBackupRequest, 
+import type {
+  RestoreBackupRequest,
+  ValidateBackupRequest,
   ValidateBackupResponse,
-  ApiError 
+  ApiError,
 } from '../types/requests';
 
 /**
@@ -22,7 +13,6 @@ import type {
 @Route('api/backup')
 @Tags('Backup')
 export class BackupController extends Controller {
-  
   /**
    * Export all data as a backup file
    * @summary Export backup

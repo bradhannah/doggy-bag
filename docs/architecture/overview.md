@@ -46,6 +46,7 @@ BudgetForFun is a desktop budgeting application built with a three-layer archite
 **Location**: `src-tauri/`
 
 The Rust layer provides:
+
 - Native window management
 - Sidecar process lifecycle (spawn, monitor, terminate)
 - System integrations via plugins:
@@ -70,12 +71,14 @@ The Rust layer provides:
 **Location**: `src/`
 
 The frontend is a Svelte 5 + SvelteKit application:
+
 - **Components**: 50+ components in `src/components/`
 - **Stores**: 11 Svelte stores in `src/stores/`
 - **Routes**: SvelteKit file-based routing in `src/routes/`
 - **API Client**: Type-safe client in `src/lib/api/client.ts`
 
 **Key Directories**:
+
 ```
 src/
 ├── components/
@@ -93,12 +96,14 @@ src/
 **Location**: `api/`
 
 The backend is a Bun HTTP server:
+
 - **Server**: Custom routing in `api/server.ts`
 - **Services**: Business logic in `api/src/services/`
 - **Handlers**: Route handlers in `api/src/routes/handlers/`
 - **Types**: Shared types in `api/src/types/index.ts`
 
 **Key Directories**:
+
 ```
 api/
 ├── server.ts            # HTTP server entry point
@@ -189,6 +194,7 @@ Frontend (Svelte)          Backend (Bun)
 **Why HTTP?** See [ADR-001: HTTP IPC](../adr/001-http-ipc.md)
 
 **API Base URL**:
+
 - Development: Proxied via Vite (relative URLs)
 - Production: `http://localhost:3000`
 
@@ -196,32 +202,35 @@ Frontend (Svelte)          Backend (Bun)
 
 ## Technology Stack
 
-| Layer | Technology | Version |
-|-------|------------|---------|
-| Desktop Shell | Tauri | 2.x |
-| Frontend | Svelte | 5.x |
-| Frontend Framework | SvelteKit | 2.x |
-| Backend Runtime | Bun | 1.x |
-| Backend Server | Bun HTTP (native) | - |
-| Data Storage | JSON files | - |
-| Type System | TypeScript | 5.6.x |
-| Build Tool | Vite | 6.x |
+| Layer              | Technology        | Version |
+| ------------------ | ----------------- | ------- |
+| Desktop Shell      | Tauri             | 2.x     |
+| Frontend           | Svelte            | 5.x     |
+| Frontend Framework | SvelteKit         | 2.x     |
+| Backend Runtime    | Bun               | 1.x     |
+| Backend Server     | Bun HTTP (native) | -       |
+| Data Storage       | JSON files        | -       |
+| Type System        | TypeScript        | 5.6.x   |
+| Build Tool         | Vite              | 6.x     |
 
 ---
 
 ## Key Patterns
 
 ### State Management
+
 - Svelte writable/derived stores
 - Optimistic updates with rollback
 - Server sync on mutations
 
 ### Error Handling
+
 - Backend: 5 typed error classes
 - Frontend: Toast notifications
 - See [Backend Patterns](./backend-patterns.md)
 
 ### Type Safety
+
 - Backend types in `api/src/types/index.ts`
 - OpenAPI spec generation via tsoa
 - Frontend types auto-generated

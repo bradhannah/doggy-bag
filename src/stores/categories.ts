@@ -29,101 +29,99 @@ type CategoryState = {
 const initialState: CategoryState = {
   categories: [],
   loading: false,
-  error: null
+  error: null,
 };
 
 const store = writable<CategoryState>(initialState);
 
-export const categories = derived(store, s => s.categories);
-export const loading = derived(store, s => s.loading);
-export const error = derived(store, s => s.error);
+export const categories = derived(store, (s) => s.categories);
+export const loading = derived(store, (s) => s.loading);
+export const error = derived(store, (s) => s.error);
 
 // Derived stores for predefined vs custom categories
-export const predefinedCategories = derived(categories, cats => 
-  cats.filter(c => c.is_predefined)
+export const predefinedCategories = derived(categories, (cats) =>
+  cats.filter((c) => c.is_predefined)
 );
-export const customCategories = derived(categories, cats => 
-  cats.filter(c => !c.is_predefined)
-);
+export const customCategories = derived(categories, (cats) => cats.filter((c) => !c.is_predefined));
 
 // Derived stores for bill vs income categories
-export const billCategories = derived(categories, cats => 
-  cats.filter(c => c.type === 'bill').sort((a, b) => a.sort_order - b.sort_order)
+export const billCategories = derived(categories, (cats) =>
+  cats.filter((c) => c.type === 'bill').sort((a, b) => a.sort_order - b.sort_order)
 );
-export const incomeCategories = derived(categories, cats => 
-  cats.filter(c => c.type === 'income').sort((a, b) => a.sort_order - b.sort_order)
+export const incomeCategories = derived(categories, (cats) =>
+  cats.filter((c) => c.type === 'income').sort((a, b) => a.sort_order - b.sort_order)
 );
 
 export async function loadCategories() {
-  store.update(s => ({ ...s, loading: true, error: null }));
-  
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
   try {
     const data = await apiClient.get('/api/categories');
     const categories = (data || []) as Category[];
-    store.update(s => ({ ...s, categories, loading: false }));
+    store.update((s) => ({ ...s, categories, loading: false }));
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load categories');
-    store.update(s => ({ ...s, loading: false, error: err.message }));
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
 }
 
 export async function createCategory(data: CategoryData) {
-  store.update(s => ({ ...s, loading: true, error: null }));
-  
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
   try {
     await apiClient.post('/api/categories', data);
     await loadCategories();
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to create category');
-    store.update(s => ({ ...s, loading: false, error: err.message }));
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
 }
 
 export async function updateCategory(id: string, updates: Partial<CategoryData>) {
-  store.update(s => ({ ...s, loading: true, error: null }));
-  
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
   try {
     await apiClient.put('/api/categories', id, updates);
     await loadCategories();
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to update category');
-    store.update(s => ({ ...s, loading: false, error: err.message }));
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
 }
 
 export async function deleteCategory(id: string) {
-  store.update(s => ({ ...s, loading: true, error: null }));
-  
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
   try {
     await apiClient.delete('/api/categories', id);
     await loadCategories();
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to delete category');
-    store.update(s => ({ ...s, loading: false, error: err.message }));
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
 }
 
 export async function reorderCategories(type: CategoryType, orderedIds: string[]) {
-  store.update(s => ({ ...s, loading: true, error: null }));
-  
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
   try {
     await apiClient.putPath('/api/categories/reorder', { type, orderedIds });
-    
+
     // Reload categories to get the updated sort_order values
     await loadCategories();
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to reorder categories');
-    store.update(s => ({ ...s, loading: false, error: err.message }));
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
 }
 
 export function clearError() {
-  store.update(s => ({ ...s, error: null }));
+  store.update((s) => ({ ...s, error: null }));
 }
 
 export const categoriesStore = store;

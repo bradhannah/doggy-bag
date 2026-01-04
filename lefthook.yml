@@ -1,0 +1,17 @@
+# Lefthook pre-commit hooks configuration
+# https://lefthook.dev/configuration/
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      glob: '*.{ts,svelte}'
+      # Only check for errors, not warnings (warnings are allowed)
+      run: npx eslint {staged_files}
+
+    - name: format-check
+      glob: '*.{ts,js,svelte,json,css,html,md}'
+      run: npx prettier --check {staged_files}
+
+    - name: typecheck
+      run: npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json

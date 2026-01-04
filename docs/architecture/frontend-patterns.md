@@ -36,9 +36,7 @@ const loading = writable(false);
 const error = writable<string | null>(null);
 
 // Derived state
-const activeExamples = derived(examples, $examples => 
-  $examples.filter(e => e.isActive)
-);
+const activeExamples = derived(examples, ($examples) => $examples.filter((e) => e.isActive));
 
 // Actions
 async function loadExamples() {
@@ -58,17 +56,15 @@ async function createExample(example: Partial<Example>) {
   // Optimistic update
   const tempId = crypto.randomUUID();
   const optimistic = { ...example, id: tempId };
-  examples.update(list => [...list, optimistic]);
-  
+  examples.update((list) => [...list, optimistic]);
+
   try {
     const created = await apiClient.post('/api/examples', example);
     // Replace optimistic with real
-    examples.update(list => 
-      list.map(e => e.id === tempId ? created : e)
-    );
+    examples.update((list) => list.map((e) => (e.id === tempId ? created : e)));
   } catch (e) {
     // Rollback
-    examples.update(list => list.filter(e => e.id !== tempId));
+    examples.update((list) => list.filter((e) => e.id !== tempId));
     throw e;
   }
 }
@@ -86,19 +82,19 @@ export const exampleStore = {
 
 ### Current Stores
 
-| Store | Purpose | Lines |
-|-------|---------|-------|
-| `bills.ts` | Bill templates | ~150 |
-| `incomes.ts` | Income templates | ~150 |
-| `categories.ts` | Category management | ~120 |
-| `payment-sources.ts` | Bank accounts, credit cards | ~150 |
-| `detailed-month.ts` | Monthly budget data | ~580 |
-| `months.ts` | Month navigation | ~100 |
-| `payments.ts` | Payment tracking | ~100 |
-| `settings.ts` | App settings + Tauri Store | ~200 |
-| `toast.ts` | Toast notifications | ~50 |
-| `ui.ts` | UI state (sidebar, modals) | ~80 |
-| `undo.ts` | Undo stack | ~100 |
+| Store                | Purpose                     | Lines |
+| -------------------- | --------------------------- | ----- |
+| `bills.ts`           | Bill templates              | ~150  |
+| `incomes.ts`         | Income templates            | ~150  |
+| `categories.ts`      | Category management         | ~120  |
+| `payment-sources.ts` | Bank accounts, credit cards | ~150  |
+| `detailed-month.ts`  | Monthly budget data         | ~580  |
+| `months.ts`          | Month navigation            | ~100  |
+| `payments.ts`        | Payment tracking            | ~100  |
+| `settings.ts`        | App settings + Tauri Store  | ~200  |
+| `toast.ts`           | Toast notifications         | ~50   |
+| `ui.ts`              | UI state (sidebar, modals)  | ~80   |
+| `undo.ts`            | Undo stack                  | ~100  |
 
 ### Optimistic Updates
 
@@ -108,13 +104,11 @@ The pattern for optimistic updates:
 async function updateItem(id: string, changes: Partial<Item>) {
   // 1. Capture current state for rollback
   let previousState: Item[];
-  items.update(list => {
+  items.update((list) => {
     previousState = [...list];
-    return list.map(item => 
-      item.id === id ? { ...item, ...changes } : item
-    );
+    return list.map((item) => (item.id === id ? { ...item, ...changes } : item));
   });
-  
+
   // 2. Make API call
   try {
     await apiClient.put('/api/items', id, changes);
@@ -167,27 +161,27 @@ src/components/
 ```svelte
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  
+
   // Props
   interface Props {
     title: string;
     amount: number;
     variant?: 'default' | 'highlight';
   }
-  
+
   let { title, amount, variant = 'default' }: Props = $props();
-  
+
   // Events
   const dispatch = createEventDispatcher<{
     click: { id: string };
     delete: void;
   }>();
-  
+
   // Derived
   const formattedAmount = $derived(
     new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'USD',
     }).format(amount / 100)
   );
 </script>
@@ -199,8 +193,12 @@ src/components/
 </div>
 
 <style>
-  .card { /* styles */ }
-  .highlight { /* styles */ }
+  .card {
+    /* styles */
+  }
+  .highlight {
+    /* styles */
+  }
 </style>
 ```
 
@@ -235,7 +233,7 @@ async function loadBills() {
 
 async function createBill(bill: CreateBillRequest) {
   const created = await apiClient.post('/api/bills', bill);
-  billsStore.update(list => [...list, created]);
+  billsStore.update((list) => [...list, created]);
 }
 ```
 
@@ -278,7 +276,7 @@ src/routes/
 <!-- src/routes/month/[month]/+page.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
-  
+
   // Access route param
   const month = $derived($page.params.month);
 </script>
@@ -316,6 +314,7 @@ src/routes/
 ## Known Issues
 
 See [Technical Debt Registry](./technical-debt.md) for:
+
 - TD-F1: Navigation.svelte too large
 - TD-F2: Repetitive optimistic update logic
 - TD-F3: Inconsistent persistence patterns

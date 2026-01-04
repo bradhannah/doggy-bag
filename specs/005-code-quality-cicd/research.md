@@ -31,20 +31,20 @@
 
 ### Tool Compatibility
 
-| Tool | Command | Status |
-|------|---------|--------|
-| ESLint 9 | `bunx eslint .` | ✅ Works |
-| Prettier | `bunx prettier . --write` | ✅ Works |
-| eslint-plugin-svelte | As ESLint plugin | ✅ Works |
-| @typescript-eslint | As ESLint plugin | ✅ Works |
-| prettier-plugin-svelte | As Prettier plugin | ✅ Works |
+| Tool                   | Command                   | Status   |
+| ---------------------- | ------------------------- | -------- |
+| ESLint 9               | `bunx eslint .`           | ✅ Works |
+| Prettier               | `bunx prettier . --write` | ✅ Works |
+| eslint-plugin-svelte   | As ESLint plugin          | ✅ Works |
+| @typescript-eslint     | As ESLint plugin          | ✅ Works |
+| prettier-plugin-svelte | As Prettier plugin        | ✅ Works |
 
 ### Alternatives Considered
 
-| Alternative | Pros | Cons | Decision |
-|-------------|------|------|----------|
-| npm/npx | Most stable | Slower, adds Node.js dependency | Not chosen |
-| Biome (ESLint/Prettier replacement) | Single tool, faster | Less mature Svelte support | Future consideration |
+| Alternative                         | Pros                | Cons                            | Decision             |
+| ----------------------------------- | ------------------- | ------------------------------- | -------------------- |
+| npm/npx                             | Most stable         | Slower, adds Node.js dependency | Not chosen           |
+| Biome (ESLint/Prettier replacement) | Single tool, faster | Less mature Svelte support      | Future consideration |
 
 ### Caveats
 
@@ -69,13 +69,13 @@
 
 ### Comparison
 
-| Feature | Husky | Lefthook | simple-git-hooks |
-|---------|-------|----------|------------------|
-| Bun-native | ✅ | ✅ | ⚠️ |
-| No Node.js runtime | ✅ | ✅ | ❌ |
-| Parallel execution | ❌ | ✅ | ❌ |
-| Built-in staged files | ❌ | ✅ | ❌ |
-| Config format | Shell scripts | YAML | JSON |
+| Feature               | Husky         | Lefthook | simple-git-hooks |
+| --------------------- | ------------- | -------- | ---------------- |
+| Bun-native            | ✅            | ✅       | ⚠️               |
+| No Node.js runtime    | ✅            | ✅       | ❌               |
+| Parallel execution    | ❌            | ✅       | ❌               |
+| Built-in staged files | ❌            | ✅       | ❌               |
+| Config format         | Shell scripts | YAML     | JSON             |
 
 ### Alternatives Considered
 
@@ -107,19 +107,19 @@ pre-commit:
   parallel: true
   jobs:
     - name: lint frontend
-      glob: "*.{ts,svelte}"
+      glob: '*.{ts,svelte}'
       run: bunx eslint {staged_files}
-      
+
     - name: format check
-      glob: "*.{ts,js,svelte,json}"
+      glob: '*.{ts,js,svelte,json}'
       run: bunx prettier --check {staged_files}
-      
+
     - name: typecheck frontend
       run: bun run check
 
     - name: lint backend
-      root: "api/"
-      glob: "*.ts"
+      root: 'api/'
+      glob: '*.ts'
       run: bunx eslint {staged_files}
 
     - name: unit tests
@@ -148,21 +148,21 @@ pre-push:
 
 ### Version Requirements
 
-| Package | Version | Notes |
-|---------|---------|-------|
-| @testing-library/svelte | ^5.3.1 | Required for Svelte 5 |
-| vitest | ^4.0.0 | Latest major |
-| @sveltejs/vite-plugin-svelte | ^5.0.0 | For Svelte 5 |
-| jsdom | ^26.0.0 | DOM environment |
-| @testing-library/jest-dom | ^6.6.3 | Optional matchers |
+| Package                      | Version | Notes                 |
+| ---------------------------- | ------- | --------------------- |
+| @testing-library/svelte      | ^5.3.1  | Required for Svelte 5 |
+| vitest                       | ^4.0.0  | Latest major          |
+| @sveltejs/vite-plugin-svelte | ^5.0.0  | For Svelte 5          |
+| jsdom                        | ^26.0.0 | DOM environment       |
+| @testing-library/jest-dom    | ^6.6.3  | Optional matchers     |
 
 ### Configuration
 
 ```typescript
 // vitest.config.ts
-import { defineConfig } from 'vitest/config'
-import { sveltekit } from '@sveltejs/kit/vite'
-import { svelteTesting } from '@testing-library/svelte/vite'
+import { defineConfig } from 'vitest/config';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig({
   plugins: [sveltekit(), svelteTesting()],
@@ -177,16 +177,16 @@ export default defineConfig({
         lines: 80,
         functions: 80,
         branches: 80,
-        statements: 80
-      }
-    }
+        statements: 80,
+      },
+    },
   },
-})
+});
 ```
 
 ```typescript
 // vitest-setup.ts
-import '@testing-library/jest-dom/vitest'
+import '@testing-library/jest-dom/vitest';
 ```
 
 ### Caveats
@@ -212,12 +212,12 @@ import '@testing-library/jest-dom/vitest'
 
 ### Key Points
 
-| Question | Answer |
-|----------|--------|
-| Official Bun setup? | `oven-sh/setup-bun@v2` |
-| Need Node.js? | **No** - Bun is standalone |
-| Dependency caching? | `actions/cache` with `bun.lock` hash |
-| Tauri builds? | `tauri-apps/tauri-action@v1` auto-detects Bun |
+| Question            | Answer                                        |
+| ------------------- | --------------------------------------------- |
+| Official Bun setup? | `oven-sh/setup-bun@v2`                        |
+| Need Node.js?       | **No** - Bun is standalone                    |
+| Dependency caching? | `actions/cache` with `bun.lock` hash          |
+| Tauri builds?       | `tauri-apps/tauri-action@v1` auto-detects Bun |
 
 ### Example Workflow
 
@@ -235,18 +235,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      
+
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-      
+
       - run: bun install
       - run: bun run lint
       - run: bun run test
@@ -288,13 +288,13 @@ jobs:
 
 ### Comparison
 
-| Option | Feasibility | Complexity | Eliminates HTTP? | Performance |
-|--------|-------------|------------|------------------|-------------|
-| **HTTP localhost** (current) | ✅ High | Low | No | ~0.05ms/req |
-| **Unix Domain Sockets** | ✅ High | Medium | No | ~0.03ms/req |
-| **Tauri Commands (Rust proxy)** | ⚠️ Medium | High | Yes | Variable |
-| **Tauri IPC Channels** | ❌ Low | Very High | Yes | Fast |
-| **Shared Memory** | ❌ Low | Very High | Yes | Fastest |
+| Option                          | Feasibility | Complexity | Eliminates HTTP? | Performance |
+| ------------------------------- | ----------- | ---------- | ---------------- | ----------- |
+| **HTTP localhost** (current)    | ✅ High     | Low        | No               | ~0.05ms/req |
+| **Unix Domain Sockets**         | ✅ High     | Medium     | No               | ~0.03ms/req |
+| **Tauri Commands (Rust proxy)** | ⚠️ Medium   | High       | Yes              | Variable    |
+| **Tauri IPC Channels**          | ❌ Low      | Very High  | Yes              | Fast        |
+| **Shared Memory**               | ❌ Low      | Very High  | Yes              | Fastest     |
 
 ### Unix Domain Sockets Detail
 
@@ -303,13 +303,15 @@ Bun fully supports Unix sockets:
 ```typescript
 // Server
 const server = Bun.serve({
-  unix: "/tmp/budgetforfun.sock",
-  fetch(req) { /* ... */ }
+  unix: '/tmp/budgetforfun.sock',
+  fetch(req) {
+    /* ... */
+  },
 });
 
 // Client
-const response = await fetch("http://localhost/api/test", {
-  unix: "/tmp/budgetforfun.sock"
+const response = await fetch('http://localhost/api/test', {
+  unix: '/tmp/budgetforfun.sock',
 });
 ```
 
@@ -318,12 +320,14 @@ const response = await fetch("http://localhost/api/test", {
 ### Future Consideration
 
 If port conflicts become an issue, implement Unix sockets with Rust proxy:
+
 - Estimated effort: 2-3 days
 - Performance gain: ~40% (imperceptible to user)
 
 ### ADR Recommendation
 
 Create ADR documenting this decision:
+
 - **Title**: Keep HTTP for Tauri-Bun IPC
 - **Status**: Accepted
 - **Context**: Evaluated Unix sockets, Tauri commands, IPC channels
@@ -334,12 +338,12 @@ Create ADR documenting this decision:
 
 ## Summary
 
-| Research Topic | Decision | Confidence |
-|----------------|----------|------------|
-| ESLint/Prettier + Bun | ✅ Works natively | High |
-| Pre-commit tool | Lefthook | High |
-| Vitest + Svelte 5 | @testing-library/svelte@5.x | High |
-| GitHub Actions | oven-sh/setup-bun@v2 | High |
-| IPC alternatives | Keep HTTP localhost | High |
+| Research Topic        | Decision                    | Confidence |
+| --------------------- | --------------------------- | ---------- |
+| ESLint/Prettier + Bun | ✅ Works natively           | High       |
+| Pre-commit tool       | Lefthook                    | High       |
+| Vitest + Svelte 5     | @testing-library/svelte@5.x | High       |
+| GitHub Actions        | oven-sh/setup-bun@v2        | High       |
+| IPC alternatives      | Keep HTTP localhost         | High       |
 
 All [NEEDS RESEARCH] items from the plan have been resolved. Ready for Phase 1.

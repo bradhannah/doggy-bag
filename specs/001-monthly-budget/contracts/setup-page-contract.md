@@ -73,11 +73,13 @@ Setup page provides a simple interface for users to add their initial bills, inc
 ### Subcomponents
 
 **Tabs**: `components/Setup/Tabs.svelte`
+
 - Three tabs: Bills, Incomes, Payment Sources
 - Active tab indicator (underline or highlight)
 - Click handler updates current tab state
 
 **Entity List**: `components/Setup/EntityList.svelte`
+
 - Reusable component for displaying bills, incomes, or payment sources
 - Props: `entities: Bill[] | Income[] | PaymentSource[]`, `entityType: 'bill' | 'income' | 'payment_source'`
 - Displays each entity in row format:
@@ -90,11 +92,13 @@ Setup page provides a simple interface for users to add their initial bills, inc
 - Empty state: Shows message when no entities exist
 
 **Add Form**: `components/Setup/AddForm.svelte`
+
 - Inline form for adding new entities
 - Props: `entityType: 'bill' | 'income' | 'payment_source'`
 - Fields based on entity type:
 
 **Bill Fields**:
+
 - Name (required): Text input
 - Amount (required): Currency input (allows $, , for formatting)
 - Billing Period (required): Dropdown (Monthly, Bi-weekly, Weekly, Semi-annually)
@@ -103,6 +107,7 @@ Setup page provides a simple interface for users to add their initial bills, inc
 - [Save] button
 
 **Income Fields**:
+
 - Name (required): Text input
 - Amount (required): Currency input
 - Billing Period (required): Dropdown (Monthly, Bi-weekly, Weekly, Semi-annually)
@@ -110,23 +115,27 @@ Setup page provides a simple interface for users to add their initial bills, inc
 - [Save] button
 
 **Payment Source Fields**:
+
 - Name (required): Text input
 - Type (required): Radio buttons (Bank Account, Credit Card, Cash)
 - Balance (optional): Currency input (pre-fill with current balance for existing)
 - [Save] button
 
 **Load Defaults Button**: `components/shared/LoadDefaultsButton.svelte`
+
 - Button to populate Setup page with example/default data
 - Helps users get started if they have no existing data
 - Loads predefined bills, incomes, payment sources (configurable)
 - Action: Adds entities to stores, auto-saves
 
 **Clear All Button**: `components/shared/ClearAllButton.svelte`
+
 - Button to remove all entities of current tab type
 - Shows confirmation: "Delete all bills/incomes/payment sources?"
 - Action: Clears entities from store, auto-saves
 
 **Edit Form**: `components/Setup/EditForm.svelte` (Modal overlay)
+
 - Modal form for editing existing entities
 - Props: `entity: Bill | Income | PaymentSource`
 - Pre-fills all existing data

@@ -58,21 +58,24 @@ export function createExampleHandlerGET() {
   return async () => {
     try {
       const items = await service.getAll();
-      
+
       return new Response(JSON.stringify(items), {
         headers: { 'Content-Type': 'application/json' },
-        status: 200
+        status: 200,
       });
     } catch (error) {
       console.error('[ExampleHandler] GET failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to load items'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to load items',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -82,33 +85,39 @@ export function createExampleHandlerPOST() {
     try {
       const body = await request.json();
       const validation = service.validate(body);
-      
+
       if (!validation.isValid) {
-        return new Response(JSON.stringify({
-          error: 'Validation failed',
-          details: validation.errors
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: validation.errors,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const created = await service.create(body);
-      
+
       return new Response(JSON.stringify(created), {
         headers: { 'Content-Type': 'application/json' },
-        status: 201
+        status: 201,
       });
     } catch (error) {
       console.error('[ExampleHandler] POST failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to create item'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to create item',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -118,42 +127,51 @@ export function createExampleHandlerPUT() {
     try {
       const url = new URL(request.url);
       const id = url.pathname.split('/').pop();
-      
+
       if (!id) {
-        return new Response(JSON.stringify({
-          error: 'Missing ID'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Missing ID',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       const body = await request.json();
       const updated = await service.update(id, body);
-      
+
       if (!updated) {
-        return new Response(JSON.stringify({
-          error: 'Item not found'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 404
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Item not found',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
       }
-      
+
       return new Response(JSON.stringify(updated), {
         headers: { 'Content-Type': 'application/json' },
-        status: 200
+        status: 200,
       });
     } catch (error) {
       console.error('[ExampleHandler] PUT failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to update item'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update item',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -163,29 +181,35 @@ export function createExampleHandlerDELETE() {
     try {
       const url = new URL(request.url);
       const id = url.pathname.split('/').pop();
-      
+
       if (!id) {
-        return new Response(JSON.stringify({
-          error: 'Missing ID'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Missing ID',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       await service.delete(id);
-      
+
       return new Response(null, { status: 204 });
     } catch (error) {
       console.error('[ExampleHandler] DELETE failed:', error);
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to delete item'
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to delete item',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
   };
 }
@@ -230,16 +254,16 @@ export interface ExampleService {
 ```typescript
 export class ExampleServiceImpl implements ExampleService {
   private storage = StorageServiceImpl;
-  
+
   async getAll(): Promise<Example[]> {
     return this.storage.readEntity<Example[]>('examples') ?? [];
   }
-  
+
   async getById(id: string): Promise<Example | null> {
     const items = await this.getAll();
-    return items.find(item => item.id === id) ?? null;
+    return items.find((item) => item.id === id) ?? null;
   }
-  
+
   async create(data: Partial<Example>): Promise<Example> {
     const items = await this.getAll();
     const newItem: Example = {
@@ -252,12 +276,12 @@ export class ExampleServiceImpl implements ExampleService {
     await this.storage.writeEntity('examples', items);
     return newItem;
   }
-  
+
   async update(id: string, data: Partial<Example>): Promise<Example | null> {
     const items = await this.getAll();
-    const index = items.findIndex(item => item.id === id);
+    const index = items.findIndex((item) => item.id === id);
     if (index === -1) return null;
-    
+
     items[index] = {
       ...items[index],
       ...data,
@@ -266,27 +290,27 @@ export class ExampleServiceImpl implements ExampleService {
     await this.storage.writeEntity('examples', items);
     return items[index];
   }
-  
+
   async delete(id: string): Promise<void> {
     const items = await this.getAll();
-    const filtered = items.filter(item => item.id !== id);
+    const filtered = items.filter((item) => item.id !== id);
     await this.storage.writeEntity('examples', filtered);
   }
-  
+
   validate(data: Partial<Example>): ValidationResult {
     const errors: string[] = [];
-    
+
     if (!data.name || data.name.trim() === '') {
       errors.push('Name is required');
     }
-    
+
     if (data.amount !== undefined && data.amount < 0) {
       errors.push('Amount must be positive');
     }
-    
+
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 }
@@ -302,7 +326,10 @@ export class ExampleServiceImpl implements ExampleService {
 // api/src/utils/errors.ts
 
 export class ValidationError extends Error {
-  constructor(message: string, public field?: string) {
+  constructor(
+    message: string,
+    public field?: string
+  ) {
     super(message);
     this.name = 'ValidationError';
   }
@@ -316,7 +343,10 @@ export class NotFoundError extends Error {
 }
 
 export class StorageError extends Error {
-  constructor(message: string, public path?: string) {
+  constructor(
+    message: string,
+    public path?: string
+  ) {
     super(message);
     this.name = 'StorageError';
   }
@@ -339,14 +369,14 @@ export class ReadOnlyError extends Error {
 
 ### Error-to-HTTP Mapping
 
-| Error Type | HTTP Status | User Message |
-|------------|-------------|--------------|
-| `ValidationError` | 400 | Error message |
-| `NotFoundError` | 404 | Error message |
-| `ConflictError` | 409 | Error message |
-| `ReadOnlyError` | 423 | Error message |
-| `StorageError` | 500 | "Failed to save data" |
-| Generic `Error` | 500 | "An error occurred" |
+| Error Type        | HTTP Status | User Message          |
+| ----------------- | ----------- | --------------------- |
+| `ValidationError` | 400         | Error message         |
+| `NotFoundError`   | 404         | Error message         |
+| `ConflictError`   | 409         | Error message         |
+| `ReadOnlyError`   | 423         | Error message         |
+| `StorageError`    | 500         | "Failed to save data" |
+| Generic `Error`   | 500         | "An error occurred"   |
 
 ### User-Friendly Messages
 
@@ -420,7 +450,7 @@ import { createLogger } from './logger';
 
 const logger = createLogger('ServiceName');
 
-logger.debug('Detailed info', { data });  // Only in development
+logger.debug('Detailed info', { data }); // Only in development
 logger.info('Operation completed');
 logger.warn('Something unusual');
 logger.error('Operation failed', { error });
@@ -473,6 +503,7 @@ See [ADR-002: Type Synchronization](../adr/002-type-synchronization.md) for the 
 ## Known Issues
 
 See [Technical Debt Registry](./technical-debt.md) for:
+
 - TD-B1: Complex matchRoute function (270 lines)
 - TD-B2: server.ts does too much
 - TD-B5: No dependency injection

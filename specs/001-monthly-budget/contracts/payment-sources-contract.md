@@ -50,6 +50,7 @@ Payment Sources component allows users to add and manage multiple payment source
 ### Subcomponents
 
 **PaymentSourceList.svelte**
+
 - Displays all payment sources in table/list format
 - Filter by type (All, Bank Accounts, Credit Cards, Cash)
 - Sort options (Name A-Z, Name Z-A, Balance High-Low, Balance Low-High)
@@ -58,6 +59,7 @@ Payment Sources component allows users to add and manage multiple payment source
 - Empty state: "No payment sources yet. Click 'Add Payment Source' to get started."
 
 **AddPaymentSourceForm.svelte** (Modal or Inline)
+
 - Name input (required): Text input, max 100 chars
 - Type selection (required): Radio buttons (Bank Account, Credit Card, Cash)
 - Balance input (optional): Currency input, pre-fill with current balance
@@ -66,6 +68,7 @@ Payment Sources component allows users to add and manage multiple payment source
 - Validation: Real-time error messages below fields
 
 **EditPaymentSourceForm.svelte** (Modal)
+
 - Pre-fill with existing payment source data
 - Name, type, and balance fields
 - [Save] button
@@ -73,16 +76,19 @@ Payment Sources component allows users to add and manage multiple payment source
 - Shows "Current Balance" label if editing
 
 **LoadDefaultsButton.svelte** (Inline Action)
+
 - Button to load pre-defined payment sources for quick setup
 - Loads examples like "Scotia Checking", "Visa", "Cash"
 - User can edit or delete loaded examples after adding
 
 **ClearAllButton.svelte** (Inline Action)
+
 - Button to remove all payment sources
 - Shows confirmation: "Delete all payment sources?"
 - Only enabled if payment sources exist
 
 **TotalCashCard.svelte** (Summary Display)
+
 - Large display of "Total Cash / Net Worth" value
 - Formula displayed below: "Sum of bank accounts + cash - credit card debt"
 - Updates in real-time as payment sources change
@@ -212,12 +218,14 @@ User can edit or delete examples as regular payment sources
 ## Type Handling
 
 **Payment Source Types**:
+
 - **Bank Account**: Positive balance (cash on hand)
 - **Credit Card**: Can be positive or negative/zero (debt owed)
   - Example: Balance of -$1,500 means user owes $1,500
 - **Cash**: Positive balance (cash on hand, like wallet)
 
 **Total Cash / Net Worth Calculation** (per data model):
+
 ```
 function calculateTotalCashNetWorth(paymentSources: PaymentSource[]): number {
   const positiveBalances = paymentSources
@@ -271,13 +279,15 @@ function calculateTotalCashNetWorth(paymentSources: PaymentSource[]): number {
 ### Delete Conflicts
 
 - **Payment Source in Use**:
+
   ```
   Show error: "Cannot delete. Scotia Checking is used by:
     - 3 bills
     - 1 income source
-  
+
   Reassign those bills/expenses/incomes to another payment source or delete them first."
   ```
+
 - User cannot delete from error state (must reassign or cancel)
 
 ### Persistence Errors
@@ -371,17 +381,18 @@ function calculateTotalCashNetWorth(paymentSources: PaymentSource[]): number {
 
 ```typescript
 interface PaymentSourcesStore extends Writable<PaymentSourcesState> {
-  defaults: PaymentSource[];         // Pre-defined examples
+  defaults: PaymentSource[]; // Pre-defined examples
   actions: {
     add: (source: PaymentSource) => void;
     update: (id: string, updates: Partial<PaymentSource>) => void;
     delete: (id: string) => void;
     loadDefaults: (sources: PaymentSource[]) => void;
-  }
+  };
 }
 ```
 
 **Store Usage**:
+
 ```typescript
 // In PaymentSourceList component
 $: paymentSources = paymentSourcesStore.defaults;

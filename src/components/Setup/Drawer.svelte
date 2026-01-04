@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Drawer - Right-side drawer component for forms
-   * 
+   *
    * @prop isOpen - Whether the drawer is visible
    * @prop title - Title displayed in the drawer header
    * @prop onClose - Callback when drawer should close (backdrop click or X button)
@@ -34,12 +34,18 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div class="drawer-backdrop" on:click={handleBackdropClick} role="presentation">
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <div class="drawer" on:click={handleDrawerClick} on:keydown={handleKeydown} role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="0">
+    <div
+      class="drawer"
+      on:click={handleDrawerClick}
+      on:keydown={handleKeydown}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-title"
+      tabindex="0"
+    >
       <div class="drawer-header">
         <h2 id="drawer-title">{title}</h2>
-        <button class="close-btn" on:click={onClose} aria-label="Close drawer">
-          &times;
-        </button>
+        <button class="close-btn" on:click={onClose} aria-label="Close drawer"> &times; </button>
       </div>
       <div class="drawer-content">
         <slot />

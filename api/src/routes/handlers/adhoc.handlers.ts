@@ -3,8 +3,18 @@
 
 import { AdhocServiceImpl } from '../../services/adhoc-service';
 import { MonthsServiceImpl } from '../../services/months-service';
-import type { CreateAdhocBillRequest, CreateAdhocIncomeRequest, UpdateAdhocRequest, MakeRegularRequest } from '../../services/adhoc-service';
-import { formatErrorForUser, NotFoundError, ValidationError, ReadOnlyError } from '../../utils/errors';
+import type {
+  CreateAdhocBillRequest,
+  CreateAdhocIncomeRequest,
+  UpdateAdhocRequest,
+  MakeRegularRequest,
+} from '../../services/adhoc-service';
+import {
+  formatErrorForUser,
+  NotFoundError,
+  ValidationError,
+  ReadOnlyError,
+} from '../../utils/errors';
 
 const adhocService = new AdhocServiceImpl();
 const monthsService = new MonthsServiceImpl();
@@ -13,12 +23,15 @@ const monthsService = new MonthsServiceImpl();
 async function checkReadOnly(month: string): Promise<Response | null> {
   const isReadOnly = await monthsService.isReadOnly(month);
   if (isReadOnly) {
-    return new Response(JSON.stringify({
-      error: `Month ${month} is read-only. Unlock it to make changes.`
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 403
-    });
+    return new Response(
+      JSON.stringify({
+        error: `Month ${month} is read-only. Unlock it to make changes.`,
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 403,
+      }
+    );
   }
   return null;
 }
@@ -27,25 +40,31 @@ async function checkReadOnly(month: string): Promise<Response | null> {
 // /api/months/2025-01/adhoc/bills -> { month: '2025-01', instanceId: null }
 // /api/months/2025-01/adhoc/bills/uuid -> { month: '2025-01', instanceId: 'uuid' }
 // /api/months/2025-01/adhoc/bills/uuid/make-regular -> { month: '2025-01', instanceId: 'uuid', makeRegular: true }
-function extractAdhocParams(url: string): { month: string | null; instanceId: string | null; makeRegular: boolean } {
+function extractAdhocParams(url: string): {
+  month: string | null;
+  instanceId: string | null;
+  makeRegular: boolean;
+} {
   // Match make-regular pattern first
-  const makeRegularMatch = url.match(/\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^\/]+)\/make-regular/);
+  const makeRegularMatch = url.match(
+    /\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^/]+)\/make-regular/
+  );
   if (makeRegularMatch) {
     return { month: makeRegularMatch[1], instanceId: makeRegularMatch[2], makeRegular: true };
   }
-  
+
   // Match with instance ID
-  const withId = url.match(/\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^\/]+)/);
+  const withId = url.match(/\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^/]+)/);
   if (withId) {
     return { month: withId[1], instanceId: withId[2], makeRegular: false };
   }
-  
+
   // Match without instance ID (for POST create)
   const withoutId = url.match(/\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)/);
   if (withoutId) {
     return { month: withoutId[1], instanceId: null, makeRegular: false };
   }
-  
+
   return { month: null, instanceId: null, makeRegular: false };
 }
 
@@ -62,44 +81,50 @@ export function createAdhocBillHandlerPOST() {
     try {
       const url = new URL(request.url);
       const { month } = extractAdhocParams(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
-      const body = await request.json() as CreateAdhocBillRequest;
+
+      const body = (await request.json()) as CreateAdhocBillRequest;
       const billInstance = await adhocService.createAdhocBill(month, body);
-      
+
       return new Response(JSON.stringify({ billInstance }), {
         status: 201,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch (error) {
       console.error('[AdhocHandler] Create bill error:', error);
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to create ad-hoc bill'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to create ad-hoc bill',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -113,58 +138,64 @@ export function createAdhocBillHandlerPUT() {
     try {
       const url = new URL(request.url);
       const { month, instanceId } = extractAdhocParams(url.pathname);
-      
+
       if (!month || !instanceId) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
-      const body = await request.json() as UpdateAdhocRequest;
+
+      const body = (await request.json()) as UpdateAdhocRequest;
       const billInstance = await adhocService.updateAdhocBill(month, instanceId, body);
-      
+
       if (!billInstance) {
         return new Response(JSON.stringify({ error: 'Bill instance not found' }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       return new Response(JSON.stringify({ billInstance }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch (error) {
       console.error('[AdhocHandler] Update bill error:', error);
-      
+
       if (error instanceof NotFoundError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to update ad-hoc bill'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update ad-hoc bill',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -178,47 +209,53 @@ export function createAdhocBillHandlerDELETE() {
     try {
       const url = new URL(request.url);
       const { month, instanceId } = extractAdhocParams(url.pathname);
-      
+
       if (!month || !instanceId) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
+
       await adhocService.deleteAdhocBill(month, instanceId);
-      
+
       return new Response(null, { status: 204 });
     } catch (error) {
       console.error('[AdhocHandler] Delete bill error:', error);
-      
+
       if (error instanceof NotFoundError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to delete ad-hoc bill'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to delete ad-hoc bill',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -232,66 +269,85 @@ export function createMakeRegularBillHandler() {
     try {
       const url = new URL(request.url);
       const { month, instanceId, makeRegular } = extractAdhocParams(url.pathname);
-      
+
       if (!month || !instanceId || !makeRegular) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id/make-regular'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id/make-regular',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
-      const body = await request.json() as MakeRegularRequest;
-      
+
+      const body = (await request.json()) as MakeRegularRequest;
+
       // Validate required fields
-      if (!body.name || !body.amount || !body.category_id || !body.payment_source_id || !body.billing_period) {
-        return new Response(JSON.stringify({
-          error: 'Missing required fields: name, amount, category_id, payment_source_id, billing_period'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+      if (
+        !body.name ||
+        !body.amount ||
+        !body.category_id ||
+        !body.payment_source_id ||
+        !body.billing_period
+      ) {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Missing required fields: name, amount, category_id, payment_source_id, billing_period',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
-      
+
       const { bill, billInstance } = await adhocService.makeRegularBill(month, instanceId, body);
-      
-      return new Response(JSON.stringify({
-        bill,
-        billInstance,
-        message: `Created recurring bill: ${bill.name}`
-      }), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          bill,
+          billInstance,
+          message: `Created recurring bill: ${bill.name}`,
+        }),
+        {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     } catch (error) {
       console.error('[AdhocHandler] Make regular bill error:', error);
-      
+
       if (error instanceof NotFoundError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to make bill regular'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to make bill regular',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -309,44 +365,50 @@ export function createAdhocIncomeHandlerPOST() {
     try {
       const url = new URL(request.url);
       const { month } = extractAdhocParams(url.pathname);
-      
+
       if (!month) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
-      const body = await request.json() as CreateAdhocIncomeRequest;
+
+      const body = (await request.json()) as CreateAdhocIncomeRequest;
       const incomeInstance = await adhocService.createAdhocIncome(month, body);
-      
+
       return new Response(JSON.stringify({ incomeInstance }), {
         status: 201,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch (error) {
       console.error('[AdhocHandler] Create income error:', error);
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to create ad-hoc income'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to create ad-hoc income',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -360,58 +422,64 @@ export function createAdhocIncomeHandlerPUT() {
     try {
       const url = new URL(request.url);
       const { month, instanceId } = extractAdhocParams(url.pathname);
-      
+
       if (!month || !instanceId) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
-      const body = await request.json() as UpdateAdhocRequest;
+
+      const body = (await request.json()) as UpdateAdhocRequest;
       const incomeInstance = await adhocService.updateAdhocIncome(month, instanceId, body);
-      
+
       if (!incomeInstance) {
         return new Response(JSON.stringify({ error: 'Income instance not found' }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       return new Response(JSON.stringify({ incomeInstance }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch (error) {
       console.error('[AdhocHandler] Update income error:', error);
-      
+
       if (error instanceof NotFoundError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to update ad-hoc income'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update ad-hoc income',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -425,47 +493,53 @@ export function createAdhocIncomeHandlerDELETE() {
     try {
       const url = new URL(request.url);
       const { month, instanceId } = extractAdhocParams(url.pathname);
-      
+
       if (!month || !instanceId) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
+
       await adhocService.deleteAdhocIncome(month, instanceId);
-      
+
       return new Response(null, { status: 204 });
     } catch (error) {
       console.error('[AdhocHandler] Delete income error:', error);
-      
+
       if (error instanceof NotFoundError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to delete ad-hoc income'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to delete ad-hoc income',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }
@@ -479,66 +553,89 @@ export function createMakeRegularIncomeHandler() {
     try {
       const url = new URL(request.url);
       const { month, instanceId, makeRegular } = extractAdhocParams(url.pathname);
-      
+
       if (!month || !instanceId || !makeRegular) {
-        return new Response(JSON.stringify({
-          error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id/make-regular'
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-          status: 400
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id/make-regular',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
       }
-      
+
       // Check if month is read-only
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
-      
-      const body = await request.json() as MakeRegularRequest;
-      
+
+      const body = (await request.json()) as MakeRegularRequest;
+
       // Validate required fields
-      if (!body.name || !body.amount || !body.category_id || !body.payment_source_id || !body.billing_period) {
-        return new Response(JSON.stringify({
-          error: 'Missing required fields: name, amount, category_id, payment_source_id, billing_period'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+      if (
+        !body.name ||
+        !body.amount ||
+        !body.category_id ||
+        !body.payment_source_id ||
+        !body.billing_period
+      ) {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Missing required fields: name, amount, category_id, payment_source_id, billing_period',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
-      
-      const { income, incomeInstance } = await adhocService.makeRegularIncome(month, instanceId, body);
-      
-      return new Response(JSON.stringify({
-        income,
-        incomeInstance,
-        message: `Created recurring income: ${income.name}`
-      }), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      const { income, incomeInstance } = await adhocService.makeRegularIncome(
+        month,
+        instanceId,
+        body
+      );
+
+      return new Response(
+        JSON.stringify({
+          income,
+          incomeInstance,
+          message: `Created recurring income: ${income.name}`,
+        }),
+        {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     } catch (error) {
       console.error('[AdhocHandler] Make regular income error:', error);
-      
+
       if (error instanceof NotFoundError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (error instanceof ValidationError) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      return new Response(JSON.stringify({
-        error: formatErrorForUser(error),
-        message: 'Failed to make income regular'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to make income regular',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   };
 }

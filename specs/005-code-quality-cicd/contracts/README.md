@@ -8,6 +8,7 @@
 ## Overview
 
 This feature does not introduce new API endpoints. The feature focuses on:
+
 - Development tooling (linting, testing, formatting)
 - CI/CD configuration (GitHub Actions workflows)
 - Documentation (architecture docs, ADRs)
@@ -22,29 +23,29 @@ While there are no HTTP API contracts, this feature establishes the following CL
 
 ### Make Targets
 
-| Target | Input | Output | Exit Codes |
-|--------|-------|--------|------------|
-| `make lint` | None | Lint violations (stdout) | 0=pass, 1=fail |
-| `make format` | None | Formatted file list (stdout) | 0=success |
-| `make test` | None | Test results + coverage (stdout) | 0=pass, 1=fail |
-| `make check` | None | Type errors (stdout) | 0=pass, 1=fail |
-| `make build` | None | Build artifacts | 0=success, 1=fail |
+| Target        | Input | Output                           | Exit Codes        |
+| ------------- | ----- | -------------------------------- | ----------------- |
+| `make lint`   | None  | Lint violations (stdout)         | 0=pass, 1=fail    |
+| `make format` | None  | Formatted file list (stdout)     | 0=success         |
+| `make test`   | None  | Test results + coverage (stdout) | 0=pass, 1=fail    |
+| `make check`  | None  | Type errors (stdout)             | 0=pass, 1=fail    |
+| `make build`  | None  | Build artifacts                  | 0=success, 1=fail |
 
 ### Pre-commit Hook Contract
 
-| Trigger | Checks Run | Behavior on Failure |
-|---------|------------|---------------------|
-| `git commit` | lint, format, typecheck, unit tests | Block commit, show errors |
-| `git commit --no-verify` | None | Bypass (escape hatch) |
-| `git push` | Full test suite | Block push, show errors |
+| Trigger                  | Checks Run                          | Behavior on Failure       |
+| ------------------------ | ----------------------------------- | ------------------------- |
+| `git commit`             | lint, format, typecheck, unit tests | Block commit, show errors |
+| `git commit --no-verify` | None                                | Bypass (escape hatch)     |
+| `git push`               | Full test suite                     | Block push, show errors   |
 
 ### CI/CD Contract
 
-| Event | Workflow | Required Checks |
-|-------|----------|-----------------|
-| Push to any branch | `ci.yml` | lint, typecheck, test, build |
-| Pull request | `ci.yml` | lint, typecheck, test, build, coverage report |
-| Push to main | `build.yml` | Full Tauri build (macOS) |
+| Event              | Workflow    | Required Checks                               |
+| ------------------ | ----------- | --------------------------------------------- |
+| Push to any branch | `ci.yml`    | lint, typecheck, test, build                  |
+| Pull request       | `ci.yml`    | lint, typecheck, test, build, coverage report |
+| Push to main       | `build.yml` | Full Tauri build (macOS)                      |
 
 ---
 

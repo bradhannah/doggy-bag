@@ -20,18 +20,20 @@ Bills component handles all bill-related functionality: listing bills, adding/ed
 **Purpose**: Display list of all bills (default definitions) with filtering, sorting, and quick actions.
 
 **Props**:
+
 ```typescript
 interface Props {
-  bills?: Bill[];                    // Default bills (templates)
-  billInstances?: BillInstance[];       // Monthly instances
-  categories?: Category[];           // For filtering
-  currentMonth?: string;             // Current viewing month
+  bills?: Bill[]; // Default bills (templates)
+  billInstances?: BillInstance[]; // Monthly instances
+  categories?: Category[]; // For filtering
+  currentMonth?: string; // Current viewing month
   onEdit?: (bill: Bill | BillInstance) => void;
   onDelete?: (id: string) => void;
 }
 ```
 
 **Display Format**:
+
 ```
 ┌──────────────────────────────────────────────────┐
 │  [Filter: All ▾] [Sort: Name ↓]  │
@@ -53,6 +55,7 @@ interface Props {
 ```
 
 **Features**:
+
 - **Filter by Category**: Dropdown or button group (Home, Debt, Streaming, etc.)
 - **Sort Options**: Name (A-Z, Z-A), Amount (High-Low, Low-High), Period (monthly, bi-weekly, weekly)
 - **Toggle View**: Switch between "Default Bills" (templates) and "Month Instances" (for current month)
@@ -62,6 +65,7 @@ interface Props {
 - **Total Fixed Costs**: Display sum of all bills (showing calculation basis)
 
 **Events**:
+
 - `on:click={onEdit(bill)}` - Opens edit form
 - `on:click={onDelete(bill.id)}` - Shows delete confirmation
 
@@ -72,18 +76,20 @@ interface Props {
 **Purpose**: Form for adding or editing bills. Can be used inline (in Setup page) or as modal (in Bills page).
 
 **Props**:
+
 ```typescript
 interface Props {
-  bill?: Bill | BillInstance;        // If provided, editing existing bill
-  paymentSources?: PaymentSource[];     // For dropdown
-  categories?: Category[];             // For dropdown
-  onSave: (bill: Omit<Bill>) => void;  // Callback when saved
-  onCancel: () => void;                 // Callback when cancelled (modal only)
-  mode?: 'inline' | 'modal';           // Inline (Setup page) or modal (Bills page)
+  bill?: Bill | BillInstance; // If provided, editing existing bill
+  paymentSources?: PaymentSource[]; // For dropdown
+  categories?: Category[]; // For dropdown
+  onSave: (bill: Omit<Bill>) => void; // Callback when saved
+  onCancel: () => void; // Callback when cancelled (modal only)
+  mode?: 'inline' | 'modal'; // Inline (Setup page) or modal (Bills page)
 }
 ```
 
 **Form Layout**:
+
 ```
 ┌──────────────────────────────────────────────────┐
 │                                                │
@@ -107,6 +113,7 @@ interface Props {
 ```
 
 **Fields**:
+
 - **Name**: Text input, required, max 100 chars, trimmed
 - **Amount**: Currency input ($, , formatting), required, > 0, max 12 digits
 - **Billing Period**: Dropdown (Monthly, Bi-weekly, Weekly, Semi-annually)
@@ -114,12 +121,14 @@ interface Props {
 - **Category**: Dropdown (8 pre-defined + custom categories)
 
 **Validation**:
+
 - Real-time validation as user types
 - Error messages below each field (red text)
 - Save button disabled until all validations pass
 - Inline error summary at bottom of form
 
 **Behaviors**:
+
 - **Default Monthly**: Monthly selected by default
 - **Auto-focus**: Name field auto-focused on mount or on "Add New" click
 - **Enter key submits**: No need to click "Save" button
@@ -134,9 +143,10 @@ interface Props {
 **Purpose**: Modal overlay for editing existing bills (default definitions or monthly instances).
 
 **Props**:
+
 ```typescript
 interface Props {
-  bill: Bill | BillInstance;           // Bill to edit
+  bill: Bill | BillInstance; // Bill to edit
   paymentSources: PaymentSource[];
   categories: Category[];
   onSave: (bill: Omit<Bill | BillInstance>) => void;
@@ -145,6 +155,7 @@ interface Props {
 ```
 
 **Features**:
+
 - **Pre-fill**: All fields populated from existing bill data
 - **Type Indicator**: Show whether editing "Default Bill" or "Month Instance"
 - **Billing Period Warning**: If editing default bill, show warning: "This changes the template for all future months. Current month will use this new value unless you re-edit it."
@@ -337,20 +348,21 @@ Total Fixed Costs: $1,580 /month
 interface BillsStore extends Writable<BillsState> {
   defaults: Bill[];
   instances: Record<string, BillInstance[]>; // Key = month ('YYYY-MM')
-  
+
   actions: {
     addDefault: (bill: Bill) => void;
     updateDefault: (id: string, updates: Partial<Bill>) => void;
     softDeleteDefault: (id: string) => void;
-    
+
     addInstance: (billInstance: BillInstance) => void;
     updateInstance: (month: string, billId: string, updates: Partial<BillInstance>) => void;
     deleteInstance: (month: string, id: string) => void;
-  }
+  };
 }
 ```
 
 **Store Structure**:
+
 - `defaults`: Array of all default bills (templates)
 - `instances`: Record mapping month → array of bill instances for that month
 

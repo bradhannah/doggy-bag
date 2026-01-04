@@ -1,7 +1,7 @@
 # BudgetForFun Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
-.PHONY: help dev dev-browser build clean test lint format types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail
+.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare
 
 # Log directory
 LOGS_DIR := logs
@@ -42,8 +42,10 @@ help: ## Show this help message
 	@echo "  make kill-dev   Terminate stray development processes"
 	@echo ""
 	@echo "Quality Targets:"
-	@echo "  make lint      Run ESLint checks"
-	@echo "  make format    Format all files with Prettier"
+	@echo "  make lint         Run ESLint checks"
+	@echo "  make format       Format all files with Prettier"
+	@echo "  make format-check Check if files are formatted correctly"
+	@echo "  make prepare      Install git hooks (lefthook)"
 	@echo ""
 	@echo "Logs:"
 	@echo "  API log:      $(LOGS_DIR)/api.log"
@@ -224,9 +226,9 @@ test-backend: ## Run backend tests with Bun test runner
 	@echo "Running backend tests (Bun)..."
 	@cd api && $(BUN) test
 
-test-frontend: ## Run frontend tests with Jest
-	@echo "Running frontend tests (Jest)..."
-	@$(BUN) test
+test-frontend: ## Run frontend tests with Vitest
+	@echo "Running frontend tests (Vitest)..."
+	@$(BUN)x vitest run
 
 test-e2e: ## Run E2E tests with Playwright
 	@echo "Running E2E tests (Playwright)..."
@@ -235,21 +237,26 @@ test-e2e: ## Run E2E tests with Playwright
 # Quality
 lint: ## Run ESLint checks
 	@echo "Running ESLint..."
-	@make lint-backend
 	@make lint-frontend
+	@make lint-backend
 
 lint-backend: ## Lint backend TypeScript
-	@echo "Linting backend (api/)..."
-	@cd api && bunx eslint src/ --ext .ts,.tsx
+	@echo "Linting backend (api/src/)..."
+	@$(BUN)x eslint api/src/
 
 lint-frontend: ## Lint frontend TypeScript and Svelte
 	@echo "Linting frontend (src/)..."
-	@bunx eslint src/ --ext .ts,.tsx,.svelte
+	@$(BUN)x eslint src/
 
 format: ## Format all files with Prettier
 	@echo "Formatting files..."
-	@bunx prettier --write "**/*.{ts,tsx,svelte,json,md}"
+	@$(BUN)x prettier --write .
 	@echo "Format complete"
+
+format-check: ## Check if files are formatted correctly
+	@echo "Checking formatting..."
+	@$(BUN)x prettier --check .
+	@echo "Format check complete"
 
 # Smoke test (build system validation)
 smoke-test: ## Validate Bun, Svelte, and Tauri integration
@@ -273,3 +280,9 @@ install-bun: ## Install Bun backend dependencies
 install-npm: ## Install npm dependencies (frontend, Tauri, tools) using Bun
 	@echo "Installing npm dependencies with Bun..."
 	@$(BUN) install
+
+# Git hooks
+prepare: ## Install git hooks (lefthook)
+	@echo "Installing git hooks..."
+	@$(BUN)x lefthook install
+	@echo "✓ Git hooks installed"

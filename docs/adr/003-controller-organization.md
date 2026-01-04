@@ -17,6 +17,7 @@ With the decision to use tsoa for OpenAPI spec generation (ADR-002), we need to 
 ```
 
 Options:
+
 1. **Single large controller** - All routes in one file
 2. **Split by resource** - Separate controllers for bills, incomes, etc.
 3. **Nested route controllers** - Use tsoa's nested route feature
@@ -29,24 +30,24 @@ We will use **Split controllers with nested routes**.
 
 Each major resource gets its own controller with appropriate base route:
 
-| Controller | Base Route | Endpoints |
-|------------|------------|-----------|
-| `HealthController` | `/health` | 2 |
-| `BillsController` | `/bills` | 4 |
-| `IncomesController` | `/incomes` | 4 |
-| `PaymentSourcesController` | `/payment-sources` | 4 |
-| `CategoriesController` | `/categories` | 5 |
-| `MonthsController` | `/months` | 11 |
-| `BillInstancesController` | `/months/{month}/bills` | 8 |
-| `IncomeInstancesController` | `/months/{month}/incomes` | 8 |
-| `BillOccurrencesController` | `/months/{month}/bills/{billId}/occurrences` | 7 |
-| `IncomeOccurrencesController` | `/months/{month}/incomes/{incomeId}/occurrences` | 7 |
-| `AdhocBillsController` | `/months/{month}/adhoc/bills` | 4 |
-| `AdhocIncomesController` | `/months/{month}/adhoc/incomes` | 4 |
-| `BackupController` | `/backup` | 3 |
-| `UndoController` | `/undo` | 3 |
-| `SettingsController` | `/settings` | 5 |
-| `SeedController` | `/seed-defaults` | 1 |
+| Controller                    | Base Route                                       | Endpoints |
+| ----------------------------- | ------------------------------------------------ | --------- |
+| `HealthController`            | `/health`                                        | 2         |
+| `BillsController`             | `/bills`                                         | 4         |
+| `IncomesController`           | `/incomes`                                       | 4         |
+| `PaymentSourcesController`    | `/payment-sources`                               | 4         |
+| `CategoriesController`        | `/categories`                                    | 5         |
+| `MonthsController`            | `/months`                                        | 11        |
+| `BillInstancesController`     | `/months/{month}/bills`                          | 8         |
+| `IncomeInstancesController`   | `/months/{month}/incomes`                        | 8         |
+| `BillOccurrencesController`   | `/months/{month}/bills/{billId}/occurrences`     | 7         |
+| `IncomeOccurrencesController` | `/months/{month}/incomes/{incomeId}/occurrences` | 7         |
+| `AdhocBillsController`        | `/months/{month}/adhoc/bills`                    | 4         |
+| `AdhocIncomesController`      | `/months/{month}/adhoc/incomes`                  | 4         |
+| `BackupController`            | `/backup`                                        | 3         |
+| `UndoController`              | `/undo`                                          | 3         |
+| `SettingsController`          | `/settings`                                      | 5         |
+| `SeedController`              | `/seed-defaults`                                 | 1         |
 
 ---
 
@@ -79,14 +80,14 @@ Each major resource gets its own controller with appropriate base route:
 @Route('months/{month}/bills/{billId}/occurrences')
 @Tags('Bill Occurrences')
 export class BillOccurrencesController extends Controller {
-  
+
   @Post()
   public async createOccurrence(
     @Path() month: string,
     @Path() billId: string,
     @Body() body: CreateOccurrenceRequest
   ): Promise<Occurrence> { ... }
-  
+
   @Put('{occurrenceId}')
   public async updateOccurrence(
     @Path() month: string,
@@ -94,7 +95,7 @@ export class BillOccurrencesController extends Controller {
     @Path() occurrenceId: string,
     @Body() body: UpdateOccurrenceRequest
   ): Promise<Occurrence> { ... }
-  
+
   @Post('{occurrenceId}/close')
   public async closeOccurrence(
     @Path() month: string,

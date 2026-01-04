@@ -9,6 +9,7 @@
 ## Context
 
 The BudgetForFun application uses a multi-process architecture:
+
 - **Tauri shell** (Rust): Desktop window, native OS integration
 - **Bun backend** (TypeScript): HTTP server on localhost:3000, business logic
 - **Svelte frontend**: WebView, communicates with backend via fetch()
@@ -23,40 +24,40 @@ The frontend communicates with the backend using HTTP over localhost. We evaluat
 
 ### 1. Unix Domain Sockets
 
-| Aspect | Assessment |
-|--------|------------|
-| Performance | ~40% faster (0.029ms vs 0.050ms per request) |
-| Feasibility | High - Bun supports it natively |
-| Limitation | Browser fetch() cannot use Unix sockets |
-| Required Changes | Rust proxy layer needed |
+| Aspect           | Assessment                                   |
+| ---------------- | -------------------------------------------- |
+| Performance      | ~40% faster (0.029ms vs 0.050ms per request) |
+| Feasibility      | High - Bun supports it natively              |
+| Limitation       | Browser fetch() cannot use Unix sockets      |
+| Required Changes | Rust proxy layer needed                      |
 
 **Rejected because**: Performance gain is imperceptible to users. Adds architectural complexity for no user-facing benefit.
 
 ### 2. Tauri Commands (Rust Proxy)
 
-| Aspect | Assessment |
-|--------|------------|
-| Performance | Variable - depends on implementation |
-| Feasibility | Medium |
+| Aspect           | Assessment                                    |
+| ---------------- | --------------------------------------------- |
+| Performance      | Variable - depends on implementation          |
+| Feasibility      | Medium                                        |
 | Required Changes | ~50 new Rust commands OR full backend rewrite |
 
 **Rejected because**: Massive implementation effort. Would require either a proxy layer with double serialization, or rewriting the entire backend in Rust.
 
 ### 3. Tauri IPC Channels
 
-| Aspect | Assessment |
-|--------|------------|
-| Purpose | Streaming data from Rust to JS |
+| Aspect            | Assessment                          |
+| ----------------- | ----------------------------------- |
+| Purpose           | Streaming data from Rust to JS      |
 | Fit for REST APIs | Poor - not request-response pattern |
 
 **Rejected because**: Wrong tool for the job. Designed for streaming, not API calls.
 
 ### 4. Shared Memory / mmap
 
-| Aspect | Assessment |
-|--------|------------|
-| Performance | Fastest possible |
-| Feasibility | Very Low |
+| Aspect           | Assessment                    |
+| ---------------- | ----------------------------- |
+| Performance      | Fastest possible              |
+| Feasibility      | Very Low                      |
 | Required Changes | Custom protocol, FFI bindings |
 
 **Rejected because**: Impractical. Bun has no shared memory API. Would require custom native modules and complex synchronization.

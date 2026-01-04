@@ -42,17 +42,17 @@ export const getBaseUrl = () => {
   if (isTauriEnv() && apiPort !== null) {
     return `http://localhost:${apiPort}`;
   }
-  
+
   // In browser dev mode (not Tauri), use Vite proxy
   if (import.meta.env.DEV && !isTauriEnv()) {
     return ''; // Use relative URL (proxied by Vite to port 3000)
   }
-  
+
   // Fallback for edge cases
   if (apiPort !== null) {
     return `http://localhost:${apiPort}`;
   }
-  
+
   log.warn('Port not set, using fallback');
   return import.meta.env.VITE_API_URL || 'http://localhost:3000';
 };
@@ -63,7 +63,7 @@ export const apiUrl = (path: string) => `${getBaseUrl()}${path}`;
 export const apiClient = {
   // Expose getBaseUrl for components that need to construct their own URLs
   getBaseUrl,
-  
+
   async get(path: string) {
     const response = await fetch(apiUrl(path));
     if (!response.ok) {
@@ -76,7 +76,7 @@ export const apiClient = {
     const response = await fetch(apiUrl(path), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -91,23 +91,24 @@ export const apiClient = {
     const response = await fetch(apiUrl(`${path}/${id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       const error = await response.json();
-      const message = error.message || error.error || `PUT ${path}/${id} failed: ${response.statusText}`;
+      const message =
+        error.message || error.error || `PUT ${path}/${id} failed: ${response.statusText}`;
       const details = error.details ? `: ${error.details.join(', ')}` : '';
       throw new Error(message + details);
     }
     return response.json();
   },
-  
+
   // Generic PUT for paths that don't follow the /{id} pattern
   async putPath(path: string, body: unknown) {
     const response = await fetch(apiUrl(path), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -119,7 +120,7 @@ export const apiClient = {
 
   async delete(path: string, id: string) {
     const response = await fetch(apiUrl(`${path}/${id}`), {
-      method: 'DELETE'
+      method: 'DELETE',
     });
     if (!response.ok && response.status !== 204) {
       throw new Error(`DELETE ${path}/${id} failed: ${response.statusText}`);
@@ -130,7 +131,7 @@ export const apiClient = {
   // Generic DELETE for paths that don't follow the /{id} pattern
   async deletePath(path: string) {
     const response = await fetch(apiUrl(path), {
-      method: 'DELETE'
+      method: 'DELETE',
     });
     if (!response.ok && response.status !== 204) {
       const errorBody = await response.text();
@@ -144,5 +145,5 @@ export const apiClient = {
       throw new Error(errorMsg);
     }
     return null;
-  }
+  },
 };

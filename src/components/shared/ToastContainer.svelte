@@ -22,18 +22,18 @@
     gap: 0.75rem;
     pointer-events: none;
   }
-  
+
   .toast-container :global(.toast) {
     pointer-events: auto;
   }
-  
+
   @media (max-width: 480px) {
     .toast-container {
       left: 1rem;
       right: 1rem;
       bottom: 1rem;
     }
-    
+
     .toast-container :global(.toast) {
       max-width: none;
     }

@@ -20,18 +20,20 @@ Incomes component handles all income-related functionality: listing income sourc
 **Purpose**: Display list of all income sources (default definitions) with filtering, sorting, and quick actions.
 
 **Props**:
+
 ```typescript
 interface Props {
-  incomes?: Income[];                 // Default income sources (templates)
-  incomeInstances?: IncomeInstance[];      // Monthly instances
-  categories?: Category[];             // For filtering (optional future feature)
-  currentMonth?: string;               // Current viewing month
+  incomes?: Income[]; // Default income sources (templates)
+  incomeInstances?: IncomeInstance[]; // Monthly instances
+  categories?: Category[]; // For filtering (optional future feature)
+  currentMonth?: string; // Current viewing month
   onEdit?: (income: Income | IncomeInstance) => void;
   onDelete?: (id: string) => void;
 }
 ```
 
 **Display Format**:
+
 ```
 ┌──────────────────────────────────────────────────┐
 │                                              │
@@ -53,6 +55,7 @@ interface Props {
 ```
 
 **Features**:
+
 - **Filter by Category**: Dropdown or button group (optional future feature)
 - **Sort Options**: Name (A-Z, Z-A), Amount (High-Low, Low-High), Period (monthly, bi-weekly, weekly)
 - **Toggle View**: Switch between "Default Incomes" (templates) and "Month Instances" (for current month)
@@ -63,6 +66,7 @@ interface Props {
 - **Multi-select**: Can select multiple incomes (for batch delete - optional future feature)
 
 **Events**:
+
 - `on:click={onEdit(income)}` - Opens edit form
 - `on:click={onDelete(income.id)}` - Shows delete confirmation
 
@@ -73,18 +77,20 @@ interface Props {
 **Purpose**: Form for adding or editing incomes. Can be used inline (in Setup page) or as modal (in Incomes page).
 
 **Props**:
+
 ```typescript
 interface Props {
-  income?: Income | IncomeInstance;        // If provided, editing existing
-  paymentSources?: PaymentSource[];      // For payment source dropdown
-  categories?: Category[];               // For category dropdown (optional future feature)
-  mode?: 'inline' | 'modal';          // Inline (Setup) or modal
-  onSave: (income: Omit<Income | IncomeInstance>) => void;  // Callback when saved
-  onCancel: () => void;                 // Cancel button (modal only)
+  income?: Income | IncomeInstance; // If provided, editing existing
+  paymentSources?: PaymentSource[]; // For payment source dropdown
+  categories?: Category[]; // For category dropdown (optional future feature)
+  mode?: 'inline' | 'modal'; // Inline (Setup) or modal
+  onSave: (income: Omit<Income | IncomeInstance>) => void; // Callback when saved
+  onCancel: () => void; // Cancel button (modal only)
 }
 ```
 
 **Form Layout**:
+
 ```
 ┌──────────────────────────────────────────┐
 │  Name *                                        │
@@ -107,6 +113,7 @@ interface Props {
 ```
 
 **Fields**:
+
 - **Name**: Text input, required, max 100 chars, trimmed
 - **Amount**: Currency input ($, , formatting), required, > 0, max 9 digits
 - **Billing Period**: Dropdown (Monthly, Bi-weekly, Weekly, Semi-annually)
@@ -116,12 +123,14 @@ interface Props {
 - **Cancel Button**: "Cancel" (modal only)
 
 **Validation**:
+
 - Real-time validation as user types
 - Error messages below each field (red text)
 - Save button disabled until all validations pass
 - Currency formatting on blur (auto-add $, commas)
 
 **Behaviors**:
+
 - Default monthly selected by default
 - Auto-focus Name field on mount or "Add New" click
 - Enter key submits form (no need to click Save)
@@ -135,9 +144,10 @@ interface Props {
 **Purpose**: Modal overlay for editing existing incomes (default definitions or monthly instances).
 
 **Props**:
+
 ```typescript
 interface Props {
-  income: Income | IncomeInstance;        // Income to edit
+  income: Income | IncomeInstance; // Income to edit
   paymentSources: PaymentSource[];
   categories: Category[];
   onSave: (income: Omit<Income | IncomeInstance>) => void;
@@ -146,6 +156,7 @@ interface Props {
 ```
 
 **Features**:
+
 - **Pre-fill**: All fields populated from existing income data
 - **Type Indicator**: Show "Editing Default Income" or "Editing Month Instance"
 - **Billing Period Warning**: If editing default income, show warning: "This changes the template for all future months. Current month will use this new value unless you re-edit it."
@@ -155,6 +166,7 @@ interface Props {
 - **Cancel Button**: "Cancel"
 
 **Modal Behavior**:
+
 - Opens centered overlay with backdrop
 - Click outside closes modal (with confirmation if unsaved changes)
 - Prevents body scroll when modal is open
@@ -342,15 +354,16 @@ interface IncomesStore extends Writable<IncomesState> {
     update: (id: string, updates: Partial<Income>) => void;
     delete: (id: string) => void;
     softDelete: (id: string) => void;
-  }
+  };
 }
 ```
 
 **Store Usage**:
+
 ```typescript
 // In Income List component
-$: defaults = incomesStore.defaults;     // Display all default incomes
-$: instances = incomesStore.instances[currentMonth];  // Display current month's incomes
+$: defaults = incomesStore.defaults; // Display all default incomes
+$: instances = incomesStore.instances[currentMonth]; // Display current month's incomes
 $: totalIncome = calculateTotalIncome($instances);
 
 // In Income Form component

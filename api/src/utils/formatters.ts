@@ -4,10 +4,10 @@ export function formatCurrency(amount: number): string {
   if (typeof amount !== 'number') {
     return '$0.00';
   }
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'USD',
   }).format(amount);
 }
 
@@ -17,24 +17,24 @@ export function formatCentsToDollars(cents: number): string {
 
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  
+
   if (isNaN(d.getTime())) {
     return 'Invalid Date';
   }
-  
+
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
   }).format(d);
 }
 
 export function formatMonth(year: number, month: number): string {
   const date = new Date(year, month - 1, 1);
-  
+
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
-    month: 'long'
+    month: 'long',
   }).format(date);
 }
 
@@ -47,14 +47,14 @@ export function parseCurrency(value: string): number {
   if (!value || typeof value !== 'string') {
     return 0;
   }
-  
+
   const cleaned = value
     .replace(/[^0-9.-]/g, '')
     .replace(/^\./, '0.')
     .replace(/\.$/, '');
-  
+
   const parsed = parseFloat(cleaned);
-  
+
   return isNaN(parsed) ? 0 : parsed;
 }
 

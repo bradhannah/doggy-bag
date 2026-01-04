@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 /**
  * Generate Anonymized Sample Data for BudgetForFun
- * 
+ *
  * Creates realistic but fake budget data for demos and testing.
  * Run with: bun run scripts/generate-sample-data.ts [output-dir]
- * 
+ *
  * Default output: ./sample-data/
  */
 
@@ -92,17 +92,116 @@ function randomBetween(min: number, max: number): number {
 
 // Categories (use same IDs as predefined for consistency)
 const categories: Category[] = [
-  { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Housing', type: 'bill', is_predefined: true, sort_order: 0, color: '#3b82f6', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554402', name: 'Utilities', type: 'bill', is_predefined: true, sort_order: 1, color: '#10b981', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554403', name: 'Food & Groceries', type: 'variable', is_predefined: true, sort_order: 2, color: '#f59e0b', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554404', name: 'Transportation', type: 'variable', is_predefined: true, sort_order: 3, color: '#8b5cf6', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554405', name: 'Insurance', type: 'bill', is_predefined: true, sort_order: 4, color: '#ef4444', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554406', name: 'Entertainment', type: 'variable', is_predefined: true, sort_order: 5, color: '#ec4899', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554407', name: 'Healthcare', type: 'bill', is_predefined: true, sort_order: 6, color: '#06b6d4', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-4466554408', name: 'Other', type: 'bill', is_predefined: true, sort_order: 7, color: '#6b7280', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-446655440101', name: 'Salary', type: 'income', is_predefined: true, sort_order: 0, color: '#22c55e', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-446655440102', name: 'Side Income', type: 'income', is_predefined: true, sort_order: 1, color: '#84cc16', created_at: now, updated_at: now },
-  { id: '550e8400-e29b-41d4-a716-446655440103', name: 'Other Income', type: 'income', is_predefined: true, sort_order: 2, color: '#14b8a6', created_at: now, updated_at: now },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440001',
+    name: 'Housing',
+    type: 'bill',
+    is_predefined: true,
+    sort_order: 0,
+    color: '#3b82f6',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554402',
+    name: 'Utilities',
+    type: 'bill',
+    is_predefined: true,
+    sort_order: 1,
+    color: '#10b981',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554403',
+    name: 'Food & Groceries',
+    type: 'variable',
+    is_predefined: true,
+    sort_order: 2,
+    color: '#f59e0b',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554404',
+    name: 'Transportation',
+    type: 'variable',
+    is_predefined: true,
+    sort_order: 3,
+    color: '#8b5cf6',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554405',
+    name: 'Insurance',
+    type: 'bill',
+    is_predefined: true,
+    sort_order: 4,
+    color: '#ef4444',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554406',
+    name: 'Entertainment',
+    type: 'variable',
+    is_predefined: true,
+    sort_order: 5,
+    color: '#ec4899',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554407',
+    name: 'Healthcare',
+    type: 'bill',
+    is_predefined: true,
+    sort_order: 6,
+    color: '#06b6d4',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-4466554408',
+    name: 'Other',
+    type: 'bill',
+    is_predefined: true,
+    sort_order: 7,
+    color: '#6b7280',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440101',
+    name: 'Salary',
+    type: 'income',
+    is_predefined: true,
+    sort_order: 0,
+    color: '#22c55e',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440102',
+    name: 'Side Income',
+    type: 'income',
+    is_predefined: true,
+    sort_order: 1,
+    color: '#84cc16',
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440103',
+    name: 'Other Income',
+    type: 'income',
+    is_predefined: true,
+    sort_order: 2,
+    color: '#14b8a6',
+    created_at: now,
+    updated_at: now,
+  },
 ];
 
 // Payment Sources
@@ -114,17 +213,17 @@ const paymentSources: PaymentSource[] = [
     balance: cents(4532.18),
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Savings Account',
     type: 'bank_account',
-    balance: cents(12500.00),
+    balance: cents(12500.0),
     is_active: true,
     exclude_from_leftover: true, // Emergency fund, don't count in budget
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
@@ -134,7 +233,7 @@ const paymentSources: PaymentSource[] = [
     is_active: true,
     pay_off_monthly: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
@@ -144,17 +243,17 @@ const paymentSources: PaymentSource[] = [
     is_active: true,
     pay_off_monthly: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Cash',
     type: 'cash',
-    balance: cents(150.00),
+    balance: cents(150.0),
     is_active: true,
     created_at: now,
-    updated_at: now
-  }
+    updated_at: now,
+  },
 ];
 
 // Get payment source IDs for reference
@@ -179,39 +278,39 @@ const bills: Bill[] = [
   {
     id: randomUUID(),
     name: 'Rent',
-    amount: cents(1850.00),
+    amount: cents(1850.0),
     billing_period: 'monthly',
     day_of_month: 1,
     payment_source_id: checkingId,
     category_id: housingCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Renters Insurance',
-    amount: cents(28.00),
+    amount: cents(28.0),
     billing_period: 'monthly',
     day_of_month: 15,
     payment_source_id: rewardsCCId,
     category_id: housingCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   // Utilities
   {
     id: randomUUID(),
     name: 'Electric',
-    amount: cents(125.00),
+    amount: cents(125.0),
     billing_period: 'monthly',
     day_of_month: 20,
     payment_source_id: checkingId,
     category_id: utilitiesCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
@@ -223,81 +322,81 @@ const bills: Bill[] = [
     category_id: utilitiesCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Cell Phone',
-    amount: cents(85.00),
+    amount: cents(85.0),
     billing_period: 'monthly',
     day_of_month: 12,
     payment_source_id: rewardsCCId,
     category_id: utilitiesCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Water/Sewer',
-    amount: cents(45.00),
+    amount: cents(45.0),
     billing_period: 'monthly',
     day_of_month: 25,
     payment_source_id: checkingId,
     category_id: utilitiesCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   // Transportation
   {
     id: randomUUID(),
     name: 'Car Payment',
-    amount: cents(425.00),
+    amount: cents(425.0),
     billing_period: 'monthly',
     day_of_month: 15,
     payment_source_id: checkingId,
     category_id: transportCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Car Insurance',
-    amount: cents(138.00),
+    amount: cents(138.0),
     billing_period: 'monthly',
     day_of_month: 1,
     payment_source_id: checkingId,
     category_id: insuranceCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Gas',
-    amount: cents(200.00),
+    amount: cents(200.0),
     billing_period: 'bi_weekly',
     start_date: '2025-01-03', // Friday
     payment_source_id: rewardsCCId,
     category_id: transportCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   // Insurance
   {
     id: randomUUID(),
     name: 'Health Insurance',
-    amount: cents(280.00),
+    amount: cents(280.0),
     billing_period: 'monthly',
     day_of_month: 1,
     payment_source_id: checkingId,
     category_id: insuranceCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   // Entertainment
   {
@@ -310,7 +409,7 @@ const bills: Bill[] = [
     category_id: entertainmentCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
@@ -322,7 +421,7 @@ const bills: Bill[] = [
     category_id: entertainmentCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
@@ -334,7 +433,7 @@ const bills: Bill[] = [
     category_id: healthcareCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   // Other
   {
@@ -347,19 +446,19 @@ const bills: Bill[] = [
     category_id: otherCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Password Manager',
-    amount: cents(3.00),
+    amount: cents(3.0),
     billing_period: 'monthly',
     day_of_month: 20,
     payment_source_id: rewardsCCId,
     category_id: otherCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
 ];
 
@@ -368,26 +467,26 @@ const incomes: Income[] = [
   {
     id: randomUUID(),
     name: 'Main Job',
-    amount: cents(3250.00),
+    amount: cents(3250.0),
     billing_period: 'bi_weekly',
     start_date: '2025-01-10', // Friday payday
     payment_source_id: checkingId,
     category_id: salaryCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
   {
     id: randomUUID(),
     name: 'Freelance Work',
-    amount: cents(500.00),
+    amount: cents(500.0),
     billing_period: 'monthly',
     day_of_month: 28, // End of month payment
     payment_source_id: checkingId,
     category_id: sideIncomeCatId,
     is_active: true,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   },
 ];
 
@@ -488,7 +587,7 @@ function getBiWeeklyDatesInMonth(startDate: string, year: number, month: number)
   const start = new Date(startDate);
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0);
-  
+
   // Find occurrences in this month
   let current = new Date(start);
   while (current <= monthEnd) {
@@ -497,7 +596,7 @@ function getBiWeeklyDatesInMonth(startDate: string, year: number, month: number)
     }
     current.setDate(current.getDate() + 14);
   }
-  
+
   // Also check backwards from start date
   current = new Date(start);
   current.setDate(current.getDate() - 14);
@@ -507,30 +606,34 @@ function getBiWeeklyDatesInMonth(startDate: string, year: number, month: number)
     }
     current.setDate(current.getDate() - 14);
   }
-  
+
   return dates;
 }
 
 function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean): BillInstance {
   const [year, month] = monthStr.split('-').map(Number);
   const daysInMonth = getDaysInMonth(year, month);
-  
+
   let occurrences: Occurrence[] = [];
-  
+
   if (bill.billing_period === 'monthly') {
     const day = Math.min(bill.day_of_month || 1, daysInMonth);
     const expectedDate = formatDate(year, month, day);
     const isPaid = isPastMonth || (bill.day_of_month || 1) < 15; // Past months all paid, current month paid if early
-    
-    const payments: Payment[] = isPaid ? [{
-      id: randomUUID(),
-      amount: bill.amount,
-      payment_date: expectedDate,
-      payment_source_id: bill.payment_source_id,
-      created_at: now,
-      updated_at: now
-    }] : [];
-    
+
+    const payments: Payment[] = isPaid
+      ? [
+          {
+            id: randomUUID(),
+            amount: bill.amount,
+            payment_date: expectedDate,
+            payment_source_id: bill.payment_source_id,
+            created_at: now,
+            updated_at: now,
+          },
+        ]
+      : [];
+
     occurrences.push({
       id: randomUUID(),
       sequence: 1,
@@ -540,21 +643,25 @@ function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean
       payments,
       is_adhoc: false,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     });
   } else if (bill.billing_period === 'bi_weekly' && bill.start_date) {
     const dates = getBiWeeklyDatesInMonth(bill.start_date, year, month);
     occurrences = dates.map((date, idx) => {
       const isPaid = isPastMonth;
-      const payments: Payment[] = isPaid ? [{
-        id: randomUUID(),
-        amount: bill.amount,
-        payment_date: date,
-        payment_source_id: bill.payment_source_id,
-        created_at: now,
-        updated_at: now
-      }] : [];
-      
+      const payments: Payment[] = isPaid
+        ? [
+            {
+              id: randomUUID(),
+              amount: bill.amount,
+              payment_date: date,
+              payment_source_id: bill.payment_source_id,
+              created_at: now,
+              updated_at: now,
+            },
+          ]
+        : [];
+
       return {
         id: randomUUID(),
         sequence: idx + 1,
@@ -564,14 +671,14 @@ function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean
         payments,
         is_adhoc: false,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       };
     });
   }
-  
+
   const totalAmount = occurrences.reduce((sum, o) => sum + o.expected_amount, 0);
-  const allPaid = occurrences.length > 0 && occurrences.every(o => o.is_closed);
-  
+  const allPaid = occurrences.length > 0 && occurrences.every((o) => o.is_closed);
+
   return {
     id: randomUUID(),
     bill_id: bill.id,
@@ -586,30 +693,38 @@ function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean
     is_closed: allPaid,
     is_adhoc: false,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   };
 }
 
-function generateIncomeInstance(income: Income, monthStr: string, isPastMonth: boolean): IncomeInstance {
+function generateIncomeInstance(
+  income: Income,
+  monthStr: string,
+  isPastMonth: boolean
+): IncomeInstance {
   const [year, month] = monthStr.split('-').map(Number);
   const daysInMonth = getDaysInMonth(year, month);
-  
+
   let occurrences: Occurrence[] = [];
-  
+
   if (income.billing_period === 'monthly') {
     const day = Math.min(income.day_of_month || 1, daysInMonth);
     const expectedDate = formatDate(year, month, day);
     const isPaid = isPastMonth || (income.day_of_month || 1) < 15;
-    
-    const payments: Payment[] = isPaid ? [{
-      id: randomUUID(),
-      amount: income.amount,
-      payment_date: expectedDate,
-      payment_source_id: income.payment_source_id,
-      created_at: now,
-      updated_at: now
-    }] : [];
-    
+
+    const payments: Payment[] = isPaid
+      ? [
+          {
+            id: randomUUID(),
+            amount: income.amount,
+            payment_date: expectedDate,
+            payment_source_id: income.payment_source_id,
+            created_at: now,
+            updated_at: now,
+          },
+        ]
+      : [];
+
     occurrences.push({
       id: randomUUID(),
       sequence: 1,
@@ -619,21 +734,25 @@ function generateIncomeInstance(income: Income, monthStr: string, isPastMonth: b
       payments,
       is_adhoc: false,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     });
   } else if (income.billing_period === 'bi_weekly' && income.start_date) {
     const dates = getBiWeeklyDatesInMonth(income.start_date, year, month);
     occurrences = dates.map((date, idx) => {
       const isPaid = isPastMonth;
-      const payments: Payment[] = isPaid ? [{
-        id: randomUUID(),
-        amount: income.amount,
-        payment_date: date,
-        payment_source_id: income.payment_source_id,
-        created_at: now,
-        updated_at: now
-      }] : [];
-      
+      const payments: Payment[] = isPaid
+        ? [
+            {
+              id: randomUUID(),
+              amount: income.amount,
+              payment_date: date,
+              payment_source_id: income.payment_source_id,
+              created_at: now,
+              updated_at: now,
+            },
+          ]
+        : [];
+
       return {
         id: randomUUID(),
         sequence: idx + 1,
@@ -643,14 +762,14 @@ function generateIncomeInstance(income: Income, monthStr: string, isPastMonth: b
         payments,
         is_adhoc: false,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       };
     });
   }
-  
+
   const totalAmount = occurrences.reduce((sum, o) => sum + o.expected_amount, 0);
-  const allPaid = occurrences.length > 0 && occurrences.every(o => o.is_closed);
-  
+  const allPaid = occurrences.length > 0 && occurrences.every((o) => o.is_closed);
+
   return {
     id: randomUUID(),
     income_id: income.id,
@@ -665,14 +784,16 @@ function generateIncomeInstance(income: Income, monthStr: string, isPastMonth: b
     is_closed: allPaid,
     is_adhoc: false,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   };
 }
 
 function generateMonthData(monthStr: string, isPastMonth: boolean): MonthData {
-  const billInstances = bills.map(bill => generateBillInstance(bill, monthStr, isPastMonth));
-  const incomeInstances = incomes.map(income => generateIncomeInstance(income, monthStr, isPastMonth));
-  
+  const billInstances = bills.map((bill) => generateBillInstance(bill, monthStr, isPastMonth));
+  const incomeInstances = incomes.map((income) =>
+    generateIncomeInstance(income, monthStr, isPastMonth)
+  );
+
   // Add some variable expenses for past months
   const variableExpenses: VariableExpense[] = [];
   if (isPastMonth) {
@@ -683,7 +804,7 @@ function generateMonthData(monthStr: string, isPastMonth: boolean): MonthData {
       payment_source_id: checkingId,
       month: monthStr,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     });
     variableExpenses.push({
       id: randomUUID(),
@@ -692,10 +813,10 @@ function generateMonthData(monthStr: string, isPastMonth: boolean): MonthData {
       payment_source_id: rewardsCCId,
       month: monthStr,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     });
   }
-  
+
   return {
     month: monthStr,
     bill_instances: billInstances,
@@ -704,7 +825,7 @@ function generateMonthData(monthStr: string, isPastMonth: boolean): MonthData {
     free_flowing_expenses: [],
     bank_balances: {},
     created_at: now,
-    updated_at: now
+    updated_at: now,
   };
 }
 
@@ -714,49 +835,37 @@ function generateMonthData(monthStr: string, isPastMonth: boolean): MonthData {
 
 async function main() {
   const outputDir = Bun.argv[2] || './sample-data';
-  
+
   // Create output directories using Bun's shell
   await Bun.spawn(['mkdir', '-p', `${outputDir}/entities`, `${outputDir}/months`]).exited;
-  
+
   // Write entity files
-  await Bun.write(
-    `${outputDir}/entities/categories.json`,
-    JSON.stringify(categories, null, 2)
-  );
-  
+  await Bun.write(`${outputDir}/entities/categories.json`, JSON.stringify(categories, null, 2));
+
   await Bun.write(
     `${outputDir}/entities/payment-sources.json`,
     JSON.stringify(paymentSources, null, 2)
   );
-  
-  await Bun.write(
-    `${outputDir}/entities/bills.json`,
-    JSON.stringify(bills, null, 2)
-  );
-  
-  await Bun.write(
-    `${outputDir}/entities/incomes.json`,
-    JSON.stringify(incomes, null, 2)
-  );
-  
+
+  await Bun.write(`${outputDir}/entities/bills.json`, JSON.stringify(bills, null, 2));
+
+  await Bun.write(`${outputDir}/entities/incomes.json`, JSON.stringify(incomes, null, 2));
+
   // Write empty undo file
   await Bun.write(`${outputDir}/entities/undo.json`, '[]');
-  
+
   // Generate month data files
   const monthsToGenerate = [
     { month: '2025-01', isPast: true },
     { month: '2025-02', isPast: true },
     { month: '2025-12', isPast: false }, // "Current" month for demo
   ];
-  
+
   for (const { month, isPast } of monthsToGenerate) {
     const monthData = generateMonthData(month, isPast);
-    await Bun.write(
-      `${outputDir}/months/${month}.json`,
-      JSON.stringify(monthData, null, 2)
-    );
+    await Bun.write(`${outputDir}/months/${month}.json`, JSON.stringify(monthData, null, 2));
   }
-  
+
   console.log('Sample data generated successfully!');
   console.log(`Output directory: ${outputDir}`);
   console.log('');
@@ -770,14 +879,14 @@ async function main() {
   console.log('Monthly totals (approximate):');
   const monthlyBills = bills.reduce((sum, b) => {
     if (b.billing_period === 'monthly') return sum + b.amount;
-    if (b.billing_period === 'bi_weekly') return sum + (b.amount * 2.17); // avg 2.17 per month
-    if (b.billing_period === 'weekly') return sum + (b.amount * 4.33);
+    if (b.billing_period === 'bi_weekly') return sum + b.amount * 2.17; // avg 2.17 per month
+    if (b.billing_period === 'weekly') return sum + b.amount * 4.33;
     return sum + b.amount;
   }, 0);
   const monthlyIncome = incomes.reduce((sum, i) => {
     if (i.billing_period === 'monthly') return sum + i.amount;
-    if (i.billing_period === 'bi_weekly') return sum + (i.amount * 2.17);
-    if (i.billing_period === 'weekly') return sum + (i.amount * 4.33);
+    if (i.billing_period === 'bi_weekly') return sum + i.amount * 2.17;
+    if (i.billing_period === 'weekly') return sum + i.amount * 4.33;
     return sum + i.amount;
   }, 0);
   console.log(`  - Expected expenses: $${(monthlyBills / 100).toFixed(2)}`);
