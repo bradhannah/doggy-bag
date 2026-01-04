@@ -264,12 +264,13 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if open}
-  <div class="drawer-backdrop" on:click={handleBackdropClick}>
-    <div class="drawer">
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div class="drawer-backdrop" role="presentation" on:click={handleBackdropClick} on:keydown={(e) => e.key === 'Escape' && handleClose()}>
+    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="adhoc-form-title" tabindex="-1">
       <header class="drawer-header">
-        <h3>Add {type === 'bill' ? 'Bill' : 'Income'}</h3>
-        <button class="close-btn" on:click={handleClose}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <h3 id="adhoc-form-title">Add {type === 'bill' ? 'Bill' : 'Income'}</h3>
+        <button class="close-btn" on:click={handleClose} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>

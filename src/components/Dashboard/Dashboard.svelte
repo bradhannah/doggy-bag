@@ -455,15 +455,17 @@
   
   <!-- Lock Confirmation Modal -->
   {#if showLockConfirm}
-    <div class="modal-overlay" on:click={cancelLock}>
-      <div class="modal-content" on:click|stopPropagation>
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div class="modal-overlay" role="presentation" on:click={cancelLock} on:keydown={(e) => e.key === 'Escape' && cancelLock()}>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="lock-modal-title" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
         <div class="modal-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
             <path d="M7 11V7C7 4.23858 9.23858 2 12 2C14.7614 2 17 4.23858 17 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
-        <h3>Lock {formatMonthDisplay(monthToLock)}?</h3>
+        <h3 id="lock-modal-title">Lock {formatMonthDisplay(monthToLock)}?</h3>
         <p>Locking this month will prevent any changes to bills, income, or expenses. You can unlock it later if needed.</p>
         <div class="modal-actions">
           <button class="btn btn-secondary" on:click={cancelLock} disabled={lockingMonth}>

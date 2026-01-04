@@ -157,7 +157,8 @@
           {/if}
           
           <!-- Action buttons -->
-          <div class="item-actions" on:click|stopPropagation>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="item-actions" on:click|stopPropagation on:keydown|stopPropagation>
             {#if confirmingDeleteId === cat.id}
               <span class="confirm-text">Delete?</span>
               <button class="btn-icon btn-confirm" on:click={() => confirmDeleteCategory(cat)} title="Confirm delete">

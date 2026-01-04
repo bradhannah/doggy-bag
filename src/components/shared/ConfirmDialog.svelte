@@ -49,8 +49,9 @@
 </script>
 
 {#if open}
-  <div class="dialog-backdrop" on:click={handleBackdropClick} role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-    <div class="dialog">
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div class="dialog-backdrop" role="presentation" on:click={handleBackdropClick} on:keydown={(e) => e.key === 'Escape' && handleCancel()}>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1">
       <h2 id="dialog-title" class="dialog-title">{title}</h2>
       <p class="dialog-message">{message}</p>
       
