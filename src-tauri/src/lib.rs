@@ -4,6 +4,8 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri::Emitter;
 use tauri::Manager;
 use tauri::RunEvent;
+use tauri::WebviewWindowBuilder;
+use tauri::WebviewUrl;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -36,6 +38,47 @@ impl Default for SidecarState {
 // - Added read_saved_data_dir() to read from Tauri Store
 // - Added relaunch_app command for restart after migration
 // - Added .setup() hook to auto-start sidecar with saved data directory
+
+/// Helper to read debug mode setting from Tauri Store
+/// Returns false if no setting saved or on any error
+fn read_debug_mode(app: &tauri::AppHandle) -> bool {
+    let config_dir = match app.path().app_config_dir() {
+        Ok(dir) => dir,
+        Err(e) => {
+            println!("[Tauri] Failed to get app_config_dir for debug mode: {:?}", e);
+            return false;
+        }
+    };
+    let store_path = config_dir.join("settings.json");
+    
+    if !store_path.exists() {
+        println!("[Tauri] Settings file does not exist, debug mode disabled by default");
+        return false;
+    }
+    
+    let content = match std::fs::read_to_string(&store_path) {
+        Ok(c) => c,
+        Err(e) => {
+            println!("[Tauri] Failed to read settings file for debug mode: {:?}", e);
+            return false;
+        }
+    };
+    
+    let json: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(j) => j,
+        Err(e) => {
+            println!("[Tauri] Failed to parse settings JSON for debug mode: {:?}", e);
+            return false;
+        }
+    };
+    
+    let debug_mode = json.get("debugMode")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    
+    println!("[Tauri] Read debugMode: {}", debug_mode);
+    debug_mode
+}
 
 /// Helper to read saved data directory from Tauri Store
 /// Returns None if no setting saved or on any error
@@ -79,9 +122,14 @@ fn read_saved_data_dir(app: &tauri::AppHandle) -> Option<String> {
     data_dir
 }
 
-/// Relaunch the app (used after data directory migration)
+/// Relaunch the app (used after data directory migration or settings changes)
+/// Kills the sidecar process before restarting to prevent orphaned processes
 #[tauri::command]
 fn relaunch_app(app: tauri::AppHandle) {
+    // Kill the sidecar before restarting to prevent orphaned processes
+    kill_sidecar_sync(&app);
+    // Small delay to ensure port is released before new instance starts
+    std::thread::sleep(std::time::Duration::from_millis(100));
     app.restart();
 }
 
@@ -434,6 +482,30 @@ pub fn run() {
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();
+            
+            // Read debug mode setting and create window with devtools enabled/disabled accordingly
+            // This must be done in setup() because devtools cannot be toggled after window creation
+            let debug_mode = read_debug_mode(&app_handle);
+            println!("[Tauri Setup] Creating main window with devtools: {}", debug_mode);
+            
+            // Create the main window dynamically
+            let window_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                .title("BudgetForFun")
+                .inner_size(800.0, 600.0)
+                .min_inner_size(600.0, 400.0);
+            
+            // Enable devtools based on debug mode setting
+            // Note: In debug builds, devtools is always available. In release builds,
+            // it requires the "devtools" feature flag AND this setting to be true.
+            #[cfg(debug_assertions)]
+            let window_builder = window_builder.devtools(true);
+            
+            #[cfg(not(debug_assertions))]
+            let window_builder = window_builder.devtools(debug_mode);
+            
+            window_builder
+                .build()
+                .expect("Failed to create main window");
             
             // Spawn async task to start sidecar
             tauri::async_runtime::spawn(async move {

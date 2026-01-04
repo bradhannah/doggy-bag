@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { addToast } from '../../stores/toast';
   import { apiClient } from '../../lib/api/client';
-  import {
+import {
     loadSettings,
     settings,
     dataDirectory,
@@ -18,9 +18,8 @@
     updateDataDirectoryLocally,
     restartSidecar,
     relaunchApp,
-    isDevtoolsOpen,
+    getDebugModeSetting,
     toggleDebugMode,
-    loadDebugMode,
     type DirectoryValidation,
     type MigrationResult,
     type MigrationMode
@@ -52,15 +51,16 @@
   // Debug mode state
   let debugModeEnabled = false;
   let debugModeLoading = false;
+  let debugModeChanged = false; // Track if user changed the setting (restart needed)
   
   onMount(async () => {
     loadSettings().catch(err => {
       console.error('Failed to load settings:', err);
     });
     
-    // Load debug mode state
+    // Load debug mode setting (the saved preference, not current devtools state)
     if (isTauri()) {
-      debugModeEnabled = await isDevtoolsOpen();
+      debugModeEnabled = await getDebugModeSetting();
     }
   });
   
@@ -271,7 +271,13 @@
     debugModeLoading = true;
     try {
       debugModeEnabled = await toggleDebugMode();
-      addToast(debugModeEnabled ? 'Debug mode enabled' : 'Debug mode disabled', 'success');
+      debugModeChanged = true; // Mark that restart is needed
+      addToast(
+        debugModeEnabled 
+          ? 'Debug mode enabled - restart app to take effect' 
+          : 'Debug mode disabled - restart app to take effect', 
+        'info'
+      );
     } catch (err) {
       addToast('Failed to toggle debug mode', 'error');
     } finally {
@@ -434,8 +440,8 @@
             <div class="toggle-info">
               <label>Debug Mode</label>
               <p class="setting-description">
-                Opens browser developer tools for troubleshooting. Useful for inspecting network requests, 
-                viewing console logs, and debugging issues.
+                Enables the "Inspect Element" option in the right-click context menu. 
+                Useful for troubleshooting issues and inspecting the app's HTML/CSS.
               </p>
             </div>
             <button
@@ -448,7 +454,17 @@
               <span class="toggle-slider"></span>
             </button>
           </div>
-          {#if !inTauri}
+          {#if debugModeChanged}
+            <div class="restart-notice">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Restart the app for changes to take effect</span>
+              <button class="restart-button" on:click={handleRestart}>
+                Restart Now
+              </button>
+            </div>
+          {:else if !inTauri}
             <p class="setting-hint warning">
               In browser mode, use your browser's built-in developer tools (F12 or Cmd+Option+I).
             </p>
@@ -1272,5 +1288,43 @@
   
   .toggle-switch.active .toggle-slider {
     transform: translateX(22px);
+  }
+  
+  /* Restart Notice */
+  .restart-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: rgba(36, 200, 219, 0.1);
+    border: 1px solid rgba(36, 200, 219, 0.3);
+    border-radius: 8px;
+    color: #24c8db;
+    font-size: 0.875rem;
+  }
+  
+  .restart-notice svg {
+    flex-shrink: 0;
+  }
+  
+  .restart-notice span {
+    flex: 1;
+  }
+  
+  .restart-button {
+    padding: 6px 16px;
+    background: #24c8db;
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .restart-button:hover {
+    background: #1ba8b8;
   }
 </style>

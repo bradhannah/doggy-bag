@@ -477,8 +477,70 @@ export async function relaunchApp(): Promise<void> {
 export const settingsStore = store;
 
 // ============================================================================
-// Debug Mode - DevTools Toggle
+// Debug Mode - Enables "Inspect Element" context menu
 // ============================================================================
+// NOTE: Debug mode controls whether the right-click "Inspect Element" context
+// menu is available in production builds. This setting takes effect on app 
+// restart because the devtools capability must be set when the window is created.
+//
+// In debug/dev builds, devtools is always enabled regardless of this setting.
+
+/**
+ * Get the current saved debug mode setting
+ * This reads from storage without any side effects
+ */
+export async function getDebugModeSetting(): Promise<boolean> {
+  if (isTauri()) {
+    try {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
+      const value = await store.get('debugMode') as boolean | undefined;
+      return value === true;
+    } catch (e) {
+      log.error('Failed to get debug mode from Tauri Store:', e);
+      return false;
+    }
+  } else {
+    // Browser fallback - use localStorage
+    return localStorage.getItem('budgetforfun_debug') === 'true';
+  }
+}
+
+/**
+ * Save debug mode preference (Tauri only)
+ * NOTE: Changes require app restart to take effect
+ */
+export async function saveDebugMode(enabled: boolean): Promise<void> {
+  if (isTauri()) {
+    try {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
+      await store.set('debugMode', enabled);
+      await store.save();
+      log.info(`Debug mode saved: ${enabled} (restart required to take effect)`);
+    } catch (e) {
+      log.error('Failed to save debug mode to Tauri Store:', e);
+    }
+  } else {
+    // Browser fallback - use localStorage
+    localStorage.setItem('budgetforfun_debug', enabled.toString());
+  }
+}
+
+/**
+ * Toggle debug mode preference
+ * Returns the new state (true = enabled, false = disabled)
+ * NOTE: Changes require app restart to take effect
+ */
+export async function toggleDebugMode(): Promise<boolean> {
+  const current = await getDebugModeSetting();
+  const newValue = !current;
+  await saveDebugMode(newValue);
+  return newValue;
+}
+
+// Keep devtools control functions for potential future use (e.g., "Open DevTools Now" button)
+// These open/close the devtools panel, but don't affect the "Inspect Element" context menu
 
 /**
  * Toggle devtools open/closed (Tauri only)
@@ -552,79 +614,4 @@ export async function isDevtoolsOpen(): Promise<boolean> {
     log.error('Failed to check devtools state:', e);
     return false;
   }
-}
-
-/**
- * Load debug mode preference and apply it on startup (Tauri only)
- * If debug mode was enabled, open devtools automatically
- */
-export async function loadDebugMode(): Promise<boolean> {
-  let debugEnabled = false;
-  
-  if (isTauri()) {
-    try {
-      const { Store } = await import('@tauri-apps/plugin-store');
-      const store = await Store.load('settings.json');
-      const value = await store.get('debugMode') as boolean | undefined;
-      debugEnabled = value === true;
-      
-      if (debugEnabled) {
-        log.info('Debug mode enabled, opening devtools');
-        await openDevtools();
-      }
-    } catch (e) {
-      log.error('Failed to load debug mode from Tauri Store:', e);
-    }
-  } else {
-    // Browser fallback - use localStorage
-    debugEnabled = localStorage.getItem('budgetforfun_debug') === 'true';
-  }
-  
-  return debugEnabled;
-}
-
-/**
- * Save debug mode preference (Tauri only)
- */
-export async function saveDebugMode(enabled: boolean): Promise<void> {
-  if (isTauri()) {
-    try {
-      const { Store } = await import('@tauri-apps/plugin-store');
-      const store = await Store.load('settings.json');
-      await store.set('debugMode', enabled);
-      await store.save();
-      log.info(`Debug mode saved: ${enabled}`);
-    } catch (e) {
-      log.error('Failed to save debug mode to Tauri Store:', e);
-    }
-  } else {
-    // Browser fallback - use localStorage
-    localStorage.setItem('budgetforfun_debug', enabled.toString());
-  }
-}
-
-/**
- * Enable debug mode - opens devtools and saves preference
- */
-export async function enableDebugMode(): Promise<void> {
-  await saveDebugMode(true);
-  await openDevtools();
-}
-
-/**
- * Disable debug mode - closes devtools and saves preference
- */
-export async function disableDebugMode(): Promise<void> {
-  await saveDebugMode(false);
-  await closeDevtools();
-}
-
-/**
- * Toggle debug mode - toggles devtools and saves new preference
- * Returns the new state (true = enabled, false = disabled)
- */
-export async function toggleDebugMode(): Promise<boolean> {
-  const isOpen = await toggleDevtools();
-  await saveDebugMode(isOpen);
-  return isOpen;
 }
