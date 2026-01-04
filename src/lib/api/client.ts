@@ -1,7 +1,55 @@
-export const getBaseUrl = () => {
-  if (import.meta.env.DEV) {
-    return ''; // Use relative URL in dev (proxied by Vite)
+// Dynamic port storage - set by Tauri sidecar-ready event
+let apiPort: number | null = null;
+
+// Check if running in Tauri
+const isTauriEnv = () => {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+};
+
+/**
+ * Set the API port (called when sidecar-ready event is received)
+ */
+export function setApiPort(port: number) {
+  apiPort = port;
+  console.log(`[API Client] Port set to ${port}`);
+}
+
+/**
+ * Get the current API port (null if not yet set)
+ */
+export function getApiPort(): number | null {
+  return apiPort;
+}
+
+/**
+ * Check if the API client is ready (has a port configured)
+ */
+export function isApiReady(): boolean {
+  // In Tauri, we need the port to be set
+  if (isTauriEnv()) {
+    return apiPort !== null;
   }
+  // In browser dev mode, we use Vite proxy so we're always ready
+  return true;
+}
+
+export const getBaseUrl = () => {
+  // In Tauri (dev or prod), use the dynamic port from sidecar
+  if (isTauriEnv() && apiPort !== null) {
+    return `http://localhost:${apiPort}`;
+  }
+  
+  // In browser dev mode (not Tauri), use Vite proxy
+  if (import.meta.env.DEV && !isTauriEnv()) {
+    return ''; // Use relative URL (proxied by Vite to port 3000)
+  }
+  
+  // Fallback for edge cases
+  if (apiPort !== null) {
+    return `http://localhost:${apiPort}`;
+  }
+  
+  console.warn('[API Client] Port not set, using fallback');
   return import.meta.env.VITE_API_URL || 'http://localhost:3000';
 };
 

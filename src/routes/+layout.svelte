@@ -3,6 +3,7 @@
   import Navigation from '../components/Navigation.svelte';
   import ToastContainer from '../components/shared/ToastContainer.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom, ZOOM_CONFIG } from '../stores/settings';
+  import { setApiPort } from '../lib/api/client';
   
   let backendReady = false;
   let backendError: string | null = null;
@@ -49,10 +50,13 @@
     
     try {
       const { listen } = await import('@tauri-apps/api/event');
+      const { invoke } = await import('@tauri-apps/api/core');
       
-      // Listen for sidecar ready event
-      unlistenReady = await listen('sidecar-ready', () => {
-        console.log('[Layout] Sidecar is ready');
+      // Listen for sidecar ready event (payload contains port number)
+      unlistenReady = await listen<number>('sidecar-ready', (event) => {
+        const port = event.payload;
+        console.log('[Layout] Sidecar is ready on port:', port);
+        setApiPort(port);
         backendReady = true;
       });
       
@@ -62,15 +66,35 @@
         backendError = event.payload as string;
       });
       
-      // Check if backend is already running (in case we missed the event)
-      try {
-        const response = await fetch('http://localhost:3000/api/health');
-        if (response.ok) {
-          backendReady = true;
+      // Check if we missed the sidecar-ready event (race condition)
+      // Poll for the port - sidecar may have started before listener was ready
+      const checkPort = async () => {
+        for (let i = 0; i < 30; i++) {
+          if (backendReady) return; // Already got the event
+          
+          try {
+            const port = await invoke<number | null>('get_sidecar_port');
+            if (port) {
+              console.log('[Layout] Got port from Tauri command:', port);
+              setApiPort(port);
+              backendReady = true;
+              return;
+            }
+          } catch (e) {
+            // Command not available yet, keep polling
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
-      } catch {
-        // Backend not ready yet, wait for event
-      }
+        
+        // Timeout - show error
+        if (!backendReady) {
+          backendError = 'Backend failed to start (timeout)';
+        }
+      };
+      
+      // Start polling in background
+      checkPort();
     } catch (e) {
       console.error('[Layout] Failed to set up Tauri listeners:', e);
       // Fallback: assume backend is ready

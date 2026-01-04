@@ -1,7 +1,7 @@
 # BudgetForFun Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
-.PHONY: help dev build clean test lint format types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail
+.PHONY: help dev dev-browser build clean test lint format types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail
 
 # Log directory
 LOGS_DIR := logs
@@ -11,9 +11,10 @@ help: ## Show this help message
 	@echo "BudgetForFun Makefile - Build Automation"
 	@echo ""
 	@echo "Development Targets:"
-	@echo "  make dev        Start all services (Tauri + Bun + Vite) with logging"
-	@echo "  make logs-tail  Tail all log files in real-time"
-	@echo "  make logs-clear Clear all log files"
+	@echo "  make dev          Start Tauri dev mode (sidecar with dynamic port)"
+	@echo "  make dev-browser  Start browser dev mode (backend port 3000 + Vite)"
+	@echo "  make logs-tail    Tail all log files in real-time"
+	@echo "  make logs-clear   Clear all log files"
 	@echo ""
 	@echo "Build Targets:"
 	@echo "  make build     Build Tauri application"
@@ -121,24 +122,37 @@ check-typescript: ## Check if TypeScript is installed (optional - uses local tsc
 	fi
 
 # Development
-dev: ## Start all services (Tauri + Bun + Vite) with logging
+dev: ## Start Tauri dev mode (sidecar manages backend with dynamic port)
 	@$(MAKE) check-prereqs
 	@$(MAKE) logs-clear
-	@echo "Starting Bun backend server in background (logging to $(LOGS_DIR)/api.log)..."
-	@$(MAKE) start-bun 2>&1 | tee -a $(LOGS_DIR)/api.log &
-	@sleep 2
-	@echo "Starting Tauri (which will start Vite)..."
-	@echo "Frontend logs: $(LOGS_DIR)/frontend.log"
-	@echo "Tauri logs: $(LOGS_DIR)/tauri.log"
+	@echo "Starting Tauri development mode..."
+	@echo "  - Backend: Managed by Tauri sidecar (dynamic port)"
+	@echo "  - Frontend: Vite dev server on http://localhost:1420"
+	@echo "  - Mode: Production-like (uses your configured data directory)"
 	@echo ""
 	@echo "TIP: Run 'make logs-tail' in another terminal to watch all logs"
 	@echo ""
 	@bun run tauri dev 2>&1 | tee -a $(LOGS_DIR)/tauri.log
-	@wait
 
-start-bun: ## Start Bun backend server on localhost:3000
-	@echo "[$(shell date '+%Y-%m-%d %H:%M:%S')] Starting Bun backend server on localhost:3000..."
-	@cd api && DATA_DIR=../data bun run server.ts
+dev-browser: ## Start browser dev mode (backend port 3000 + Vite, no Tauri)
+	@$(MAKE) check-prereqs
+	@$(MAKE) logs-clear
+	@echo "Starting browser development mode..."
+	@echo "  - Backend: Bun on http://localhost:3000 (development mode)"
+	@echo "  - Frontend: Vite on http://localhost:1420 (with API proxy)"
+	@echo "  - Data: ./data directory (project-local)"
+	@echo ""
+	@echo "Open http://localhost:1420 in your browser"
+	@echo ""
+	@# Start backend in background
+	@BUN_ENV=development bun run api/server.ts 2>&1 | tee -a $(LOGS_DIR)/api.log &
+	@sleep 2
+	@# Start Vite in foreground
+	@bun run dev 2>&1 | tee -a $(LOGS_DIR)/frontend.log
+
+start-bun: ## Start Bun backend server on localhost:3000 (development mode)
+	@echo "[$(shell date '+%Y-%m-%d %H:%M:%S')] Starting Bun backend server..."
+	@cd api && BUN_ENV=development bun run server.ts
 
 start-vite: ## Start Vite dev server
 	@echo "Starting Vite dev server..."

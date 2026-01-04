@@ -6,14 +6,15 @@ use tauri::Manager;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-// Global state to track the sidecar process PID
+// Global state to track the sidecar process PID and port
 struct SidecarState {
     pid: Option<u32>,
+    port: Option<u16>,
 }
 
 impl Default for SidecarState {
     fn default() -> Self {
-        Self { pid: None }
+        Self { pid: None, port: None }
     }
 }
 
@@ -83,6 +84,15 @@ fn relaunch_app(app: tauri::AppHandle) {
     app.restart();
 }
 
+/// Get the current sidecar port (if running)
+/// Returns the port number or None if sidecar not ready
+#[tauri::command]
+fn get_sidecar_port(app: tauri::AppHandle) -> Option<u16> {
+    let state = app.state::<Mutex<SidecarState>>();
+    let state_guard = state.lock().unwrap();
+    state_guard.port
+}
+
 /// Get the default data directory path
 /// Returns ~/Documents/BudgetForFun/ for production use
 #[tauri::command]
@@ -143,10 +153,38 @@ async fn start_bun_sidecar_internal(app: &tauri::AppHandle, data_dir: Option<Str
     }
 
     // Create sidecar command with DATA_DIR environment variable
+    // The sidecar is the Bun binary, we need to pass the server script path
+    // 
+    // In dev mode: The script is at PROJECT_ROOT/api/server.ts
+    // In production: The script should be bundled in the resources
+    //
+    // We detect dev mode by checking if resource_dir contains "target/debug"
+    let resource_dir = app.path().resource_dir()
+        .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+    
+    let is_dev_mode = resource_dir.to_string_lossy().contains("target/debug") 
+        || resource_dir.to_string_lossy().contains("target/release");
+    
+    let server_script = if is_dev_mode {
+        // In dev mode, go up from target/debug to project root, then to api/server.ts
+        resource_dir
+            .parent() // target
+            .and_then(|p| p.parent()) // src-tauri
+            .and_then(|p| p.parent()) // project root
+            .map(|p| p.join("api").join("server.ts"))
+            .unwrap_or_else(|| PathBuf::from("api/server.ts"))
+    } else {
+        // In production, the api folder should be in resources
+        resource_dir.join("api").join("server.ts")
+    };
+    
+    println!("[Tauri] Server script path: {:?}", server_script);
+    
     let sidecar_command = app
         .shell()
         .sidecar("bun-sidecar")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
+        .args(["run", server_script.to_str().unwrap_or("api/server.ts")])
         .env("DATA_DIR", &effective_data_dir);
 
     let (mut rx, child) = sidecar_command
@@ -162,6 +200,7 @@ async fn start_bun_sidecar_internal(app: &tauri::AppHandle, data_dir: Option<Str
     }
 
     let app_clone = app.clone();
+    let app_for_port = app.clone();
     let data_dir_for_log = effective_data_dir.clone();
 
     tauri::async_runtime::spawn(async move {
@@ -169,6 +208,24 @@ async fn start_bun_sidecar_internal(app: &tauri::AppHandle, data_dir: Option<Str
             match event {
                 CommandEvent::Stdout(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
+                    
+                    // Check if this is the PORT=XXXX line from the backend
+                    if line.starts_with("PORT=") {
+                        if let Ok(port) = line[5..].trim().parse::<u16>() {
+                            println!("[Tauri] Captured backend port: {}", port);
+                            
+                            // Store port in state
+                            {
+                                let state = app_for_port.state::<Mutex<SidecarState>>();
+                                let mut state_guard = state.lock().unwrap();
+                                state_guard.port = Some(port);
+                            }
+                            
+                            // Don't emit sidecar-ready yet - wait for health check
+                            // The port will be used by the health check loop
+                        }
+                    }
+                    
                     let _ = app_clone.emit("bun-sidecar-output", Some(format!("{}", line)));
                 }
                 CommandEvent::Stderr(line_bytes) => {
@@ -177,10 +234,11 @@ async fn start_bun_sidecar_internal(app: &tauri::AppHandle, data_dir: Option<Str
                 }
                 CommandEvent::Terminated(payload) => {
                     let _ = app_clone.emit("bun-sidecar-exited", Some(format!("Exit code: {:?}", payload.code)));
-                    // Clear PID when process exits
+                    // Clear PID and port when process exits
                     let state = app_clone.state::<Mutex<SidecarState>>();
                     let mut state_guard = state.lock().unwrap();
                     state_guard.pid = None;
+                    state_guard.port = None;
                 }
                 _ => {}
             }
@@ -270,6 +328,7 @@ pub fn run() {
             restart_bun_sidecar,
             get_default_data_dir,
             get_config_dir,
+            get_sidecar_port,
             relaunch_app
         ])
         .setup(|app| {
@@ -292,24 +351,46 @@ pub fn run() {
                     Ok(msg) => {
                         println!("[Tauri Setup] {}", msg);
                         
-                        // Wait for the backend to be ready (health check)
+                        // Wait for the backend to be ready (health check with dynamic port)
                         let mut attempts = 0;
                         let max_attempts = 30; // 30 * 200ms = 6 seconds max wait
                         
                         loop {
                             attempts += 1;
                             
-                            // Try to reach the health endpoint
-                            match reqwest::get("http://localhost:3000/api/health").await {
-                                Ok(response) if response.status().is_success() => {
-                                    println!("[Tauri Setup] Backend is ready after {} attempts", attempts);
-                                    let _ = app_handle.emit("sidecar-ready", ());
-                                    break;
+                            // Read port from state (set by stdout handler when it sees PORT=XXXX)
+                            let port = {
+                                let state = app_handle.state::<Mutex<SidecarState>>();
+                                let state_guard = state.lock().unwrap();
+                                state_guard.port
+                            };
+                            
+                            match port {
+                                Some(port) => {
+                                    // Try to reach the health endpoint on the dynamic port
+                                    let health_url = format!("http://localhost:{}/api/health", port);
+                                    match reqwest::get(&health_url).await {
+                                        Ok(response) if response.status().is_success() => {
+                                            println!("[Tauri Setup] Backend is ready on port {} after {} attempts", port, attempts);
+                                            // Emit sidecar-ready WITH the port number
+                                            let _ = app_handle.emit("sidecar-ready", port);
+                                            break;
+                                        }
+                                        _ => {
+                                            if attempts >= max_attempts {
+                                                println!("[Tauri Setup] Backend health check timed out after {} attempts", attempts);
+                                                let _ = app_handle.emit("sidecar-error", "Backend failed to respond to health check");
+                                                break;
+                                            }
+                                            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                                        }
+                                    }
                                 }
-                                _ => {
+                                None => {
+                                    // Port not yet captured from stdout
                                     if attempts >= max_attempts {
-                                        println!("[Tauri Setup] Backend health check timed out after {} attempts", attempts);
-                                        let _ = app_handle.emit("sidecar-error", "Backend failed to start");
+                                        println!("[Tauri Setup] Backend port capture timed out after {} attempts", attempts);
+                                        let _ = app_handle.emit("sidecar-error", "Backend failed to report port");
                                         break;
                                     }
                                     tokio::time::sleep(std::time::Duration::from_millis(200)).await;

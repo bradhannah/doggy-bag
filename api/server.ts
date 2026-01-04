@@ -1,6 +1,7 @@
 // Bun HTTP Server for BudgetForFun
 // Handles backend API for IPC communication with Tauri frontend
-// Runs on localhost:3000
+// In production: Uses OS-assigned port (port 0) and prints PORT=XXXX for Rust to capture
+// In development: Uses port 3000 for Vite proxy compatibility
 // Uses simple routing with Bun serve
 
 import { serve } from 'bun';
@@ -11,6 +12,13 @@ import { StorageServiceImpl } from './src/services/storage';
 // In production, Tauri passes DATA_DIR when spawning the sidecar
 // In development, it defaults to './data' (project-relative)
 StorageServiceImpl.initialize();
+
+// Determine environment mode
+// BUN_ENV takes precedence if set, otherwise infer from DATA_DIR
+// - 'development': Fixed port 3000, for browser dev with Vite proxy
+// - 'production': Dynamic port 0, for Tauri (dev or prod builds)
+const envMode = process.env.BUN_ENV || (process.env.DATA_DIR ? 'production' : 'development');
+const isDevelopment = envMode === 'development';
 
 // Logging utility with timestamps
 function log(level: 'INFO' | 'ERROR' | 'WARN' | 'DEBUG', message: string, ...args: unknown[]) {
@@ -25,7 +33,9 @@ function log(level: 'INFO' | 'ERROR' | 'WARN' | 'DEBUG', message: string, ...arg
   }
 }
 
-const PORT = 3000;
+// In development: Use fixed port 3000 for Vite proxy compatibility
+// In production: Use port 0 to let OS assign an available port
+const PORT = isDevelopment ? 3000 : 0;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -392,8 +402,13 @@ const server = serve({
 
 // Log startup info
 const storageConfig = StorageServiceImpl.getConfig();
-log('INFO', `Bun backend server running on http://localhost:${PORT}`);
-log('INFO', `Health check: http://localhost:${PORT}/health`);
+
+// CRITICAL: Print PORT=XXXX as the FIRST line for Rust to parse
+// This must be printed before any other log messages so Rust can capture it
+console.log(`PORT=${server.port}`);
+
+log('INFO', `Bun backend server running on http://localhost:${server.port}`);
+log('INFO', `Health check: http://localhost:${server.port}/health`);
 log('INFO', `Registered ${routes.length} routes`);
 log('INFO', `Data directory: ${storageConfig.basePath}`);
 log('INFO', `Mode: ${storageConfig.isDevelopment ? 'development' : 'production'}`);
