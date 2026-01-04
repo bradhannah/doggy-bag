@@ -11,7 +11,6 @@
   export let month: string = '';
   export let compactMode: boolean = false;
   export let readOnly: boolean = false;
-  export let onTogglePaid: ((id: string) => void) | null = null;
   
   const dispatch = createEventDispatcher();
   

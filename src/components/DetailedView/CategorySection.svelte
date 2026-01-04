@@ -10,7 +10,6 @@
   export let type: 'bills' | 'income' = 'bills';
   export let month: string = '';
   export let compactMode: boolean = false;
-  export let onTogglePaid: ((id: string) => void) | null = null;
   export let readOnly: boolean = false;
   
   const dispatch = createEventDispatcher();
@@ -113,10 +112,10 @@
         />
       {:else if type === 'bills' && isBillInstance(item)}
         <!-- Regular monthly bills use BillRow -->
-        <BillRow bill={item} {month} {compactMode} {onTogglePaid} {readOnly} on:refresh={handleRefresh} />
+        <BillRow bill={item} {month} {compactMode} {readOnly} on:refresh={handleRefresh} />
       {:else if type === 'income' && !isBillInstance(item)}
         <!-- Regular monthly incomes use IncomeRow -->
-        <IncomeRow income={item} {month} {compactMode} {onTogglePaid} {readOnly} on:refresh={handleRefresh} />
+        <IncomeRow income={item} {month} {compactMode} {readOnly} on:refresh={handleRefresh} />
       {/if}
     {/each}
   </div>

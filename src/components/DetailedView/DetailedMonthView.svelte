@@ -8,7 +8,6 @@
   import { widthMode, compactMode } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
-  import { apiUrl } from '$lib/api/client';
   
   export let month: string;
   
@@ -50,52 +49,6 @@
   
   function navigateToNext() {
     goto(`/month/${getNextMonth(month)}`);
-  }
-  
-  async function handleToggleBillPaid(instanceId: string) {
-    try {
-      const response = await fetch(apiUrl(`/api/months/${month}/bills/${instanceId}/paid`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to toggle paid status');
-      }
-      
-      const result = await response.json();
-      detailedMonth.updateBillPaidStatus(
-        instanceId, 
-        result.instance.is_paid, 
-        result.instance.actual_amount
-      );
-      success('Bill status updated');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      showError(message);
-    }
-  }
-  
-  async function handleToggleIncomePaid(instanceId: string) {
-    try {
-      const response = await fetch(apiUrl(`/api/months/${month}/incomes/${instanceId}/paid`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to toggle received status');
-      }
-      
-      const result = await response.json();
-      detailedMonth.updateIncomePaidStatus(instanceId, result.instance.is_paid);
-      success('Income status updated');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      showError(message);
-    }
   }
   
   onMount(() => {
@@ -347,7 +300,7 @@
               <p class="empty-text">No bill categories. Add categories in Setup.</p>
             {:else}
               {#each sortedBillSections as section (section.category.id)}
-                <CategorySection {section} type="bills" {month} compactMode={$compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleBillPaid} on:refresh={refreshData} />
+                <CategorySection {section} type="bills" {month} compactMode={$compactMode} readOnly={$monthIsReadOnly} on:refresh={refreshData} />
               {/each}
             {/if}
           </section>
@@ -362,7 +315,7 @@
               <p class="empty-text">No income categories. Add categories in Setup.</p>
             {:else}
               {#each sortedIncomeSections as section (section.category.id)}
-                <CategorySection {section} type="income" {month} compactMode={$compactMode} readOnly={$monthIsReadOnly} onTogglePaid={handleToggleIncomePaid} on:refresh={refreshData} />
+                <CategorySection {section} type="income" {month} compactMode={$compactMode} readOnly={$monthIsReadOnly} on:refresh={refreshData} />
               {/each}
             {/if}
           </section>
