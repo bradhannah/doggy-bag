@@ -148,6 +148,7 @@ VSCode may not find Bun or Node automatically. Update `runtimeExecutable` path i
 ### "make: command not found"
 
 Ensure Make is installed and available in PATH:
+
 - macOS: Pre-installed with Xcode command line tools
 - Linux: `sudo apt install build-essential` or equivalent
 - Windows: Install via WSL or use MSYS2
