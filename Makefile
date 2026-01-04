@@ -108,8 +108,8 @@ check-node: ## Check if Node.js is installed (optional - Bun can be used instead
 
 check-bun: ## Check if Bun is installed
 	@echo "Checking Bun..."
-	@if command -v bun >/dev/null 2>&1; then \
-		echo "✓ Bun ($(shell bun --version)) is installed"; \
+	@if command -v bun >/dev/null 2>&1 || test -x "$(HOME)/.bun/bin/bun"; then \
+		echo "✓ Bun ($(shell $(BUN) --version)) is installed"; \
 	else \
 		echo "Installing Bun via official script..."; \
 		curl -fsSL https://bun.sh/install | bash; \
@@ -169,7 +169,7 @@ check-prereqs: ## Quick check that all prerequisites are installed
 	@echo "Checking prerequisites..."
 	@command -v rustc >/dev/null 2>&1 || (echo "ERROR: Rust is not installed. Run 'make install-prereqs'." && exit 1)
 	@command -v cargo >/dev/null 2>&1 || (echo "ERROR: Cargo is not installed. Run 'make install-prereqs'." && exit 1)
-	@command -v bun >/dev/null 2>&1 || (echo "ERROR: Bun is not installed. Run 'make install-prereqs'." && exit 1)
+	@(command -v bun >/dev/null 2>&1 || test -x "$(HOME)/.bun/bin/bun") || (echo "ERROR: Bun is not installed. Run 'make install-prereqs'." && exit 1)
 	@echo "✓ All prerequisites installed"
 
 # Build
