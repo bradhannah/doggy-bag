@@ -37,13 +37,11 @@
     color: white;
   }
   code {
-    background: #f0f0f0f0;
-    padding: 1rem;
-    margin-top: 1rem;
+    background: #1a1a1a;
+    padding: 0.25rem 0.5rem;
     font-family: monospace;
     font-size: 0.875rem;
-    background: #1a1a1a1;
     border-radius: 4px;
-    white-space: pre-wrap;
+    color: #f0f0f0;
   }
 </style>

@@ -77,14 +77,11 @@ export const apiClient = {
 
   // Generic DELETE for paths that don't follow the /{id} pattern
   async deletePath(path: string) {
-    console.log('[apiClient] DELETE:', apiUrl(path));
     const response = await fetch(apiUrl(path), {
       method: 'DELETE'
     });
-    console.log('[apiClient] DELETE response:', response.status);
     if (!response.ok && response.status !== 204) {
       const errorBody = await response.text();
-      console.error('[apiClient] DELETE error body:', errorBody);
       let errorMsg = `DELETE ${path} failed: ${response.statusText}`;
       try {
         const error = JSON.parse(errorBody);

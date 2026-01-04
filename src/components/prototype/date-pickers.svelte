@@ -2,7 +2,7 @@
   let date1 = $state('');
   let month1 = $state('');
   let selectedMonthYear = $state('2025');
-  let selectedMonthMonth = $state('0');
+  let selectedMonthMonth = $state(0);
   let selectedYear = $state('2025');
   
   const months = [
@@ -64,8 +64,8 @@
           <div class="month-grid">
             {#each months as month, i}
               <button 
-                class:active={selectedMonthMonth === String(i)}
-                on:click={() => selectedMonthMonth = String(i)}
+                class:active={selectedMonthMonth === i}
+                on:click={() => selectedMonthMonth = i}
               >
                 {month.slice(0, 3)}
               </button>

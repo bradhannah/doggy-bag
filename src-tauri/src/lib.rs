@@ -83,11 +83,6 @@ fn relaunch_app(app: tauri::AppHandle) {
     app.restart();
 }
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 /// Get the default data directory path
 /// Returns ~/Documents/BudgetForFun/ for production use
 #[tauri::command]
@@ -253,7 +248,7 @@ async fn restart_bun_sidecar(app: tauri::AppHandle, data_dir: Option<String>) ->
     let _ = app.emit("bun-sidecar-output", Some(format!("{}", stop_result)));
     
     // Wait a bit for the port to be released
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     
     // Start with new data directory
     start_bun_sidecar(app, data_dir).await
@@ -270,7 +265,6 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(Mutex::new(SidecarState::default()))
         .invoke_handler(tauri::generate_handler![
-            greet, 
             start_bun_sidecar,
             stop_bun_sidecar,
             restart_bun_sidecar,

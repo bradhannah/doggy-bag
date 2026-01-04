@@ -7,6 +7,8 @@ Auto-generated from all feature plans. Last updated: 2025-12-30
 - Local JSON files (data/entities/, data/months/) (002-detailed-monthly-view)
 - TypeScript (strict mode), Rust (Tauri) + Bun 1.x, Svelte 4.x, Tauri 2.x, tauri-plugin-store, tauri-plugin-dialog, tauri-plugin-fs (003-configurable-data-storage)
 - JSON files in user-configurable directory (003-configurable-data-storage)
+- TypeScript 5.6.x (strict mode), Rust 2021 edition, Svelte 5.x + ESLint 9, Prettier, Vitest, Playwright, Husky/lefthook, GitHub Actions (005-code-quality-cicd)
+- N/A (tooling/configuration feature, no data storage) (005-code-quality-cicd)
 
 - (001-monthly-budget)
 
@@ -30,10 +32,10 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 005-code-quality-cicd: Added TypeScript 5.6.x (strict mode), Rust 2021 edition, Svelte 5.x + ESLint 9, Prettier, Vitest, Playwright, Husky/lefthook, GitHub Actions
 - 003-configurable-data-storage: Added TypeScript (strict mode), Rust (Tauri) + Bun 1.x, Svelte 4.x, Tauri 2.x, tauri-plugin-store, tauri-plugin-dialog, tauri-plugin-fs
 - 002-detailed-monthly-view: Added TypeScript (strict mode), Svelte 4.x, Bun 1.x + Svelte, Tauri, Bun HTTP server, existing API routes
 
-- 001-monthly-budget: Added
 
 <!-- MANUAL ADDITIONS START -->
   - Backend types (api/src/types/index.ts)
