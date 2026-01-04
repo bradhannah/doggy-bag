@@ -1,5 +1,8 @@
 # Lefthook pre-commit hooks configuration
 # https://lefthook.dev/configuration/
+#
+# Note: Using ~/.bun/bin/bunx instead of npx to avoid Node.js dependency
+# Bun is the primary runtime for this project
 
 pre-commit:
   parallel: true
@@ -7,16 +10,16 @@ pre-commit:
     # TypeScript/Svelte linting
     - name: lint
       glob: '*.{ts,svelte}'
-      run: npx eslint {staged_files}
+      run: ~/.bun/bin/bunx eslint {staged_files}
 
     # TypeScript/Svelte formatting
     - name: format-check
       glob: '*.{ts,js,svelte,json,css,html,md}'
-      run: npx prettier --check {staged_files}
+      run: ~/.bun/bin/bunx prettier --check {staged_files}
 
     # Svelte type checking
     - name: typecheck
-      run: npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json
+      run: ~/.bun/bin/bunx svelte-kit sync && ~/.bun/bin/bunx svelte-check --tsconfig ./tsconfig.json
 
     # Rust formatting
     - name: rust-format
@@ -30,7 +33,7 @@ pre-commit:
 
     # Frontend tests (Vitest - fast)
     - name: test-frontend
-      run: npx vitest run
+      run: ~/.bun/bin/bunx vitest run
 
     # Backend tests (Bun - very fast)
     - name: test-backend
