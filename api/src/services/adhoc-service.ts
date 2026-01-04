@@ -14,7 +14,8 @@ import type {
   IncomeInstance,
   Bill,
   Income,
-  BillingPeriod
+  BillingPeriod,
+  Occurrence
 } from '../types';
 
 // Request types
@@ -36,10 +37,10 @@ export interface CreateAdhocIncomeRequest {
 
 export interface UpdateAdhocRequest {
   name?: string;
-  actual_amount?: number;
+  expected_amount?: number;  // Changed from actual_amount
   category_id?: string;
   payment_source_id?: string;
-  is_paid?: boolean;
+  is_closed?: boolean;  // Changed from is_paid
 }
 
 export interface MakeRegularRequest {
@@ -148,15 +149,17 @@ export class AdhocServiceImpl implements AdhocService {
 
     const now = new Date().toISOString();
     const today = now.split('T')[0]; // YYYY-MM-DD
+    const expectedDate = data.date || today;
+    const isClosed = !!data.date;
     
     // Ad-hoc bills have a single occurrence
-    const occurrence = {
+    const occurrence: Occurrence = {
       id: crypto.randomUUID(),
       sequence: 1,
-      expected_date: data.date || today,
+      expected_date: expectedDate,
       expected_amount: data.amount,
-      is_closed: !!data.date,
-      closed_date: data.date || undefined,
+      is_closed: isClosed,
+      closed_date: isClosed ? expectedDate : undefined,
       payments: [],
       is_adhoc: true,
       created_at: now,
@@ -168,16 +171,11 @@ export class AdhocServiceImpl implements AdhocService {
       bill_id: null, // Always null for ad-hoc
       month,
       billing_period: 'monthly',  // Ad-hoc items are treated as monthly
-      amount: data.amount,
       expected_amount: data.amount, // Ad-hoc items use entered amount as expected
-      actual_amount: undefined,     // No actual until payments are made
-      payments: [],                // DEPRECATED
       occurrences: [occurrence],   // Single occurrence for ad-hoc
       is_default: false,
-      is_paid: !!data.date, // Paid if date provided
-      is_closed: !!data.date, // Closed if date provided
+      is_closed: isClosed, // Closed if date provided
       is_adhoc: true,
-      due_date: undefined,
       name: data.name.trim(),
       category_id: categoryId,
       payment_source_id: data.payment_source_id,
@@ -209,13 +207,20 @@ export class AdhocServiceImpl implements AdhocService {
     }
 
     const now = new Date().toISOString();
+    
+    // Update expected_amount in the occurrence as well
+    if (data.expected_amount !== undefined && instance.occurrences.length > 0) {
+      instance.occurrences[0].expected_amount = data.expected_amount;
+      instance.occurrences[0].updated_at = now;
+    }
+    
     const updated: BillInstance = {
       ...instance,
       name: data.name !== undefined ? data.name : instance.name,
-      actual_amount: data.actual_amount !== undefined ? data.actual_amount : instance.actual_amount,
+      expected_amount: data.expected_amount !== undefined ? data.expected_amount : instance.expected_amount,
       category_id: data.category_id !== undefined ? data.category_id : instance.category_id,
       payment_source_id: data.payment_source_id !== undefined ? data.payment_source_id : instance.payment_source_id,
-      is_paid: data.is_paid !== undefined ? data.is_paid : instance.is_paid,
+      is_closed: data.is_closed !== undefined ? data.is_closed : instance.is_closed,
       updated_at: now
     };
 
@@ -329,15 +334,17 @@ export class AdhocServiceImpl implements AdhocService {
 
     const now = new Date().toISOString();
     const today = now.split('T')[0]; // YYYY-MM-DD
+    const expectedDate = data.date || today;
+    const isClosed = !!data.date;
     
     // Ad-hoc incomes have a single occurrence
-    const occurrence = {
+    const occurrence: Occurrence = {
       id: crypto.randomUUID(),
       sequence: 1,
-      expected_date: data.date || today,
+      expected_date: expectedDate,
       expected_amount: data.amount,
-      is_closed: !!data.date,
-      closed_date: data.date || undefined,
+      is_closed: isClosed,
+      closed_date: isClosed ? expectedDate : undefined,
       payments: [],
       is_adhoc: true,
       created_at: now,
@@ -349,16 +356,11 @@ export class AdhocServiceImpl implements AdhocService {
       income_id: null, // Always null for ad-hoc
       month,
       billing_period: 'monthly',  // Ad-hoc items are treated as monthly
-      amount: data.amount,
-      expected_amount: 0, // Ad-hoc items have no expected amount
-      actual_amount: data.amount,
-      payments: [],                // DEPRECATED
+      expected_amount: data.amount, // Ad-hoc items use entered amount as expected
       occurrences: [occurrence],   // Single occurrence for ad-hoc
       is_default: false,
-      is_paid: !!data.date, // Received if date provided
-      is_closed: !!data.date, // Closed if date provided
+      is_closed: isClosed, // Closed if date provided
       is_adhoc: true,
-      due_date: undefined,
       name: data.name.trim(),
       category_id: categoryId,
       payment_source_id: data.payment_source_id,
@@ -390,13 +392,20 @@ export class AdhocServiceImpl implements AdhocService {
     }
 
     const now = new Date().toISOString();
+    
+    // Update expected_amount in the occurrence as well
+    if (data.expected_amount !== undefined && instance.occurrences.length > 0) {
+      instance.occurrences[0].expected_amount = data.expected_amount;
+      instance.occurrences[0].updated_at = now;
+    }
+    
     const updated: IncomeInstance = {
       ...instance,
       name: data.name !== undefined ? data.name : instance.name,
-      actual_amount: data.actual_amount !== undefined ? data.actual_amount : instance.actual_amount,
+      expected_amount: data.expected_amount !== undefined ? data.expected_amount : instance.expected_amount,
       category_id: data.category_id !== undefined ? data.category_id : instance.category_id,
       payment_source_id: data.payment_source_id !== undefined ? data.payment_source_id : instance.payment_source_id,
-      is_paid: data.is_paid !== undefined ? data.is_paid : instance.is_paid,
+      is_closed: data.is_closed !== undefined ? data.is_closed : instance.is_closed,
       updated_at: now
     };
 

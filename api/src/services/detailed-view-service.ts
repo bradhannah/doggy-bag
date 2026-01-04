@@ -24,7 +24,8 @@ import type {
   BillInstanceDetailed,
   IncomeInstanceDetailed,
   SectionTally,
-  PayoffSummary
+  PayoffSummary,
+  Payment
 } from '../types';
 import { calculateDueDate, isOverdue, getDaysOverdue } from '../utils/due-date';
 import { 
@@ -39,6 +40,7 @@ import {
   getEffectiveIncomeAmount
 } from '../utils/tally';
 import { calculateUnifiedLeftover, hasActualsEntered } from '../utils/leftover';
+import { sumOccurrencePayments } from '../utils/occurrences';
 
 export interface DetailedViewService {
   getDetailedMonth(month: string): Promise<DetailedMonthResponse>;
@@ -110,11 +112,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const ccPayoffsTally: SectionTally = {
       expected: payoffBills.reduce((sum, bi) => sum + (bi.expected_amount || 0), 0),
       actual: payoffBills.reduce((sum, bi) => {
-        // Sum of all payments - both occurrence-level and top-level (for backwards compat)
-        const occurrencePayments = (bi.occurrences || []).flatMap(o => o.payments || []);
-        const topLevelPayments = bi.payments || [];
-        const allPayments = [...occurrencePayments, ...topLevelPayments];
-        return sum + allPayments.reduce((pSum, p) => pSum + p.amount, 0);
+        // Sum of all payments from occurrences
+        return sum + sumOccurrencePayments(bi.occurrences || []);
       }, 0),
       remaining: 0
     };
@@ -134,10 +133,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     // Build payoff summaries
     const payoffSummaries: PayoffSummary[] = payoffBills.map(bi => {
       const paymentSource = bi.payoff_source_id ? paymentSourcesMap.get(bi.payoff_source_id) : null;
-      // Sum payments from both occurrences and top-level
-      const occurrencePayments = (bi.occurrences || []).flatMap(o => o.payments || []);
-      const topLevelPayments = bi.payments || [];
-      const paid = [...occurrencePayments, ...topLevelPayments].reduce((sum, p) => sum + p.amount, 0);
+      // Sum payments from occurrences
+      const paid = sumOccurrencePayments(bi.occurrences || []);
       const balance = bi.expected_amount || 0;
       return {
         paymentSourceId: bi.payoff_source_id || '',
@@ -189,17 +186,22 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const paymentSourceId = instance.payment_source_id || bill?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
       
-      // Calculate due date from bill's due_day
+      // Calculate due date from first occurrence or bill's due_day
+      const firstOccurrence = instance.occurrences?.[0];
       const dueDay = bill?.due_day;
-      const dueDate = calculateDueDate(month, dueDay) || instance.due_date || null;
+      const calculatedDueDate = calculateDueDate(month, dueDay);
+      const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
       
       // Calculate total paid and remaining
       const totalPaid = getEffectiveBillAmount(instance);
       const remaining = Math.max(0, instance.expected_amount - totalPaid);
       
       // Determine if overdue
-      const overdueStatus = isOverdue(dueDate || undefined, instance.is_paid);
+      const overdueStatus = isOverdue(dueDate || undefined, instance.is_closed);
       const daysOverdueValue = overdueStatus && dueDate ? getDaysOverdue(dueDate) : null;
+
+      // Compute actual_amount from occurrences
+      const actualAmount = sumOccurrencePayments(instance.occurrences || []);
 
       return {
         id: instance.id,
@@ -207,8 +209,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         name: instance.name || bill?.name || 'Unknown Bill',
         billing_period: instance.billing_period || bill?.billing_period || 'monthly',
         expected_amount: instance.expected_amount,
-        actual_amount: instance.actual_amount ?? null,
-        payments: instance.payments || [],
+        actual_amount: actualAmount,
         occurrences: instance.occurrences || [],
         occurrence_count: (instance.occurrences || []).length,
         is_extra_occurrence_month: instance.billing_period === 'bi_weekly' 
@@ -218,12 +219,10 @@ export class DetailedViewServiceImpl implements DetailedViewService {
             : false,
         total_paid: totalPaid,
         remaining,
-        is_paid: instance.is_paid,
-        is_closed: instance.is_closed ?? instance.is_paid ?? false,
+        is_closed: instance.is_closed,
         is_adhoc: instance.is_adhoc,
         is_payoff_bill: instance.is_payoff_bill ?? false,
         payoff_source_id: instance.payoff_source_id,
-        due_date: dueDate,
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,
         days_overdue: daysOverdueValue,
@@ -244,17 +243,21 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const paymentSourceId = instance.payment_source_id || income?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
       
-      // Calculate due date from income's due_day
+      // Calculate due date from first occurrence or income's due_day
+      const firstOccurrence = instance.occurrences?.[0];
       const dueDay = income?.due_day;
-      const dueDate = calculateDueDate(month, dueDay) || instance.due_date || null;
+      const calculatedDueDate = calculateDueDate(month, dueDay);
+      const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
       
       // Determine if overdue (for income, this means "expected but not received")
-      const overdueStatus = isOverdue(dueDate || undefined, instance.is_paid);
+      const overdueStatus = isOverdue(dueDate || undefined, instance.is_closed);
       
-      // Calculate total received from payments
-      const payments = instance.payments || [];
-      const totalReceived = payments.reduce((sum, p) => sum + p.amount, 0) || (instance.actual_amount ?? 0);
+      // Calculate total received from occurrence payments
+      const totalReceived = getEffectiveIncomeAmount(instance);
       const remaining = Math.max(0, instance.expected_amount - totalReceived);
+
+      // Compute actual_amount from occurrences
+      const actualAmount = sumOccurrencePayments(instance.occurrences || []);
 
       return {
         id: instance.id,
@@ -262,8 +265,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         name: instance.name || income?.name || 'Unknown Income',
         billing_period: instance.billing_period || income?.billing_period || 'monthly',
         expected_amount: instance.expected_amount,
-        actual_amount: instance.actual_amount ?? null,
-        payments,
+        actual_amount: actualAmount,
         occurrences: instance.occurrences || [],
         occurrence_count: (instance.occurrences || []).length,
         is_extra_occurrence_month: instance.billing_period === 'bi_weekly' 
@@ -273,10 +275,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
             : false,
         total_received: totalReceived,
         remaining,
-        is_paid: instance.is_paid,
-        is_closed: instance.is_closed ?? instance.is_paid ?? false,
+        is_closed: instance.is_closed,
         is_adhoc: instance.is_adhoc,
-        due_date: dueDate,
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
@@ -468,14 +468,16 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     return [...items].sort((a, b) => {
       // Ad-hoc last
       if (a.is_adhoc !== b.is_adhoc) return a.is_adhoc ? 1 : -1;
-      // Unpaid first
-      if (a.is_paid !== b.is_paid) return a.is_paid ? 1 : -1;
-      // Soonest due first
-      if (a.due_date && b.due_date) {
-        return a.due_date.localeCompare(b.due_date);
+      // Open (not closed) first
+      if (a.is_closed !== b.is_closed) return a.is_closed ? 1 : -1;
+      // Soonest due first - use first occurrence expected_date
+      const aDueDate = a.occurrences?.[0]?.expected_date;
+      const bDueDate = b.occurrences?.[0]?.expected_date;
+      if (aDueDate && bDueDate) {
+        return aDueDate.localeCompare(bDueDate);
       }
-      if (a.due_date) return -1;
-      if (b.due_date) return 1;
+      if (aDueDate) return -1;
+      if (bDueDate) return 1;
       // Alphabetical
       return a.name.localeCompare(b.name);
     });
@@ -485,14 +487,16 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     return [...items].sort((a, b) => {
       // Ad-hoc last
       if (a.is_adhoc !== b.is_adhoc) return a.is_adhoc ? 1 : -1;
-      // Unreceived first
-      if (a.is_paid !== b.is_paid) return a.is_paid ? 1 : -1;
-      // Soonest due first
-      if (a.due_date && b.due_date) {
-        return a.due_date.localeCompare(b.due_date);
+      // Open (not closed) first
+      if (a.is_closed !== b.is_closed) return a.is_closed ? 1 : -1;
+      // Soonest due first - use first occurrence expected_date
+      const aDueDate = a.occurrences?.[0]?.expected_date;
+      const bDueDate = b.occurrences?.[0]?.expected_date;
+      if (aDueDate && bDueDate) {
+        return aDueDate.localeCompare(bDueDate);
       }
-      if (a.due_date) return -1;
-      if (b.due_date) return 1;
+      if (aDueDate) return -1;
+      if (bDueDate) return 1;
       // Alphabetical
       return a.name.localeCompare(b.name);
     });

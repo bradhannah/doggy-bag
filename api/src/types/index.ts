@@ -102,18 +102,13 @@ interface BillInstance {
   bill_id: string | null;     // null for ad-hoc bills
   month: string;
   billing_period: string;     // Copied from Bill for display
-  amount: number;             // DEPRECATED: use expected_amount
   expected_amount: number;    // Sum of all occurrence expected_amounts
-  actual_amount?: number;     // DEPRECATED: computed from occurrence payments
-  payments: Payment[];        // DEPRECATED: payments now on occurrences
-  occurrences: Occurrence[];  // NEW: Individual occurrences for this instance
+  occurrences: Occurrence[];  // Individual occurrences for this instance
   is_default: boolean;
-  is_paid: boolean;           // DEPRECATED: use is_closed instead
   is_closed: boolean;         // True when ALL occurrences are closed
   is_adhoc: boolean;          // True for one-time ad-hoc items
   is_payoff_bill?: boolean;   // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string;  // Reference to the payment source this payoff bill is for
-  due_date?: string;          // DEPRECATED: use occurrence expected_date
   closed_date?: string;       // ISO date when fully closed (YYYY-MM-DD)
   name?: string;              // For ad-hoc items (bill_id is null)
   category_id?: string;       // For ad-hoc items (no bill reference)
@@ -127,16 +122,11 @@ interface IncomeInstance {
   income_id: string | null;   // null for ad-hoc income
   month: string;
   billing_period: string;     // Copied from Income for display
-  amount: number;             // DEPRECATED: use expected_amount
   expected_amount: number;    // Sum of all occurrence expected_amounts
-  actual_amount?: number;     // DEPRECATED: computed from occurrence payments
-  payments: Payment[];        // DEPRECATED: payments now on occurrences
-  occurrences: Occurrence[];  // NEW: Individual occurrences for this instance
+  occurrences: Occurrence[];  // Individual occurrences for this instance
   is_default: boolean;
-  is_paid: boolean;           // DEPRECATED: use is_closed instead
   is_closed: boolean;         // True when ALL occurrences are closed
   is_adhoc: boolean;          // True for one-time ad-hoc items
-  due_date?: string;          // DEPRECATED: use occurrence expected_date
   closed_date?: string;       // ISO date when fully closed (YYYY-MM-DD)
   name?: string;              // For ad-hoc items (income_id is null)
   category_id?: string;       // For ad-hoc items (no income reference)
@@ -268,19 +258,16 @@ interface BillInstanceDetailed {
   name: string;
   billing_period: string;
   expected_amount: number;
-  actual_amount: number | null;
-  payments: Payment[];        // DEPRECATED: use occurrences
-  occurrences: Occurrence[];  // NEW: Individual occurrences
-  occurrence_count: number;   // NEW: How many occurrences in this month
-  is_extra_occurrence_month: boolean; // NEW: True if more occurrences than usual
+  actual_amount: number;      // Computed from occurrences[].payments
+  occurrences: Occurrence[];  // Individual occurrences
+  occurrence_count: number;   // How many occurrences in this month
+  is_extra_occurrence_month: boolean; // True if more occurrences than usual
   total_paid: number;
   remaining: number;
-  is_paid: boolean;           // DEPRECATED: use is_closed instead
   is_closed: boolean;         // True = no more transactions expected
   is_adhoc: boolean;
   is_payoff_bill: boolean;    // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string;  // Reference to the payment source this payoff bill is for
-  due_date: string | null;    // DEPRECATED: use occurrence expected_date
   closed_date: string | null; // ISO date when closed
   is_overdue: boolean;
   days_overdue: number | null;
@@ -297,17 +284,14 @@ interface IncomeInstanceDetailed {
   name: string;
   billing_period: string;
   expected_amount: number;
-  actual_amount: number | null;
-  payments: Payment[];        // DEPRECATED: use occurrences
-  occurrences: Occurrence[];  // NEW: Individual occurrences
-  occurrence_count: number;   // NEW: How many occurrences in this month
-  is_extra_occurrence_month: boolean; // NEW: True if more occurrences than usual (3-paycheck month!)
+  actual_amount: number;      // Computed from occurrences[].payments
+  occurrences: Occurrence[];  // Individual occurrences
+  occurrence_count: number;   // How many occurrences in this month
+  is_extra_occurrence_month: boolean; // True if more occurrences than usual (3-paycheck month!)
   total_received: number;     // Sum of all payments
   remaining: number;          // expected - total_received
-  is_paid: boolean;           // DEPRECATED: use is_closed instead
   is_closed: boolean;         // True = no more transactions expected
   is_adhoc: boolean;
-  due_date: string | null;    // DEPRECATED: use occurrence expected_date
   closed_date: string | null; // ISO date when closed
   is_overdue: boolean;
   payment_source: {

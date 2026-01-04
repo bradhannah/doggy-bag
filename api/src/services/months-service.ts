@@ -272,16 +272,11 @@ export class MonthsServiceImpl implements MonthsService {
           bill_id: bill.id,
           month,
           billing_period: bill.billing_period,
-          amount: expectedAmount,        // DEPRECATED: use expected_amount
           expected_amount: expectedAmount,
-          actual_amount: undefined,
-          payments: [],                  // DEPRECATED: payments now on occurrences
-          occurrences,                   // NEW: Individual occurrences
+          occurrences,
           is_default: true,
-          is_paid: false,
           is_closed: false,
           is_adhoc: false,
-          due_date: undefined,           // DEPRECATED: use occurrence expected_date
           created_at: now,
           updated_at: now
         });
@@ -314,13 +309,9 @@ export class MonthsServiceImpl implements MonthsService {
             bill_id: null,                     // No associated bill template
             month,
             billing_period: 'monthly',
-            amount: Math.abs(source.balance),  // DEPRECATED
             expected_amount: Math.abs(source.balance),
-            actual_amount: undefined,
-            payments: [],                      // DEPRECATED
             occurrences: [payoffOccurrence],
             is_default: true,
-            is_paid: false,
             is_closed: false,
             is_adhoc: false,
             is_payoff_bill: true,              // Mark as auto-generated payoff
@@ -328,7 +319,6 @@ export class MonthsServiceImpl implements MonthsService {
             name: `${source.name} Payoff`,     // Ad-hoc name since bill_id is null
             category_id: payoffCategory.id,    // Assign to payoff category
             payment_source_id: source.id,      // Payment comes from this source
-            due_date: undefined,
             created_at: now,
             updated_at: now
           });
@@ -352,16 +342,11 @@ export class MonthsServiceImpl implements MonthsService {
           income_id: income.id,
           month,
           billing_period: income.billing_period,
-          amount: expectedAmount,        // DEPRECATED: use expected_amount
           expected_amount: expectedAmount,
-          actual_amount: undefined,
-          payments: [],                  // DEPRECATED: payments now on occurrences
-          occurrences,                   // NEW: Individual occurrences
+          occurrences,
           is_default: true,
-          is_paid: false,
           is_closed: false,
           is_adhoc: false,
-          due_date: undefined,           // DEPRECATED: use occurrence expected_date
           created_at: now,
           updated_at: now
         });
@@ -422,16 +407,11 @@ export class MonthsServiceImpl implements MonthsService {
           bill_id: bill.id,
           month,
           billing_period: bill.billing_period,
-          amount: expectedAmount,        // DEPRECATED: use expected_amount
           expected_amount: expectedAmount,
-          actual_amount: undefined,
-          payments: [],                  // DEPRECATED: payments now on occurrences
-          occurrences,                   // NEW: Individual occurrences
+          occurrences,
           is_default: true,
-          is_paid: false,
           is_closed: false,
           is_adhoc: false,
-          due_date: undefined,           // DEPRECATED: use occurrence expected_date
           created_at: now,
           updated_at: now
         });
@@ -472,13 +452,9 @@ export class MonthsServiceImpl implements MonthsService {
             bill_id: null,
             month,
             billing_period: 'monthly',
-            amount: Math.abs(source.balance),
             expected_amount: Math.abs(source.balance),
-            actual_amount: undefined,
-            payments: [],
             occurrences: [payoffOccurrence],
             is_default: true,
-            is_paid: false,
             is_closed: false,
             is_adhoc: false,
             is_payoff_bill: true,
@@ -486,7 +462,6 @@ export class MonthsServiceImpl implements MonthsService {
             name: `${source.name} Payoff`,
             category_id: payoffCategory.id,
             payment_source_id: source.id,
-            due_date: undefined,
             created_at: now,
             updated_at: now
           });
@@ -514,16 +489,11 @@ export class MonthsServiceImpl implements MonthsService {
           income_id: income.id,
           month,
           billing_period: income.billing_period,
-          amount: expectedAmount,        // DEPRECATED: use expected_amount
           expected_amount: expectedAmount,
-          actual_amount: undefined,
-          payments: [],                  // DEPRECATED: payments now on occurrences
-          occurrences,                   // NEW: Individual occurrences
+          occurrences,
           is_default: true,
-          is_paid: false,
           is_closed: false,
           is_adhoc: false,
-          due_date: undefined,           // DEPRECATED: use occurrence expected_date
           created_at: now,
           updated_at: now
         });
@@ -644,7 +614,7 @@ export class MonthsServiceImpl implements MonthsService {
       const now = new Date().toISOString();
       data.bill_instances[index] = {
         ...data.bill_instances[index],
-        amount,
+        expected_amount: amount,
         is_default: false,
         updated_at: now
       };
@@ -673,7 +643,7 @@ export class MonthsServiceImpl implements MonthsService {
       const now = new Date().toISOString();
       data.income_instances[index] = {
         ...data.income_instances[index],
-        amount,
+        expected_amount: amount,
         is_default: false,
         updated_at: now
       };
@@ -721,15 +691,16 @@ export class MonthsServiceImpl implements MonthsService {
         month
       );
       
+      // Regenerate occurrences from the bill template
+      const occurrences = generateBillOccurrences(bill, month);
+      
       const now = new Date().toISOString();
       data.bill_instances[index] = {
         ...data.bill_instances[index],
-        amount: defaultAmount,
         expected_amount: defaultAmount,
-        actual_amount: undefined,
-        payments: [],
+        occurrences,
         is_default: true,
-        is_paid: false,
+        is_closed: false,
         updated_at: now
       };
       data.updated_at = now;
@@ -776,14 +747,16 @@ export class MonthsServiceImpl implements MonthsService {
         month
       );
       
+      // Regenerate occurrences from the income template
+      const occurrences = generateIncomeOccurrences(income, month);
+      
       const now = new Date().toISOString();
       data.income_instances[index] = {
         ...data.income_instances[index],
-        amount: defaultAmount,
         expected_amount: defaultAmount,
-        actual_amount: undefined,
+        occurrences,
         is_default: true,
-        is_paid: false,
+        is_closed: false,
         updated_at: now
       };
       data.updated_at = now;
@@ -809,10 +782,10 @@ export class MonthsServiceImpl implements MonthsService {
       }
       
       const now = new Date().toISOString();
-      const currentPaid = data.bill_instances[index].is_paid ?? false;
+      const currentClosed = data.bill_instances[index].is_closed ?? false;
       data.bill_instances[index] = {
         ...data.bill_instances[index],
-        is_paid: !currentPaid,
+        is_closed: !currentClosed,
         updated_at: now
       };
       data.updated_at = now;
@@ -838,21 +811,13 @@ export class MonthsServiceImpl implements MonthsService {
       }
       
       const now = new Date().toISOString();
-      const currentPaid = data.income_instances[index].is_paid ?? false;
-      const updates: Partial<IncomeInstance> = {
-        is_paid: !currentPaid,
-        updated_at: now
-      };
-      
-      // If marking as received and actualAmount provided, set the actual_amount
-      if (!currentPaid && actualAmount !== undefined) {
-        updates.actual_amount = actualAmount;
-        updates.is_default = false;
-      }
+      const currentClosed = data.income_instances[index].is_closed ?? false;
       
       data.income_instances[index] = {
         ...data.income_instances[index],
-        ...updates
+        is_closed: !currentClosed,
+        is_default: !currentClosed ? false : data.income_instances[index].is_default,
+        updated_at: now
       };
       data.updated_at = now;
       
@@ -886,7 +851,6 @@ export class MonthsServiceImpl implements MonthsService {
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: true,
-        is_paid: true, // Keep in sync for backwards compatibility
         closed_date: today,
         updated_at: now
       };
@@ -917,7 +881,6 @@ export class MonthsServiceImpl implements MonthsService {
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: false,
-        is_paid: false, // Keep in sync for backwards compatibility
         closed_date: undefined,
         updated_at: now
       };
@@ -949,7 +912,6 @@ export class MonthsServiceImpl implements MonthsService {
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: true,
-        is_paid: true, // Keep in sync for backwards compatibility
         closed_date: today,
         updated_at: now
       };
@@ -980,7 +942,6 @@ export class MonthsServiceImpl implements MonthsService {
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: false,
-        is_paid: false, // Keep in sync for backwards compatibility
         closed_date: undefined,
         updated_at: now
       };
@@ -1014,7 +975,6 @@ export class MonthsServiceImpl implements MonthsService {
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         expected_amount: amount,
-        amount: amount, // Keep deprecated field in sync
         is_default: false,
         updated_at: now
       };
@@ -1044,7 +1004,6 @@ export class MonthsServiceImpl implements MonthsService {
       data.income_instances[index] = {
         ...data.income_instances[index],
         expected_amount: amount,
-        amount: amount, // Keep deprecated field in sync
         is_default: false,
         updated_at: now
       };
@@ -1119,16 +1078,11 @@ export class MonthsServiceImpl implements MonthsService {
           bill_id: bill.id,
           month,
           billing_period: bill.billing_period,
-          amount: expectedAmount,        // DEPRECATED: use expected_amount
           expected_amount: expectedAmount,
-          actual_amount: undefined,
-          payments: [],                  // DEPRECATED: payments now on occurrences
-          occurrences,                   // NEW: Individual occurrences
+          occurrences,
           is_default: true,
-          is_paid: false,
           is_closed: false,
           is_adhoc: false,
-          due_date: undefined,           // DEPRECATED: use occurrence expected_date
           created_at: nowIso,
           updated_at: nowIso
         });
@@ -1161,13 +1115,9 @@ export class MonthsServiceImpl implements MonthsService {
             bill_id: null,                     // No associated bill template
             month,
             billing_period: 'monthly',
-            amount: Math.abs(source.balance),  // DEPRECATED
             expected_amount: Math.abs(source.balance),
-            actual_amount: undefined,
-            payments: [],                      // DEPRECATED
             occurrences: [payoffOccurrence],
             is_default: true,
-            is_paid: false,
             is_closed: false,
             is_adhoc: false,
             is_payoff_bill: true,              // Mark as auto-generated payoff
@@ -1175,7 +1125,6 @@ export class MonthsServiceImpl implements MonthsService {
             name: `${source.name} Payoff`,     // Ad-hoc name since bill_id is null
             category_id: payoffCategory.id,    // Assign to payoff category
             payment_source_id: source.id,      // Payment comes from this source
-            due_date: undefined,
             created_at: nowIso,
             updated_at: nowIso
           });
@@ -1200,16 +1149,11 @@ export class MonthsServiceImpl implements MonthsService {
           income_id: income.id,
           month,
           billing_period: income.billing_period,
-          amount: expectedAmount,        // DEPRECATED: use expected_amount
           expected_amount: expectedAmount,
-          actual_amount: undefined,
-          payments: [],                  // DEPRECATED: payments now on occurrences
-          occurrences,                   // NEW: Individual occurrences
+          occurrences,
           is_default: true,
-          is_paid: false,
           is_closed: false,
           is_adhoc: false,
-          due_date: undefined,           // DEPRECATED: use occurrence expected_date
           created_at: nowIso,
           updated_at: nowIso
         });
@@ -1403,7 +1347,6 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Update instance totals
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
-      instance.amount = instance.expected_amount; // Keep deprecated field in sync
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
       
@@ -1450,7 +1393,6 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Update instance totals
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
-      instance.amount = instance.expected_amount; // Keep deprecated field in sync
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
       
@@ -1489,7 +1431,6 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Update instance-level is_closed if all occurrences are closed
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
-      instance.is_paid = instance.is_closed; // Keep deprecated field in sync
       if (instance.is_closed) {
         instance.closed_date = today;
       }
@@ -1529,7 +1470,6 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Update instance-level is_closed (now false since one is open)
       instance.is_closed = false;
-      instance.is_paid = false; // Keep deprecated field in sync
       instance.closed_date = undefined;
       instance.updated_at = now;
       
@@ -1568,7 +1508,6 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Update instance-level is_closed if all occurrences are closed
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
-      instance.is_paid = instance.is_closed; // Keep deprecated field in sync
       if (instance.is_closed) {
         instance.closed_date = today;
       }
@@ -1608,7 +1547,6 @@ export class MonthsServiceImpl implements MonthsService {
       
       // Update instance-level is_closed (now false since one is open)
       instance.is_closed = false;
-      instance.is_paid = false; // Keep deprecated field in sync
       instance.closed_date = undefined;
       instance.updated_at = now;
       
@@ -1653,8 +1591,7 @@ export class MonthsServiceImpl implements MonthsService {
       instance.occurrences[occIndex].payments.push(newPayment);
       instance.occurrences[occIndex].updated_at = now;
       
-      // Update instance actual_amount (sum of all occurrence payments)
-      instance.actual_amount = sumOccurrencePayments(instance.occurrences);
+      // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
       
       data.bill_instances[instanceIndex] = instance;
@@ -1698,8 +1635,7 @@ export class MonthsServiceImpl implements MonthsService {
       instance.occurrences[occIndex].payments.push(newPayment);
       instance.occurrences[occIndex].updated_at = now;
       
-      // Update instance actual_amount (sum of all occurrence payments)
-      instance.actual_amount = sumOccurrencePayments(instance.occurrences);
+      // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
       
       data.income_instances[instanceIndex] = instance;
@@ -1739,8 +1675,7 @@ export class MonthsServiceImpl implements MonthsService {
       instance.occurrences[occIndex].payments.splice(paymentIndex, 1);
       instance.occurrences[occIndex].updated_at = now;
       
-      // Update instance actual_amount (sum of all occurrence payments)
-      instance.actual_amount = sumOccurrencePayments(instance.occurrences);
+      // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
       
       data.bill_instances[instanceIndex] = instance;
@@ -1780,8 +1715,7 @@ export class MonthsServiceImpl implements MonthsService {
       instance.occurrences[occIndex].payments.splice(paymentIndex, 1);
       instance.occurrences[occIndex].updated_at = now;
       
-      // Update instance actual_amount (sum of all occurrence payments)
-      instance.actual_amount = sumOccurrencePayments(instance.occurrences);
+      // actual_amount is computed from occurrences, no instance-level field needed
       instance.updated_at = now;
       
       data.income_instances[instanceIndex] = instance;
@@ -1816,7 +1750,6 @@ export class MonthsServiceImpl implements MonthsService {
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
-      instance.amount = instance.expected_amount;
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
       
@@ -1852,7 +1785,6 @@ export class MonthsServiceImpl implements MonthsService {
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
-      instance.amount = instance.expected_amount;
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
       
@@ -1891,8 +1823,6 @@ export class MonthsServiceImpl implements MonthsService {
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
-      instance.amount = instance.expected_amount;
-      instance.actual_amount = sumOccurrencePayments(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
       
@@ -1931,8 +1861,6 @@ export class MonthsServiceImpl implements MonthsService {
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
-      instance.amount = instance.expected_amount;
-      instance.actual_amount = sumOccurrencePayments(instance.occurrences);
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       instance.updated_at = now;
       

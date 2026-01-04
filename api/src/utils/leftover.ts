@@ -13,7 +13,7 @@
 //     else: expected_amount - actual_paid (still need to pay the remainder)
 
 import type { MonthlyData, PaymentSource, UnifiedLeftoverResult, BillInstance, IncomeInstance } from '../types';
-import { getEffectiveBillAmount } from './tally';
+import { getEffectiveBillAmount, getEffectiveIncomeAmount } from './tally';
 
 /**
  * Get IDs of payment sources that should be excluded from leftover calculation
@@ -58,7 +58,7 @@ function getRemainingBillExpense(bill: BillInstance): number {
     return 0; // Already paid, reflected in bank balance
   }
   
-  const paid = getEffectiveBillAmount(bill); // Sum of payments or actual_amount
+  const paid = getEffectiveBillAmount(bill); // Sum of payments from occurrences
   return Math.max(0, bill.expected_amount - paid);
 }
 
@@ -72,7 +72,7 @@ function getRemainingIncomeAmount(income: IncomeInstance): number {
     return 0; // Already received, reflected in bank balance
   }
   
-  const received = income.actual_amount ?? 0;
+  const received = getEffectiveIncomeAmount(income); // Sum of payments from occurrences
   return Math.max(0, income.expected_amount - received);
 }
 
@@ -214,15 +214,13 @@ export function hasActualsEntered(monthData: MonthlyData): boolean {
   // Check bill instances for payments or closed status
   const hasBillActuals = monthData.bill_instances.some(bill => 
     bill.is_closed ||
-    bill.actual_amount !== undefined || 
-    (bill.payments && bill.payments.length > 0) ||
     (bill.occurrences && bill.occurrences.some(occ => occ.payments && occ.payments.length > 0))
   );
   
   // Check income instances
   const hasIncomeActuals = monthData.income_instances.some(inc => 
     inc.is_closed ||
-    inc.actual_amount !== undefined
+    (inc.occurrences && inc.occurrences.some(occ => occ.payments && occ.payments.length > 0))
   );
   
   // Check variable expenses (always count as actual)
