@@ -16,7 +16,16 @@
           "expected_date": "2025-12-01",
           "expected_amount": 185000,
           "is_closed": true,
-          "payments": [{"id": "m12-pay-0001", "amount": 185000, "payment_date": "2025-12-01", "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-pay-0001",
+              "amount": 185000,
+              "payment_date": "2025-12-01",
+              "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -100,7 +109,16 @@
           "expected_date": "2025-12-05",
           "expected_amount": 7999,
           "is_closed": true,
-          "payments": [{"id": "m12-pay-0004", "amount": 7999, "payment_date": "2025-12-05", "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-pay-0004",
+              "amount": 7999,
+              "payment_date": "2025-12-05",
+              "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -184,7 +202,16 @@
           "expected_date": "2025-12-01",
           "expected_amount": 13800,
           "is_closed": true,
-          "payments": [{"id": "m12-pay-0007", "amount": 13800, "payment_date": "2025-12-01", "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-pay-0007",
+              "amount": 13800,
+              "payment_date": "2025-12-01",
+              "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -212,7 +239,16 @@
           "expected_date": "2025-12-01",
           "expected_amount": 28000,
           "is_closed": true,
-          "payments": [{"id": "m12-pay-0008", "amount": 28000, "payment_date": "2025-12-01", "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-pay-0008",
+              "amount": 28000,
+              "payment_date": "2025-12-01",
+              "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -240,7 +276,16 @@
           "expected_date": "2025-12-08",
           "expected_amount": 2599,
           "is_closed": true,
-          "payments": [{"id": "m12-pay-0009", "amount": 2599, "payment_date": "2025-12-08", "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-pay-0009",
+              "amount": 2599,
+              "payment_date": "2025-12-08",
+              "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -268,7 +313,16 @@
           "expected_date": "2025-12-01",
           "expected_amount": 4999,
           "is_closed": true,
-          "payments": [{"id": "m12-pay-0010", "amount": 4999, "payment_date": "2025-12-01", "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-pay-0010",
+              "amount": 4999,
+              "payment_date": "2025-12-01",
+              "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -329,7 +383,16 @@
           "expected_date": "2025-12-05",
           "expected_amount": 325000,
           "is_closed": true,
-          "payments": [{"id": "m12-incpay-0001", "amount": 325000, "payment_date": "2025-12-05", "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001", "created_at": "2025-12-01T00:00:00.000Z", "updated_at": "2025-12-01T00:00:00.000Z"}],
+          "payments": [
+            {
+              "id": "m12-incpay-0001",
+              "amount": 325000,
+              "payment_date": "2025-12-05",
+              "payment_source_id": "a1b2c3d4-1111-4000-8000-000000000001",
+              "created_at": "2025-12-01T00:00:00.000Z",
+              "updated_at": "2025-12-01T00:00:00.000Z"
+            }
+          ],
           "is_adhoc": false,
           "created_at": "2025-12-01T00:00:00.000Z",
           "updated_at": "2025-12-01T00:00:00.000Z"
@@ -384,7 +447,11 @@
   ],
   "variable_expenses": [],
   "free_flowing_expenses": [],
-  "bank_balances": {},
+  "bank_balances": {
+    "a1b2c3d4-3333-4000-8000-000000000003": -184723,
+    "a1b2c3d4-4444-4000-8000-000000000004": -52345,
+    "a1b2c3d4-2222-4000-8000-000000000002": 1250000
+  },
   "created_at": "2025-12-01T00:00:00.000Z",
-  "updated_at": "2025-12-01T00:00:00.000Z"
+  "updated_at": "2026-01-04T13:12:42.811Z"
 }
