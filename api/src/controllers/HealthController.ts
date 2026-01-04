@@ -3,19 +3,26 @@ import {
   Route,
   Get,
   SuccessResponse,
-  Response,
   Tags,
 } from 'tsoa';
 
 interface HealthResponse {
   status: string;
   timestamp: string;
+  version?: string;
 }
 
-@Route('health')
+/**
+ * Health check endpoint for monitoring
+ */
+@Route('api/health')
 @Tags('Health')
 export class HealthController extends Controller {
-  @SuccessResponse('200', 'OK')
+  /**
+   * Check API health status
+   * @summary Health check
+   */
+  @SuccessResponse(200, 'OK')
   @Get()
   public async getHealth(): Promise<HealthResponse> {
     return {

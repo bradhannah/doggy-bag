@@ -175,10 +175,10 @@ clean: ## Remove build artifacts and temporary files
 # Type generation
 types: ## Generate OpenAPI spec and Svelte types
 	@$(MAKE) check-prereqs
-	@echo "Generating OpenAPI spec from backend types..."
-	@cd api && bun run src/scripts/generate-openapi.ts
+	@echo "Generating OpenAPI spec from tsoa controllers..."
+	@cd api && npm run spec
 	@echo "Generating Svelte types from OpenAPI spec..."
-	@bun run src/scripts/generate-types.ts
+	@bun run scripts/generate-types.ts
 	@echo "✓ Type generation complete"
 
 # Testing

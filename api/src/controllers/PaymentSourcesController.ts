@@ -3,35 +3,86 @@ import {
   Route,
   Get,
   Post,
+  Put,
+  Delete,
+  Body,
+  Path,
   Response,
   Tags,
+  SuccessResponse,
+  Example
 } from 'tsoa';
+import type { PaymentSource } from '../types';
+import type { CreatePaymentSourceRequest, UpdatePaymentSourceRequest, ApiError } from '../types/requests';
 
-// TODO: Implement in Phase 5 (User Story 0)
-// Placeholder for OpenAPI spec generation
-
-@Route('payment-sources')
+/**
+ * Controller for managing payment sources (bank accounts, credit cards, etc.)
+ */
+@Route('api/payment-sources')
 @Tags('Payment Sources')
 export class PaymentSourcesController extends Controller {
+  
+  /**
+   * Get all payment sources
+   * @summary List all payment sources
+   */
   @Get()
-  @Response('200', 'OK')
-  @Response('501', 'Not Implemented')
-  public async getPaymentSources() {
-    return {
-      status: 'error',
-      message: 'Not implemented yet',
-      data: []
-    };
+  @SuccessResponse(200, 'OK')
+  @Example<PaymentSource[]>([{
+    id: 'ps-001',
+    name: 'Checking Account',
+    type: 'bank_account',
+    balance: 250000,
+    is_active: true,
+    exclude_from_leftover: false,
+    pay_off_monthly: false,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z'
+  }])
+  public async getPaymentSources(): Promise<PaymentSource[]> {
+    throw new Error('Not implemented - use existing handlers');
   }
 
+  /**
+   * Create a new payment source
+   * @summary Create a payment source
+   */
   @Post()
-  @Response('201', 'Created')
-  @Response('400', 'Bad Request')
-  @Response('501', 'Not Implemented')
-  public async createPaymentSource() {
-    return {
-      status: 'error',
-      message: 'Not implemented yet'
-    };
+  @SuccessResponse(201, 'Created')
+  @Response<ApiError>(400, 'Bad Request')
+  public async createPaymentSource(
+    @Body() body: CreatePaymentSourceRequest
+  ): Promise<PaymentSource> {
+    throw new Error('Not implemented - use existing handlers');
+  }
+
+  /**
+   * Update an existing payment source
+   * @summary Update a payment source
+   * @param id The payment source ID
+   */
+  @Put('{id}')
+  @SuccessResponse(200, 'OK')
+  @Response<ApiError>(400, 'Bad Request')
+  @Response<ApiError>(404, 'Not Found')
+  public async updatePaymentSource(
+    @Path() id: string,
+    @Body() body: UpdatePaymentSourceRequest
+  ): Promise<PaymentSource> {
+    throw new Error('Not implemented - use existing handlers');
+  }
+
+  /**
+   * Delete a payment source
+   * @summary Delete a payment source
+   * @param id The payment source ID
+   */
+  @Delete('{id}')
+  @SuccessResponse(204, 'No Content')
+  @Response<ApiError>(404, 'Not Found')
+  public async deletePaymentSource(
+    @Path() id: string
+  ): Promise<void> {
+    throw new Error('Not implemented - use existing handlers');
   }
 }

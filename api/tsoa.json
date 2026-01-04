@@ -5,17 +5,25 @@
   "spec": {
     "outputDirectory": "./openapi",
     "specVersion": 3,
-    "specFileMerged": "openapi.yaml",
-    "specMerging": "recursive",
-    "entryFile": "./server.ts",
-    "basePath": "/api",
-    "description": "BudgetForFun API Documentation",
+    "specFileBaseName": "swagger",
+    "description": "BudgetForFun API - Personal budget tracking application",
     "name": "BudgetForFun API",
     "version": "1.0.0",
     "license": "MIT",
     "contact": {
       "name": "BudgetForFun Team"
-    }
+    },
+    "tags": [
+      { "name": "Health", "description": "Health check endpoints" },
+      { "name": "Bills", "description": "Recurring bill management" },
+      { "name": "Incomes", "description": "Recurring income management" },
+      { "name": "Payment Sources", "description": "Bank accounts and payment methods" },
+      { "name": "Categories", "description": "Category management for bills and incomes" },
+      { "name": "Months", "description": "Monthly budget data and operations" },
+      { "name": "Undo", "description": "Undo/redo operations" },
+      { "name": "Backup", "description": "Backup and restore" },
+      { "name": "Settings", "description": "Application settings" }
+    ]
   },
   "routes": {
     "routesDir": "./dist"

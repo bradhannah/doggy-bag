@@ -4,7 +4,9 @@
   "description": "Bun HTTP backend for BudgetForFun",
   "type": "module",
   "scripts": {
-    "server": "bun run server.ts"
+    "server": "bun run server.ts",
+    "spec": "tsoa spec",
+    "spec:watch": "tsoa spec --watch"
   },
   "dependencies": {
     "@tsoa/runtime": "^7.0.0-alpha.0",
