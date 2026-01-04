@@ -451,49 +451,6 @@
     color: #24c8db;
   }
   
-  .leftover-display {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    padding: 12px 20px;
-    background: rgba(74, 222, 128, 0.1);
-    border-radius: 12px;
-    border: 1px solid rgba(74, 222, 128, 0.2);
-  }
-  
-  .leftover-display.negative {
-    background: rgba(248, 113, 113, 0.1);
-    border-color: rgba(248, 113, 113, 0.2);
-  }
-  
-  .leftover-label {
-    font-size: 0.75rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  
-  .leftover-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #4ade80;
-  }
-  
-  .leftover-display.negative .leftover-value {
-    color: #f87171;
-  }
-  
-  .leftover-display.muted {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: #333355;
-  }
-  
-  .leftover-hint {
-    font-size: 0.875rem;
-    color: #666;
-    font-style: italic;
-  }
-  
   /* Main layout with sidebar */
   .detailed-layout {
     display: grid;
@@ -682,14 +639,6 @@
   .detailed-view.compact .nav-arrow {
     width: 28px;
     height: 28px;
-  }
-  
-  .detailed-view.compact .leftover-display {
-    padding: 8px 12px;
-  }
-  
-  .detailed-view.compact .leftover-value {
-    font-size: 1.1rem;
   }
   
   .detailed-view.compact .detailed-layout {

@@ -538,10 +538,6 @@
     gap: 2px;
   }
   
-  .remaining-column {
-    /* No extra styles needed with grid */
-  }
-  
   .amount-label {
     font-size: 0.5rem;
     color: #666;

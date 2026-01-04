@@ -512,79 +512,6 @@
     max-width: 900px;
   }
 
-  .entity-card {
-    background: #16213e;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #333355;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: border-color 0.15s ease, background 0.15s ease;
-  }
-
-  .entity-card.clickable {
-    cursor: pointer;
-  }
-
-  .entity-card.clickable:hover {
-    border-color: #24c8db;
-    background: rgba(36, 200, 219, 0.05);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .card-name {
-    font-weight: 600;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .type-icon {
-    font-size: 1.125rem;
-  }
-
-  .card-badge {
-    font-size: 0.75rem;
-    color: #24c8db;
-    padding: 4px 10px;
-    background: rgba(36, 200, 219, 0.1);
-    border-radius: 4px;
-  }
-
-  .card-badge.inactive {
-    color: #888;
-    background: rgba(136, 136, 136, 0.1);
-  }
-
-  .card-badge.debt {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
-  }
-
-  .card-meta {
-    font-size: 0.8125rem;
-    color: #888;
-  }
-
-  .card-amount {
-    font-size: 1.25rem;
-    font-weight: bold;
-  }
-
-  .card-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-top: 5px;
-  }
-
   .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -608,29 +535,6 @@
     margin-bottom: 24px;
   }
 
-  /* Total Row */
-  .total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background: #16213e;
-    border-radius: 8px;
-    border: 2px solid #333355;
-    margin-top: 10px;
-  }
-
-  .total-label {
-    font-weight: 600;
-    font-size: 1rem;
-    color: #e4e4e7;
-  }
-
-  .total-value {
-    font-size: 1.375rem;
-    font-weight: bold;
-  }
-
   /* Buttons */
   .btn {
     padding: 12px 20px;
@@ -648,33 +552,6 @@
 
   .btn-primary:hover {
     background: #1ab0c9;
-  }
-
-  .btn-small {
-    padding: 6px 12px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-
-  .btn-secondary {
-    background: #333355;
-    color: #fff;
-  }
-
-  .btn-secondary:hover {
-    background: #444466;
-  }
-
-  .btn-danger {
-    background: #ff4444;
-    color: #fff;
-  }
-
-  .btn-danger:hover {
-    background: #cc3333;
   }
 
   /* Mobile responsive */

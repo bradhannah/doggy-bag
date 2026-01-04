@@ -754,10 +754,6 @@ import {
     padding: 24px;
   }
   
-  .settings-section.disabled {
-    opacity: 0.6;
-  }
-  
   .settings-section h2 {
     font-size: 1rem;
     font-weight: 600;

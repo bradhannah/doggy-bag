@@ -501,28 +501,6 @@
     color: #f87171;
   }
   
-  .subtotal-value.positive {
-    color: #4ade80;
-  }
-  
-  .networth-row {
-    border-top: none;
-    padding-top: 0;
-  }
-  
-  .subtotal-value.expense {
-    color: #f87171;
-  }
-  
-  .box-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 8px;
-    border-top: 1px dashed #444;
-    margin-top: 2px;
-  }
-  
   /* Balance list */
   .balance-list {
     display: flex;
@@ -544,10 +522,6 @@
   .balance-value {
     font-weight: 500;
     color: #e4e4e7;
-  }
-  
-  .balance-value.negative {
-    color: #f87171;
   }
   
   .balance-info {
@@ -712,36 +686,6 @@
   .edit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-  
-  /* Section totals */
-  .section-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 8px;
-    border-top: 1px dashed #444;
-    margin-top: 2px;
-  }
-  
-  .total-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #a1a1aa;
-  }
-  
-  .total-value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #e4e4e7;
-  }
-  
-  .total-value.negative {
-    color: #f87171;
-  }
-  
-  .total-value.expense {
-    color: #f87171;
   }
   
   /* Summary rows */
