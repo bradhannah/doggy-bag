@@ -6,6 +6,9 @@
 # Log directory
 LOGS_DIR := logs
 
+# Bun binary - check common locations
+BUN := $(shell command -v bun 2>/dev/null || echo ~/.bun/bin/bun)
+
 # Default target
 help: ## Show this help message
 	@echo "BudgetForFun Makefile - Build Automation"
@@ -17,9 +20,11 @@ help: ## Show this help message
 	@echo "  make logs-clear   Clear all log files"
 	@echo ""
 	@echo "Build Targets:"
-	@echo "  make build     Build Tauri application"
-	@echo "  make clean     Remove build artifacts"
-	@echo "  make types     Generate OpenAPI spec and Svelte types"
+	@echo "  make build              Build Tauri application (production)"
+	@echo "  make build-sidecar      Compile backend into standalone binary"
+	@echo "  make prepare-dev-sidecar  Download Bun runtime for dev mode"
+	@echo "  make clean              Remove build artifacts"
+	@echo "  make types              Generate OpenAPI spec and Svelte types"
 	@echo ""
 	@echo "Installation Targets:"
 	@echo "  make install-prereqs  Check and install prerequisites (Bun, Rust, Node.js, TypeScript)"
@@ -132,7 +137,7 @@ dev: ## Start Tauri dev mode (sidecar manages backend with dynamic port)
 	@echo ""
 	@echo "TIP: Run 'make logs-tail' in another terminal to watch all logs"
 	@echo ""
-	@bun run tauri dev 2>&1 | tee -a $(LOGS_DIR)/tauri.log
+	@$(BUN) run tauri dev 2>&1 | tee -a $(LOGS_DIR)/tauri.log
 
 dev-browser: ## Start browser dev mode (backend port 3000 + Vite, no Tauri)
 	@$(MAKE) check-prereqs
@@ -145,18 +150,18 @@ dev-browser: ## Start browser dev mode (backend port 3000 + Vite, no Tauri)
 	@echo "Open http://localhost:1420 in your browser"
 	@echo ""
 	@# Start backend in background
-	@BUN_ENV=development bun run api/server.ts 2>&1 | tee -a $(LOGS_DIR)/api.log &
+	@BUN_ENV=development $(BUN) run api/server.ts 2>&1 | tee -a $(LOGS_DIR)/api.log &
 	@sleep 2
 	@# Start Vite in foreground
-	@bun run dev 2>&1 | tee -a $(LOGS_DIR)/frontend.log
+	@$(BUN) run dev 2>&1 | tee -a $(LOGS_DIR)/frontend.log
 
 start-bun: ## Start Bun backend server on localhost:3000 (development mode)
 	@echo "[$(shell date '+%Y-%m-%d %H:%M:%S')] Starting Bun backend server..."
-	@cd api && BUN_ENV=development bun run server.ts
+	@cd api && BUN_ENV=development $(BUN) run server.ts
 
 start-vite: ## Start Vite dev server
 	@echo "Starting Vite dev server..."
-	@bun run dev
+	@$(BUN) run dev
 
 check-prereqs: ## Quick check that all prerequisites are installed
 	@echo "Checking prerequisites..."
@@ -170,12 +175,24 @@ build: ## Build Tauri application for current platform
 	@$(MAKE) check-prereqs
 	@$(MAKE) build-sidecar
 	@echo "Building Tauri application..."
-	@bun run tauri build
+	@$(BUN) run tauri build
 
-build-sidecar: ## Build the standalone Bun sidecar executable
-	@echo "Building standalone sidecar executable..."
-	@cd api && bun build --compile --outfile ../src-tauri/binaries/bun-sidecar-aarch64-apple-darwin ./server.ts
-	@echo "✓ Sidecar built: src-tauri/binaries/bun-sidecar-aarch64-apple-darwin"
+build-sidecar: ## Build the standalone compiled Bun sidecar (for production)
+	@echo "Building compiled sidecar binary..."
+	@echo "  Input: api/server.ts (+ all dependencies)"
+	@echo "  Output: src-tauri/binaries/bun-sidecar-aarch64-apple-darwin"
+	@cd api && $(BUN) build --compile --outfile ../src-tauri/binaries/bun-sidecar-aarch64-apple-darwin ./server.ts
+	@chmod +x src-tauri/binaries/bun-sidecar-aarch64-apple-darwin
+	@echo ""
+	@echo "✓ Compiled sidecar ready"
+	@ls -lh src-tauri/binaries/bun-sidecar-aarch64-apple-darwin | awk '{print "  Size: " $$5}'
+	@echo ""
+	@echo "Note: For dev mode, the Bun runtime is used instead."
+	@echo "      Run 'make prepare-dev-sidecar' to set up the dev runtime."
+
+prepare-dev-sidecar: ## Download Bun runtime for dev mode sidecar
+	@echo "Preparing Bun runtime for dev mode..."
+	@./scripts/prepare-sidecar.sh
 
 # Clean
 clean: ## Remove build artifacts and temporary files
@@ -192,7 +209,7 @@ types: ## Generate OpenAPI spec and Svelte types
 	@echo "Generating OpenAPI spec from tsoa controllers..."
 	@cd api && npm run spec
 	@echo "Generating Svelte types from OpenAPI spec..."
-	@bun run scripts/generate-types.ts
+	@$(BUN) run scripts/generate-types.ts
 	@echo "✓ Type generation complete"
 
 # Testing
@@ -205,11 +222,11 @@ test: ## Run all tests (Bun backend + Jest frontend + Playwright E2E)
 
 test-backend: ## Run backend tests with Bun test runner
 	@echo "Running backend tests (Bun)..."
-	@cd api && bun test
+	@cd api && $(BUN) test
 
 test-frontend: ## Run frontend tests with Jest
 	@echo "Running frontend tests (Jest)..."
-	@bun test
+	@$(BUN) test
 
 test-e2e: ## Run E2E tests with Playwright
 	@echo "Running E2E tests (Playwright)..."
@@ -251,8 +268,8 @@ install-all: ## Install all dependencies (same as install-dev)
 
 install-bun: ## Install Bun backend dependencies
 	@echo "Installing Bun dependencies (api/)..."
-	@cd api && bun install
+	@cd api && $(BUN) install
 
 install-npm: ## Install npm dependencies (frontend, Tauri, tools) using Bun
 	@echo "Installing npm dependencies with Bun..."
-	@bun install
+	@$(BUN) install

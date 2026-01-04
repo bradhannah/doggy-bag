@@ -8,6 +8,9 @@
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 import { isTauri as checkIsTauri } from '@tauri-apps/api/core';
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('Settings');
 
 // ============================================================================
 // Zoom Settings - Native Tauri WebView Zoom
@@ -66,13 +69,13 @@ export async function applyZoom(level: number): Promise<void> {
       const { getCurrentWebview } = await import('@tauri-apps/api/webview');
       const webview = getCurrentWebview();
       await webview.setZoom(clampedLevel);
-      console.log('[Settings] Zoom applied:', clampedLevel);
+      log.debug(`Zoom applied: ${clampedLevel}`);
     } catch (e) {
-      console.error('[Settings] Failed to apply zoom:', e);
+      log.error('Failed to apply zoom:', e);
     }
   } else {
     // Browser: let browser handle its own zoom, don't interfere
-    console.log('[Settings] Browser mode - zoom not applied (use browser zoom)');
+    log.debug('Browser mode - zoom not applied (use browser zoom)');
   }
 }
 
@@ -91,7 +94,7 @@ export async function loadZoom(): Promise<number> {
         savedZoom = value;
       }
     } catch (e) {
-      console.error('[Settings] Failed to load zoom from Tauri Store:', e);
+      log.error('Failed to load zoom from Tauri Store:', e);
     }
   } else {
     // Browser fallback - use localStorage
@@ -122,7 +125,7 @@ async function saveZoom(level: number): Promise<void> {
       await store.set('zoomLevel', clampedLevel);
       await store.save();
     } catch (e) {
-      console.error('[Settings] Failed to save zoom to Tauri Store:', e);
+      log.error('Failed to save zoom to Tauri Store:', e);
     }
   } else {
     // Browser fallback - use localStorage
@@ -312,30 +315,30 @@ export async function migrateData(
  */
 export async function openFolderPicker(): Promise<string | null> {
   const inTauri = isTauri();
-  console.log('[Settings] openFolderPicker called, isTauri:', inTauri);
+  log.debug(`openFolderPicker called, isTauri: ${inTauri}`);
   
   if (!inTauri) {
     // In browser dev mode, show a prompt
-    console.log('[Settings] Not in Tauri, using prompt fallback');
+    log.debug('Not in Tauri, using prompt fallback');
     const path = prompt('Enter folder path (browser dev mode):', '~/Documents/BudgetForFun');
     return path;
   }
   
   try {
-    console.log('[Settings] Importing @tauri-apps/plugin-dialog...');
+    log.debug('Importing @tauri-apps/plugin-dialog...');
     // Dynamic import for Tauri dialog
     const { open } = await import('@tauri-apps/plugin-dialog');
-    console.log('[Settings] Calling dialog.open()...');
+    log.debug('Calling dialog.open()...');
     const selected = await open({
       directory: true,
       multiple: false,
       title: 'Choose Data Directory'
     });
-    console.log('[Settings] Dialog returned:', selected);
+    log.debug(`Dialog returned: ${selected}`);
     
     return selected as string | null;
   } catch (e) {
-    console.error('[Settings] Failed to open folder picker:', e);
+    log.error('Failed to open folder picker:', e);
     return null;
   }
 }
@@ -352,7 +355,7 @@ export async function getDefaultDataDir(): Promise<string> {
     const { invoke } = await import('@tauri-apps/api/core');
     return await invoke('get_default_data_dir');
   } catch (e) {
-    console.error('Failed to get default data dir:', e);
+    log.error('Failed to get default data dir:', e);
     return '~/Documents/BudgetForFun';
   }
 }
@@ -374,7 +377,7 @@ export async function saveDataDirectorySetting(path: string): Promise<void> {
     await store.set('dataDirectory', path);
     await store.save();
   } catch (e) {
-    console.error('Failed to save data directory setting:', e);
+    log.error('Failed to save data directory setting:', e);
     throw e;
   }
 }
@@ -393,7 +396,7 @@ export async function getSavedDataDirectory(): Promise<string | null> {
     const value = await store.get('dataDirectory') as string | undefined;
     return value || null;
   } catch (e) {
-    console.error('Failed to get saved data directory:', e);
+    log.error('Failed to get saved data directory:', e);
     return null;
   }
 }
@@ -410,7 +413,7 @@ export function clearError(): void {
  * This updates the UI immediately without waiting for the API
  */
 export function updateDataDirectoryLocally(newPath: string): void {
-  console.log('[Settings Store] updateDataDirectoryLocally called with:', newPath);
+  log.debug(`updateDataDirectoryLocally called with: ${newPath}`);
   store.update(s => {
     const newState = {
       ...s,
@@ -423,7 +426,7 @@ export function updateDataDirectoryLocally(newPath: string): void {
       },
       isDevelopment: false
     };
-    console.log('[Settings Store] New dataDirectory state:', newState.dataDirectory);
+    log.debug(`New dataDirectory state: ${newState.dataDirectory?.path}`);
     return newState;
   });
 }
@@ -434,17 +437,17 @@ export function updateDataDirectoryLocally(newPath: string): void {
  */
 export async function restartSidecar(newDataDir: string): Promise<void> {
   if (!isTauri()) {
-    console.log('[Settings] Not in Tauri, cannot restart sidecar');
+    log.debug('Not in Tauri, cannot restart sidecar');
     return;
   }
   
   try {
-    console.log('[Settings] Restarting sidecar with new data directory:', newDataDir);
+    log.info(`Restarting sidecar with new data directory: ${newDataDir}`);
     const { invoke } = await import('@tauri-apps/api/core');
     const result = await invoke('restart_bun_sidecar', { dataDir: newDataDir });
-    console.log('[Settings] Sidecar restart result:', result);
+    log.info(`Sidecar restart result: ${result}`);
   } catch (e) {
-    console.error('[Settings] Failed to restart sidecar:', e);
+    log.error('Failed to restart sidecar:', e);
     throw e;
   }
 }
@@ -455,20 +458,173 @@ export async function restartSidecar(newDataDir: string): Promise<void> {
  */
 export async function relaunchApp(): Promise<void> {
   if (!isTauri()) {
-    console.log('[Settings] Not in Tauri, cannot relaunch app');
+    log.debug('Not in Tauri, cannot relaunch app');
     // In browser, just reload the page
     window.location.reload();
     return;
   }
   
   try {
-    console.log('[Settings] Relaunching app...');
+    log.info('Relaunching app...');
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('relaunch_app');
   } catch (e) {
-    console.error('[Settings] Failed to relaunch app:', e);
+    log.error('Failed to relaunch app:', e);
     throw e;
   }
 }
 
 export const settingsStore = store;
+
+// ============================================================================
+// Debug Mode - DevTools Toggle
+// ============================================================================
+
+/**
+ * Toggle devtools open/closed (Tauri only)
+ * Returns the new state (true = open, false = closed)
+ */
+export async function toggleDevtools(): Promise<boolean> {
+  if (!isTauri()) {
+    log.debug('Not in Tauri, cannot toggle devtools');
+    return false;
+  }
+  
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const isOpen = await invoke('toggle_devtools') as boolean;
+    log.info(`DevTools toggled: ${isOpen ? 'open' : 'closed'}`);
+    return isOpen;
+  } catch (e) {
+    log.error('Failed to toggle devtools:', e);
+    return false;
+  }
+}
+
+/**
+ * Open devtools (Tauri only)
+ */
+export async function openDevtools(): Promise<void> {
+  if (!isTauri()) {
+    log.debug('Not in Tauri, cannot open devtools');
+    return;
+  }
+  
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('open_devtools');
+    log.info('DevTools opened');
+  } catch (e) {
+    log.error('Failed to open devtools:', e);
+  }
+}
+
+/**
+ * Close devtools (Tauri only)
+ */
+export async function closeDevtools(): Promise<void> {
+  if (!isTauri()) {
+    log.debug('Not in Tauri, cannot close devtools');
+    return;
+  }
+  
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('close_devtools');
+    log.info('DevTools closed');
+  } catch (e) {
+    log.error('Failed to close devtools:', e);
+  }
+}
+
+/**
+ * Check if devtools is currently open (Tauri only)
+ */
+export async function isDevtoolsOpen(): Promise<boolean> {
+  if (!isTauri()) {
+    return false;
+  }
+  
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return await invoke('is_devtools_open') as boolean;
+  } catch (e) {
+    log.error('Failed to check devtools state:', e);
+    return false;
+  }
+}
+
+/**
+ * Load debug mode preference and apply it on startup (Tauri only)
+ * If debug mode was enabled, open devtools automatically
+ */
+export async function loadDebugMode(): Promise<boolean> {
+  let debugEnabled = false;
+  
+  if (isTauri()) {
+    try {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
+      const value = await store.get('debugMode') as boolean | undefined;
+      debugEnabled = value === true;
+      
+      if (debugEnabled) {
+        log.info('Debug mode enabled, opening devtools');
+        await openDevtools();
+      }
+    } catch (e) {
+      log.error('Failed to load debug mode from Tauri Store:', e);
+    }
+  } else {
+    // Browser fallback - use localStorage
+    debugEnabled = localStorage.getItem('budgetforfun_debug') === 'true';
+  }
+  
+  return debugEnabled;
+}
+
+/**
+ * Save debug mode preference (Tauri only)
+ */
+export async function saveDebugMode(enabled: boolean): Promise<void> {
+  if (isTauri()) {
+    try {
+      const { Store } = await import('@tauri-apps/plugin-store');
+      const store = await Store.load('settings.json');
+      await store.set('debugMode', enabled);
+      await store.save();
+      log.info(`Debug mode saved: ${enabled}`);
+    } catch (e) {
+      log.error('Failed to save debug mode to Tauri Store:', e);
+    }
+  } else {
+    // Browser fallback - use localStorage
+    localStorage.setItem('budgetforfun_debug', enabled.toString());
+  }
+}
+
+/**
+ * Enable debug mode - opens devtools and saves preference
+ */
+export async function enableDebugMode(): Promise<void> {
+  await saveDebugMode(true);
+  await openDevtools();
+}
+
+/**
+ * Disable debug mode - closes devtools and saves preference
+ */
+export async function disableDebugMode(): Promise<void> {
+  await saveDebugMode(false);
+  await closeDevtools();
+}
+
+/**
+ * Toggle debug mode - toggles devtools and saves new preference
+ * Returns the new state (true = enabled, false = disabled)
+ */
+export async function toggleDebugMode(): Promise<boolean> {
+  const isOpen = await toggleDevtools();
+  await saveDebugMode(isOpen);
+  return isOpen;
+}

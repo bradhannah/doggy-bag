@@ -1,6 +1,6 @@
 # Technical Debt Registry
 
-**Last Updated**: 2026-01-03  
+**Last Updated**: 2026-01-04  
 **Review Session**: Architecture Deep Dive (US-0)
 
 ---
@@ -9,10 +9,12 @@
 
 | Severity | Count |
 |----------|-------|
-| High | 6 |
-| Medium | 13 |
-| Low | 5 |
-| **Total** | **24** |
+| High | 3 |
+| Medium | 10 |
+| Low | 3 |
+| **Total** | **16** |
+
+**Completed This Session**: TD-R4, TD-F5, TD-F6, TD-CC4 (includes TD-F4, TD-B4, TD-R1), TD-R7
 
 ---
 
@@ -25,9 +27,9 @@
 | TD-F1 | `Navigation.svelte` too large (645 lines) | Medium | Medium | `src/components/Navigation.svelte` | Split into smaller components |
 | TD-F2 | `detailed-month.ts` repetitive optimistic update logic (582 lines) | Medium | Medium | `src/stores/detailed-month.ts` | Extract shared update patterns |
 | TD-F3 | Inconsistent persistence (localStorage vs Tauri Store) | Medium | Medium | Various stores | Standardize on Tauri Store |
-| TD-F4 | Hardcoded API URL fallback | High | Low | `src/lib/api/client.ts:5` | Part of dynamic port feature |
-| TD-F5 | Debug console.logs left in code | Low | Trivial | `src/lib/api/client.ts:80,84,87` | Remove or use logger |
-| TD-F6 | No frontend logging utility | Medium | Low | N/A | Create logger wrapper |
+| ~~TD-F4~~ | ~~Hardcoded API URL fallback~~ | ~~High~~ | ~~Low~~ | ~~`src/lib/api/client.ts:5`~~ | ✅ COMPLETED - Dynamic port via TD-CC4 |
+| ~~TD-F5~~ | ~~Debug console.logs left in code~~ | ~~Low~~ | ~~Trivial~~ | ~~`src/lib/api/client.ts`~~ | ✅ COMPLETED - Replaced with logger |
+| ~~TD-F6~~ | ~~No frontend logging utility~~ | ~~Medium~~ | ~~Low~~ | ~~N/A~~ | ✅ COMPLETED - Created `src/lib/logger.ts` |
 
 ### Backend (Bun)
 
@@ -35,8 +37,8 @@
 |----|-------|----------|--------|----------|-------|
 | TD-B1 | `server.ts` matchRoute too complex (270 lines) | High | High | `api/server.ts:54-327` | Works but hard to maintain |
 | TD-B2 | `server.ts` does too much (400 lines) | Medium | Medium | `api/server.ts` | Extract CORS, logging utilities |
-| TD-B3 | Models directory redundant | Low | Trivial | `api/src/models/` | Just re-exports types |
-| TD-B4 | Hardcoded port 3000 | High | Medium | `api/server.ts:28` | Part of dynamic port feature |
+| TD-B3 | Models directory redundant | Low | Trivial | `api/src/models/` | Keep - provides useful organization |
+| ~~TD-B4~~ | ~~Hardcoded port 3000~~ | ~~High~~ | ~~Medium~~ | ~~`api/server.ts:28`~~ | ✅ COMPLETED - Dynamic port via TD-CC4 |
 | TD-B5 | No dependency injection | Medium | High | All services | Harder to test; consider for v2 |
 | TD-B6 | 16 DEPRECATED fields in types | Medium | Medium | `api/src/types/index.ts` | User approved removal |
 | TD-B7 | Incomplete OpenAPI generation | High | High | `api/openapi/swagger.json` | A2 approach: tsoa controllers |
@@ -46,36 +48,34 @@
 
 | ID | Issue | Severity | Effort | Location | Notes |
 |----|-------|----------|--------|----------|-------|
-| TD-R1 | Hardcoded port 3000 in health check | High | Medium | `src-tauri/src/lib.rs:309` | Part of dynamic port feature |
+| ~~TD-R1~~ | ~~Hardcoded port 3000 in health check~~ | ~~High~~ | ~~Medium~~ | ~~`src-tauri/src/lib.rs:309`~~ | ✅ COMPLETED - Dynamic port via TD-CC4 |
 | TD-R2 | No CSP configured | Medium | Low | `src-tauri/tauri.conf.json:21` | User declined for now |
-| TD-R3 | Blocking `std::thread::sleep()` | Medium | Low | `src-tauri/src/lib.rs:256` | Use `tokio::time::sleep` |
-| TD-R4 | Remove `greet` boilerplate command | Low | Trivial | `src-tauri/src/lib.rs:87-89` | Dead code |
+| TD-R3 | Blocking `std::thread::sleep()` | Low | Low | `src-tauri/src/lib.rs:342` | Only in sync shutdown context, acceptable |
+| ~~TD-R4~~ | ~~Remove `greet` boilerplate command~~ | ~~Low~~ | ~~Trivial~~ | ~~`src-tauri/src/lib.rs:87-89`~~ | ✅ COMPLETED - Already removed |
 | TD-R5 | Use proper logging crate (tracing) | Low | Medium | `src-tauri/src/lib.rs` | Uses println! |
 | TD-R6 | FS scope too broad (`$HOME/**`) | Medium | Low | `src-tauri/capabilities/default.json` | User declined to restrict |
-| TD-R7 | No graceful shutdown on app close | Medium | Medium | `src-tauri/src/lib.rs` | User approved fix |
+| ~~TD-R7~~ | ~~No graceful shutdown on app close~~ | ~~Medium~~ | ~~Medium~~ | ~~`src-tauri/src/lib.rs`~~ | ✅ COMPLETED - RunEvent::Exit handler |
 
 ### Cross-Cutting
 
 | ID | Issue | Severity | Effort | Location | Notes |
 |----|-------|----------|--------|----------|-------|
-| TD-CC4 | Port hardcoded in 3+ places | High | Medium | Multiple | Consolidates TD-F4, TD-B4, TD-R1 |
+| ~~TD-CC4~~ | ~~Port hardcoded in 3+ places~~ | ~~High~~ | ~~Medium~~ | ~~Multiple~~ | ✅ COMPLETED - Dynamic port allocation |
 
 ---
 
 ## Prioritized Remediation Plan
 
-### Phase 1: Quick Wins (Sprint 1)
+### Phase 1: Quick Wins (Sprint 1) - ✅ COMPLETED
 
 Low effort items that can be done immediately.
 
-| ID | Task | Effort | Owner |
-|----|------|--------|-------|
-| TD-R4 | Remove `greet` boilerplate | Trivial | - |
-| TD-F5 | Remove debug console.logs | Trivial | - |
-| TD-B3 | Clean up models directory | Trivial | - |
-| TD-R3 | Replace blocking sleep with async | Low | - |
-
-**Estimated Time**: 2-4 hours
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| TD-R4 | Remove `greet` boilerplate | Trivial | ✅ Done |
+| TD-F5 | Remove debug console.logs | Trivial | ✅ Done (replaced with logger) |
+| TD-B3 | Clean up models directory | Trivial | ⏸️ Kept - provides useful organization |
+| TD-R3 | Replace blocking sleep with async | Low | ⏸️ Kept - only in sync shutdown context |
 
 ### Phase 2: Type System Cleanup (Sprint 1-2)
 
@@ -94,39 +94,39 @@ Prerequisite for other work. Enables proper type synchronization.
 - `api/src/controllers/*.ts` - 16 controller files
 - Updated `src/types/api.ts` - Auto-generated
 
-### Phase 3: Dynamic Port (Sprint 2)
+### Phase 3: Dynamic Port (Sprint 2) - ✅ COMPLETED
 
 Resolves high-severity cluster of port-related issues.
 
-| ID | Task | Effort | Dependencies |
-|----|------|--------|--------------|
-| TD-CC4 | Implement dynamic port allocation | Medium | None |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| TD-CC4 | Implement dynamic port allocation | Medium | ✅ Done |
 
-**Implementation Steps**:
-1. Backend starts with port 0 (OS assigns)
-2. Backend prints `PORT=XXXX` to stdout
-3. Rust captures port from sidecar stdout
-4. Rust stores port in app state
-5. Rust emits `sidecar-ready` with port number
-6. Frontend receives port via Tauri event
-7. Frontend configures API client with dynamic port
-8. Health check uses dynamic port
+**Implementation Completed**:
+1. ✅ Backend starts with port 0 (OS assigns) in production
+2. ✅ Backend prints `PORT=XXXX` to stdout
+3. ✅ Rust captures port from sidecar stdout
+4. ✅ Rust stores port in app state (`SidecarState`)
+5. ✅ Rust emits `sidecar-ready` with port number
+6. ✅ Frontend receives port via Tauri event + polling fallback
+7. ✅ Frontend configures API client with dynamic port (`setApiPort()`)
+8. ✅ Health check uses dynamic port
+9. ✅ Graceful shutdown on app close (TD-R7)
+10. ✅ Hybrid sidecar: dev mode (Bun runtime) vs prod (compiled binary)
 
-**Estimated Time**: 1-2 days
-
-### Phase 4: Code Quality (Sprint 2-3)
+### Phase 4: Code Quality (Sprint 2-3) - IN PROGRESS
 
 Medium severity improvements for maintainability.
 
-| ID | Task | Effort | Dependencies |
-|----|------|--------|--------------|
-| TD-F1 | Split Navigation.svelte | Medium | None |
-| TD-F2 | Extract optimistic update patterns | Medium | None |
-| TD-F6 | Create frontend logger | Low | None |
-| TD-B2 | Extract server.ts utilities | Medium | None |
-| TD-R7 | Add graceful sidecar shutdown | Medium | None |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| TD-F6 | Create frontend logger | Low | ✅ Done - `src/lib/logger.ts` |
+| TD-R7 | Add graceful sidecar shutdown | Medium | ✅ Done |
+| TD-F1 | Split Navigation.svelte | Medium | Pending |
+| TD-F2 | Extract optimistic update patterns | Medium | Pending |
+| TD-B2 | Extract server.ts utilities | Medium | Pending |
 
-**Estimated Time**: 3-4 days
+**Estimated Time**: 2-3 days remaining
 
 ### Phase 5: Future Improvements (Backlog)
 

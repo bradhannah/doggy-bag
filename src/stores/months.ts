@@ -3,6 +3,9 @@
 import { writable, derived } from 'svelte/store';
 import { currentMonth } from './ui';
 import { apiUrl } from '$lib/api/client';
+import { createLogger } from '$lib/logger';
+
+const log = createLogger('Months Store');
 
 // Types for monthly data
 export interface BillInstance {
@@ -225,7 +228,7 @@ function createMonthsStore() {
           }));
         }
       } catch (error) {
-        console.error('Failed to refresh summary:', error);
+        log.error('Failed to refresh summary:', error);
       }
     },
 
@@ -253,7 +256,7 @@ function createMonthsStore() {
           } as MonthlyData
         }));
       } catch (error) {
-        console.error('Failed to update bank balances:', error);
+        log.error('Failed to update bank balances:', error);
         throw error;
       }
     },

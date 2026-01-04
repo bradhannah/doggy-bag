@@ -4,6 +4,9 @@
   import ToastContainer from '../components/shared/ToastContainer.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom, ZOOM_CONFIG } from '../stores/settings';
   import { setApiPort } from '../lib/api/client';
+  import { createLogger } from '../lib/logger';
+  
+  const log = createLogger('Layout');
   
   let backendReady = false;
   let backendError: string | null = null;
@@ -55,14 +58,14 @@
       // Listen for sidecar ready event (payload contains port number)
       unlistenReady = await listen<number>('sidecar-ready', (event) => {
         const port = event.payload;
-        console.log('[Layout] Sidecar is ready on port:', port);
+        log.info(`Sidecar is ready on port: ${port}`);
         setApiPort(port);
         backendReady = true;
       });
       
       // Listen for sidecar error event
       unlistenError = await listen('sidecar-error', (event) => {
-        console.error('[Layout] Sidecar error:', event.payload);
+        log.error('Sidecar error:', event.payload);
         backendError = event.payload as string;
       });
       
@@ -75,7 +78,7 @@
           try {
             const port = await invoke<number | null>('get_sidecar_port');
             if (port) {
-              console.log('[Layout] Got port from Tauri command:', port);
+              log.info(`Got port from Tauri command: ${port}`);
               setApiPort(port);
               backendReady = true;
               return;
@@ -96,7 +99,7 @@
       // Start polling in background
       checkPort();
     } catch (e) {
-      console.error('[Layout] Failed to set up Tauri listeners:', e);
+      log.error('Failed to set up Tauri listeners:', e);
       // Fallback: assume backend is ready
       backendReady = true;
     }

@@ -1,3 +1,7 @@
+import { createLogger } from '../logger';
+
+const log = createLogger('API Client');
+
 // Dynamic port storage - set by Tauri sidecar-ready event
 let apiPort: number | null = null;
 
@@ -11,7 +15,7 @@ const isTauriEnv = () => {
  */
 export function setApiPort(port: number) {
   apiPort = port;
-  console.log(`[API Client] Port set to ${port}`);
+  log.info(`Port set to ${port}`);
 }
 
 /**
@@ -49,7 +53,7 @@ export const getBaseUrl = () => {
     return `http://localhost:${apiPort}`;
   }
   
-  console.warn('[API Client] Port not set, using fallback');
+  log.warn('Port not set, using fallback');
   return import.meta.env.VITE_API_URL || 'http://localhost:3000';
 };
 

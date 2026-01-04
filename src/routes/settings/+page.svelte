@@ -18,6 +18,9 @@
     updateDataDirectoryLocally,
     restartSidecar,
     relaunchApp,
+    isDevtoolsOpen,
+    toggleDebugMode,
+    loadDebugMode,
     type DirectoryValidation,
     type MigrationResult,
     type MigrationMode
@@ -46,10 +49,19 @@
   let backupLoading = false;
   let fileInput: HTMLInputElement | null = null;
   
+  // Debug mode state
+  let debugModeEnabled = false;
+  let debugModeLoading = false;
+  
   onMount(async () => {
     loadSettings().catch(err => {
       console.error('Failed to load settings:', err);
     });
+    
+    // Load debug mode state
+    if (isTauri()) {
+      debugModeEnabled = await isDevtoolsOpen();
+    }
   });
   
   // Handle Browse button click
@@ -253,6 +265,19 @@
   function goBack() {
     goto('/');
   }
+  
+  // Toggle debug mode (devtools)
+  async function handleToggleDebugMode() {
+    debugModeLoading = true;
+    try {
+      debugModeEnabled = await toggleDebugMode();
+      addToast(debugModeEnabled ? 'Debug mode enabled' : 'Debug mode disabled', 'success');
+    } catch (err) {
+      addToast('Failed to toggle debug mode', 'error');
+    } finally {
+      debugModeLoading = false;
+    }
+  }
 </script>
 
 <div class="settings-page">
@@ -397,6 +422,37 @@
             </label>
           </div>
           <p class="setting-hint">(Coming soon)</p>
+        </div>
+      </section>
+      
+      <!-- Developer Section -->
+      <section class="settings-section">
+        <h2>Developer</h2>
+        
+        <div class="setting-item">
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label>Debug Mode</label>
+              <p class="setting-description">
+                Opens browser developer tools for troubleshooting. Useful for inspecting network requests, 
+                viewing console logs, and debugging issues.
+              </p>
+            </div>
+            <button
+              class="toggle-switch"
+              class:active={debugModeEnabled}
+              on:click={handleToggleDebugMode}
+              disabled={!inTauri || debugModeLoading}
+              title={!inTauri ? 'Only available in desktop app' : (debugModeEnabled ? 'Disable debug mode' : 'Enable debug mode')}
+            >
+              <span class="toggle-slider"></span>
+            </button>
+          </div>
+          {#if !inTauri}
+            <p class="setting-hint warning">
+              In browser mode, use your browser's built-in developer tools (F12 or Cmd+Option+I).
+            </p>
+          {/if}
         </div>
       </section>
       
@@ -1155,5 +1211,66 @@
   .shortcut-desc {
     font-size: 0.75rem;
     color: #888;
+  }
+  
+  /* Toggle Switch Styles */
+  .toggle-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  
+  .toggle-info {
+    flex: 1;
+  }
+  
+  .toggle-info label {
+    margin-bottom: 4px;
+  }
+  
+  .toggle-info .setting-description {
+    margin-bottom: 0;
+  }
+  
+  .toggle-switch {
+    flex-shrink: 0;
+    width: 48px;
+    height: 26px;
+    background: #333355;
+    border: none;
+    border-radius: 13px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    padding: 0;
+  }
+  
+  .toggle-switch:hover:not(:disabled) {
+    background: #444466;
+  }
+  
+  .toggle-switch.active {
+    background: #24c8db;
+  }
+  
+  .toggle-switch:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .toggle-slider {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    background: #e4e4e7;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  
+  .toggle-switch.active .toggle-slider {
+    transform: translateX(22px);
   }
 </style>
