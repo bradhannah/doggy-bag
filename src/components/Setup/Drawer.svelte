@@ -66,8 +66,8 @@
   }
 
   .drawer {
-    width: 400px;
-    max-width: 100%;
+    width: var(--drawer-width);
+    max-width: 90vw;
     height: 100%;
     background: #1a1a2e;
     border-left: 1px solid #333355;
@@ -89,7 +89,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: var(--space-4);
     border-bottom: 1px solid #333355;
     background: #16213e;
   }
@@ -109,12 +109,12 @@
     cursor: pointer;
     padding: 0;
     line-height: 1;
-    width: 32px;
-    height: 32px;
+    width: var(--button-height-sm);
+    height: var(--button-height-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
   }
 
   .close-btn:hover {
@@ -125,7 +125,7 @@
   .drawer-content {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: var(--space-4);
   }
 
   /* Mobile: full width drawer from bottom */
@@ -140,7 +140,7 @@
       height: 90%;
       border-left: none;
       border-top: 1px solid #333355;
-      border-radius: 16px 16px 0 0;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
       animation: slideUp 0.2s ease-out;
     }
 

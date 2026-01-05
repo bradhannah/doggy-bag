@@ -257,7 +257,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding-left: 4px;
+    padding-left: 8px;
   }
 
   @media (max-width: 640px) {
@@ -312,6 +312,6 @@
 
   .category-section.compact .category-items {
     gap: 2px;
-    padding-left: 2px;
+    padding-left: 6px;
   }
 </style>
