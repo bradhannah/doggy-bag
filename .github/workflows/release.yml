@@ -1,0 +1,131 @@
+# Release Workflow
+# Runs when a version tag is pushed (e.g., v0.2.0).
+# Builds a macOS ARM64 DMG with ad-hoc signing and attaches it to GitHub Release.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Ensure only one release runs at a time
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    name: Build macOS (ARM64)
+    runs-on: macos-latest
+    needs: create-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Install API dependencies
+        run: bun install
+        working-directory: api
+
+      - name: Generate types
+        run: make types
+
+      - name: Prepare Bun sidecar
+        run: make prepare-dev-sidecar
+
+      - name: Build Tauri (release)
+        run: |
+          npm run tauri build -- --target aarch64-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ''
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+
+      - name: Ad-hoc code sign
+        run: |
+          APP_PATH="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/BudgetForFun.app"
+          if [ -d "$APP_PATH" ]; then
+            codesign --sign - --force --deep "$APP_PATH"
+            codesign --verify --verbose "$APP_PATH"
+            echo "Ad-hoc signing complete"
+          else
+            echo "App bundle not found at $APP_PATH"
+            ls -la src-tauri/target/aarch64-apple-darwin/release/bundle/ || true
+            exit 1
+          fi
+
+      - name: Create DMG
+        run: |
+          DMG_PATH="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+          if [ -d "$DMG_PATH" ]; then
+            DMG_FILE=$(ls "$DMG_PATH"/*.dmg 2>/dev/null | head -1)
+            if [ -n "$DMG_FILE" ]; then
+              echo "DMG found: $DMG_FILE"
+              cp "$DMG_FILE" "BudgetForFun_${{ github.ref_name }}_aarch64.dmg"
+            else
+              echo "No DMG file found in $DMG_PATH"
+              exit 1
+            fi
+          else
+            echo "DMG directory not found"
+            exit 1
+          fi
+
+      - name: Upload DMG to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: BudgetForFun_${{ github.ref_name }}_aarch64.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-macos]
+    steps:
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
