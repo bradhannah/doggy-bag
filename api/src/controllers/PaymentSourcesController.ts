@@ -71,7 +71,7 @@ export class PaymentSourcesController extends Controller {
   @Response<ApiError>(400, 'Bad Request')
   @Response<ApiError>(404, 'Not Found')
   public async updatePaymentSource(
-    @Path() _id: string,
+    @Path('id') _id: string,
     @Body() _body: UpdatePaymentSourceRequest
   ): Promise<PaymentSource> {
     throw new Error('Not implemented - use existing handlers');
@@ -85,7 +85,7 @@ export class PaymentSourcesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deletePaymentSource(@Path() _id: string): Promise<void> {
+  public async deletePaymentSource(@Path('id') _id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 }

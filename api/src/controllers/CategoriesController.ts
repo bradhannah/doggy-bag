@@ -69,7 +69,7 @@ export class CategoriesController extends Controller {
   @Response<ApiError>(400, 'Bad Request')
   @Response<ApiError>(404, 'Not Found')
   public async updateCategory(
-    @Path() _id: string,
+    @Path('id') _id: string,
     @Body() _body: UpdateCategoryRequest
   ): Promise<Category> {
     throw new Error('Not implemented - use existing handlers');
@@ -83,7 +83,7 @@ export class CategoriesController extends Controller {
   @Delete('{id}')
   @SuccessResponse(204, 'No Content')
   @Response<ApiError>(404, 'Not Found')
-  public async deleteCategory(@Path() _id: string): Promise<void> {
+  public async deleteCategory(@Path('id') _id: string): Promise<void> {
     throw new Error('Not implemented - use existing handlers');
   }
 
