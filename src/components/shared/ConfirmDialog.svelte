@@ -107,10 +107,11 @@
   .dialog {
     background: #1e1e2e;
     border: 1px solid #333355;
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    width: 90%;
     min-width: 320px;
-    max-width: 420px;
+    max-width: var(--modal-width-sm);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
     animation: slideIn 0.2s ease-out;
   }
@@ -130,25 +131,26 @@
     font-size: 1.125rem;
     font-weight: 600;
     color: #e4e4e7;
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-3) 0;
   }
 
   .dialog-message {
     font-size: 0.9rem;
     color: #a1a1aa;
-    margin: 0 0 24px 0;
+    margin: 0 0 var(--space-6) 0;
     line-height: 1.5;
   }
 
   .dialog-actions {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
     justify-content: flex-end;
   }
 
   .btn {
-    padding: 10px 20px;
-    border-radius: 8px;
+    height: var(--button-height);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-md);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;

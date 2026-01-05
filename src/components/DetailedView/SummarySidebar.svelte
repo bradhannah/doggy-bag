@@ -498,26 +498,26 @@
 
 <style>
   .summary-sidebar {
-    width: 260px;
-    min-width: 260px;
+    width: var(--summary-sidebar-width);
+    min-width: var(--summary-sidebar-width);
     position: sticky;
-    top: 20px;
-    max-height: calc(100vh - 40px);
+    top: var(--content-padding);
+    max-height: calc(100vh - var(--content-padding) * 2);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   /* Box styling for distinct sections */
   .sidebar-box {
     background: #151525;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     border: 1px solid #333355;
     padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-3);
   }
 
   .box-title {
@@ -540,13 +540,13 @@
   .box-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .section-divider {
     height: 1px;
     background: #333355;
-    margin: 4px 0;
+    margin: var(--space-1) 0;
   }
 
   .section-subtotal {
@@ -578,7 +578,7 @@
   .balance-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
   }
 
   .balance-row {
@@ -605,13 +605,13 @@
 
   .payoff-indicator {
     font-size: 0.55rem;
-    padding: 1px 4px;
+    padding: 1px var(--space-1);
     background: rgba(139, 92, 246, 0.2);
     color: #8b5cf6;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     text-transform: uppercase;
     font-weight: 600;
-    margin-left: 6px;
+    margin-left: var(--space-2);
   }
 
   .payoff-progress {
@@ -620,19 +620,19 @@
   }
 
   .balance-row.payoff-mode {
-    padding: 6px 0;
+    padding: var(--space-2) 0;
   }
 
   /* Editable balance styles */
   .balance-value.editable {
     background: none;
     border: none;
-    padding: 2px 4px;
-    border-radius: 4px;
+    padding: 2px var(--space-1);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
     transition:
       background 0.2s,
       color 0.2s,
@@ -643,8 +643,8 @@
   .balance-value.editable-highlight {
     background: rgba(251, 191, 36, 0.15);
     border: 1px solid rgba(251, 191, 36, 0.4);
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
   }
 
   .balance-value.editable-highlight:hover {
@@ -686,7 +686,7 @@
   .balance-edit {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .currency-prefix {
@@ -696,11 +696,11 @@
 
   .balance-input {
     width: 70px;
-    padding: 4px 6px;
+    padding: var(--space-1) var(--space-2);
     font-size: 0.8rem;
     background: #1a1a2e;
     border: 1px solid #24c8db;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     color: #e4e4e7;
     text-align: right;
   }
@@ -735,7 +735,7 @@
     height: 22px;
     background: transparent;
     border: 1px solid #444;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.2s;
     padding: 0;
@@ -770,7 +770,7 @@
   .summary-rows {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
   }
 
   .summary-row {
@@ -805,7 +805,7 @@
   .leftover-calc {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
   }
 
   .calc-row {
@@ -837,10 +837,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
-    margin-top: 6px;
+    padding: var(--space-3);
+    margin-top: var(--space-2);
     background: rgba(74, 222, 128, 0.1);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid rgba(74, 222, 128, 0.2);
   }
 
@@ -885,10 +885,10 @@
   .error-message {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px;
+    gap: var(--space-3);
+    padding: var(--space-3);
     background: rgba(251, 146, 60, 0.1);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid rgba(251, 146, 60, 0.3);
   }
 

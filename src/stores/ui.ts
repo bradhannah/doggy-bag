@@ -61,16 +61,16 @@ export function goToCurrentMonth() {
 }
 
 // Wide mode store with localStorage persistence
-// Supports 3 levels: small (900px), medium (1200px), wide (100%)
-export type WidthMode = 'small' | 'medium' | 'wide';
+// Supports 2 levels: medium (1400px), wide (100%)
+export type WidthMode = 'medium' | 'wide';
 
 function getStoredWidthMode(): WidthMode {
   if (typeof window === 'undefined') return 'medium';
   const stored = localStorage.getItem('budgetforfun-width-mode');
-  // Handle legacy values
+  // Handle legacy values (map 'small' to 'medium')
   if (stored === 'true' || stored === 'wide') return 'wide';
-  if (stored === 'false') return 'medium';
-  if (stored === 'small' || stored === 'medium' || stored === 'wide') return stored;
+  if (stored === 'false' || stored === 'small') return 'medium';
+  if (stored === 'medium' || stored === 'wide') return stored;
   return 'medium';
 }
 
@@ -84,11 +84,10 @@ function createWidthModeStore() {
 
   return {
     subscribe,
-    // Cycle through modes: small -> medium -> wide -> small
+    // Toggle between modes: medium <-> wide
     cycle: () => {
       update((current) => {
-        const nextMode: WidthMode =
-          current === 'small' ? 'medium' : current === 'medium' ? 'wide' : 'small';
+        const nextMode: WidthMode = current === 'medium' ? 'wide' : 'medium';
         if (typeof window !== 'undefined') {
           localStorage.setItem('budgetforfun-width-mode', nextMode);
         }
@@ -148,6 +147,54 @@ export const wideMode = {
   toggle: widthMode.cycle,
 };
 
+// Sidebar collapsed state with localStorage persistence
+function getStoredSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('budgetforfun-sidebar-collapsed') === 'true';
+}
+
+function createSidebarCollapsedStore() {
+  const { subscribe, set, update } = writable<boolean>(false);
+
+  // Initialize from localStorage on client side
+  if (typeof window !== 'undefined') {
+    set(getStoredSidebarCollapsed());
+  }
+
+  return {
+    subscribe,
+    toggle: () => {
+      update((current) => {
+        const next = !current;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('budgetforfun-sidebar-collapsed', String(next));
+        }
+        return next;
+      });
+    },
+    set: (value: boolean) => {
+      set(value);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('budgetforfun-sidebar-collapsed', String(value));
+      }
+    },
+    expand: () => {
+      set(false);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('budgetforfun-sidebar-collapsed', 'false');
+      }
+    },
+    collapse: () => {
+      set(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('budgetforfun-sidebar-collapsed', 'true');
+      }
+    },
+  };
+}
+
+export const sidebarCollapsed = createSidebarCollapsedStore();
+
 // UI state store for sidebar, drawers, etc.
 interface UIState {
   sidebarOpen: boolean;
@@ -166,7 +213,7 @@ const initialUIState: UIState = {
 export const uiState = writable<UIState>(initialUIState);
 
 export function toggleSidebar() {
-  uiState.update((state) => ({ ...state, sidebarOpen: !state.sidebarOpen }));
+  sidebarCollapsed.toggle();
 }
 
 export function openDrawer(content: UIState['drawerContent'], id?: string) {

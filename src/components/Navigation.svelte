@@ -5,7 +5,7 @@
   import { undoStore, canUndo, undoLoading } from '../stores/undo';
   import { addToast } from '../stores/toast';
   import { apiClient } from '../lib/api/client';
-  import { currentMonth, goToCurrentMonth, getCurrentMonth } from '../stores/ui';
+  import { currentMonth, goToCurrentMonth, getCurrentMonth, sidebarCollapsed } from '../stores/ui';
   import {
     isTauri,
     zoomLevel,
@@ -148,10 +148,37 @@
   });
 </script>
 
-<nav class="sidebar">
+<nav class="sidebar" class:collapsed={$sidebarCollapsed}>
   <div class="sidebar-header">
     <div class="header-row">
-      <h2>BudgetForFun</h2>
+      <h2 class="app-title">BudgetForFun</h2>
+      <button
+        class="collapse-toggle"
+        on:click={() => sidebarCollapsed.toggle()}
+        title={$sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          {#if $sidebarCollapsed}
+            <!-- Chevron right (expand) -->
+            <path
+              d="M9 18L15 12L9 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          {:else}
+            <!-- Chevron left (collapse) -->
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          {/if}
+        </svg>
+      </button>
     </div>
     <div class="header-actions">
       <button class="today-button" on:click={handleTodayClick} title="Go to current month">
@@ -170,7 +197,7 @@
   <!-- Main navigation -->
   <ul class="nav-list">
     <li>
-      <a href="/" class="nav-item" class:active={currentPath === '/'}>
+      <a href="/" class="nav-item" class:active={currentPath === '/'} title="Dashboard">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
           <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
@@ -181,7 +208,12 @@
       </a>
     </li>
     <li>
-      <a href="/month/{$currentMonth}" class="nav-item" class:active={isDetailsActive}>
+      <a
+        href="/month/{$currentMonth}"
+        class="nav-item"
+        class:active={isDetailsActive}
+        title="Details"
+      >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <path
             d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15"
@@ -203,7 +235,7 @@
 
   <ul class="nav-list bottom-nav">
     <li>
-      <a href="/manage" class="nav-item" class:active={isManageActive}>
+      <a href="/manage" class="nav-item" class:active={isManageActive} title="Manage Months">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
           <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -217,7 +249,12 @@
       </a>
     </li>
     <li>
-      <a href="/setup" class="nav-item" class:active={currentPath === '/setup'}>
+      <a
+        href="/setup"
+        class="nav-item"
+        class:active={currentPath === '/setup'}
+        title="Budget Config"
+      >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
           <path
@@ -372,7 +409,12 @@
 
     <!-- Settings link in footer -->
     <div class="footer-separator"></div>
-    <a href="/settings" class="settings-footer-link" class:active={isSettingsActive}>
+    <a
+      href="/settings"
+      class="settings-footer-link"
+      class:active={isSettingsActive}
+      title="Settings"
+    >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path
           d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
@@ -396,20 +438,22 @@
 
 <style>
   .sidebar {
-    width: 220px;
+    width: var(--sidebar-width);
     height: 100vh;
     background: #1a1a2e;
     border-right: 1px solid #333355;
-    padding: 20px 0;
+    padding: var(--section-gap) 0;
     display: flex;
     flex-direction: column;
     position: fixed;
     left: 0;
     top: 0;
+    transition: width 0.2s ease;
+    overflow: hidden;
   }
 
   .sidebar-header {
-    padding: 0 16px 16px;
+    padding: 0 var(--space-4) var(--space-4);
     border-bottom: 1px solid #333355;
   }
 
@@ -417,29 +461,32 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3);
   }
 
-  .sidebar-header h2 {
+  .app-title {
     font-size: 1.125rem;
     font-weight: 700;
     color: #24c8db;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.2s ease;
   }
 
   .header-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .today-button {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     background: rgba(36, 200, 219, 0.1);
     border: 1px solid rgba(36, 200, 219, 0.3);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #24c8db;
     font-size: 0.75rem;
     font-weight: 600;
@@ -461,28 +508,28 @@
 
   .nav-list {
     list-style: none;
-    padding: 12px;
+    padding: var(--space-3);
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .nav-separator {
-    margin: 0 12px;
+    margin: 0 var(--space-3);
     border-top: 1px solid #333355;
   }
 
   .bottom-nav {
-    padding-top: 12px;
+    padding-top: var(--space-3);
   }
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 8px;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
     color: #888;
     text-decoration: none;
     font-weight: 500;
@@ -506,7 +553,7 @@
   /* Footer with zoom, undo and backup */
   .sidebar-footer {
     margin-top: auto;
-    padding: 12px;
+    padding: var(--space-3);
     border-top: 1px solid #333355;
   }
 
@@ -515,8 +562,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    margin-bottom: 8px;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
   }
 
   .zoom-button {
@@ -527,7 +574,7 @@
     height: 28px;
     padding: 0;
     border: 1px solid #333355;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: #888;
     cursor: pointer;
@@ -547,9 +594,9 @@
 
   .zoom-percentage {
     min-width: 50px;
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: #888;
     font-size: 0.75rem;
@@ -567,17 +614,17 @@
 
   .footer-separator {
     border-top: 1px solid #333355;
-    margin: 0 0 8px 0;
+    margin: 0 0 var(--space-2) 0;
   }
 
   .undo-button {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-3);
     width: 100%;
-    padding: 12px 16px;
+    padding: var(--space-3) var(--space-4);
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: transparent;
     color: #888;
     font-size: 0.875rem;
@@ -610,8 +657,8 @@
   /* Backup buttons */
   .backup-buttons {
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
   }
 
   .backup-button {
@@ -619,10 +666,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px 12px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 1px solid #333355;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: #888;
     font-size: 0.75rem;
@@ -651,22 +698,22 @@
     text-align: center;
     color: #24c8db;
     font-size: 0.75rem;
-    margin-top: 8px;
+    margin-top: var(--space-2);
   }
 
   /* Settings link in footer */
   .settings-footer-link {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
     color: #666;
     text-decoration: none;
     font-size: 0.8rem;
     font-weight: 500;
     transition: all 0.2s;
-    margin-top: 4px;
+    margin-top: var(--space-1);
   }
 
   .settings-footer-link:hover {
@@ -681,5 +728,130 @@
 
   .settings-footer-link svg {
     flex-shrink: 0;
+  }
+
+  /* Collapse toggle button */
+  .collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #333355;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .collapse-toggle:hover {
+    background: rgba(36, 200, 219, 0.1);
+    border-color: #24c8db;
+    color: #e4e4e7;
+  }
+
+  /* ========================================
+     COLLAPSED SIDEBAR STYLES
+     ======================================== */
+
+  .sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+  }
+
+  /* Header adjustments when collapsed */
+  .sidebar.collapsed .sidebar-header {
+    padding: 0 var(--space-2) var(--space-4);
+  }
+
+  .sidebar.collapsed .header-row {
+    justify-content: center;
+  }
+
+  .sidebar.collapsed .app-title {
+    display: none;
+  }
+
+  .sidebar.collapsed .header-actions {
+    display: none;
+  }
+
+  /* Nav list adjustments when collapsed */
+  .sidebar.collapsed .nav-list {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: var(--space-3);
+  }
+
+  .sidebar.collapsed .nav-item span {
+    display: none;
+  }
+
+  .sidebar.collapsed .nav-separator {
+    margin: 0 var(--space-2);
+  }
+
+  /* Footer adjustments when collapsed */
+  .sidebar.collapsed .sidebar-footer {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .sidebar.collapsed .zoom-control {
+    flex-direction: column;
+  }
+
+  .sidebar.collapsed .zoom-percentage {
+    min-width: auto;
+    font-size: 0.65rem;
+  }
+
+  .sidebar.collapsed .undo-button {
+    justify-content: center;
+    padding: var(--space-2);
+  }
+
+  .sidebar.collapsed .undo-button span,
+  .sidebar.collapsed .undo-button .loading-indicator {
+    display: none;
+  }
+
+  .sidebar.collapsed .backup-buttons {
+    flex-direction: column;
+  }
+
+  .sidebar.collapsed .backup-button {
+    padding: var(--space-2);
+  }
+
+  .sidebar.collapsed .backup-button span {
+    display: none;
+  }
+
+  .sidebar.collapsed .settings-footer-link {
+    justify-content: center;
+    padding: var(--space-2);
+  }
+
+  .sidebar.collapsed .settings-footer-link span {
+    display: none;
+  }
+
+  .sidebar.collapsed .backup-loading {
+    font-size: 0.65rem;
+  }
+
+  /* Today button in collapsed state - show only icon */
+  .sidebar.collapsed .today-button {
+    padding: var(--space-2);
+    width: auto;
+  }
+
+  .sidebar.collapsed .today-button span {
+    display: none;
   }
 </style>

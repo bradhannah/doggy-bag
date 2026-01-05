@@ -72,7 +72,7 @@
     monthsStore.loadMonth(month);
   }
 
-  // Toggle width mode (cycles through small -> medium -> wide)
+  // Toggle width mode (toggles between medium <-> wide)
   function toggleWidthMode() {
     widthMode.cycle();
   }
@@ -159,7 +159,6 @@
 <div class="detailed-view" class:compact={$compactMode}>
   <div
     class="content-wrapper"
-    class:small={$widthMode === 'small'}
     class:medium={$widthMode === 'medium'}
     class:wide={$widthMode === 'wide'}
   >
@@ -206,30 +205,15 @@
 
       {#if $detailedMonthData}
         <div class="header-summary">
-          <!-- Width toggle (cycles: small -> medium -> wide) -->
+          <!-- Width toggle (toggles: medium <-> wide) -->
           <button
             class="width-toggle"
             on:click={toggleWidthMode}
-            title={$widthMode === 'small'
-              ? 'Small width (click for medium)'
-              : $widthMode === 'medium'
-                ? 'Medium width (click for wide)'
-                : 'Wide (click for small)'}
+            title={$widthMode === 'medium'
+              ? 'Medium width (click for wide)'
+              : 'Wide (click for medium)'}
           >
-            {#if $widthMode === 'small'}
-              <!-- Small icon: narrow box -->
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect
-                  x="7"
-                  y="4"
-                  width="10"
-                  height="16"
-                  rx="1"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-            {:else if $widthMode === 'medium'}
+            {#if $widthMode === 'medium'}
               <!-- Medium icon: medium box -->
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <rect
@@ -454,16 +438,18 @@
 
 <style>
   .detailed-view {
-    padding: 20px;
+    padding: var(--content-padding);
   }
 
   .content-wrapper {
     /* Container query context for responsive internal layout */
     container-type: inline-size;
     container-name: content;
-    /* Centering: account for 220px nav, center in remaining space */
-    max-width: 1800px;
+    /* Centering: account for sidebar, center in remaining space */
+    max-width: var(--content-max-lg);
     width: 100%;
+    /* Minimum width: summary sidebar + gap + main content minimum */
+    min-width: calc(var(--summary-sidebar-width) + var(--space-6) + var(--main-content-min));
     margin-left: max(0px, calc(50vw - 150px - 900px));
     margin-right: auto;
     transition:
@@ -471,14 +457,9 @@
       margin 0.3s ease;
   }
 
-  .content-wrapper.small {
-    max-width: 1000px;
-    margin-left: max(0px, calc(50vw - 350px - 500px));
-  }
-
   .content-wrapper.medium {
-    max-width: 1800px;
-    margin-left: max(0px, calc(50vw - 150px - 900px));
+    max-width: 1400px;
+    margin-left: max(0px, calc(50vw - 150px - 700px));
   }
 
   .content-wrapper.wide {
@@ -491,15 +472,15 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 24px;
+    margin-bottom: var(--space-6);
     flex-wrap: wrap;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .header-content {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .back-link {
@@ -519,18 +500,18 @@
   .month-nav {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .nav-arrow {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: var(--icon-button-size);
+    height: var(--icon-button-size);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #888;
     cursor: pointer;
     transition: all 0.2s;
@@ -552,7 +533,7 @@
   .header-summary {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .compact-toggle,
@@ -561,11 +542,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: var(--button-height-sm);
+    height: var(--button-height-sm);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid #333355;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #888;
     cursor: pointer;
     transition: all 0.2s;
@@ -582,8 +563,8 @@
   /* Main layout with sidebar */
   .detailed-layout {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 24px;
+    grid-template-columns: var(--summary-sidebar-width) minmax(var(--main-content-min), 1fr);
+    gap: var(--space-6);
     align-items: start;
   }
 
@@ -591,28 +572,44 @@
     min-width: 0; /* Prevent grid blowout */
   }
 
+  /* Medium mode: fixed-size grid, left-aligned */
   .sections-container {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
+    grid-template-columns: var(--panel-width-medium);
+    gap: var(--space-6);
+  }
+
+  /* Wide mode: flexible grid */
+  .content-wrapper.wide .sections-container {
+    grid-template-columns: minmax(var(--panel-width-min-wide), 1fr);
   }
 
   .section {
     background: #1a1a2e;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     border: 1px solid #333355;
-    padding: 24px;
-    min-width: 0; /* Prevent grid blowout */
+    padding: var(--space-6);
+    /* Medium mode: fixed width panels */
+    width: var(--panel-width-medium);
+    min-width: var(--panel-width-medium);
+    max-width: var(--panel-width-medium);
     overflow-x: hidden; /* Prevent horizontal scrollbar */
+  }
+
+  /* Wide mode: flexible panels */
+  .content-wrapper.wide .section {
+    width: auto;
+    min-width: var(--panel-width-min-wide);
+    max-width: none;
   }
 
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 20px;
+    margin-bottom: var(--section-gap);
     flex-wrap: wrap;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .section-header h2 {
@@ -634,11 +631,11 @@
   }
 
   .error-state button {
-    margin-top: 16px;
-    padding: 8px 16px;
+    margin-top: var(--space-4);
+    padding: var(--space-2) var(--space-4);
     background: #24c8db;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #000;
     font-weight: 500;
     cursor: pointer;
@@ -661,16 +658,16 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 20px;
+    padding: 60px var(--content-padding);
     text-align: center;
     background: #1a1a2e;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     border: 1px solid #333355;
   }
 
   .prompt-icon {
     color: #888;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
 
   .create-month-prompt h2 {
@@ -693,8 +690,9 @@
   }
 
   .btn {
-    padding: 12px 24px;
-    border-radius: 8px;
+    height: var(--button-height);
+    padding: 0 var(--space-6);
+    border-radius: var(--radius-md);
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
@@ -720,12 +718,12 @@
   .read-only-banner {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     background: rgba(251, 191, 36, 0.1);
     border: 1px solid rgba(251, 191, 36, 0.3);
-    border-radius: 8px;
-    margin-bottom: 20px;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--section-gap);
     color: #fbbf24;
   }
 
@@ -737,28 +735,44 @@
     font-size: 0.875rem;
   }
 
-  /* Responsive: stack on smaller screens */
-  @media (max-width: 900px) {
+  /* Responsive: stack summary sidebar on smaller screens
+     Breakpoint = nav sidebar (220) + summary sidebar (260) + gap (24) + main content min (600) = 1104px
+     Rounded to 1100px for cleaner value */
+  @media (max-width: 1100px) {
     .detailed-layout {
       grid-template-columns: 1fr;
     }
   }
 
-  /* Container query: 2-column layout when content-wrapper is wide enough */
-  @container content (min-width: 900px) {
+  /* Container query: 2-column layout when content-wrapper is wide enough
+     Note: CSS container queries don't support var() or calc() in conditions.
+     Medium mode breakpoint = 2 * var(--panel-width-medium) + var(--space-6) = 2*550 + 24 = 1124px
+     Wide mode breakpoint = 2 * var(--panel-width-min-wide) + var(--space-6) = 2*600 + 24 = 1224px */
+  @container content (min-width: 1124px) {
+    /* Medium mode: two fixed columns */
     .sections-container {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: var(--panel-width-medium) var(--panel-width-medium);
+    }
+  }
+
+  @container content (min-width: 1224px) {
+    /* Wide mode: two flexible columns */
+    .content-wrapper.wide .sections-container {
+      grid-template-columns: minmax(var(--panel-width-min-wide), 1fr) minmax(
+          var(--panel-width-min-wide),
+          1fr
+        );
     }
   }
 
   /* Compact mode styles */
   .detailed-view.compact {
-    padding: 12px;
+    padding: var(--space-3);
   }
 
   .detailed-view.compact .view-header {
-    margin-bottom: 16px;
-    gap: 8px;
+    margin-bottom: var(--space-4);
+    gap: var(--space-2);
   }
 
   .detailed-view.compact .view-header h1 {
@@ -771,21 +785,21 @@
   }
 
   .detailed-view.compact .detailed-layout {
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .detailed-view.compact .sections-container {
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .detailed-view.compact .section {
-    padding: 12px;
-    border-radius: 10px;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
   }
 
   .detailed-view.compact .section-header {
-    margin-bottom: 10px;
-    gap: 8px;
+    margin-bottom: var(--space-3);
+    gap: var(--space-2);
   }
 
   .detailed-view.compact .section-header h2 {
@@ -793,6 +807,13 @@
   }
 
   .detailed-view.compact .empty-text {
-    padding: 20px 12px;
+    padding: var(--section-gap) var(--space-3);
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .detailed-view {
+      padding: var(--content-padding-mobile);
+    }
   }
 </style>

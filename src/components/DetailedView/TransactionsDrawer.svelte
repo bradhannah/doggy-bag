@@ -367,7 +367,7 @@
 
   .drawer {
     width: 100%;
-    max-width: 400px;
+    max-width: var(--drawer-width);
     height: 100%;
     background: #1a1a2e;
     border-left: 1px solid #333355;
@@ -389,7 +389,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: var(--space-4);
     border-bottom: 1px solid #333355;
   }
 
@@ -405,7 +405,7 @@
     border: none;
     color: #888;
     cursor: pointer;
-    padding: 4px;
+    padding: var(--space-1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -418,28 +418,28 @@
 
   .drawer-content {
     flex: 1;
-    padding: 20px;
+    padding: var(--space-4);
     overflow-y: auto;
   }
 
   .item-info {
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--section-gap);
   }
 
   .item-name {
     display: block;
     font-weight: 600;
     color: #e4e4e7;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
 
   .item-details {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
     font-size: 0.875rem;
     color: #888;
   }
@@ -454,12 +454,12 @@
   }
 
   .transactions-section {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-6);
   }
 
   .transactions-section h4,
   .add-section h4 {
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-3) 0;
     font-size: 0.875rem;
     font-weight: 500;
     color: #888;
@@ -469,14 +469,14 @@
 
   .transactions-list {
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     overflow: hidden;
   }
 
   .transaction-item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid #333355;
   }
 
@@ -493,7 +493,7 @@
   .transaction-amount {
     font-weight: 500;
     color: #e4e4e7;
-    margin-right: 12px;
+    margin-right: var(--space-3);
   }
 
   .delete-btn {
@@ -501,7 +501,7 @@
     border: none;
     color: #666;
     cursor: pointer;
-    padding: 4px;
+    padding: var(--space-1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -516,32 +516,32 @@
     color: #666;
     font-size: 0.875rem;
     text-align: center;
-    padding: 20px;
+    padding: var(--section-gap);
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    margin-bottom: 24px;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-6);
   }
 
   .add-section {
     border-top: 1px solid #333355;
-    padding-top: 20px;
+    padding-top: var(--section-gap);
   }
 
   .form-group {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
 
   .form-group label {
     display: block;
     font-size: 0.875rem;
     color: #888;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
 
   .amount-input-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .amount-input-group .prefix {
@@ -551,10 +551,11 @@
 
   .amount-input-group input {
     flex: 1;
-    padding: 10px 12px;
+    height: var(--input-height);
+    padding: 0 var(--space-3);
     background: #0f0f1a;
     border: 1px solid #333355;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #e4e4e7;
     font-size: 1rem;
   }
@@ -569,10 +570,10 @@
   }
 
   .suggest-btn {
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
     background: rgba(245, 158, 11, 0.1);
     border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #f59e0b;
     font-size: 0.75rem;
     cursor: pointer;
@@ -586,10 +587,11 @@
 
   input[type='date'] {
     width: 100%;
-    padding: 10px 12px;
+    height: var(--input-height);
+    padding: 0 var(--space-3);
     background: #0f0f1a;
     border: 1px solid #333355;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #e4e4e7;
     font-size: 1rem;
   }
@@ -602,19 +604,20 @@
   .error-message {
     color: #f87171;
     font-size: 0.875rem;
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-4) 0;
   }
 
   .form-actions {
     display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
   }
 
   .action-btn {
     flex: 1;
-    padding: 12px;
-    border-radius: 8px;
+    height: var(--button-height);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-md);
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
@@ -649,10 +652,11 @@
 
   .close-without-btn {
     width: 100%;
-    padding: 10px;
+    height: var(--button-height-sm);
+    padding: 0 var(--space-3);
     background: transparent;
     border: 1px solid #555;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #888;
     font-size: 0.8rem;
     cursor: pointer;
@@ -673,11 +677,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 20px;
+    gap: var(--space-2);
+    padding: var(--section-gap);
     background: rgba(74, 222, 128, 0.1);
     border: 1px solid rgba(74, 222, 128, 0.3);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #4ade80;
     font-weight: 500;
   }

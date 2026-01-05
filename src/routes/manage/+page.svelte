@@ -264,10 +264,16 @@
   .manage-header {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 20px 30px;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--content-padding);
     background: #16213e;
     border-bottom: 1px solid #333355;
+  }
+
+  @media (max-width: 768px) {
+    .manage-header {
+      padding: var(--space-4) var(--content-padding-mobile);
+    }
   }
 
   .back-link {
@@ -288,9 +294,15 @@
   }
 
   .manage-content {
-    padding: 30px;
-    max-width: 1200px;
+    padding: var(--content-padding);
+    max-width: var(--content-max-setup);
     margin: 0 auto;
+  }
+
+  @media (max-width: 768px) {
+    .manage-content {
+      padding: var(--content-padding-mobile);
+    }
   }
 
   .loading-state,
@@ -308,14 +320,14 @@
   .months-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--card-gap);
   }
 
   .month-card {
     background: #16213e;
     border: 1px solid #333355;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
     transition: border-color 0.15s ease;
   }
 
@@ -331,7 +343,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
 
   .month-name {
@@ -341,8 +353,8 @@
   }
 
   .month-badge {
-    padding: 4px 12px;
-    border-radius: 4px;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--space-1);
     font-size: 0.75rem;
     font-weight: 500;
   }
@@ -365,14 +377,14 @@
   .month-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
   }
 
   .stat {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .stat-label {
@@ -403,7 +415,7 @@
   }
 
   .month-empty {
-    padding: 20px 0;
+    padding: var(--space-4) 0;
     text-align: center;
     color: #888;
   }
@@ -414,15 +426,16 @@
 
   .month-actions {
     display: flex;
-    gap: 8px;
-    padding-top: 16px;
+    gap: var(--space-2);
+    padding-top: var(--space-4);
     border-top: 1px solid #333355;
   }
 
   /* Buttons */
   .btn {
-    padding: 8px 16px;
-    border-radius: 6px;
+    height: var(--button-height-sm);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-sm);
     border: none;
     cursor: pointer;
     font-size: 0.8125rem;
@@ -477,10 +490,6 @@
 
   /* Mobile */
   @media (max-width: 768px) {
-    .manage-content {
-      padding: 20px;
-    }
-
     .month-stats {
       grid-template-columns: repeat(2, 1fr);
     }

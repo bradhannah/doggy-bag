@@ -423,8 +423,8 @@
   .setup-header {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 20px 30px;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--content-padding);
     background: #16213e;
     border-bottom: 1px solid #333355;
   }
@@ -458,16 +458,17 @@
 
   /* Sidebar */
   .setup-sidebar {
-    width: 200px;
+    width: var(--tab-sidebar-width);
     background: #16213e;
     border-right: 1px solid #333355;
-    padding: 20px 0;
+    padding: var(--space-4) 0;
     flex-shrink: 0;
   }
 
   .tab-button {
     width: 100%;
-    padding: 14px 20px;
+    height: var(--button-height);
+    padding: 0 var(--space-4);
     border: none;
     background: none;
     color: #888;
@@ -491,7 +492,7 @@
   /* Main Content */
   .setup-content {
     flex: 1;
-    padding: 30px;
+    padding: var(--content-padding);
     overflow-y: auto;
   }
 
@@ -499,7 +500,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: var(--section-gap);
+    max-width: var(--content-max-setup);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .content-header h2 {
@@ -517,18 +521,19 @@
   .entity-list {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    max-width: 900px;
+    gap: var(--card-gap);
+    max-width: var(--content-max-setup);
+    margin: 0 auto;
   }
 
   .empty-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: 60px var(--space-4);
     color: #888;
   }
 
   .empty-state p {
-    margin: 0 0 10px;
+    margin: 0 0 var(--space-2);
   }
 
   .empty-state .hint {
@@ -540,14 +545,15 @@
   .category-orderers {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: var(--section-gap);
+    margin-bottom: var(--section-gap);
   }
 
   /* Buttons */
   .btn {
-    padding: 12px 20px;
-    border-radius: 6px;
+    height: var(--button-height);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-sm);
     border: none;
     cursor: pointer;
     font-size: 0.875rem;
@@ -565,6 +571,10 @@
 
   /* Mobile responsive */
   @media (max-width: 768px) {
+    .setup-header {
+      padding: var(--space-4) var(--content-padding-mobile);
+    }
+
     .setup-layout {
       flex-direction: column;
     }
@@ -580,17 +590,17 @@
 
     .tab-button {
       flex-shrink: 0;
-      padding: 14px 16px;
+      padding: 0 var(--space-4);
     }
 
     .setup-content {
-      padding: 20px;
+      padding: var(--content-padding-mobile);
     }
 
     .content-header {
       flex-direction: column;
       align-items: flex-start;
-      gap: 15px;
+      gap: var(--card-gap);
     }
 
     .content-header .btn {

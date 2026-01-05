@@ -787,16 +787,22 @@
 
 <style>
   .settings-page {
-    max-width: 800px;
+    max-width: var(--content-max-sm);
     margin: 0 auto;
-    padding: 24px;
+    padding: var(--content-padding);
+  }
+
+  @media (max-width: 768px) {
+    .settings-page {
+      padding: var(--content-padding-mobile);
+    }
   }
 
   .settings-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 32px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
   }
 
   .settings-header h1 {
@@ -809,11 +815,12 @@
   .back-button {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: var(--space-2);
+    height: var(--button-height);
+    padding: 0 var(--space-4);
     background: transparent;
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #888;
     font-size: 0.875rem;
     cursor: pointer;
@@ -840,27 +847,27 @@
   .settings-content {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: var(--section-gap);
   }
 
   .settings-section {
     background: #1a1a2e;
     border: 1px solid #333355;
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
   }
 
   .settings-section h2 {
     font-size: 1rem;
     font-weight: 600;
     color: #24c8db;
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-4) 0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .setting-item {
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
 
   .setting-item:last-child {
@@ -872,30 +879,32 @@
     display: block;
     font-size: 0.875rem;
     color: #e4e4e7;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
 
   .directory-input {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .directory-path {
     flex: 1;
-    padding: 12px 16px;
+    height: var(--input-height);
+    padding: 0 var(--space-4);
     background: #0f0f1a;
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #e4e4e7;
     font-family: monospace;
     font-size: 0.875rem;
   }
 
   .browse-button {
-    padding: 12px 24px;
+    height: var(--button-height);
+    padding: 0 var(--space-6);
     background: #24c8db;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #000;
     font-weight: 600;
     cursor: pointer;
@@ -915,7 +924,7 @@
   .setting-hint {
     font-size: 0.75rem;
     color: #888;
-    margin-top: 8px;
+    margin-top: var(--space-2);
   }
 
   .setting-hint.warning {
@@ -924,17 +933,18 @@
 
   .button-row {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .action-button {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
+    gap: var(--space-2);
+    height: var(--button-height);
+    padding: 0 var(--space-4);
     background: transparent;
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #e4e4e7;
     font-size: 0.875rem;
     cursor: pointer;
@@ -953,13 +963,13 @@
 
   .radio-group {
     display: flex;
-    gap: 24px;
+    gap: var(--space-6);
   }
 
   .radio-label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     color: #888;
     font-size: 0.875rem;
     cursor: pointer;
@@ -972,12 +982,12 @@
   .about-info {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .about-row {
     display: flex;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .about-label {
@@ -1008,9 +1018,9 @@
   .modal {
     background: #1a1a2e;
     border: 1px solid #333355;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     width: 90%;
-    max-width: 500px;
+    max-width: var(--modal-width);
     max-height: 90vh;
     overflow-y: auto;
   }
@@ -1022,8 +1032,8 @@
   .modal-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 20px 24px;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
     border-bottom: 1px solid #333355;
   }
 
@@ -1065,7 +1075,7 @@
   }
 
   .modal-body {
-    padding: 24px;
+    padding: var(--space-6);
   }
 
   .modal-body.center {
@@ -1073,23 +1083,24 @@
   }
 
   .modal-body p {
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-4) 0;
     color: #e4e4e7;
   }
 
   .modal-footer {
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
-    padding: 16px 24px;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
     border-top: 1px solid #333355;
   }
 
   .btn-primary {
-    padding: 10px 24px;
+    height: var(--button-height);
+    padding: 0 var(--space-6);
     background: #24c8db;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #000;
     font-weight: 600;
     cursor: pointer;
@@ -1101,10 +1112,11 @@
   }
 
   .btn-secondary {
-    padding: 10px 24px;
+    height: var(--button-height);
+    padding: 0 var(--space-6);
     background: transparent;
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #888;
     cursor: pointer;
     transition: all 0.2s;
@@ -1117,15 +1129,15 @@
 
   .path-change {
     background: #0f0f1a;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
   }
 
   .path-item {
     display: flex;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
   }
 
   .path-item:last-child {
@@ -1153,17 +1165,17 @@
   .radio-options {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .radio-option {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
+    gap: var(--space-3);
+    padding: var(--space-3);
     background: #0f0f1a;
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -1185,7 +1197,7 @@
   .radio-content {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .radio-title {
@@ -1200,11 +1212,11 @@
   }
 
   .progress-bar {
-    height: 8px;
+    height: var(--space-2);
     background: #333355;
-    border-radius: 4px;
+    border-radius: var(--space-1);
     overflow: hidden;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
   }
 
   .progress-fill {
@@ -1221,11 +1233,11 @@
   .path-highlight {
     background: #0f0f1a;
     border: 1px solid #333355;
-    border-radius: 8px;
-    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
     font-family: monospace;
     color: #24c8db;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
     word-break: break-all;
   }
 
@@ -1236,13 +1248,13 @@
 
   .migration-summary {
     background: #0f0f1a;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
   }
 
   .migration-summary p {
-    margin-bottom: 8px !important;
+    margin-bottom: var(--space-2) !important;
   }
 
   .migration-summary ul {
@@ -1290,22 +1302,22 @@
   .setting-description {
     font-size: 0.75rem;
     color: #888;
-    margin: 0 0 12px 0;
+    margin: 0 0 var(--space-3) 0;
   }
 
   /* Keyboard shortcuts display */
   .keyboard-shortcuts {
     background: #0f0f1a;
     border: 1px solid #333355;
-    border-radius: 8px;
-    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
   }
 
   .shortcut-row {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 6px 0;
+    gap: var(--space-4);
+    padding: var(--space-1) 0;
   }
 
   .shortcut-row:not(:last-child) {
@@ -1333,7 +1345,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 24px;
+    gap: var(--space-6);
   }
 
   .toggle-info {
@@ -1341,7 +1353,7 @@
   }
 
   .toggle-info .setting-label {
-    margin-bottom: 4px;
+    margin-bottom: var(--space-1);
   }
 
   .toggle-info .setting-description {
@@ -1393,12 +1405,12 @@
   .restart-notice {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding: 12px 16px;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     background: rgba(36, 200, 219, 0.1);
     border: 1px solid rgba(36, 200, 219, 0.3);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #24c8db;
     font-size: 0.875rem;
   }
@@ -1412,10 +1424,11 @@
   }
 
   .restart-button {
-    padding: 6px 16px;
+    height: var(--button-height-sm);
+    padding: 0 var(--space-4);
     background: #24c8db;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #000;
     font-weight: 600;
     font-size: 0.75rem;

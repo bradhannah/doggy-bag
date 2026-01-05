@@ -672,9 +672,15 @@
 
 <style>
   .dashboard {
-    max-width: 800px;
+    max-width: var(--content-max-sm);
     margin: 0 auto;
-    padding: 24px;
+    padding: var(--content-padding);
+  }
+
+  @media (max-width: 768px) {
+    .dashboard {
+      padding: var(--content-padding-mobile);
+    }
   }
 
   .loading-state {
@@ -721,8 +727,9 @@
   }
 
   .btn {
-    padding: 12px 24px;
-    border-radius: 8px;
+    height: var(--button-height);
+    padding: 0 var(--space-6);
+    border-radius: var(--radius-md);
     border: none;
     cursor: pointer;
     font-size: 1rem;
@@ -747,14 +754,14 @@
   /* Hero Section */
   .hero-section {
     background: #1a1a2e;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     border: 1px solid #333355;
-    padding: 32px;
-    margin-bottom: 20px;
+    padding: var(--space-8);
+    margin-bottom: var(--card-gap);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: var(--space-6);
   }
 
   .hero-header {
@@ -769,11 +776,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: var(--icon-button-size);
+    height: var(--icon-button-size);
     background: transparent;
     border: 1px solid #333355;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #888;
     cursor: pointer;
     transition: all 0.2s;
@@ -813,15 +820,15 @@
   .progress-cards {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: var(--card-gap);
     width: 100%;
     max-width: 600px;
   }
 
   .progress-card {
     background: #151525;
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
     border: 1px solid #333355;
   }
 
@@ -829,7 +836,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3);
   }
 
   .progress-label {
@@ -876,8 +883,8 @@
   /* Leftover Display */
   .leftover-display {
     text-align: center;
-    padding: 16px 32px;
-    border-radius: 12px;
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-lg);
   }
 
   .leftover-display.positive {
@@ -916,11 +923,12 @@
   .view-details-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
+    gap: var(--space-2);
+    height: var(--button-height);
+    padding: 0 var(--space-6);
     background: transparent;
     border: 1px solid #24c8db;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #24c8db;
     font-size: 0.95rem;
     font-weight: 500;
@@ -937,17 +945,17 @@
   .adjacent-months {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: var(--card-gap);
+    margin-bottom: var(--card-gap);
   }
 
   .month-card {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 16px;
+    gap: var(--space-2);
+    padding: var(--space-4);
     background: #1a1a2e;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     border: 1px solid #333355;
     cursor: pointer;
     transition: all 0.2s;
@@ -1037,16 +1045,16 @@
   /* Attention Section */
   .attention-section {
     background: #1a1a2e;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     border: 1px solid #333355;
-    padding: 20px;
+    padding: var(--space-4);
   }
 
   .attention-title {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 0 0 16px;
+    margin: 0 0 var(--space-4);
     font-size: 0.9rem;
     font-weight: 600;
     color: #fbbf24;
@@ -1057,16 +1065,16 @@
   .attention-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .attention-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: var(--space-3) var(--space-4);
     background: rgba(251, 191, 36, 0.05);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid rgba(251, 191, 36, 0.2);
   }
 
@@ -1076,10 +1084,11 @@
   }
 
   .attention-action {
-    padding: 6px 14px;
+    height: var(--button-height-sm);
+    padding: 0 14px;
     background: transparent;
     border: 1px solid #24c8db;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #24c8db;
     font-size: 0.8rem;
     font-weight: 500;
@@ -1093,7 +1102,7 @@
   }
 
   /* Responsive */
-  @media (max-width: 600px) {
+  @media (max-width: 768px) {
     .progress-cards {
       grid-template-columns: 1fr;
     }
@@ -1127,10 +1136,10 @@
 
   .modal-content {
     background: #1a1a2e;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     border: 1px solid #333355;
-    padding: 32px;
-    max-width: 400px;
+    padding: var(--space-8);
+    max-width: var(--modal-width-sm);
     width: 90%;
     text-align: center;
   }
@@ -1163,7 +1172,7 @@
 
   .modal-actions {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
     justify-content: center;
   }
 

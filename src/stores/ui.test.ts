@@ -15,6 +15,7 @@ import {
   toggleSidebar,
   openDrawer,
   closeDrawer,
+  sidebarCollapsed,
 } from './ui';
 
 // Mock localStorage
@@ -131,18 +132,15 @@ describe('UI Store', () => {
       expect(get(widthMode)).toBe('medium');
     });
 
-    it('cycles through modes: small -> medium -> wide', () => {
-      widthMode.set('small');
-      expect(get(widthMode)).toBe('small');
-
-      widthMode.cycle();
+    it('toggles between modes: medium <-> wide', () => {
+      widthMode.set('medium');
       expect(get(widthMode)).toBe('medium');
 
       widthMode.cycle();
       expect(get(widthMode)).toBe('wide');
 
       widthMode.cycle();
-      expect(get(widthMode)).toBe('small');
+      expect(get(widthMode)).toBe('medium');
     });
 
     it('persists to localStorage', () => {
@@ -151,9 +149,9 @@ describe('UI Store', () => {
     });
 
     it('persists on cycle', () => {
-      widthMode.set('small');
+      widthMode.set('medium');
       widthMode.cycle();
-      expect(localStorageMock.getItem('budgetforfun-width-mode')).toBe('medium');
+      expect(localStorageMock.getItem('budgetforfun-width-mode')).toBe('wide');
     });
   });
 
@@ -206,14 +204,16 @@ describe('UI Store', () => {
     });
 
     describe('toggleSidebar', () => {
-      it('toggles sidebar open state', () => {
-        expect(get(uiState).sidebarOpen).toBe(true);
+      it('toggles sidebarCollapsed store', () => {
+        // Reset sidebarCollapsed to known state (false = expanded)
+        sidebarCollapsed.set(false);
+        expect(get(sidebarCollapsed)).toBe(false);
 
         toggleSidebar();
-        expect(get(uiState).sidebarOpen).toBe(false);
+        expect(get(sidebarCollapsed)).toBe(true);
 
         toggleSidebar();
-        expect(get(uiState).sidebarOpen).toBe(true);
+        expect(get(sidebarCollapsed)).toBe(false);
       });
     });
 

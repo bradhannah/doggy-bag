@@ -3,6 +3,7 @@
   import Navigation from '../components/Navigation.svelte';
   import ToastContainer from '../components/shared/ToastContainer.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom } from '../stores/settings';
+  import { sidebarCollapsed } from '../stores/ui';
   import { setApiPort } from '../lib/api/client';
   import { createLogger } from '../lib/logger';
 
@@ -134,7 +135,7 @@
     </div>
   </div>
 {:else}
-  <div class="app-layout">
+  <div class="app-layout" class:sidebar-collapsed={$sidebarCollapsed}>
     <Navigation />
     <main class="main-content">
       <slot />
@@ -146,11 +147,13 @@
 
 <style>
   :global(:root) {
+    /* Typography */
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
     font-size: 16px;
     line-height: 1.5;
     font-weight: 400;
 
+    /* Colors */
     color: #e4e4e7;
     background-color: #0f0f1a;
 
@@ -159,6 +162,65 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
+
+    /* ========================================
+       DESIGN TOKENS - Responsive Layout System
+       ======================================== */
+
+    /* Spacing Scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Layout Widths - Sidebars */
+    --sidebar-width: 220px;
+    --summary-sidebar-width: 260px;
+    --tab-sidebar-width: 200px;
+
+    /* Layout Widths - Overlays */
+    --drawer-width: 400px;
+    --modal-width: 500px;
+    --modal-width-sm: 400px;
+
+    /* Content Max Widths */
+    --content-max-sm: 800px; /* Dashboard, Settings */
+    --content-max-md: 1200px; /* Manage Months */
+    --content-max-lg: 1800px; /* Details View */
+    --content-max-setup: 900px; /* Entity Configuration */
+
+    /* Content Min Widths */
+    --main-content-min: 600px; /* Minimum width for main content column in Details View */
+
+    /* Panel Widths - Bills/Income sections */
+    --panel-width-medium: 550px; /* Fixed width in Medium mode */
+    --panel-width-min-wide: 600px; /* Minimum width in Wide mode */
+
+    /* Content Padding */
+    --content-padding: 24px;
+    --content-padding-mobile: 16px;
+
+    /* Component Sizes */
+    --button-height: 44px;
+    --button-height-sm: 32px;
+    --input-height: 44px;
+    --icon-button-size: 36px;
+
+    /* Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    /* Section Gaps */
+    --section-gap: 24px;
+    --card-gap: 16px;
+    --form-field-gap: 16px;
+
+    /* Sidebar Collapsed Width */
+    --sidebar-collapsed-width: 60px;
   }
 
   :global(body) {
@@ -233,9 +295,14 @@
 
   .main-content {
     flex: 1;
-    margin-left: 220px;
+    margin-left: var(--sidebar-width);
     padding: 0;
     min-height: 100vh;
+    transition: margin-left 0.2s ease;
+  }
+
+  .sidebar-collapsed .main-content {
+    margin-left: var(--sidebar-collapsed-width);
   }
 
   @media (max-width: 768px) {
