@@ -134,10 +134,10 @@ jobs:
       - name: Generate types
         run: make types
 
+      - name: Prepare Bun sidecar
+        run: make prepare-dev-sidecar
+
       - name: Build Tauri (debug mode for speed)
         run: |
           cd src-tauri
           cargo build
-        env:
-          # Skip sidecar for CI build check
-          SKIP_SIDECAR: true
