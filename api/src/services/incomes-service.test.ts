@@ -55,6 +55,7 @@ describe('IncomesService', () => {
       billing_period: 'monthly',
       day_of_month: 15,
       payment_source_id: 'ps-checking-001',
+      category_id: 'cat-salary-001',
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -66,6 +67,7 @@ describe('IncomesService', () => {
       billing_period: 'monthly',
       day_of_month: 1,
       payment_source_id: 'ps-checking-001',
+      category_id: 'cat-salary-001',
       is_active: false, // Inactive income
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -154,6 +156,7 @@ describe('IncomesService', () => {
         billing_period: 'monthly',
         day_of_month: 25,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
 
       expect(newIncome.id).toBeDefined();
@@ -171,6 +174,7 @@ describe('IncomesService', () => {
         billing_period: 'monthly',
         day_of_month: 1,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
 
       const incomes = await service.getAll();
@@ -186,13 +190,14 @@ describe('IncomesService', () => {
         billing_period: 'bi_weekly',
         start_date: '2025-01-10',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
 
       expect(newIncome.billing_period).toBe('bi_weekly');
       expect(newIncome.start_date).toBe('2025-01-10');
     });
 
-    test('creates income with optional category', async () => {
+    test('creates income with category', async () => {
       const newIncome = await service.create({
         name: 'Rental Income',
         amount: 120000,
@@ -213,6 +218,7 @@ describe('IncomesService', () => {
           billing_period: 'monthly',
           day_of_month: 1,
           payment_source_id: 'ps-checking-001',
+          category_id: 'cat-salary-001',
         })
       ).rejects.toThrow();
     });
@@ -225,6 +231,7 @@ describe('IncomesService', () => {
           billing_period: 'monthly',
           day_of_month: 1,
           payment_source_id: 'ps-checking-001',
+          category_id: 'cat-salary-001',
         })
       ).rejects.toThrow();
     });
@@ -235,7 +242,22 @@ describe('IncomesService', () => {
           name: 'Test',
           amount: 50000,
           billing_period: 'invalid' as 'monthly',
+          day_of_month: 1,
           payment_source_id: 'ps-checking-001',
+          category_id: 'cat-salary-001',
+        })
+      ).rejects.toThrow();
+    });
+
+    test('throws error for missing category_id', async () => {
+      await expect(
+        service.create({
+          name: 'Test',
+          amount: 50000,
+          billing_period: 'monthly',
+          day_of_month: 1,
+          payment_source_id: 'ps-checking-001',
+          category_id: '',
         })
       ).rejects.toThrow();
     });
@@ -318,6 +340,7 @@ describe('IncomesService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -329,6 +352,7 @@ describe('IncomesService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
       expect(result.isValid).toBe(false);
     });
@@ -340,6 +364,7 @@ describe('IncomesService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
       expect(result.isValid).toBe(false);
     });
@@ -350,6 +375,7 @@ describe('IncomesService', () => {
         amount: 100000,
         billing_period: 'daily' as 'monthly',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
       expect(result.isValid).toBe(false);
     });
@@ -361,6 +387,7 @@ describe('IncomesService', () => {
         billing_period: 'bi_weekly',
         start_date: '2025-01-03',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
       expect(result.isValid).toBe(true);
     });
@@ -372,8 +399,34 @@ describe('IncomesService', () => {
         billing_period: 'weekly',
         start_date: '2025-01-06',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-salary-001',
       });
       expect(result.isValid).toBe(true);
+    });
+
+    test('returns invalid for missing category_id', () => {
+      const result = service.validate({
+        name: 'Test Income',
+        amount: 100000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Category ID is required');
+    });
+
+    test('returns invalid for empty category_id', () => {
+      const result = service.validate({
+        name: 'Test Income',
+        amount: 100000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+        category_id: '',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Category ID is required');
     });
   });
 });

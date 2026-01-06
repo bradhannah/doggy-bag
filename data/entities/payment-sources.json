@@ -46,5 +46,17 @@
     "is_active": true,
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "name": "General Big Savings",
+    "type": "bank_account",
+    "balance": 111100,
+    "exclude_from_leftover": true,
+    "is_savings": true,
+    "is_investment": false,
+    "id": "0bb95cfc-2dca-4783-b1ff-e958145441fc",
+    "created_at": "2026-01-06T02:00:19.214Z",
+    "updated_at": "2026-01-06T02:00:19.214Z",
+    "is_active": true
   }
 ]

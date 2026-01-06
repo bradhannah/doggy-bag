@@ -55,6 +55,7 @@ export interface BillInstanceDetailed {
     name: string;
   } | null;
   category_id: string;
+  payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
 }
 
 export interface IncomeInstanceDetailed {

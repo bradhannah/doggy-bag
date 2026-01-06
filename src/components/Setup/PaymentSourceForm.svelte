@@ -25,14 +25,45 @@
   let balanceDollars = editingItem ? (editingItem.balance / 100).toFixed(2) : '0.00';
   let excludeFromLeftover = editingItem?.exclude_from_leftover ?? false;
   let payOffMonthly = editingItem?.pay_off_monthly ?? false;
+  let isSavings = editingItem?.is_savings ?? false;
+  let isInvestment = editingItem?.is_investment ?? false;
 
   // Reactive helper for debt account detection
   $: isDebt = isDebtAccount(type);
+
+  // Show savings/investment options only for bank accounts
+  $: isBankAccount = type === 'bank_account';
+
+  // Savings or investment mode disables pay_off_monthly
+  $: isSavingsOrInvestment = isSavings || isInvestment;
 
   // When type changes to non-debt, reset the debt-only options
   $: if (!isDebt) {
     excludeFromLeftover = false;
     payOffMonthly = false;
+  }
+
+  // When type changes to non-bank account, reset savings/investment
+  $: if (!isBankAccount) {
+    isSavings = false;
+    isInvestment = false;
+  }
+
+  // Savings and investment are mutually exclusive
+  function handleSavingsChange(checked: boolean) {
+    isSavings = checked;
+    if (checked) {
+      isInvestment = false;
+      excludeFromLeftover = true; // Savings accounts are excluded from leftover
+    }
+  }
+
+  function handleInvestmentChange(checked: boolean) {
+    isInvestment = checked;
+    if (checked) {
+      isSavings = false;
+      excludeFromLeftover = true; // Investment accounts are excluded from leftover
+    }
   }
 
   // pay_off_monthly implies exclude_from_leftover
@@ -50,6 +81,8 @@
     balanceDollars = (editingItem.balance / 100).toFixed(2);
     excludeFromLeftover = editingItem.exclude_from_leftover ?? false;
     payOffMonthly = editingItem.pay_off_monthly ?? false;
+    isSavings = editingItem.is_savings ?? false;
+    isInvestment = editingItem.is_investment ?? false;
   }
 
   // Convert dollars to cents
@@ -76,8 +109,10 @@
           name,
           type,
           balance: balanceCents,
-          exclude_from_leftover: isDebt ? excludeFromLeftover : undefined,
-          pay_off_monthly: isDebt ? payOffMonthly : undefined,
+          exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
+          pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
+          is_savings: isBankAccount ? isSavings : undefined,
+          is_investment: isBankAccount ? isInvestment : undefined,
         });
         success(`Payment source "${name}" updated`);
       } else {
@@ -85,8 +120,10 @@
           name,
           type,
           balance: balanceCents,
-          exclude_from_leftover: isDebt ? excludeFromLeftover : undefined,
-          pay_off_monthly: isDebt ? payOffMonthly : undefined,
+          exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
+          pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
+          is_savings: isBankAccount ? isSavings : undefined,
+          is_investment: isBankAccount ? isInvestment : undefined,
         });
         success(`Payment source "${name}" added`);
       }
@@ -146,6 +183,44 @@
       </div>
     {/if}
   </div>
+
+  {#if isBankAccount}
+    <div class="bank-options">
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            checked={isSavings}
+            on:change={(e) => handleSavingsChange(e.currentTarget.checked)}
+            disabled={saving}
+          />
+          <span class="checkbox-text">
+            <strong>Savings Account</strong>
+            <span class="checkbox-description"
+              >Track as a savings account (excluded from budget leftover)</span
+            >
+          </span>
+        </label>
+      </div>
+
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            checked={isInvestment}
+            on:change={(e) => handleInvestmentChange(e.currentTarget.checked)}
+            disabled={saving}
+          />
+          <span class="checkbox-text">
+            <strong>Investment Account</strong>
+            <span class="checkbox-description"
+              >Track as an investment account (excluded from budget leftover)</span
+            >
+          </span>
+        </label>
+      </div>
+    </div>
+  {/if}
 
   {#if isDebt}
     <div class="debt-options">
@@ -280,6 +355,16 @@
     background: #1a1a2e;
     border-radius: 8px;
     border: 1px solid #333355;
+  }
+
+  .bank-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    background: #1a2e1a;
+    border-radius: 8px;
+    border: 1px solid #335533;
   }
 
   .checkbox-group {

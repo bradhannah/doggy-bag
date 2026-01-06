@@ -26,6 +26,7 @@ describe('ValidationService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: '12345678901234567890',
+        category_id: '12345678901234567890',
       });
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -39,6 +40,7 @@ describe('ValidationService', () => {
         recurrence_week: 1,
         recurrence_day: 1, // First Monday
         payment_source_id: '12345678901234567890',
+        category_id: '12345678901234567890',
       });
       expect(result.isValid).toBe(true);
     });
@@ -98,6 +100,7 @@ describe('ValidationService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: '12345678901234567890',
+        category_id: '12345678901234567890',
       });
       expect(result.isValid).toBe(true);
     });
@@ -158,6 +161,7 @@ describe('ValidationService', () => {
         billing_period: 'bi_weekly',
         start_date: '2025-01-15',
         payment_source_id: '12345678901234567890',
+        category_id: '12345678901234567890',
       });
       expect(result.isValid).toBe(true);
     });
@@ -303,6 +307,7 @@ describe('ValidationService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: '12345678901234567890',
+        category_id: '12345678901234567890',
       });
       expect(result.isValid).toBe(true);
     });
@@ -389,6 +394,7 @@ describe('ValidationService', () => {
         billing_period: 'weekly',
         start_date: '2025-01-06',
         payment_source_id: '12345678901234567890',
+        category_id: '12345678901234567890',
       });
       expect(result.isValid).toBe(true);
     });
@@ -574,7 +580,7 @@ describe('ValidationService', () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        'exclude_from_leftover can only be enabled for credit cards and lines of credit'
+        'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'
       );
     });
 

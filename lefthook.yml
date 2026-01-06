@@ -12,19 +12,19 @@ pre-commit:
       glob: '*.{ts,svelte}'
       run: ~/.bun/bin/bunx eslint {staged_files}
 
-    # TypeScript/Svelte formatting
-    - name: format-check
+    # TypeScript/Svelte formatting (auto-format and re-stage)
+    - name: format
       glob: '*.{ts,js,svelte,json,css,html,md}'
-      run: ~/.bun/bin/bunx prettier --check {staged_files}
+      run: ~/.bun/bin/bunx prettier --write {staged_files} && git add {staged_files}
 
     # Svelte type checking
     - name: typecheck
       run: ~/.bun/bin/bunx svelte-kit sync && ~/.bun/bin/bunx svelte-check --tsconfig ./tsconfig.json
 
-    # Rust formatting
+    # Rust formatting (auto-format and re-stage)
     - name: rust-format
       glob: 'src-tauri/**/*.rs'
-      run: cd src-tauri && cargo fmt --check
+      run: cd src-tauri && cargo fmt && git add {staged_files}
 
     # Rust linting (Clippy with warnings as errors)
     - name: rust-lint

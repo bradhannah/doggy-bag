@@ -84,6 +84,7 @@ const sampleBills: Bill[] = [
     billing_period: 'monthly',
     day_of_month: 5,
     payment_source_id: 'ps-2',
+    category_id: 'cat-1',
     is_active: false,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -95,6 +96,7 @@ const sampleBills: Bill[] = [
     billing_period: 'bi_weekly',
     start_date: '2025-01-01',
     payment_source_id: 'ps-1',
+    category_id: 'cat-1',
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -190,6 +192,7 @@ describe('Bills Store', () => {
         billing_period: 'monthly' as const,
         day_of_month: 10,
         payment_source_id: 'ps-1',
+        category_id: 'cat-1',
       };
 
       mockPost.mockResolvedValue({ id: 'bill-new', ...newBill });
@@ -210,6 +213,7 @@ describe('Bills Store', () => {
           amount: 0,
           billing_period: 'monthly',
           payment_source_id: 'ps-1',
+          category_id: 'cat-1',
         })
       ).rejects.toThrow('Validation failed');
 
@@ -309,10 +313,10 @@ describe('Bills Store', () => {
         // Should have: Uncategorized, Utilities (cat-1), Subscriptions (cat-2)
         expect(grouped.length).toBeGreaterThanOrEqual(2);
 
-        // Find utilities category
+        // Find utilities category (cat-1 has Electric and Paycheck Deduction active)
         const utilities = grouped.find((g) => g.category?.id === 'cat-1');
-        expect(utilities?.bills).toHaveLength(1);
-        expect(utilities?.bills[0].name).toBe('Electric');
+        expect(utilities?.bills).toHaveLength(2);
+        expect(utilities?.bills.map((b) => b.name)).toContain('Electric');
       });
 
       it('puts uncategorized bills first', () => {
@@ -322,8 +326,9 @@ describe('Bills Store', () => {
 
       it('calculates subtotals per category', () => {
         const grouped = get(billsByCategory);
+        // cat-1 has Electric (150) + Paycheck Deduction (100 bi_weekly = 217)
         const utilities = grouped.find((g) => g.category?.id === 'cat-1');
-        expect(utilities?.subtotal).toBe(150);
+        expect(utilities?.subtotal).toBe(150 + 217);
       });
     });
   });

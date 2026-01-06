@@ -81,8 +81,15 @@
     return formatBalanceForDisplay(raw, source.type);
   }
 
-  // Separate payment sources by type
-  $: assetAccounts = paymentSources.filter((ps) => !isDebtAccount(ps.type));
+  // Helper to check if account is a savings or investment account
+  function isSavingsOrInvestmentAccount(source: PaymentSource): boolean {
+    return source.is_savings === true || source.is_investment === true;
+  }
+
+  // Separate payment sources by type (excluding savings/investment accounts)
+  $: assetAccounts = paymentSources.filter(
+    (ps) => !isDebtAccount(ps.type) && !isSavingsOrInvestmentAccount(ps)
+  );
   $: debtAccounts = paymentSources.filter((ps) => isDebtAccount(ps.type));
 
   // Get payoff summary for a payment source

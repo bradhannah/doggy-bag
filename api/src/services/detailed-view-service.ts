@@ -190,9 +190,9 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const paymentSourceId = instance.payment_source_id || bill?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
 
-      // Calculate due date from first occurrence or bill's due_day
+      // Calculate due date from first occurrence or bill's day_of_month
       const firstOccurrence = instance.occurrences?.[0];
-      const dueDay = bill?.due_day;
+      const dueDay = bill?.day_of_month;
       const calculatedDueDate = calculateDueDate(month, dueDay);
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
 
@@ -233,6 +233,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         days_overdue: daysOverdueValue,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
         category_id: instance.category_id || bill?.category_id || '',
+        payment_method: bill?.payment_method,
       };
     });
   }
@@ -248,9 +249,9 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const paymentSourceId = instance.payment_source_id || income?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
 
-      // Calculate due date from first occurrence or income's due_day
+      // Calculate due date from first occurrence or income's day_of_month
       const firstOccurrence = instance.occurrences?.[0];
-      const dueDay = income?.due_day;
+      const dueDay = income?.day_of_month;
       const calculatedDueDate = calculateDueDate(month, dueDay);
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
 

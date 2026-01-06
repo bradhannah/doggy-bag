@@ -9,9 +9,23 @@
     leftover,
     billInstances,
     incomeInstances,
+    bankBalances,
   } from '../../stores/months';
+  import {
+    loadPaymentSources,
+    paymentSources,
+    isDebtAccount,
+    formatBalanceForDisplay,
+    type PaymentSource,
+  } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
+  import { onMount } from 'svelte';
+
+  // Load payment sources on mount
+  onMount(() => {
+    loadPaymentSources();
+  });
 
   // Load data when month changes
   $: {
@@ -361,6 +375,26 @@
   }
 
   $: isPositive = $leftover >= 0;
+
+  // Bank balances - filter out savings/investment accounts (they're on /savings page)
+  $: regularAccounts = $paymentSources.filter(
+    (ps: PaymentSource) => !ps.is_savings && !ps.is_investment
+  );
+
+  // Separate asset accounts from debt accounts
+  $: assetAccounts = regularAccounts.filter((ps: PaymentSource) => !isDebtAccount(ps.type));
+  $: debtAccounts = regularAccounts.filter((ps: PaymentSource) => isDebtAccount(ps.type));
+
+  // Get balance for a payment source (use month-specific balance or fall back to default)
+  function getBalance(source: PaymentSource): number {
+    return $bankBalances[source.id] ?? source.balance;
+  }
+
+  // Calculate totals
+  $: totalAssets = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
+  $: totalDebt = debtAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
+  $: netPosition = totalAssets - totalDebt;
+  $: hasAccounts = regularAccounts.length > 0;
 </script>
 
 <div class="dashboard">
@@ -474,6 +508,67 @@
         <span class="leftover-label">PROJECTED LEFTOVER</span>
         <span class="leftover-amount">{formatCurrency($leftover)}</span>
       </div>
+
+      <!-- Bank Balances -->
+      {#if hasAccounts}
+        <div class="bank-balances-section">
+          <div class="balances-header">
+            <span class="balances-label">ACCOUNT BALANCES</span>
+          </div>
+          <div class="balances-grid">
+            {#if assetAccounts.length > 0}
+              <div class="balance-group">
+                <span class="group-label">Assets</span>
+                {#each assetAccounts as account (account.id)}
+                  <div class="balance-row">
+                    <span class="account-name">{account.name}</span>
+                    <span class="account-balance positive"
+                      >{formatCurrency(getBalance(account))}</span
+                    >
+                  </div>
+                {/each}
+                {#if assetAccounts.length > 1}
+                  <div class="balance-row total">
+                    <span class="account-name">Total Assets</span>
+                    <span class="account-balance positive">{formatCurrency(totalAssets)}</span>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+            {#if debtAccounts.length > 0}
+              <div class="balance-group">
+                <span class="group-label">Debt</span>
+                {#each debtAccounts as account (account.id)}
+                  <div class="balance-row">
+                    <span class="account-name">{account.name}</span>
+                    <span class="account-balance negative"
+                      >{formatCurrency(
+                        formatBalanceForDisplay(getBalance(account), account.type)
+                      )}</span
+                    >
+                  </div>
+                {/each}
+                {#if debtAccounts.length > 1}
+                  <div class="balance-row total">
+                    <span class="account-name">Total Debt</span>
+                    <span class="account-balance negative">{formatCurrency(-totalDebt)}</span>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+          {#if assetAccounts.length > 0 && debtAccounts.length > 0}
+            <div
+              class="net-position"
+              class:positive={netPosition >= 0}
+              class:negative={netPosition < 0}
+            >
+              <span class="net-label">Net Position</span>
+              <span class="net-amount">{formatCurrency(netPosition)}</span>
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       <button class="view-details-btn" on:click={viewDetails}>
         View Details
@@ -916,6 +1011,129 @@
   }
 
   .leftover-display.negative .leftover-amount {
+    color: #f87171;
+  }
+
+  /* Bank Balances Section */
+  .bank-balances-section {
+    width: 100%;
+    max-width: 600px;
+    background: #151525;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    border: 1px solid #333355;
+  }
+
+  .balances-header {
+    margin-bottom: var(--space-3);
+  }
+
+  .balances-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .balances-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .balance-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .group-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .balance-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid #2a2a40;
+  }
+
+  .balance-row:last-child {
+    border-bottom: none;
+  }
+
+  .balance-row.total {
+    border-top: 1px solid #444;
+    border-bottom: none;
+    padding-top: var(--space-3);
+    margin-top: var(--space-1);
+  }
+
+  .account-name {
+    font-size: 0.875rem;
+    color: #e4e4e7;
+  }
+
+  .balance-row.total .account-name {
+    font-weight: 600;
+    color: #888;
+  }
+
+  .account-balance {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .account-balance.positive {
+    color: #4ade80;
+  }
+
+  .account-balance.negative {
+    color: #f87171;
+  }
+
+  .net-position {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+  }
+
+  .net-position.positive {
+    background: rgba(74, 222, 128, 0.1);
+  }
+
+  .net-position.negative {
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  .net-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .net-amount {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .net-position.positive .net-amount {
+    color: #4ade80;
+  }
+
+  .net-position.negative .net-amount {
     color: #f87171;
   }
 

@@ -392,7 +392,7 @@ describe('PaymentSourcesService', () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        'exclude_from_leftover can only be enabled for credit cards and lines of credit'
+        'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'
       );
     });
 
@@ -414,6 +414,102 @@ describe('PaymentSourcesService', () => {
         pay_off_monthly: true,
       });
       expect(result.isValid).toBe(false);
+    });
+
+    // Savings and Investment validation tests (T055)
+    test('returns valid for savings account with bank_account type', () => {
+      const result = service.validate({
+        name: 'Emergency Fund',
+        type: 'bank_account',
+        balance: 500000,
+        is_savings: true,
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('returns valid for investment account with bank_account type', () => {
+      const result = service.validate({
+        name: '401k',
+        type: 'bank_account',
+        balance: 1000000,
+        is_investment: true,
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('returns invalid for is_savings and is_investment both true', () => {
+      const result = service.validate({
+        name: 'Hybrid Account',
+        type: 'bank_account',
+        balance: 100000,
+        is_savings: true,
+        is_investment: true,
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        'An account cannot be both a savings account and an investment account'
+      );
+    });
+
+    test('returns invalid for is_savings with pay_off_monthly', () => {
+      const result = service.validate({
+        name: 'Bad Savings',
+        type: 'bank_account',
+        balance: 100000,
+        is_savings: true,
+        pay_off_monthly: true,
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        'Savings and investment accounts cannot have pay_off_monthly enabled'
+      );
+    });
+
+    test('returns invalid for is_investment with pay_off_monthly', () => {
+      const result = service.validate({
+        name: 'Bad Investment',
+        type: 'bank_account',
+        balance: 100000,
+        is_investment: true,
+        pay_off_monthly: true,
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        'Savings and investment accounts cannot have pay_off_monthly enabled'
+      );
+    });
+
+    test('returns invalid for is_savings on credit_card type', () => {
+      const result = service.validate({
+        name: 'Bad Savings Card',
+        type: 'credit_card',
+        balance: 0,
+        is_savings: true,
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('is_savings can only be enabled for bank accounts');
+    });
+
+    test('returns invalid for is_investment on cash type', () => {
+      const result = service.validate({
+        name: 'Bad Investment Cash',
+        type: 'cash',
+        balance: 500,
+        is_investment: true,
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('is_investment can only be enabled for bank accounts');
+    });
+
+    test('returns valid for exclude_from_leftover on savings account', () => {
+      const result = service.validate({
+        name: 'Savings with exclude',
+        type: 'bank_account',
+        balance: 100000,
+        is_savings: true,
+        exclude_from_leftover: true,
+      });
+      expect(result.isValid).toBe(true);
     });
   });
 });

@@ -54,12 +54,20 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       const sources = await this.getAll();
 
       const now = new Date().toISOString();
+
+      // Auto-set exclude_from_leftover for savings/investment accounts
+      const shouldExcludeFromLeftover =
+        data.exclude_from_leftover === true ||
+        data.is_savings === true ||
+        data.is_investment === true;
+
       const newSource: PaymentSource = {
         ...data,
         id: crypto.randomUUID(),
         created_at: now,
         updated_at: now,
         is_active: true,
+        exclude_from_leftover: shouldExcludeFromLeftover || undefined,
       };
 
       sources.push(newSource);
@@ -85,10 +93,20 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       }
 
       const now = new Date().toISOString();
+
+      // Merge existing data with updates
+      const merged = { ...sources[index], ...updates };
+
+      // Auto-set exclude_from_leftover for savings/investment accounts
+      const shouldExcludeFromLeftover =
+        merged.exclude_from_leftover === true ||
+        merged.is_savings === true ||
+        merged.is_investment === true;
+
       const updatedSource: PaymentSource = {
-        ...sources[index],
-        ...updates,
+        ...merged,
         updated_at: now,
+        exclude_from_leftover: shouldExcludeFromLeftover || undefined,
       };
 
       sources[index] = updatedSource;
@@ -137,14 +155,38 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       }
     }
 
-    // exclude_from_leftover is only valid for debt accounts
+    // exclude_from_leftover is only valid for debt accounts (unless savings/investment)
     if (data.exclude_from_leftover === true) {
       const debtTypes = ['credit_card', 'line_of_credit'];
-      if (data.type && !debtTypes.includes(data.type)) {
+      const isSavingsOrInvestment = data.is_savings === true || data.is_investment === true;
+      if (data.type && !debtTypes.includes(data.type) && !isSavingsOrInvestment) {
         errors.push(
-          'exclude_from_leftover can only be enabled for credit cards and lines of credit'
+          'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'
         );
       }
+    }
+
+    // is_savings and is_investment are mutually exclusive
+    if (data.is_savings === true && data.is_investment === true) {
+      errors.push('An account cannot be both a savings account and an investment account');
+    }
+
+    // is_savings/is_investment are mutually exclusive with pay_off_monthly
+    if (
+      (data.is_savings === true || data.is_investment === true) &&
+      data.pay_off_monthly === true
+    ) {
+      errors.push('Savings and investment accounts cannot have pay_off_monthly enabled');
+    }
+
+    // is_savings is only valid for bank_account type
+    if (data.is_savings === true && data.type && data.type !== 'bank_account') {
+      errors.push('is_savings can only be enabled for bank accounts');
+    }
+
+    // is_investment is only valid for bank_account type
+    if (data.is_investment === true && data.type && data.type !== 'bank_account') {
+      errors.push('is_investment can only be enabled for bank accounts');
     }
 
     return {

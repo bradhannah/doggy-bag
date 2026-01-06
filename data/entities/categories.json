@@ -20,42 +20,12 @@
     "updated_at": "2025-01-01T00:00:00.000Z"
   },
   {
-    "id": "550e8400-e29b-41d4-a716-4466554403",
-    "name": "Food & Groceries",
-    "type": "variable",
-    "is_predefined": true,
-    "sort_order": 2,
-    "color": "#f59e0b",
-    "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2025-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "550e8400-e29b-41d4-a716-4466554404",
-    "name": "Transportation",
-    "type": "variable",
-    "is_predefined": true,
-    "sort_order": 3,
-    "color": "#8b5cf6",
-    "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2025-01-01T00:00:00.000Z"
-  },
-  {
     "id": "550e8400-e29b-41d4-a716-4466554405",
     "name": "Insurance",
     "type": "bill",
     "is_predefined": true,
     "sort_order": 4,
     "color": "#ef4444",
-    "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2025-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "550e8400-e29b-41d4-a716-4466554406",
-    "name": "Entertainment",
-    "type": "variable",
-    "is_predefined": true,
-    "sort_order": 5,
-    "color": "#ec4899",
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
   },
@@ -108,5 +78,45 @@
     "color": "#14b8a6",
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554403",
+    "name": "Food & Groceries",
+    "type": "variable",
+    "is_predefined": true,
+    "sort_order": 2,
+    "color": "#f59e0b",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554404",
+    "name": "Transportation",
+    "type": "variable",
+    "is_predefined": true,
+    "sort_order": 3,
+    "color": "#8b5cf6",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-4466554406",
+    "name": "Entertainment",
+    "type": "variable",
+    "is_predefined": true,
+    "sort_order": 5,
+    "color": "#ec4899",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "cf328983-f478-4d18-b9e2-072f71674cb3",
+    "name": "Credit Card Payoffs",
+    "type": "bill",
+    "color": "#8b5cf6",
+    "sort_order": -1,
+    "is_predefined": true,
+    "created_at": "2026-01-05T20:29:26.285Z",
+    "updated_at": "2026-01-05T20:29:26.285Z"
   }
 ]

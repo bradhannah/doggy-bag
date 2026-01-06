@@ -19,6 +19,7 @@ export interface ValidationService {
   validateAmount(amount: number): boolean;
   validateBillingPeriod(period: string): boolean;
   validatePaymentSourceType(type: string): boolean;
+  validatePaymentMethod(method: string): boolean;
   validateDate(dateStr: string): boolean;
   validateDueDay(dueDay: number | undefined): boolean;
   validateHexColor(color: string): boolean;
@@ -108,6 +109,18 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Payment source ID is required');
     }
 
+    // Validate category_id is required
+    if (!bill.category_id?.trim()) {
+      errors.push('Category ID is required');
+    }
+
+    // Validate payment_method if provided (optional field)
+    if (bill.payment_method !== undefined) {
+      if (!['auto', 'manual'].includes(bill.payment_method)) {
+        errors.push("payment_method must be 'auto' or 'manual'");
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -186,6 +199,11 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Payment source ID must be a valid UUID');
     }
 
+    // Validate category_id is required
+    if (!income.category_id?.trim()) {
+      errors.push('Category ID is required');
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -220,14 +238,38 @@ export class ValidationServiceImpl implements ValidationService {
       }
     }
 
-    // exclude_from_leftover is only valid for debt accounts
+    // exclude_from_leftover is only valid for debt accounts (unless it's a savings/investment account)
     if (source.exclude_from_leftover === true) {
       const debtTypes = ['credit_card', 'line_of_credit'];
-      if (source.type && !debtTypes.includes(source.type)) {
+      const isSavingsOrInvestment = source.is_savings === true || source.is_investment === true;
+      if (source.type && !debtTypes.includes(source.type) && !isSavingsOrInvestment) {
         errors.push(
-          'exclude_from_leftover can only be enabled for credit cards and lines of credit'
+          'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'
         );
       }
+    }
+
+    // is_savings and is_investment are mutually exclusive
+    if (source.is_savings === true && source.is_investment === true) {
+      errors.push('An account cannot be both a savings account and an investment account');
+    }
+
+    // is_savings/is_investment are mutually exclusive with pay_off_monthly
+    if (
+      (source.is_savings === true || source.is_investment === true) &&
+      source.pay_off_monthly === true
+    ) {
+      errors.push('Savings and investment accounts cannot have pay_off_monthly enabled');
+    }
+
+    // is_savings is only valid for bank_account type
+    if (source.is_savings === true && source.type && source.type !== 'bank_account') {
+      errors.push('is_savings can only be enabled for bank accounts');
+    }
+
+    // is_investment is only valid for bank_account type
+    if (source.is_investment === true && source.type && source.type !== 'bank_account') {
+      errors.push('is_investment can only be enabled for bank accounts');
     }
 
     return {
@@ -274,7 +316,7 @@ export class ValidationServiceImpl implements ValidationService {
   }
 
   /**
-   * Validate due_day field for Bill/Income (1-31)
+   * Validate day_of_month field for Bill/Income (1-31)
    * @param dueDay - Day of month when bill/income is due
    * @returns true if valid or undefined, false if invalid
    */
@@ -327,6 +369,15 @@ export class ValidationServiceImpl implements ValidationService {
 
   validatePaymentSourceType(type: string): boolean {
     return ['bank_account', 'credit_card', 'line_of_credit', 'cash'].includes(type);
+  }
+
+  /**
+   * Validate payment method for Bill ('auto' or 'manual')
+   * @param method - Payment method string
+   * @returns true if valid
+   */
+  validatePaymentMethod(method: string): boolean {
+    return ['auto', 'manual'].includes(method);
   }
 
   validateDate(dateStr: string): boolean {

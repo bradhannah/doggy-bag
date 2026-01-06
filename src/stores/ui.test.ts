@@ -11,6 +11,7 @@ import {
   goToCurrentMonth,
   widthMode,
   compactMode,
+  hidePaidItems,
   uiState,
   toggleSidebar,
   openDrawer,
@@ -185,6 +186,37 @@ describe('UI Store', () => {
     });
   });
 
+  describe('hidePaidItems store', () => {
+    it('defaults to false', () => {
+      expect(get(hidePaidItems)).toBe(false);
+    });
+
+    it('toggles on and off', () => {
+      hidePaidItems.set(false); // Reset first
+      hidePaidItems.toggle();
+      expect(get(hidePaidItems)).toBe(true);
+
+      hidePaidItems.toggle();
+      expect(get(hidePaidItems)).toBe(false);
+    });
+
+    it('can set directly', () => {
+      hidePaidItems.set(true);
+      expect(get(hidePaidItems)).toBe(true);
+
+      hidePaidItems.set(false);
+      expect(get(hidePaidItems)).toBe(false);
+    });
+
+    it('persists to localStorage', () => {
+      hidePaidItems.set(true);
+      expect(localStorageMock.getItem('budgetforfun-hide-paid-items')).toBe('true');
+
+      hidePaidItems.set(false);
+      expect(localStorageMock.getItem('budgetforfun-hide-paid-items')).toBe('false');
+    });
+  });
+
   describe('uiState store', () => {
     beforeEach(() => {
       closeDrawer();
@@ -214,6 +246,50 @@ describe('UI Store', () => {
 
         toggleSidebar();
         expect(get(sidebarCollapsed)).toBe(false);
+      });
+    });
+
+    describe('sidebarCollapsed.expand', () => {
+      it('sets sidebar to expanded (false)', () => {
+        sidebarCollapsed.set(true);
+        expect(get(sidebarCollapsed)).toBe(true);
+
+        sidebarCollapsed.expand();
+        expect(get(sidebarCollapsed)).toBe(false);
+      });
+
+      it('persists to localStorage', () => {
+        sidebarCollapsed.set(true);
+        sidebarCollapsed.expand();
+        expect(localStorageMock.getItem('budgetforfun-sidebar-collapsed')).toBe('false');
+      });
+
+      it('is idempotent when already expanded', () => {
+        sidebarCollapsed.set(false);
+        sidebarCollapsed.expand();
+        expect(get(sidebarCollapsed)).toBe(false);
+      });
+    });
+
+    describe('sidebarCollapsed.collapse', () => {
+      it('sets sidebar to collapsed (true)', () => {
+        sidebarCollapsed.set(false);
+        expect(get(sidebarCollapsed)).toBe(false);
+
+        sidebarCollapsed.collapse();
+        expect(get(sidebarCollapsed)).toBe(true);
+      });
+
+      it('persists to localStorage', () => {
+        sidebarCollapsed.set(false);
+        sidebarCollapsed.collapse();
+        expect(localStorageMock.getItem('budgetforfun-sidebar-collapsed')).toBe('true');
+      });
+
+      it('is idempotent when already collapsed', () => {
+        sidebarCollapsed.set(true);
+        sidebarCollapsed.collapse();
+        expect(get(sidebarCollapsed)).toBe(true);
       });
     });
 

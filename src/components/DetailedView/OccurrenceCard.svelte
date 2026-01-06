@@ -199,6 +199,7 @@
   }
 
   .occurrence-card.closed {
+    background: rgba(74, 222, 128, 0.05);
     opacity: 0.7;
   }
 

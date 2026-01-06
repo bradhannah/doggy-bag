@@ -58,7 +58,6 @@ export interface CreateBillRequest {
   recurrence_day?: number;
   payment_source_id: string;
   category_id?: string;
-  due_day?: number;
   is_active?: boolean;
 }
 
@@ -72,7 +71,6 @@ export interface UpdateBillRequest {
   recurrence_day?: number;
   payment_source_id?: string;
   category_id?: string;
-  due_day?: number;
   is_active?: boolean;
 }
 
@@ -90,7 +88,6 @@ export interface CreateIncomeRequest {
   recurrence_day?: number;
   payment_source_id: string;
   category_id?: string;
-  due_day?: number;
   is_active?: boolean;
 }
 
@@ -104,7 +101,6 @@ export interface UpdateIncomeRequest {
   recurrence_day?: number;
   payment_source_id?: string;
   category_id?: string;
-  due_day?: number;
   is_active?: boolean;
 }
 

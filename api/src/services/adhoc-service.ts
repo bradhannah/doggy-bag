@@ -49,7 +49,7 @@ export interface MakeRegularRequest {
   category_id: string;
   payment_source_id: string;
   billing_period: BillingPeriod;
-  due_day?: number;
+  day_of_month?: number;
 }
 
 export interface AdhocService {
@@ -299,14 +299,13 @@ export class AdhocServiceImpl implements AdhocService {
     }
 
     // Create the new recurring bill
-    // For monthly bills, use due_day as day_of_month if provided, otherwise default to 1
+    // For monthly bills, use day_of_month if provided, otherwise default to 1
     const billData: {
       name: string;
       amount: number;
       billing_period: BillingPeriod;
       payment_source_id: string;
       category_id: string;
-      due_day?: number;
       day_of_month?: number;
       start_date?: string;
     } = {
@@ -315,12 +314,11 @@ export class AdhocServiceImpl implements AdhocService {
       billing_period: data.billing_period,
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
-      due_day: data.due_day,
     };
 
     // Add day_of_month for monthly billing (required by validation)
     if (data.billing_period === 'monthly') {
-      billData.day_of_month = data.due_day || 1;
+      billData.day_of_month = data.day_of_month || 1;
     } else {
       // For non-monthly, we need a start_date - use today
       billData.start_date = new Date().toISOString().split('T')[0];
@@ -504,14 +502,13 @@ export class AdhocServiceImpl implements AdhocService {
     }
 
     // Create the new recurring income
-    // For monthly incomes, use due_day as day_of_month if provided, otherwise default to 1
+    // For monthly incomes, use day_of_month if provided, otherwise default to 1
     const incomeData: {
       name: string;
       amount: number;
       billing_period: BillingPeriod;
       payment_source_id: string;
       category_id: string;
-      due_day?: number;
       day_of_month?: number;
       start_date?: string;
     } = {
@@ -520,12 +517,11 @@ export class AdhocServiceImpl implements AdhocService {
       billing_period: data.billing_period,
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
-      due_day: data.due_day,
     };
 
     // Add day_of_month for monthly billing (required by validation)
     if (data.billing_period === 'monthly') {
-      incomeData.day_of_month = data.due_day || 1;
+      incomeData.day_of_month = data.day_of_month || 1;
     } else {
       // For non-monthly, we need a start_date - use today
       incomeData.start_date = new Date().toISOString().split('T')[0];

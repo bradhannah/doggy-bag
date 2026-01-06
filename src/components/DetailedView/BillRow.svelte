@@ -151,6 +151,9 @@
       const newTotalPaid = bill.total_paid + paymentAmount;
       detailedMonth.updateBillClosedStatus(bill.id, true, newTotalPaid);
 
+      // Dispatch closed event so parent can scroll to the item's new location
+      dispatch('closed', { id: bill.id, type: 'bill' });
+
       // If this is a payoff bill, show the CC balance sync modal
       if (isPayoffBill && payoffSourceId) {
         ccSyncPaymentAmount = paymentAmount;
@@ -172,6 +175,8 @@
       success('Bill closed');
       // Optimistic update - close without re-sorting
       detailedMonth.updateBillClosedStatus(bill.id, true);
+      // Dispatch closed event so parent can scroll to the item's new location
+      dispatch('closed', { id: bill.id, type: 'bill' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close bill');
     } finally {
@@ -188,6 +193,8 @@
       success('Bill reopened');
       // Optimistic update - reopen without re-sorting
       detailedMonth.updateBillClosedStatus(bill.id, false);
+      // Dispatch reopened event so parent can scroll to the item's new location
+      dispatch('reopened', { id: bill.id, type: 'bill' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to reopen bill');
     } finally {
@@ -359,7 +366,7 @@
   }
 </script>
 
-<div class="bill-row-container">
+<div class="bill-row-container" data-bill-id={bill.id}>
   <div
     class="bill-row"
     class:closed={isClosed}
@@ -394,6 +401,11 @@
                 on {formatDayOfMonth(firstOccurrenceDate)}
               </button>
             {/if}
+          {/if}
+          {#if bill.payment_method === 'auto'}
+            <span class="badge auto-badge">auto</span>
+          {:else}
+            <span class="badge manual-badge">manual</span>
           {/if}
           {#if isPayoffBill}
             <span class="badge payoff-badge">payoff</span>
@@ -466,7 +478,9 @@
             <span class="payment-count">({transactionCount})</span>
           {/if}
         </span>
-        {#if hasTransactions}
+        {#if isClosed}
+          <span class="amount-value">{formatCurrency(bill.total_paid)}</span>
+        {:else if hasTransactions}
           <button
             class="amount-value clickable"
             class:amber={showAmber}
@@ -761,6 +775,16 @@
     color: #f59e0b;
   }
 
+  .auto-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .manual-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+  }
+
   .payoff-badge {
     background: rgba(139, 92, 246, 0.2);
     color: #8b5cf6;
@@ -956,13 +980,14 @@
 
   .action-btn.reopen {
     background: transparent;
-    border: 1px solid #888;
-    color: #888;
+    border: 1px solid #a1a1aa;
+    color: #a1a1aa;
   }
 
   .action-btn.reopen:hover:not(:disabled) {
     border-color: #e4e4e7;
     color: #e4e4e7;
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .action-btn:disabled {

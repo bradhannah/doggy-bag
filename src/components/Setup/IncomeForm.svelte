@@ -89,6 +89,12 @@
       error = 'Payment source is required';
       return;
     }
+
+    if (!category_id) {
+      error = 'Category is required';
+      return;
+    }
+
     if (billing_period !== 'monthly' && !start_date) {
       error = 'Start date is required for bi-weekly, weekly, and semi-annual billing';
       return;
@@ -103,6 +109,7 @@
         amount: amountCents,
         billing_period,
         payment_source_id,
+        category_id,
       };
 
       // Add appropriate fields based on billing period
@@ -123,11 +130,6 @@
       // Add due_day if specified
       if (due_day !== '' && typeof due_day === 'number') {
         incomeData.due_day = due_day;
-      }
-
-      // Add category_id if specified
-      if (category_id) {
-        incomeData.category_id = category_id;
       }
 
       if (editingItem) {
@@ -304,9 +306,14 @@
   </div>
 
   <div class="form-group">
-    <label for="income-category">Category (Optional)</label>
-    <select id="income-category" bind:value={category_id} disabled={saving || !hasPaymentSources}>
-      <option value="">-- No Category --</option>
+    <label for="income-category">Category</label>
+    <select
+      id="income-category"
+      bind:value={category_id}
+      required
+      disabled={saving || !hasPaymentSources}
+    >
+      <option value="">-- Select Category --</option>
       {#each $incomeCategories as cat (cat.id)}
         <option value={cat.id}>{cat.name}</option>
       {/each}

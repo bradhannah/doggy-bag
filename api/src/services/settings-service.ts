@@ -175,7 +175,6 @@ export class SettingsService {
           'incomes.json',
           'categories.json',
           'payment-sources.json',
-          'undo.json',
         ];
         for (const file of emptyEntities) {
           await writeFile(join(destEntities, file), '[]', 'utf-8');

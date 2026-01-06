@@ -309,4 +309,238 @@ describe('Detailed Month Store', () => {
       expect(mockGet).not.toHaveBeenCalled();
     });
   });
+
+  describe('updateIncomeExpectedAmount', () => {
+    beforeEach(async () => {
+      mockGet.mockResolvedValue(sampleDetailedMonthData);
+      await detailedMonth.loadMonth('2025-01');
+    });
+
+    it('updates expected amount and recalculates remaining', () => {
+      detailedMonth.updateIncomeExpectedAmount('ii-1', 600000);
+
+      const data = get(detailedMonthData);
+      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      expect(income.expected_amount).toBe(600000);
+      expect(income.remaining).toBe(600000); // 600000 - 0 total_received
+    });
+
+    it('recalculates section subtotals', () => {
+      detailedMonth.updateIncomeExpectedAmount('ii-1', 700000);
+
+      const data = get(detailedMonthData);
+      const section = data?.incomeSections[0];
+
+      expect(section?.subtotal.expected).toBe(700000);
+    });
+
+    it('does nothing when income not found', () => {
+      const dataBefore = get(detailedMonthData);
+      const incomeBefore = dataBefore?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+      const expectedBefore = incomeBefore.expected_amount;
+
+      detailedMonth.updateIncomeExpectedAmount('nonexistent-id', 999999);
+
+      const dataAfter = get(detailedMonthData);
+      const incomeAfter = dataAfter?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      expect(incomeAfter.expected_amount).toBe(expectedBefore);
+    });
+
+    it('does nothing when data is null', () => {
+      detailedMonth.clear();
+
+      // Should not throw
+      expect(() => detailedMonth.updateIncomeExpectedAmount('ii-1', 100000)).not.toThrow();
+    });
+  });
+
+  describe('updateBillExpectedAmount edge cases', () => {
+    beforeEach(async () => {
+      mockGet.mockResolvedValue(sampleDetailedMonthData);
+      await detailedMonth.loadMonth('2025-01');
+    });
+
+    it('does nothing when bill not found', () => {
+      const dataBefore = get(detailedMonthData);
+      const billBefore = dataBefore?.billSections[0].items[0] as BillInstanceDetailed;
+      const expectedBefore = billBefore.expected_amount;
+
+      detailedMonth.updateBillExpectedAmount('nonexistent-id', 999999);
+
+      const dataAfter = get(detailedMonthData);
+      const billAfter = dataAfter?.billSections[0].items[0] as BillInstanceDetailed;
+
+      expect(billAfter.expected_amount).toBe(expectedBefore);
+    });
+
+    it('does nothing when data is null', () => {
+      detailedMonth.clear();
+
+      // Should not throw
+      expect(() => detailedMonth.updateBillExpectedAmount('bi-1', 100000)).not.toThrow();
+    });
+  });
+
+  describe('updateIncomePaidStatus with bankBalances', () => {
+    const dataWithBankBalances: DetailedMonthData = {
+      ...sampleDetailedMonthData,
+      bankBalances: { 'ps-1': 100000, 'ps-2': 50000 },
+      leftoverBreakdown: {
+        bankBalances: 150000,
+        remainingIncome: 500000,
+        remainingExpenses: 15000,
+        leftover: 635000,
+        isValid: true,
+      },
+    };
+
+    beforeEach(async () => {
+      mockGet.mockResolvedValue(dataWithBankBalances);
+      await detailedMonth.loadMonth('2025-01');
+    });
+
+    it('recalculates leftover with bank balances', () => {
+      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
+
+      const data = get(detailedMonthData);
+
+      // Leftover should be recalculated using bankBalances
+      expect(data?.leftoverBreakdown).toBeDefined();
+      expect(typeof data?.leftover).toBe('number');
+    });
+
+    it('marks income as unpaid correctly', () => {
+      // First mark as paid
+      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
+
+      // Then mark as unpaid
+      detailedMonth.updateIncomePaidStatus('ii-1', false);
+
+      const data = get(detailedMonthData);
+      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      expect(income.is_paid).toBe(false);
+      expect(income.actual_amount).toBeNull();
+    });
+
+    it('uses expected amount when marked paid without actualAmount', () => {
+      detailedMonth.updateIncomePaidStatus('ii-1', true);
+
+      const data = get(detailedMonthData);
+      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      expect(income.is_paid).toBe(true);
+      expect(income.actual_amount).toBe(500000); // Uses expected_amount
+    });
+  });
+
+  describe('updateBillClosedStatus edge cases', () => {
+    beforeEach(async () => {
+      mockGet.mockResolvedValue(sampleDetailedMonthData);
+      await detailedMonth.loadMonth('2025-01');
+    });
+
+    it('uses existing total_paid when totalPaid not provided', () => {
+      // First add some payment
+      detailedMonth.updateBillPaidStatus('bi-1', true, 10000);
+
+      // Then close without providing totalPaid
+      detailedMonth.updateBillClosedStatus('bi-1', true);
+
+      const data = get(detailedMonthData);
+      const bill = data?.billSections[0].items[0] as BillInstanceDetailed;
+
+      expect(bill.is_closed).toBe(true);
+      expect(bill.total_paid).toBe(10000);
+    });
+
+    it('reopens bill correctly', () => {
+      detailedMonth.updateBillClosedStatus('bi-1', true, 15000);
+      detailedMonth.updateBillClosedStatus('bi-1', false);
+
+      const data = get(detailedMonthData);
+      const bill = data?.billSections[0].items[0] as BillInstanceDetailed;
+
+      expect(bill.is_closed).toBe(false);
+      expect(bill.closed_date).toBeNull();
+    });
+  });
+
+  describe('updateIncomeClosedStatus edge cases', () => {
+    beforeEach(async () => {
+      mockGet.mockResolvedValue(sampleDetailedMonthData);
+      await detailedMonth.loadMonth('2025-01');
+    });
+
+    it('uses existing total_received when totalReceived not provided', () => {
+      // First add some payment
+      detailedMonth.updateIncomePaidStatus('ii-1', true, 300000);
+
+      // Get the state to understand total_received
+      const dataBefore = get(detailedMonthData);
+      const incomeBefore = dataBefore?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      // Then close without providing totalReceived
+      detailedMonth.updateIncomeClosedStatus('ii-1', true);
+
+      const data = get(detailedMonthData);
+      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      expect(income.is_closed).toBe(true);
+      expect(income.total_received).toBe(incomeBefore.total_received);
+    });
+
+    it('reopens income correctly', () => {
+      detailedMonth.updateIncomeClosedStatus('ii-1', true, 500000);
+      detailedMonth.updateIncomeClosedStatus('ii-1', false);
+
+      const data = get(detailedMonthData);
+      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
+
+      expect(income.is_closed).toBe(false);
+      expect(income.closed_date).toBeNull();
+    });
+  });
+
+  describe('adhoc income tallies', () => {
+    const dataWithAdhocIncome: DetailedMonthData = {
+      ...sampleDetailedMonthData,
+      incomeSections: [
+        {
+          category: { id: 'cat-1', name: 'Primary', color: '#00ff00', sort_order: 0 },
+          items: [
+            sampleIncomeInstance,
+            {
+              ...sampleIncomeInstance,
+              id: 'ii-adhoc',
+              name: 'Side Gig',
+              is_adhoc: true,
+              expected_amount: 20000,
+              total_received: 0,
+              remaining: 20000,
+            },
+          ],
+          subtotal: { expected: 520000, actual: 0 },
+        },
+      ],
+    };
+
+    beforeEach(async () => {
+      mockGet.mockResolvedValue(dataWithAdhocIncome);
+      await detailedMonth.loadMonth('2025-01');
+    });
+
+    it('separates regular and adhoc income in tallies', () => {
+      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
+      detailedMonth.updateIncomePaidStatus('ii-adhoc', true, 25000);
+
+      const data = get(detailedMonthData);
+
+      expect(data?.tallies.income.actual).toBe(500000);
+      expect(data?.tallies.adhocIncome.actual).toBe(25000);
+      expect(data?.tallies.totalIncome.actual).toBe(525000);
+    });
+  });
 });

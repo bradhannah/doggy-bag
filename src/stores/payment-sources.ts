@@ -62,6 +62,8 @@ export interface PaymentSource {
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
+  is_savings?: boolean; // If true, this is a savings account (mutually exclusive with is_investment and pay_off_monthly)
+  is_investment?: boolean; // If true, this is an investment account (mutually exclusive with is_savings and pay_off_monthly)
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +74,8 @@ export interface PaymentSourceData {
   balance: number;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
+  is_savings?: boolean;
+  is_investment?: boolean;
 }
 
 type PaymentSourceState = {
@@ -110,6 +114,17 @@ export const linesOfCredit = derived(paymentSources, (ps) =>
 );
 export const debtAccounts = derived(paymentSources, (ps) =>
   ps.filter((p) => isDebtAccount(p.type))
+);
+
+// Savings and investment accounts
+export const savingsAccounts = derived(paymentSources, (ps) =>
+  ps.filter((p) => p.is_savings === true)
+);
+export const investmentAccounts = derived(paymentSources, (ps) =>
+  ps.filter((p) => p.is_investment === true)
+);
+export const savingsAndInvestmentAccounts = derived(paymentSources, (ps) =>
+  ps.filter((p) => p.is_savings === true || p.is_investment === true)
 );
 
 export async function loadPaymentSources() {

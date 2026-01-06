@@ -144,6 +144,8 @@
       // Optimistic update - update totals and close status without re-sorting
       const newTotalReceived = totalReceived + receiptAmount;
       detailedMonth.updateIncomeClosedStatus(income.id, true, newTotalReceived);
+      // Dispatch closed event so parent can scroll to the item's new location
+      dispatch('closed', { id: income.id, type: 'income' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to receive income');
     } finally {
@@ -160,6 +162,8 @@
       success('Income closed');
       // Optimistic update - close without re-sorting
       detailedMonth.updateIncomeClosedStatus(income.id, true);
+      // Dispatch closed event so parent can scroll to the item's new location
+      dispatch('closed', { id: income.id, type: 'income' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close income');
     } finally {
@@ -176,6 +180,8 @@
       success('Income reopened');
       // Optimistic update - reopen without re-sorting
       detailedMonth.updateIncomeClosedStatus(income.id, false);
+      // Dispatch reopened event so parent can scroll to the item's new location
+      dispatch('reopened', { id: income.id, type: 'income' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to reopen income');
     } finally {
@@ -338,7 +344,7 @@
   }
 </script>
 
-<div class="income-row-container">
+<div class="income-row-container" data-income-id={income.id}>
   <div
     class="income-row"
     class:closed={isClosed}
@@ -437,7 +443,9 @@
             <span class="payment-count">({transactionCount})</span>
           {/if}
         </span>
-        {#if hasTransactions}
+        {#if isClosed}
+          <span class="amount-value">{formatCurrency(totalReceived)}</span>
+        {:else if hasTransactions}
           <button
             class="amount-value clickable"
             class:amber={showAmber}
@@ -902,13 +910,14 @@
 
   .action-btn.reopen {
     background: transparent;
-    border: 1px solid #888;
-    color: #888;
+    border: 1px solid #a1a1aa;
+    color: #a1a1aa;
   }
 
   .action-btn.reopen:hover:not(:disabled) {
     border-color: #e4e4e7;
     color: #e4e4e7;
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .action-btn:disabled {
