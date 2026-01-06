@@ -57,25 +57,36 @@ Vitest's coverage provider (`@vitest/coverage-v8`) depends on `node:inspector`, 
 - **Tracking issue**: https://github.com/oven-sh/bun/issues/2445
 - **Status**: Active development (PR series in progress)
 
-### Running Frontend Coverage Locally
+### Running Frontend Coverage Locally (macOS)
 
-1. Install Node.js (via nvm, fnm, or brew):
+1. Install NVM (Node Version Manager) if you don't have it:
 
    ```bash
-   # Using nvm
-   nvm install 20
-   nvm use 20
-
-   # Using brew
-   brew install node
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
    ```
 
-2. Run coverage:
+2. Restart your terminal or run:
+
+   ```bash
+   source ~/.zshrc
+   ```
+
+3. Install Node.js 22 (LTS):
+
+   ```bash
+   nvm install 22
+   nvm use 22
+   ```
+
+4. Run coverage:
+
    ```bash
    make test-frontend-coverage
    # or directly:
    npx vitest run --coverage
    ```
+
+**Tip**: To automatically use Node.js 22 in this project, the `.nvmrc` file is already configured.
 
 ### In CI
 
