@@ -249,6 +249,50 @@ describe('UI Store', () => {
       });
     });
 
+    describe('sidebarCollapsed.expand', () => {
+      it('sets sidebar to expanded (false)', () => {
+        sidebarCollapsed.set(true);
+        expect(get(sidebarCollapsed)).toBe(true);
+
+        sidebarCollapsed.expand();
+        expect(get(sidebarCollapsed)).toBe(false);
+      });
+
+      it('persists to localStorage', () => {
+        sidebarCollapsed.set(true);
+        sidebarCollapsed.expand();
+        expect(localStorageMock.getItem('budgetforfun-sidebar-collapsed')).toBe('false');
+      });
+
+      it('is idempotent when already expanded', () => {
+        sidebarCollapsed.set(false);
+        sidebarCollapsed.expand();
+        expect(get(sidebarCollapsed)).toBe(false);
+      });
+    });
+
+    describe('sidebarCollapsed.collapse', () => {
+      it('sets sidebar to collapsed (true)', () => {
+        sidebarCollapsed.set(false);
+        expect(get(sidebarCollapsed)).toBe(false);
+
+        sidebarCollapsed.collapse();
+        expect(get(sidebarCollapsed)).toBe(true);
+      });
+
+      it('persists to localStorage', () => {
+        sidebarCollapsed.set(false);
+        sidebarCollapsed.collapse();
+        expect(localStorageMock.getItem('budgetforfun-sidebar-collapsed')).toBe('true');
+      });
+
+      it('is idempotent when already collapsed', () => {
+        sidebarCollapsed.set(true);
+        sidebarCollapsed.collapse();
+        expect(get(sidebarCollapsed)).toBe(true);
+      });
+    });
+
     describe('openDrawer', () => {
       it('opens drawer with content type', () => {
         openDrawer('edit-bill');
