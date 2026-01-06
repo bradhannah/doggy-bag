@@ -1,7 +1,7 @@
 # BudgetForFun Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
-.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare
+.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage
 
 # Log directory
 LOGS_DIR := logs
@@ -32,11 +32,14 @@ help: ## Show this help message
 	@echo "  make install-all      Install all dependencies (Bun + npm)"
 	@echo ""
 	@echo "Testing Targets:"
-	@echo "  make test      Run all tests (Bun + Jest + Playwright)"
-	@echo "  make test-backend   Run backend tests (Bun)"
-	@echo "  make test-frontend  Run frontend tests (Jest)"
-	@echo "  make test-e2e      Run E2E tests (Playwright)"
-	@echo "  make smoke-test Validate build system integration"
+	@echo "  make test                   Run all tests (Bun + Vitest + Playwright)"
+	@echo "  make test-backend           Run backend tests (Bun)"
+	@echo "  make test-frontend          Run frontend tests (Vitest)"
+	@echo "  make test-e2e               Run E2E tests (Playwright)"
+	@echo "  make test-backend-coverage  Run backend tests with coverage"
+	@echo "  make test-frontend-coverage Run frontend tests with coverage (requires Node.js)"
+	@echo "  make test-coverage          Run all tests with coverage"
+	@echo "  make smoke-test             Validate build system integration"
 	@echo ""
 	@echo "Utility Targets:"
 	@echo "  make kill-dev   Terminate stray development processes"
@@ -233,6 +236,29 @@ test-frontend: ## Run frontend tests with Vitest
 test-e2e: ## Run E2E tests with Playwright
 	@echo "Running E2E tests (Playwright)..."
 	@cd src && bunx playwright test
+
+test-backend-coverage: ## Run backend tests with coverage (Bun native)
+	@echo "Running backend tests with coverage..."
+	@cd api && $(BUN) test --coverage
+
+test-frontend-coverage: ## Run frontend tests with coverage (requires Node.js)
+	@echo "Running frontend tests with coverage..."
+	@echo "NOTE: This requires Node.js installed (exception to no-Node rule)"
+	@echo "      Bun doesn't support node:inspector yet (github.com/oven-sh/bun/issues/2445)"
+	@npx vitest run --coverage
+
+test-coverage: ## Run all tests with coverage
+	@echo "=== Backend Coverage (Bun native) ==="
+	@cd api && $(BUN) test --coverage
+	@echo ""
+	@echo "=== Frontend Coverage ==="
+	@if command -v node >/dev/null 2>&1; then \
+		echo "Running frontend coverage with Node.js..."; \
+		npx vitest run --coverage; \
+	else \
+		echo "WARNING: Node.js not installed - frontend coverage skipped"; \
+		echo "  Install Node.js and run: make test-frontend-coverage"; \
+	fi
 
 # Quality
 lint: ## Run all linting checks (ESLint + Clippy)

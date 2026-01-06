@@ -31,6 +31,27 @@ tests/
 
 # Add commands for
 
+## Test Coverage
+
+### Running Coverage
+
+```bash
+# Backend (Bun native - always works)
+make test-backend-coverage
+
+# Frontend (requires Node.js)
+make test-frontend-coverage
+
+# Both (skips frontend if Node.js not available)
+make test-coverage
+```
+
+### Node.js Exception
+
+Frontend coverage requires Node.js because Vitest's coverage provider needs `node:inspector`, which Bun hasn't implemented yet. This is the **only exception** to the no-Node rule.
+
+See `docs/testing.md` for details.
+
 ## Code Style
 
 : Follow standard conventions
