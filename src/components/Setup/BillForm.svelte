@@ -34,8 +34,8 @@
   let recurrence_week = editingItem?.recurrence_week || 1;
   let recurrence_day = editingItem?.recurrence_day || 0;
 
-  // Due date (optional)
-  let due_day: number | '' = editingItem?.due_day || '';
+  // Payment method (auto or manual) - defaults to 'manual'
+  let payment_method: 'auto' | 'manual' = editingItem?.payment_method || 'manual';
 
   let error = '';
   let saving = false;
@@ -61,7 +61,7 @@
     day_of_month = editingItem.day_of_month || 1;
     recurrence_week = editingItem.recurrence_week || 1;
     recurrence_day = editingItem.recurrence_day || 0;
-    due_day = editingItem.due_day || '';
+    payment_method = editingItem.payment_method || 'manual';
   }
 
   // Convert dollars to cents
@@ -93,6 +93,12 @@
       error = 'Payment source is required';
       return;
     }
+
+    if (!category_id) {
+      error = 'Category is required';
+      return;
+    }
+
     if (billing_period !== 'monthly' && !start_date) {
       error = 'Start date is required for bi-weekly, weekly, and semi-annual billing';
       return;
@@ -107,12 +113,8 @@
         amount: amountCents,
         billing_period,
         payment_source_id,
+        category_id,
       };
-
-      // Add category_id if selected
-      if (category_id) {
-        billData.category_id = category_id;
-      }
 
       // Add appropriate fields based on billing period
       if (billing_period !== 'monthly' && start_date) {
@@ -129,10 +131,8 @@
         }
       }
 
-      // Add due_day if specified
-      if (due_day !== '' && typeof due_day === 'number') {
-        billData.due_day = due_day;
-      }
+      // Always include payment_method (defaults to 'manual')
+      billData.payment_method = payment_method;
 
       if (editingItem) {
         await updateBill(editingItem.id, billData);
@@ -308,9 +308,14 @@
   </div>
 
   <div class="form-group">
-    <label for="bill-category">Category (Optional)</label>
-    <select id="bill-category" bind:value={category_id} disabled={saving || !hasPaymentSources}>
-      <option value="">-- No category --</option>
+    <label for="bill-category">Category</label>
+    <select
+      id="bill-category"
+      bind:value={category_id}
+      required
+      disabled={saving || !hasPaymentSources}
+    >
+      <option value="">-- Select Category --</option>
       {#each $billCategories as cat (cat.id)}
         <option value={cat.id}>{cat.name}</option>
       {/each}
@@ -319,14 +324,16 @@
   </div>
 
   <div class="form-group">
-    <label for="bill-due-day">Due Day (Optional)</label>
-    <select id="bill-due-day" bind:value={due_day} disabled={saving || !hasPaymentSources}>
-      <option value="">-- No due date --</option>
-      {#each Array.from({ length: 31 }, (_, i) => i + 1) as day (day)}
-        <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
-      {/each}
+    <label for="bill-payment-method">Payment Method</label>
+    <select
+      id="bill-payment-method"
+      bind:value={payment_method}
+      disabled={saving || !hasPaymentSources}
+    >
+      <option value="manual">Manual (Pay manually)</option>
+      <option value="auto">Auto (Autopay)</option>
     </select>
-    <div class="help-text">Used to calculate overdue status in the monthly view</div>
+    <div class="help-text">How is this bill paid? Autopay or manual payment</div>
   </div>
 
   <div class="form-actions">

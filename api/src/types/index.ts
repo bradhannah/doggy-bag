@@ -15,14 +15,7 @@ const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'
 
 type CategoryType = 'bill' | 'income' | 'variable';
 
-type UndoEntityType =
-  | 'bill'
-  | 'income'
-  | 'variable_expense'
-  | 'free_flowing_expense'
-  | 'payment_source'
-  | 'bill_instance'
-  | 'income_instance';
+type PaymentMethod = 'auto' | 'manual';
 
 // ============================================================================
 // Entity Interfaces
@@ -39,8 +32,8 @@ interface Bill {
   recurrence_week?: number; // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
   recurrence_day?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
-  category_id?: string;
-  due_day?: number; // NEW: Day of month when due (1-31)
+  category_id: string; // Required - reference to bill category
+  payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -57,8 +50,7 @@ interface Income {
   recurrence_week?: number; // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
   recurrence_day?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
-  category_id?: string; // NEW: Reference to income category
-  due_day?: number; // NEW: Day of month when expected (1-31)
+  category_id: string; // Required - reference to income category
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -83,7 +75,7 @@ interface Payment {
 interface Occurrence {
   id: string;
   sequence: number; // 1, 2, 3... for ordering within the month
-  expected_date: string; // YYYY-MM-DD - calculated from due_day/start_date, overridable
+  expected_date: string; // YYYY-MM-DD - calculated from day_of_month/start_date, overridable
   expected_amount: number; // Cents - can be edited independently per occurrence
   is_closed: boolean; // Close/Open status for this occurrence
   closed_date?: string; // When closed (YYYY-MM-DD)
@@ -182,6 +174,8 @@ interface PaymentSource {
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
+  is_savings?: boolean; // If true, this is a savings account (mutually exclusive with is_investment and pay_off_monthly)
+  is_investment?: boolean; // If true, this is an investment account (mutually exclusive with is_savings and pay_off_monthly)
   created_at: string;
   updated_at: string;
 }
@@ -204,18 +198,11 @@ interface MonthlyData {
   variable_expenses: VariableExpense[];
   free_flowing_expenses: FreeFlowingExpense[];
   bank_balances: Record<string, number>;
+  savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
+  savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
   is_read_only: boolean; // Lock month from edits
   created_at: string;
   updated_at: string;
-}
-
-interface UndoEntry {
-  id: string;
-  entity_type: UndoEntityType;
-  entity_id: string;
-  old_value: unknown;
-  new_value: unknown;
-  timestamp: string;
 }
 
 interface BackupFileData {
@@ -276,6 +263,7 @@ interface BillInstanceDetailed {
     name: string;
   } | null;
   category_id: string;
+  payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
 }
 
 interface IncomeInstanceDetailed {
@@ -391,7 +379,7 @@ export type {
   BillingPeriod,
   PaymentSourceType,
   CategoryType,
-  UndoEntityType,
+  PaymentMethod,
   VariableExpenseFrequency,
   Bill,
   Income,
@@ -405,7 +393,6 @@ export type {
   PaymentSource,
   Category,
   MonthlyData,
-  UndoEntry,
   BackupFileData,
   SectionTally,
   CategorySection,

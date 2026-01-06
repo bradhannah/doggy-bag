@@ -79,6 +79,8 @@ export interface MonthlyData {
   variable_expenses: VariableExpense[];
   free_flowing_expenses: FreeFlowingExpense[];
   bank_balances: Record<string, number>;
+  savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
+  savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
   summary: LeftoverSummary;
   created_at: string;
   updated_at: string;

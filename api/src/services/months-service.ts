@@ -62,6 +62,11 @@ export interface MonthsService {
   generateMonthlyData(month: string): Promise<MonthlyData>;
   syncMonthlyData(month: string): Promise<MonthlyData>;
   updateBankBalances(month: string, balances: Record<string, number>): Promise<MonthlyData>;
+  updateSavingsBalances(
+    month: string,
+    start?: Record<string, number>,
+    end?: Record<string, number>
+  ): Promise<MonthlyData>;
   saveMonthlyData(month: string, data: MonthlyData): Promise<void>;
 
   // Month management
@@ -662,6 +667,44 @@ export class MonthsServiceImpl implements MonthsService {
       return data;
     } catch (error) {
       console.error('[MonthsService] Failed to update bank balances:', error);
+      throw error;
+    }
+  }
+
+  public async updateSavingsBalances(
+    month: string,
+    start?: Record<string, number>,
+    end?: Record<string, number>
+  ): Promise<MonthlyData> {
+    try {
+      const data = await this.getMonthlyData(month);
+
+      if (!data) {
+        throw new Error(`Monthly data for ${month} not found`);
+      }
+
+      const now = new Date().toISOString();
+
+      // Update savings balances
+      if (start !== undefined) {
+        data.savings_balances_start = {
+          ...(data.savings_balances_start || {}),
+          ...start,
+        };
+      }
+      if (end !== undefined) {
+        data.savings_balances_end = {
+          ...(data.savings_balances_end || {}),
+          ...end,
+        };
+      }
+      data.updated_at = now;
+
+      await this.saveMonthlyData(month, data);
+      console.log(`[MonthsService] Updated savings balances for ${month}`);
+      return data;
+    } catch (error) {
+      console.error('[MonthsService] Failed to update savings balances:', error);
       throw error;
     }
   }

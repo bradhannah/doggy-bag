@@ -631,3 +631,77 @@ export function createMonthsHandlerLock() {
     }
   };
 }
+
+// PUT /api/months/:month/savings-balances - Update savings/investment account balances for a month
+export function createMonthsHandlerUpdateSavingsBalances() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/savings-balances/);
+      const month = match ? match[1] : null;
+
+      if (!month) {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const body = await request.json();
+
+      // Validate body structure: { start: {id: amount}, end: {id: amount} }
+      if (typeof body !== 'object' || body === null) {
+        return new Response(
+          JSON.stringify({
+            error: 'Request body must be an object with start and/or end balance maps',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const { start, end } = body as {
+        start?: Record<string, number>;
+        end?: Record<string, number>;
+      };
+
+      const monthlyData = await monthsService.updateSavingsBalances(month, start, end);
+
+      return new Response(
+        JSON.stringify({
+          month,
+          savings_balances_start: monthlyData.savings_balances_start,
+          savings_balances_end: monthlyData.savings_balances_end,
+          message: 'Savings balances updated successfully',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (error) {
+      console.error('[MonthsHandler] UpdateSavingsBalances failed:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const status = errorMessage.includes('not found') ? 404 : 500;
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update savings balances',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status,
+        }
+      );
+    }
+  };
+}

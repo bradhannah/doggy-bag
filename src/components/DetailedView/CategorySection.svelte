@@ -4,6 +4,7 @@
     CategorySection as CategorySectionType,
     BillInstanceDetailed,
     IncomeInstanceDetailed,
+    Occurrence,
   } from '../../stores/detailed-month';
   import BillRow from './BillRow.svelte';
   import IncomeRow from './IncomeRow.svelte';
@@ -15,6 +16,8 @@
   export let month: string = '';
   export let compactMode: boolean = false;
   export let readOnly: boolean = false;
+  export let hiddenCount: number = 0; // Number of hidden closed items (for partial categories)
+  export let collapsed: boolean = false; // Show collapsed single-line view (for completed categories)
 
   const dispatch = createEventDispatcher();
 
@@ -43,6 +46,29 @@
   function hasMultipleOccurrences(item: BillInstanceDetailed | IncomeInstanceDetailed): boolean {
     return item.occurrences && item.occurrences.length > 1;
   }
+
+  // Count total occurrences and closed occurrences for stats
+  function countOccurrences(items: (BillInstanceDetailed | IncomeInstanceDetailed)[]): {
+    total: number;
+    closed: number;
+  } {
+    let total = 0;
+    let closed = 0;
+    for (const item of items) {
+      if (item.occurrences && item.occurrences.length > 0) {
+        total += item.occurrences.length;
+        closed += item.occurrences.filter((occ: Occurrence) => occ.is_closed).length;
+      } else {
+        // Fallback: item without occurrences counts as 1
+        total += 1;
+        if (item.is_closed) closed += 1;
+      }
+    }
+    return { total, closed };
+  }
+
+  $: occurrenceStats = countOccurrences(section.items);
+  $: statsLabel = type === 'bills' ? 'paid' : 'received';
 
   $: showAmber =
     section.subtotal.actual > 0 && section.subtotal.actual !== section.subtotal.expected;
@@ -81,60 +107,119 @@
   }
 </script>
 
-<div class="category-section" class:compact={compactMode} class:complete={isComplete}>
+{#if collapsed}
+  <!-- Collapsed single-line view for completed categories -->
   <div
-    class="category-header"
+    class="category-collapsed"
+    class:compact={compactMode}
     style="border-left-color: {section.category.color}; background: {headerBgColor}"
   >
-    <div class="category-title">
-      <span class="category-color" style="background-color: {section.category.color}"></span>
-      <h4 class:crossed-out={isComplete}>{section.category.name}</h4>
-      <span class="item-count">({section.items.length})</span>
-      <button
-        class="add-adhoc-btn"
-        on:click={openAdHocForm}
-        title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
-        disabled={readOnly}
-      >
-        +
-      </button>
-    </div>
-
-    <div class="category-subtotal">
-      <span class="subtotal-item">
-        <span class="subtotal-label">Expected</span>
-        <span class="subtotal-value">{formatCurrency(section.subtotal.expected)}</span>
+    <span class="collapse-chevron">▸</span>
+    <span class="category-color" style="background-color: {section.category.color}"></span>
+    <span class="category-name">{section.category.name}</span>
+    <span class="checkmark">✓</span>
+    <span class="item-count">
+      {section.items.length} item{section.items.length !== 1 ? 's' : ''}
+    </span>
+    {#if occurrenceStats.total > 0}
+      <span class="occurrence-stats complete">
+        {occurrenceStats.closed}/{occurrenceStats.total}
+        {statsLabel}
       </span>
-      <span class="subtotal-item">
-        <span class="subtotal-label">Actual</span>
-        <span class="subtotal-value" class:amber={showAmber}>
-          {section.subtotal.actual > 0 ? formatCurrency(section.subtotal.actual) : '-'}
+    {/if}
+    <button
+      class="add-adhoc-btn"
+      on:click={openAdHocForm}
+      title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
+      disabled={readOnly}
+    >
+      +
+    </button>
+  </div>
+{:else}
+  <!-- Expanded view -->
+  <div class="category-section" class:compact={compactMode} class:complete={isComplete}>
+    <div
+      class="category-header"
+      style="border-left-color: {section.category.color}; background: {headerBgColor}"
+    >
+      <div class="category-title">
+        <span class="category-color" style="background-color: {section.category.color}"></span>
+        <h4 class:crossed-out={isComplete}>{section.category.name}</h4>
+        {#if hiddenCount > 0}
+          <span class="hidden-count">{hiddenCount} hidden</span>
+        {/if}
+        {#if occurrenceStats.total > 0}
+          <span
+            class="occurrence-stats"
+            class:complete={occurrenceStats.closed === occurrenceStats.total}
+          >
+            {occurrenceStats.closed}/{occurrenceStats.total}
+            {statsLabel}
+          </span>
+        {/if}
+        <button
+          class="add-adhoc-btn"
+          on:click={openAdHocForm}
+          title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
+          disabled={readOnly}
+        >
+          +
+        </button>
+      </div>
+
+      <div class="category-subtotal">
+        <span class="subtotal-item">
+          <span class="subtotal-label">Expected</span>
+          <span class="subtotal-value">{formatCurrency(section.subtotal.expected)}</span>
         </span>
-      </span>
+        <span class="subtotal-item">
+          <span class="subtotal-label">Actual</span>
+          <span class="subtotal-value" class:amber={showAmber}>
+            {section.subtotal.actual > 0 ? formatCurrency(section.subtotal.actual) : '-'}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <div class="category-items">
+      {#each section.items as item (item.id)}
+        {#if hasMultipleOccurrences(item)}
+          <!-- Multi-occurrence items (bi-weekly, weekly) use OccurrenceCard -->
+          <OccurrenceCard
+            {item}
+            type={type === 'bills' ? 'bill' : 'income'}
+            {month}
+            {readOnly}
+            on:refresh={handleRefresh}
+          />
+        {:else if type === 'bills' && isBillInstance(item)}
+          <!-- Regular monthly bills use BillRow -->
+          <BillRow
+            bill={item}
+            {month}
+            {compactMode}
+            {readOnly}
+            on:refresh={handleRefresh}
+            on:reopened
+            on:closed
+          />
+        {:else if type === 'income' && !isBillInstance(item)}
+          <!-- Regular monthly incomes use IncomeRow -->
+          <IncomeRow
+            income={item}
+            {month}
+            {compactMode}
+            {readOnly}
+            on:refresh={handleRefresh}
+            on:reopened
+            on:closed
+          />
+        {/if}
+      {/each}
     </div>
   </div>
-
-  <div class="category-items">
-    {#each section.items as item (item.id)}
-      {#if hasMultipleOccurrences(item)}
-        <!-- Multi-occurrence items (bi-weekly, weekly) use OccurrenceCard -->
-        <OccurrenceCard
-          {item}
-          type={type === 'bills' ? 'bill' : 'income'}
-          {month}
-          {readOnly}
-          on:refresh={handleRefresh}
-        />
-      {:else if type === 'bills' && isBillInstance(item)}
-        <!-- Regular monthly bills use BillRow -->
-        <BillRow bill={item} {month} {compactMode} {readOnly} on:refresh={handleRefresh} />
-      {:else if type === 'income' && !isBillInstance(item)}
-        <!-- Regular monthly incomes use IncomeRow -->
-        <IncomeRow income={item} {month} {compactMode} {readOnly} on:refresh={handleRefresh} />
-      {/if}
-    {/each}
-  </div>
-</div>
+{/if}
 
 <!-- Ad-hoc Form Drawer -->
 <AdHocForm
@@ -196,9 +281,18 @@
     color: #e4e4e7;
   }
 
-  .item-count {
+  .occurrence-stats {
     font-size: 0.75rem;
+    font-weight: 500;
     color: #888;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
+
+  .occurrence-stats.complete {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
   }
 
   .add-adhoc-btn {
@@ -292,8 +386,9 @@
     height: 10px;
   }
 
-  .category-section.compact .item-count {
+  .category-section.compact .occurrence-stats {
     font-size: 0.65rem;
+    padding: 1px 6px;
   }
 
   .category-section.compact .add-adhoc-btn {
@@ -313,5 +408,138 @@
   .category-section.compact .category-items {
     gap: 2px;
     padding-left: 6px;
+  }
+
+  /* Hidden count badge for partially complete categories */
+  .hidden-count {
+    font-size: 0.7rem;
+    color: #888;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    font-style: italic;
+  }
+
+  /* Collapsed category row for completed categories */
+  .category-collapsed {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #555;
+    margin-bottom: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .category-collapsed:hover {
+    opacity: 0.85;
+  }
+
+  .collapse-chevron {
+    color: #666;
+    font-size: 0.8rem;
+    width: 12px;
+    flex-shrink: 0;
+  }
+
+  .category-collapsed .category-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .category-collapsed .category-name {
+    font-weight: 600;
+    color: #e4e4e7;
+    font-size: 1rem;
+  }
+
+  .category-collapsed .checkmark {
+    color: #4ade80;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+
+  .category-collapsed .item-count {
+    color: #888;
+    font-size: 0.8rem;
+    margin-left: auto;
+  }
+
+  .category-collapsed .occurrence-stats {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #4ade80;
+    padding: 2px 8px;
+    background: rgba(74, 222, 128, 0.1);
+    border-radius: 10px;
+  }
+
+  .category-collapsed .add-adhoc-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px dashed #555;
+    background: transparent;
+    color: #888;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-left: 8px;
+    /* Counteract parent opacity */
+    opacity: 1.43;
+  }
+
+  .category-collapsed .add-adhoc-btn:hover {
+    border-color: #24c8db;
+    color: #24c8db;
+    background: rgba(36, 200, 219, 0.1);
+  }
+
+  /* Compact mode for collapsed categories */
+  .category-collapsed.compact {
+    padding: 6px 10px;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .category-collapsed.compact .collapse-chevron {
+    font-size: 0.7rem;
+    width: 10px;
+  }
+
+  .category-collapsed.compact .category-color {
+    width: 10px;
+    height: 10px;
+  }
+
+  .category-collapsed.compact .category-name {
+    font-size: 0.85rem;
+  }
+
+  .category-collapsed.compact .checkmark {
+    font-size: 0.8rem;
+  }
+
+  .category-collapsed.compact .item-count {
+    font-size: 0.7rem;
+  }
+
+  .category-collapsed.compact .occurrence-stats {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+  }
+
+  .category-collapsed.compact .add-adhoc-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 0.85rem;
   }
 </style>

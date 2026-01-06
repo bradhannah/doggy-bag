@@ -10,7 +10,7 @@
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import { widthMode, compactMode } from '../../stores/ui';
+  import { widthMode, compactMode, hidePaidItems } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
 
@@ -77,13 +77,19 @@
     widthMode.cycle();
   }
 
-  // Helper: check if a category section is complete (all paid or empty)
-  function isSectionComplete(section: { items: { is_paid: boolean }[] }): boolean {
-    return section.items.length === 0 || section.items.every((item) => item.is_paid);
+  // Helper: check if a category section is complete (all closed or empty)
+  // Use is_closed because that indicates the user has marked the item as done
+  function isSectionComplete(section: { items: { is_closed: boolean }[] }): boolean {
+    return section.items.length === 0 || section.items.every((item) => item.is_closed);
+  }
+
+  // Helper: count closed items in a section
+  function countClosedItems(section: { items: { is_closed: boolean }[] }): number {
+    return section.items.filter((item) => item.is_closed).length;
   }
 
   // Sort sections: incomplete first, complete/empty last
-  function sortSections<T extends { items: { is_paid: boolean }[] }>(sections: T[]): T[] {
+  function sortSections<T extends { items: { is_closed: boolean }[] }>(sections: T[]): T[] {
     return [...sections].sort((a, b) => {
       const aComplete = isSectionComplete(a);
       const bComplete = isSectionComplete(b);
@@ -97,6 +103,49 @@
   $: sortedIncomeSections = $detailedMonthData
     ? sortSections($detailedMonthData.incomeSections)
     : [];
+
+  // Calculate total items for empty state checks
+  $: totalBills = sortedBillSections.reduce((sum, section) => sum + section.items.length, 0);
+  $: totalIncomes = sortedIncomeSections.reduce((sum, section) => sum + section.items.length, 0);
+
+  // Separate active vs completed sections (always sorted: active first, completed last)
+  $: activeBillSections = sortedBillSections.filter((s) => !isSectionComplete(s));
+  $: completedBillSections = sortedBillSections.filter((s) => isSectionComplete(s));
+  $: activeIncomeSections = sortedIncomeSections.filter((s) => !isSectionComplete(s));
+  $: completedIncomeSections = sortedIncomeSections.filter((s) => isSectionComplete(s));
+
+  // Calculate hidden counts for each active section (when toggle is on, this shows "X hidden" in header)
+  // Map from section category id to hidden count
+  $: billHiddenCounts = new Map(
+    activeBillSections.map((s) => [s.category.id, $hidePaidItems ? countClosedItems(s) : 0])
+  );
+  $: incomeHiddenCounts = new Map(
+    activeIncomeSections.map((s) => [s.category.id, $hidePaidItems ? countClosedItems(s) : 0])
+  );
+
+  // When toggle ON: filter closed items from active sections
+  // When toggle OFF: show all items
+  // Type assertion needed to maintain proper types after filter
+  type BillSection = (typeof sortedBillSections)[number];
+  type IncomeSection = (typeof sortedIncomeSections)[number];
+
+  $: displayActiveBillSections = (
+    $hidePaidItems
+      ? activeBillSections.map((section) => ({
+          ...section,
+          items: section.items.filter((item) => !item.is_closed),
+        }))
+      : activeBillSections
+  ) as BillSection[];
+
+  $: displayActiveIncomeSections = (
+    $hidePaidItems
+      ? activeIncomeSections.map((section) => ({
+          ...section,
+          items: section.items.filter((item) => !item.is_closed),
+        }))
+      : activeIncomeSections
+  ) as IncomeSection[];
 
   // Refresh all data with scroll position preservation
   function refreshData() {
@@ -153,6 +202,84 @@
     } finally {
       creating = false;
     }
+  }
+
+  // Handle reopened event - scroll to the item's new location and highlight it
+  async function handleReopened(event: CustomEvent<{ id: string; type: 'bill' | 'income' }>) {
+    const { id, type } = event.detail;
+
+    // Wait for Svelte to update the DOM after the store update
+    await tick();
+
+    // Wait for browser layout/paint with double RAF
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Find the element by data attribute
+        const selector = type === 'bill' ? `[data-bill-id="${id}"]` : `[data-income-id="${id}"]`;
+        const element = document.querySelector(selector);
+
+        if (element) {
+          // Scroll the element into view (centered)
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          // Add highlight class for animation
+          element.classList.add('just-reopened');
+
+          // Remove the class after animation completes
+          element.addEventListener(
+            'animationend',
+            () => {
+              element.classList.remove('just-reopened');
+            },
+            { once: true }
+          );
+
+          // Fallback timeout in case animationend doesn't fire
+          setTimeout(() => {
+            element.classList.remove('just-reopened');
+          }, 2000);
+        }
+      });
+    });
+  }
+
+  // Handle closed event - scroll to the item's new location and highlight it
+  async function handleClosed(event: CustomEvent<{ id: string; type: 'bill' | 'income' }>) {
+    const { id, type } = event.detail;
+
+    // Wait for Svelte to update the DOM after the store update
+    await tick();
+
+    // Wait for browser layout/paint with double RAF
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Find the element by data attribute
+        const selector = type === 'bill' ? `[data-bill-id="${id}"]` : `[data-income-id="${id}"]`;
+        const element = document.querySelector(selector);
+
+        if (element) {
+          // Scroll the element into view (centered)
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          // Add highlight class for animation
+          element.classList.add('just-reopened');
+
+          // Remove the class after animation completes
+          element.addEventListener(
+            'animationend',
+            () => {
+              element.classList.remove('just-reopened');
+            },
+            { once: true }
+          );
+
+          // Fallback timeout in case animationend doesn't fire
+          setTimeout(() => {
+            element.classList.remove('just-reopened');
+          }, 2000);
+        }
+      });
+    });
   }
 </script>
 
@@ -289,6 +416,52 @@
               </svg>
             {/if}
           </button>
+          <!-- Hide paid toggle -->
+          <button
+            class="hide-paid-toggle"
+            class:active={$hidePaidItems}
+            on:click={() => hidePaidItems.toggle()}
+            title={$hidePaidItems ? 'Show all items' : 'Hide paid items'}
+          >
+            {#if $hidePaidItems}
+              <!-- Eye with slash (hidden) -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M1 1l22 22"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            {:else}
+              <!-- Eye (visible) -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            {/if}
+          </button>
           <!-- Refresh button -->
           <button class="refresh-toggle" on:click={refreshData} title="Refresh data">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -392,19 +565,46 @@
                 <h2>Bills</h2>
               </div>
 
-              {#if sortedBillSections.length === 0}
+              {#if totalBills === 0}
                 <p class="empty-text">No bill categories. Add categories in Setup.</p>
               {:else}
-                {#each sortedBillSections as section (section.category.id)}
+                <!-- Active (incomplete) categories -->
+                {#each displayActiveBillSections as section (section.category.id)}
                   <CategorySection
                     {section}
                     type="bills"
                     {month}
                     compactMode={$compactMode}
                     readOnly={$monthIsReadOnly}
+                    hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
+                    collapsed={false}
                     on:refresh={refreshData}
+                    on:reopened={handleReopened}
+                    on:closed={handleClosed}
                   />
                 {/each}
+
+                <!-- Divider + Completed categories -->
+                {#if completedBillSections.length > 0}
+                  <div class="completed-divider">
+                    <span>Completed</span>
+                  </div>
+
+                  {#each completedBillSections as section (section.category.id)}
+                    <CategorySection
+                      {section}
+                      type="bills"
+                      {month}
+                      compactMode={$compactMode}
+                      readOnly={$monthIsReadOnly}
+                      hiddenCount={0}
+                      collapsed={$hidePaidItems}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/each}
+                {/if}
               {/if}
             </section>
 
@@ -414,19 +614,46 @@
                 <h2>Income</h2>
               </div>
 
-              {#if sortedIncomeSections.length === 0}
+              {#if totalIncomes === 0}
                 <p class="empty-text">No income categories. Add categories in Setup.</p>
               {:else}
-                {#each sortedIncomeSections as section (section.category.id)}
+                <!-- Active (incomplete) categories -->
+                {#each displayActiveIncomeSections as section (section.category.id)}
                   <CategorySection
                     {section}
                     type="income"
                     {month}
                     compactMode={$compactMode}
                     readOnly={$monthIsReadOnly}
+                    hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
+                    collapsed={false}
                     on:refresh={refreshData}
+                    on:reopened={handleReopened}
+                    on:closed={handleClosed}
                   />
                 {/each}
+
+                <!-- Divider + Completed categories -->
+                {#if completedIncomeSections.length > 0}
+                  <div class="completed-divider">
+                    <span>Completed</span>
+                  </div>
+
+                  {#each completedIncomeSections as section (section.category.id)}
+                    <CategorySection
+                      {section}
+                      type="income"
+                      {month}
+                      compactMode={$compactMode}
+                      readOnly={$monthIsReadOnly}
+                      hiddenCount={0}
+                      collapsed={$hidePaidItems}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/each}
+                {/if}
               {/if}
             </section>
           </div>
@@ -538,7 +765,8 @@
 
   .compact-toggle,
   .width-toggle,
-  .refresh-toggle {
+  .refresh-toggle,
+  .hide-paid-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -554,10 +782,17 @@
 
   .compact-toggle:hover,
   .width-toggle:hover,
-  .refresh-toggle:hover {
+  .refresh-toggle:hover,
+  .hide-paid-toggle:hover {
     background: rgba(36, 200, 219, 0.1);
     border-color: #24c8db;
     color: #24c8db;
+  }
+
+  .hide-paid-toggle.active {
+    background: rgba(74, 222, 128, 0.1);
+    border-color: #4ade80;
+    color: #4ade80;
   }
 
   /* Main layout with sidebar */
@@ -650,6 +885,39 @@
     color: #666;
     text-align: center;
     padding: 40px 20px;
+  }
+
+  .empty-text.all-paid {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.05);
+    border-radius: var(--radius-md);
+    padding: 30px 20px;
+  }
+
+  /* Completed categories divider */
+  .completed-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-4) 0 var(--space-3) 0;
+    color: #666;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .completed-divider::before,
+  .completed-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #333355;
+  }
+
+  /* Compact mode for divider */
+  .detailed-view.compact .completed-divider {
+    margin: var(--space-2) 0;
+    font-size: 0.6rem;
   }
 
   /* Create month prompt styles */
@@ -814,6 +1082,24 @@
   @media (max-width: 768px) {
     .detailed-view {
       padding: var(--content-padding-mobile);
+    }
+  }
+
+  /* Reopened item highlight animation */
+  :global(.bill-row-container.just-reopened),
+  :global(.income-row-container.just-reopened) {
+    animation: reopened-highlight 1.5s ease-out;
+  }
+
+  @keyframes reopened-highlight {
+    0% {
+      background: rgba(36, 200, 219, 0.3);
+      box-shadow: 0 0 0 2px rgba(36, 200, 219, 0.5);
+      border-radius: 8px;
+    }
+    100% {
+      background: transparent;
+      box-shadow: none;
     }
   }
 </style>

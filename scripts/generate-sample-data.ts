@@ -851,9 +851,6 @@ async function main() {
 
   await Bun.write(`${outputDir}/entities/incomes.json`, JSON.stringify(incomes, null, 2));
 
-  // Write empty undo file
-  await Bun.write(`${outputDir}/entities/undo.json`, '[]');
-
   // Generate month data files
   const monthsToGenerate = [
     { month: '2025-01', isPast: true },

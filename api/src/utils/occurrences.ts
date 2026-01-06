@@ -14,7 +14,7 @@ export function generateBillOccurrences(
     bill.billing_period,
     bill.amount,
     bill.start_date,
-    bill.due_day,
+    bill.day_of_month,
     month
   );
 }
@@ -30,7 +30,7 @@ export function generateIncomeOccurrences(
     income.billing_period,
     income.amount,
     income.start_date,
-    income.due_day,
+    income.day_of_month,
     month
   );
 }
@@ -42,11 +42,11 @@ export function generateOccurrences(
   billingPeriod: BillingPeriod,
   amount: number,
   startDate: string | undefined,
-  dueDay: number | undefined,
+  dayOfMonth: number | undefined,
   month: string
 ): Occurrence[] {
   const now = new Date().toISOString();
-  const dates = getOccurrenceDatesInMonth(billingPeriod, startDate, dueDay, month);
+  const dates = getOccurrenceDatesInMonth(billingPeriod, startDate, dayOfMonth, month);
 
   return dates.map((date, index) => ({
     id: crypto.randomUUID(),
@@ -67,7 +67,7 @@ export function generateOccurrences(
 export function getOccurrenceDatesInMonth(
   billingPeriod: BillingPeriod,
   startDate: string | undefined,
-  dueDay: number | undefined,
+  dayOfMonth: number | undefined,
   month: string
 ): string[] {
   const [year, monthNum] = month.split('-').map(Number);
@@ -76,7 +76,7 @@ export function getOccurrenceDatesInMonth(
 
   switch (billingPeriod) {
     case 'monthly':
-      return getMonthlyDates(dueDay, month, lastDayOfMonth);
+      return getMonthlyDates(dayOfMonth, month, lastDayOfMonth);
 
     case 'bi_weekly':
       return getBiWeeklyDatesInMonth(startDate, month);
@@ -89,7 +89,7 @@ export function getOccurrenceDatesInMonth(
 
     default:
       // Default to monthly if unknown
-      return getMonthlyDates(dueDay, month, lastDayOfMonth);
+      return getMonthlyDates(dayOfMonth, month, lastDayOfMonth);
   }
 }
 
@@ -97,12 +97,12 @@ export function getOccurrenceDatesInMonth(
  * Get monthly occurrence date (single date per month)
  */
 function getMonthlyDates(
-  dueDay: number | undefined,
+  dayOfMonth: number | undefined,
   month: string,
   lastDayOfMonth: number
 ): string[] {
-  // Default to 1st if no due_day set
-  const day = Math.min(dueDay || 1, lastDayOfMonth);
+  // Default to 1st if no day_of_month set
+  const day = Math.min(dayOfMonth || 1, lastDayOfMonth);
   return [`${month}-${String(day).padStart(2, '0')}`];
 }
 

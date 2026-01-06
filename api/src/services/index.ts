@@ -8,6 +8,5 @@ export * from './incomes-service';
 export * from './categories-service';
 export * from './months-service';
 export * from './backup-service';
-export * from './undo-service';
 export * from './leftover-service';
 export * from './auto-save';

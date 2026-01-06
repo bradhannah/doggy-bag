@@ -55,6 +55,7 @@ describe('BillsService', () => {
       billing_period: 'monthly',
       day_of_month: 15,
       payment_source_id: 'ps-checking-001',
+      category_id: 'cat-housing-001',
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -66,6 +67,7 @@ describe('BillsService', () => {
       billing_period: 'monthly',
       day_of_month: 20,
       payment_source_id: 'ps-checking-001',
+      category_id: 'cat-housing-001',
       is_active: false, // Inactive bill
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -151,6 +153,7 @@ describe('BillsService', () => {
         billing_period: 'monthly',
         day_of_month: 5,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
 
       expect(newBill.id).toBeDefined();
@@ -168,6 +171,7 @@ describe('BillsService', () => {
         billing_period: 'monthly',
         day_of_month: 10,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
 
       const bills = await service.getAll();
@@ -183,13 +187,14 @@ describe('BillsService', () => {
         billing_period: 'bi_weekly',
         start_date: '2025-01-03',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
 
       expect(newBill.billing_period).toBe('bi_weekly');
       expect(newBill.start_date).toBe('2025-01-03');
     });
 
-    test('creates bill with optional category', async () => {
+    test('creates bill with category', async () => {
       const newBill = await service.create({
         name: 'Insurance',
         amount: 12000,
@@ -208,7 +213,9 @@ describe('BillsService', () => {
           name: '',
           amount: 5000,
           billing_period: 'monthly',
+          day_of_month: 1,
           payment_source_id: 'ps-checking-001',
+          category_id: 'cat-housing-001',
         })
       ).rejects.toThrow();
     });
@@ -219,7 +226,9 @@ describe('BillsService', () => {
           name: 'Test',
           amount: -100,
           billing_period: 'monthly',
+          day_of_month: 1,
           payment_source_id: 'ps-checking-001',
+          category_id: 'cat-housing-001',
         })
       ).rejects.toThrow();
     });
@@ -230,7 +239,22 @@ describe('BillsService', () => {
           name: 'Test',
           amount: 5000,
           billing_period: 'invalid' as 'monthly',
+          day_of_month: 1,
           payment_source_id: 'ps-checking-001',
+          category_id: 'cat-housing-001',
+        })
+      ).rejects.toThrow();
+    });
+
+    test('throws error for missing category_id', async () => {
+      await expect(
+        service.create({
+          name: 'Test',
+          amount: 5000,
+          billing_period: 'monthly',
+          day_of_month: 1,
+          payment_source_id: 'ps-checking-001',
+          category_id: '',
         })
       ).rejects.toThrow();
     });
@@ -313,6 +337,7 @@ describe('BillsService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -323,6 +348,7 @@ describe('BillsService', () => {
         amount: 10000,
         billing_period: 'monthly',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
       expect(result.isValid).toBe(false);
     });
@@ -333,6 +359,7 @@ describe('BillsService', () => {
         amount: -100,
         billing_period: 'monthly',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
       expect(result.isValid).toBe(false);
     });
@@ -343,6 +370,7 @@ describe('BillsService', () => {
         amount: 10000,
         billing_period: 'daily' as 'monthly',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
       expect(result.isValid).toBe(false);
     });
@@ -354,6 +382,7 @@ describe('BillsService', () => {
         billing_period: 'weekly',
         start_date: '2025-01-06',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
       expect(result.isValid).toBe(true);
     });
@@ -365,8 +394,86 @@ describe('BillsService', () => {
         billing_period: 'semi_annually',
         start_date: '2025-01-15',
         payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
       });
       expect(result.isValid).toBe(true);
+    });
+
+    test('returns valid for payment_method auto', () => {
+      const result = service.validate({
+        name: 'Auto Pay Bill',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
+        payment_method: 'auto',
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('returns valid for payment_method manual', () => {
+      const result = service.validate({
+        name: 'Manual Pay Bill',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
+        payment_method: 'manual',
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('returns invalid for invalid payment_method', () => {
+      const result = service.validate({
+        name: 'Invalid Method Bill',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
+        payment_method: 'invalid' as 'auto',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain("payment_method must be 'auto' or 'manual'");
+    });
+
+    test('returns valid when payment_method is undefined (optional field)', () => {
+      const result = service.validate({
+        name: 'No Payment Method',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+        category_id: 'cat-housing-001',
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('returns invalid for missing category_id', () => {
+      const result = service.validate({
+        name: 'Test Bill',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Category ID is required');
+    });
+
+    test('returns invalid for empty category_id', () => {
+      const result = service.validate({
+        name: 'Test Bill',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'ps-checking-001',
+        category_id: '',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Category ID is required');
     });
   });
 });

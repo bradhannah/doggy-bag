@@ -1,8 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { undoStore, canUndo, undoLoading } from '../stores/undo';
   import { addToast } from '../stores/toast';
   import { apiClient } from '../lib/api/client';
   import { currentMonth, goToCurrentMonth, getCurrentMonth, sidebarCollapsed } from '../stores/ui';
@@ -24,6 +22,8 @@
   $: isManageActive = currentPath.startsWith('/manage');
   // Check if we're on the settings page
   $: isSettingsActive = currentPath.startsWith('/settings');
+  // Check if we're on the savings page
+  $: isSavingsActive = currentPath.startsWith('/savings');
 
   // Check if in Tauri environment (for zoom controls)
   const inTauri = isTauri();
@@ -41,33 +41,6 @@
     goToCurrentMonth();
     const todayMonth = getCurrentMonth();
     goto(`/month/${todayMonth}`);
-  }
-
-  // Load undo state on mount
-  onMount(() => {
-    undoStore.load();
-  });
-
-  // Handle undo action
-  async function handleUndo() {
-    const result = await undoStore.undo();
-    if (result.success && result.entry) {
-      addToast(`Undid ${result.entry.entity_type} change`, 'success');
-      // Trigger page refresh by dispatching a custom event
-      window.dispatchEvent(new CustomEvent('undo-complete'));
-    } else {
-      addToast('Nothing to undo', 'error');
-    }
-  }
-
-  // Handle keyboard shortcut (Ctrl+Z / Cmd+Z)
-  function handleKeydown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-      event.preventDefault();
-      if ($canUndo) {
-        handleUndo();
-      }
-    }
   }
 
   // Export backup
@@ -141,11 +114,6 @@
       input.value = '';
     }
   }
-
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
-  });
 </script>
 
 <nav class="sidebar" class:collapsed={$sidebarCollapsed}>
@@ -226,6 +194,22 @@
           <path d="M9 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
         <span>Details</span>
+      </a>
+    </li>
+    <li>
+      <a href="/savings" class="nav-item" class:active={isSavingsActive} title="Savings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M19 5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21L12 17L19 21V5Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path d="M9 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <path d="M12 7V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        <span>Savings</span>
       </a>
     </li>
   </ul>
@@ -309,34 +293,6 @@
       </div>
       <div class="footer-separator"></div>
     {/if}
-
-    <button
-      class="undo-button"
-      on:click={handleUndo}
-      disabled={!$canUndo || $undoLoading}
-      title="Undo last change (Ctrl+Z)"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M3 10H16C18.7614 10 21 12.2386 21 15C21 17.7614 18.7614 20 16 20H11"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M7 6L3 10L7 14"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-      <span>Undo</span>
-      {#if $undoLoading}
-        <span class="loading-indicator">...</span>
-      {/if}
-    </button>
 
     <!-- Backup buttons -->
     <div class="backup-buttons">
@@ -550,7 +506,7 @@
     flex-shrink: 0;
   }
 
-  /* Footer with zoom, undo and backup */
+  /* Footer with zoom and backup */
   .sidebar-footer {
     margin-top: auto;
     padding: var(--space-3);
@@ -615,43 +571,6 @@
   .footer-separator {
     border-top: 1px solid #333355;
     margin: 0 0 var(--space-2) 0;
-  }
-
-  .undo-button {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid #333355;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: #888;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-  }
-
-  .undo-button:hover:not(:disabled) {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #e4e4e7;
-  }
-
-  .undo-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .undo-button svg {
-    flex-shrink: 0;
-  }
-
-  .loading-indicator {
-    margin-left: auto;
-    color: #24c8db;
   }
 
   /* Backup buttons */
@@ -808,16 +727,6 @@
   .sidebar.collapsed .zoom-percentage {
     min-width: auto;
     font-size: 0.65rem;
-  }
-
-  .sidebar.collapsed .undo-button {
-    justify-content: center;
-    padding: var(--space-2);
-  }
-
-  .sidebar.collapsed .undo-button span,
-  .sidebar.collapsed .undo-button .loading-indicator {
-    display: none;
   }
 
   .sidebar.collapsed .backup-buttons {

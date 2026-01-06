@@ -8,19 +8,6 @@
   export let onDelete: (income: IncomeWithContribution) => void;
   export let getPaymentSourceName: (id: string) => string;
 
-  // Track collapsed state for each category
-  let collapsed: Record<string, boolean> = {};
-
-  function toggleCategory(categoryId: string | null) {
-    const key = categoryId || 'uncategorized';
-    collapsed[key] = !collapsed[key];
-  }
-
-  function isCollapsed(categoryId: string | null): boolean {
-    const key = categoryId || 'uncategorized';
-    return collapsed[key] || false;
-  }
-
   function formatAmount(income: IncomeWithContribution): string {
     const amount = income.amount / 100;
     const monthly = income.monthlyContribution / 100;
@@ -54,6 +41,18 @@
     return group.category?.color || '#888888';
   }
 
+  // Generate a subtle background tint from the category color
+  function hexToRgba(hex: string, alpha: number): string {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      const r = parseInt(result[1], 16);
+      const g = parseInt(result[2], 16);
+      const b = parseInt(result[3], 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return `rgba(100, 100, 100, ${alpha})`; // fallback
+  }
+
   // Total income count (used for display but currently commented out)
   $: _totalIncomes = incomesByCategory.reduce((sum, group) => sum + group.incomes.length, 0);
 </script>
@@ -71,78 +70,65 @@
 
     <!-- Category Groups -->
     {#each incomesByCategory as group (group.category?.id || 'uncategorized')}
-      {@const categoryId = group.category?.id || null}
-      {@const isGroupCollapsed = isCollapsed(categoryId)}
+      {@const catColor = getCategoryColor(group)}
+      {@const headerBg = hexToRgba(catColor, 0.08)}
 
       <!-- Category Header -->
-      <button
-        class="category-header"
-        on:click={() => toggleCategory(categoryId)}
-        style="--cat-color: {getCategoryColor(group)};"
-      >
-        <span class="collapse-icon">{isGroupCollapsed ? '>' : 'v'}</span>
-        <span class="category-name">{getCategoryName(group).toUpperCase()}</span>
-        <span class="category-count">({group.incomes.length})</span>
-        <span class="category-line"></span>
-      </button>
+      <div class="category-header" style="--cat-color: {catColor}; background: {headerBg};">
+        <div class="category-title">
+          <span class="category-color" style="background-color: {catColor};"></span>
+          <span class="category-name">{getCategoryName(group)}</span>
+          <span class="category-count">({group.incomes.length})</span>
+        </div>
+        <div class="category-subtotal-header">
+          <span>{formatCurrency(group.subtotal)}/mo</span>
+        </div>
+      </div>
 
       <!-- Incomes in Category -->
-      {#if !isGroupCollapsed}
-        {#if group.incomes.length === 0}
-          <div class="empty-category">No incomes in this category</div>
-        {:else}
-          {#each group.incomes as income (income.id)}
-            <div class="income-row" on:click={() => onView(income)}>
-              <span class="col-name">{income.name}</span>
-              <span class="col-period">{formatPeriod(income.billing_period)}</span>
-              <span class="col-source">{getPaymentSourceName(income.payment_source_id)}</span>
-              <span class="col-amount" class:zero={income.amount === 0}>
-                {formatAmount(income)}
-              </span>
-              <span class="col-actions" on:click|stopPropagation>
-                <button class="btn-icon" on:click={() => onEdit(income)} title="Edit">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </button>
-                <button
-                  class="btn-icon btn-danger"
-                  on:click={() => onDelete(income)}
-                  title="Delete"
+      {#if group.incomes.length === 0}
+        <div class="empty-category">No incomes in this category</div>
+      {:else}
+        {#each group.incomes as income (income.id)}
+          <div class="income-row" on:click={() => onView(income)}>
+            <span class="col-name">{income.name}</span>
+            <span class="col-period">{formatPeriod(income.billing_period)}</span>
+            <span class="col-source">{getPaymentSourceName(income.payment_source_id)}</span>
+            <span class="col-amount" class:zero={income.amount === 0}>
+              {formatAmount(income)}
+            </span>
+            <span class="col-actions" on:click|stopPropagation>
+              <button class="btn-icon" on:click={() => onEdit(income)} title="Edit">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path
-                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                    />
-                  </svg>
-                </button>
-              </span>
-            </div>
-          {/each}
-
-          <!-- Category Subtotal -->
-          {#if group.incomes.length > 0}
-            <div class="category-subtotal">
-              <span>Subtotal: {formatCurrency(group.subtotal)}/mo</span>
-            </div>
-          {/if}
-        {/if}
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <button class="btn-icon btn-danger" on:click={() => onDelete(income)} title="Delete">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  />
+                </svg>
+              </button>
+            </span>
+          </div>
+        {/each}
       {/if}
     {/each}
   </div>
@@ -184,55 +170,49 @@
     letter-spacing: 0.5px;
   }
 
-  /* Category Header */
+  /* Category Header - styled to match DetailedMonthView */
   .category-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: rgba(255, 255, 255, 0.02);
-    border: none;
-    border-left: 3px solid var(--cat-color);
-    cursor: pointer;
-    text-align: left;
-    color: #e4e4e7;
-    margin-top: 8px;
-    transition: background 0.15s ease;
-  }
-
-  .category-header:hover {
-    background: rgba(255, 255, 255, 0.05);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--cat-color);
+    margin: 8px 8px 8px 8px;
   }
 
   .category-header:first-of-type {
-    margin-top: 0;
+    margin-top: 8px;
   }
 
-  .collapse-icon {
-    font-family: monospace;
-    font-size: 0.75rem;
+  .category-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .category-color {
     width: 12px;
-    color: #888;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
   }
 
   .category-name {
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: var(--cat-color);
-    letter-spacing: 0.5px;
+    color: #e4e4e7;
   }
 
   .category-count {
-    font-size: 0.6875rem;
-    color: #666;
+    font-size: 0.75rem;
+    color: #888;
   }
 
-  .category-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(to right, var(--cat-color) 0%, transparent 100%);
-    opacity: 0.3;
-    margin-left: 8px;
+  .category-subtotal-header {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #22c55e;
   }
 
   /* Empty Category */
@@ -322,15 +302,6 @@
   .btn-icon.btn-danger:hover {
     background: #ff4444;
     color: #fff;
-  }
-
-  /* Category Subtotal */
-  .category-subtotal {
-    padding: 8px 16px;
-    text-align: right;
-    font-size: 0.8125rem;
-    color: #888;
-    border-bottom: 1px solid #2a2a4a;
   }
 
   /* Total Row */

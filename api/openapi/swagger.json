@@ -1841,46 +1841,6 @@
 				],
 				"type": "object",
 				"additionalProperties": false
-			},
-			"UndoEntityType": {
-				"type": "string",
-				"enum": [
-					"bill",
-					"income",
-					"variable_expense",
-					"free_flowing_expense",
-					"payment_source",
-					"bill_instance",
-					"income_instance"
-				]
-			},
-			"UndoEntry": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"entity_type": {
-						"$ref": "#/components/schemas/UndoEntityType"
-					},
-					"entity_id": {
-						"type": "string"
-					},
-					"old_value": {},
-					"new_value": {},
-					"timestamp": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"entity_type",
-					"entity_id",
-					"old_value",
-					"new_value",
-					"timestamp"
-				],
-				"type": "object",
-				"additionalProperties": false
 			}
 		},
 		"securitySchemes": {}
@@ -3512,77 +3472,6 @@
 						}
 					}
 				}
-			}
-		},
-		"/api/undo": {
-			"get": {
-				"operationId": "GetUndoHistory",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/UndoEntry"
-									},
-									"type": "array"
-								}
-							}
-						}
-					}
-				},
-				"description": "Get undo history (last 5 entries)",
-				"summary": "Get undo history",
-				"tags": [
-					"Undo"
-				],
-				"security": [],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "Undo",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"message": {
-											"type": "string"
-										},
-										"success": {
-											"type": "boolean"
-										}
-									},
-									"required": [
-										"message",
-										"success"
-									],
-									"type": "object"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Nothing to undo",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Perform undo operation (restore last change)",
-				"summary": "Undo last change",
-				"tags": [
-					"Undo"
-				],
-				"security": [],
-				"parameters": []
 			}
 		}
 	},

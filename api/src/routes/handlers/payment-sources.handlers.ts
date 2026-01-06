@@ -169,3 +169,36 @@ export function createPaymentSourcesHandlerDELETE() {
     }
   };
 }
+
+/**
+ * GET /api/payment-sources/savings
+ * Returns all payment sources marked as savings or investment accounts
+ */
+export function createPaymentSourcesSavingsHandlerGET() {
+  return async () => {
+    try {
+      const allSources = await paymentSourcesService.getAll();
+      const savingsAndInvestments = allSources.filter(
+        (source) => source.is_savings === true || source.is_investment === true
+      );
+
+      return new Response(JSON.stringify(savingsAndInvestments), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (error) {
+      console.error('[PaymentSourcesHandler] GET savings failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to load savings and investment accounts',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}

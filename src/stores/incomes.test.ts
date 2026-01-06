@@ -84,6 +84,7 @@ const sampleIncomes: Income[] = [
     billing_period: 'monthly',
     day_of_month: 5,
     payment_source_id: 'ps-2',
+    category_id: 'cat-1',
     is_active: false,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -95,6 +96,7 @@ const sampleIncomes: Income[] = [
     billing_period: 'bi_weekly',
     start_date: '2025-01-01',
     payment_source_id: 'ps-1',
+    category_id: 'cat-1',
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -190,6 +192,7 @@ describe('Incomes Store', () => {
         billing_period: 'monthly' as const,
         day_of_month: 10,
         payment_source_id: 'ps-1',
+        category_id: 'cat-1',
       };
 
       mockPost.mockResolvedValue({ id: 'income-new', ...newIncome });
@@ -210,6 +213,7 @@ describe('Incomes Store', () => {
           amount: 0,
           billing_period: 'monthly',
           payment_source_id: 'ps-1',
+          category_id: 'cat-1',
         })
       ).rejects.toThrow('Validation failed');
 
@@ -309,10 +313,10 @@ describe('Incomes Store', () => {
         // Should have: Uncategorized, Primary (cat-1), Side Income (cat-2)
         expect(grouped.length).toBeGreaterThanOrEqual(2);
 
-        // Find Primary category
+        // Find Primary category (cat-1 has Salary and Bi-weekly Pay active)
         const primary = grouped.find((g) => g.category?.id === 'cat-1');
-        expect(primary?.incomes).toHaveLength(1);
-        expect(primary?.incomes[0].name).toBe('Salary');
+        expect(primary?.incomes).toHaveLength(2);
+        expect(primary?.incomes.map((i) => i.name)).toContain('Salary');
       });
 
       it('puts uncategorized incomes first', () => {
@@ -322,8 +326,9 @@ describe('Incomes Store', () => {
 
       it('calculates subtotals per category', () => {
         const grouped = get(incomesByCategory);
+        // cat-1 has Salary (5000) + Bi-weekly Pay (2000 bi_weekly = 4333)
         const primary = grouped.find((g) => g.category?.id === 'cat-1');
-        expect(primary?.subtotal).toBe(5000);
+        expect(primary?.subtotal).toBe(5000 + 4333);
       });
     });
   });

@@ -11,6 +11,7 @@ import {
   goToCurrentMonth,
   widthMode,
   compactMode,
+  hidePaidItems,
   uiState,
   toggleSidebar,
   openDrawer,
@@ -182,6 +183,37 @@ describe('UI Store', () => {
 
       compactMode.set(false);
       expect(localStorageMock.getItem('budgetforfun-compact-mode')).toBe('false');
+    });
+  });
+
+  describe('hidePaidItems store', () => {
+    it('defaults to false', () => {
+      expect(get(hidePaidItems)).toBe(false);
+    });
+
+    it('toggles on and off', () => {
+      hidePaidItems.set(false); // Reset first
+      hidePaidItems.toggle();
+      expect(get(hidePaidItems)).toBe(true);
+
+      hidePaidItems.toggle();
+      expect(get(hidePaidItems)).toBe(false);
+    });
+
+    it('can set directly', () => {
+      hidePaidItems.set(true);
+      expect(get(hidePaidItems)).toBe(true);
+
+      hidePaidItems.set(false);
+      expect(get(hidePaidItems)).toBe(false);
+    });
+
+    it('persists to localStorage', () => {
+      hidePaidItems.set(true);
+      expect(localStorageMock.getItem('budgetforfun-hide-paid-items')).toBe('true');
+
+      hidePaidItems.set(false);
+      expect(localStorageMock.getItem('budgetforfun-hide-paid-items')).toBe('false');
     });
   });
 

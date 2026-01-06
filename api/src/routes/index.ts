@@ -7,6 +7,7 @@ import {
   createPaymentSourcesHandlerPOST,
   createPaymentSourcesHandlerPUT,
   createPaymentSourcesHandlerDELETE,
+  createPaymentSourcesSavingsHandlerGET,
 } from './handlers/payment-sources.handlers';
 
 import {
@@ -29,6 +30,7 @@ import {
   createMonthsHandlerGenerate,
   createMonthsHandlerSync,
   createMonthsHandlerUpdateBalances,
+  createMonthsHandlerUpdateSavingsBalances,
   createMonthsHandlerSummary,
   createMonthsHandlerManage,
   createMonthsHandlerExists,
@@ -100,12 +102,6 @@ import {
 } from './handlers/payments.handlers';
 
 import {
-  createUndoHandlerGET,
-  createUndoHandlerPOST,
-  createUndoHandlerDELETE,
-} from './handlers/undo.handlers';
-
-import {
   createBackupHandlerGET,
   createBackupHandlerPOST,
   createBackupHandlerValidate,
@@ -150,11 +146,6 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     definition: { method: 'POST', handler: createSeedDefaultsHandler() },
   },
 
-  // Undo
-  { path: '/api/undo', definition: { method: 'GET', handler: createUndoHandlerGET() } },
-  { path: '/api/undo', definition: { method: 'POST', handler: createUndoHandlerPOST() } },
-  { path: '/api/undo', definition: { method: 'DELETE', handler: createUndoHandlerDELETE() } },
-
   // Backup
   { path: '/api/backup', definition: { method: 'GET', handler: createBackupHandlerGET() } },
   { path: '/api/backup', definition: { method: 'POST', handler: createBackupHandlerPOST() } },
@@ -198,7 +189,11 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     definition: { method: 'PUT', handler: createCategoriesReorderHandler() },
   },
 
-  // Payment Sources
+  // Payment Sources - savings endpoint must come before generic payment-sources routes
+  {
+    path: '/api/payment-sources/savings',
+    definition: { method: 'GET', handler: createPaymentSourcesSavingsHandlerGET() },
+  },
   {
     path: '/api/payment-sources',
     definition: { method: 'GET', handler: createPaymentSourcesHandlerGET() },
@@ -281,6 +276,14 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/months/bank-balances',
     definition: { method: 'PUT', handler: createMonthsHandlerUpdateBalances(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/savings-balances',
+    definition: {
+      method: 'PUT',
+      handler: createMonthsHandlerUpdateSavingsBalances(),
+      hasPathParam: true,
+    },
   },
   {
     path: '/api/months/summary',

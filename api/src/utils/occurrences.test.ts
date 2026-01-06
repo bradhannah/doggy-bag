@@ -24,7 +24,7 @@ describe('Occurrence Utilities', () => {
         expect(dates).toEqual(['2025-01-15']);
       });
 
-      test('defaults to 1st if no due_day', () => {
+      test('defaults to 1st if no day_of_month', () => {
         const dates = getOccurrenceDatesInMonth('monthly', undefined, undefined, '2025-01');
         expect(dates).toEqual(['2025-01-01']);
       });
