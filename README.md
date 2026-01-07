@@ -4,13 +4,15 @@
   <img src="docs/assets/DoggyBagLogo.png" alt="Doggy Bag Logo" width="200">
 </p>
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
 <p align="center">
-  <img src="docs/assets/BudgetForFunExample-Dec-2025.png" alt="Doggy Bag Detailed View" width="800">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
 </p>
 
-Desktop budgeting app focused on fixed monthly costs. Answers one question: **"How much do I have left at end of month?"**
+_Doggy Bag_ is a desktop budgeting app focused on fixed monthly costs. Answers one question: **"How much do I have left in my doggy bag at the end of month?"**
+
+It promotes active tracking of expenses and income, helping users stay on top of their finances.
+
+---
 
 ## What It Does
 
@@ -25,20 +27,28 @@ Desktop budgeting app focused on fixed monthly costs. Answers one question: **"H
 - Partial payment tracking for bills paid incrementally
 - Due dates with overdue indicators
 - Ad-hoc expenses for unexpected costs
-- Undo (last 5 changes)
+- Configurable data directory (great for cloud sync!)
 - Export/import for manual backup
-- Configurable data directory
-- Dark mode
 
-## Screenshot
+## Sample
 
 _Detailed view of the Budget Details pane showing bills grouped by category with Expected/Actual columns, partial payments, and monthly summary._
 
+<p align="center">
+  <img src="docs/assets/BudgetForFunExample-Dec-2025.png" alt="Doggy Bag Detailed View" width="1400">
+</p>
+
 ## Installation
+
+**Homebrew (macOS Apple Silicon)**
+
+```bash
+brew install bradhannah/doggy-bag/doggy-bag
+```
 
 **Download Binary (macOS ARM)**
 
-Grab the latest `.dmg` from [GitHub Releases](https://github.com/bradhannah/DoggyBag/releases).
+Grab the latest `.dmg` from [GitHub Releases](https://github.com/bradhannah/BudgetForFun/releases).
 
 Windows and Linux builds coming.
 
