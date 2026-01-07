@@ -77,8 +77,8 @@ jobs:
       - name: Generate types
         run: make types
 
-      - name: Prepare Bun sidecar
-        run: make prepare-dev-sidecar
+      - name: Build sidecar (production)
+        run: make build-sidecar
 
       - name: Build Tauri (release)
         run: |
