@@ -7,11 +7,21 @@
     goToNextMonth,
     goToCurrentMonth,
     getCurrentMonth,
+    widthMode,
+    compactMode,
+    hidePaidItems,
   } from '../stores/ui';
 
   // Optional: If provided, navigation will use goto() instead of just store updates
   // This is needed for URL-based routing like /month/2025-01
   export let basePath: string | undefined = undefined;
+
+  // Optional control buttons
+  export let showRefresh: boolean = false;
+  export let showWidthToggle: boolean = false;
+  export let showCompactToggle: boolean = false;
+  export let showHidePaid: boolean = false;
+  export let onRefresh: (() => void) | undefined = undefined;
 
   // Check if we're viewing the current calendar month
   $: isCurrentMonth = $currentMonth === getCurrentMonth();
@@ -36,6 +46,18 @@
       goto(`${basePath}/${$currentMonth}`);
     }
   }
+
+  function toggleWidthMode() {
+    widthMode.cycle();
+  }
+
+  function handleRefresh() {
+    if (onRefresh) {
+      onRefresh();
+    }
+  }
+
+  $: hasControls = showRefresh || showWidthToggle || showCompactToggle || showHidePaid;
 </script>
 
 <div class="month-picker-header">
@@ -78,7 +100,179 @@
     </button>
   </div>
 
-  <div class="spacer"></div>
+  <div class="spacer controls-spacer">
+    {#if hasControls}
+      <div class="header-controls">
+        {#if showWidthToggle}
+          <!-- Width toggle (toggles: medium <-> wide) -->
+          <button
+            class="control-btn"
+            on:click={toggleWidthMode}
+            title={$widthMode === 'medium'
+              ? 'Medium width (click for wide)'
+              : 'Wide (click for medium)'}
+          >
+            {#if $widthMode === 'medium'}
+              <!-- Medium icon: medium box -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="4"
+                  y="4"
+                  width="16"
+                  height="16"
+                  rx="1"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            {:else}
+              <!-- Wide icon: full width with arrows -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M4 4V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M20 4V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path
+                  d="M8 12L11 9"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M8 12L11 15"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M16 12L13 9"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M16 12L13 15"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            {/if}
+          </button>
+        {/if}
+
+        {#if showCompactToggle}
+          <!-- Compact toggle -->
+          <button
+            class="control-btn"
+            on:click={() => compactMode.toggle()}
+            title={$compactMode ? 'Normal view' : 'Compact view'}
+          >
+            {#if $compactMode}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 8h16M4 16h16"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            {:else}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6h16M4 12h16M4 18h16"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            {/if}
+          </button>
+        {/if}
+
+        {#if showHidePaid}
+          <!-- Hide paid toggle -->
+          <button
+            class="control-btn"
+            class:active={$hidePaidItems}
+            on:click={() => hidePaidItems.toggle()}
+            title={$hidePaidItems ? 'Show all items' : 'Hide paid items'}
+          >
+            {#if $hidePaidItems}
+              <!-- Eye with slash (hidden) -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M1 1l22 22"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            {:else}
+              <!-- Eye (visible) -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            {/if}
+          </button>
+        {/if}
+
+        {#if showRefresh}
+          <!-- Refresh button -->
+          <button class="control-btn" on:click={handleRefresh} title="Refresh data">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polyline
+                points="23 4 23 10 17 10"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <polyline
+                points="1 20 1 14 7 14"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -93,6 +287,11 @@
 
   .spacer {
     flex: 1;
+  }
+
+  .controls-spacer {
+    display: flex;
+    justify-content: flex-end;
   }
 
   .center-group {
@@ -154,6 +353,39 @@
     color: #555;
   }
 
+  /* Header controls */
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--button-height-sm);
+    height: var(--button-height-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333355;
+    border-radius: var(--radius-sm);
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .control-btn:hover {
+    background: rgba(36, 200, 219, 0.1);
+    border-color: #24c8db;
+    color: #24c8db;
+  }
+
+  .control-btn.active {
+    background: rgba(74, 222, 128, 0.1);
+    border-color: #4ade80;
+    color: #4ade80;
+  }
+
   @media (max-width: 480px) {
     .month-picker-header {
       padding: var(--space-3) var(--space-3);
@@ -176,6 +408,15 @@
     .today-btn {
       padding: var(--space-1) var(--space-3);
       font-size: 0.75rem;
+    }
+
+    .header-controls {
+      gap: var(--space-1);
+    }
+
+    .control-btn {
+      width: 28px;
+      height: 28px;
     }
   }
 </style>

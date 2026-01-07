@@ -54,11 +54,6 @@
     monthsStore.loadMonth(month);
   }
 
-  // Toggle width mode (toggles between medium <-> wide)
-  function toggleWidthMode() {
-    widthMode.cycle();
-  }
-
   // Helper: check if a category section is complete (all closed or empty)
   // Use is_closed because that indicates the user has marked the item as done
   function isSectionComplete(section: { items: { is_closed: boolean }[] }): boolean {
@@ -129,8 +124,8 @@
       : activeIncomeSections
   ) as IncomeSection[];
 
-  // Refresh all data with scroll position preservation
-  function refreshData() {
+  // Refresh all data with scroll position preservation - exported for external use
+  export function refreshData() {
     // Save current scroll position before refresh
     savedScrollY = window.scrollY;
     restoreScrollAfterLoad = true;
@@ -271,169 +266,6 @@
     class:medium={$widthMode === 'medium'}
     class:wide={$widthMode === 'wide'}
   >
-    <header class="view-header">
-      {#if $detailedMonthData}
-        <div class="header-summary">
-          <!-- Width toggle (toggles: medium <-> wide) -->
-          <button
-            class="width-toggle"
-            on:click={toggleWidthMode}
-            title={$widthMode === 'medium'
-              ? 'Medium width (click for wide)'
-              : 'Wide (click for medium)'}
-          >
-            {#if $widthMode === 'medium'}
-              <!-- Medium icon: medium box -->
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect
-                  x="4"
-                  y="4"
-                  width="16"
-                  height="16"
-                  rx="1"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-            {:else}
-              <!-- Wide icon: full width with arrows -->
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M4 4V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <path d="M20 4V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <path d="M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <path
-                  d="M8 12L11 9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M8 12L11 15"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M16 12L13 9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M16 12L13 15"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            {/if}
-          </button>
-          <!-- Compact toggle -->
-          <button
-            class="compact-toggle"
-            on:click={() => compactMode.toggle()}
-            title={$compactMode ? 'Normal view' : 'Compact view'}
-          >
-            {#if $compactMode}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 8h16M4 16h16"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            {:else}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 6h16M4 12h16M4 18h16"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            {/if}
-          </button>
-          <!-- Hide paid toggle -->
-          <button
-            class="hide-paid-toggle"
-            class:active={$hidePaidItems}
-            on:click={() => hidePaidItems.toggle()}
-            title={$hidePaidItems ? 'Show all items' : 'Hide paid items'}
-          >
-            {#if $hidePaidItems}
-              <!-- Eye with slash (hidden) -->
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M1 1l22 22"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            {:else}
-              <!-- Eye (visible) -->
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            {/if}
-          </button>
-          <!-- Refresh button -->
-          <button class="refresh-toggle" on:click={refreshData} title="Refresh data">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <polyline
-                points="23 4 23 10 17 10"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <polyline
-                points="1 20 1 14 7 14"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-      {/if}
-    </header>
-
     {#if $monthIsReadOnly && $monthExists}
       <div class="read-only-banner">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -587,7 +419,7 @@
 
 <style>
   .detailed-view {
-    padding: 0 var(--content-padding) var(--content-padding) var(--content-padding);
+    padding: var(--content-padding);
   }
 
   .content-wrapper {
@@ -615,51 +447,6 @@
     max-width: 100%;
     margin-left: 0;
     margin-right: 0;
-  }
-
-  .view-header {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-bottom: var(--space-4);
-  }
-
-  .header-summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-  }
-
-  .compact-toggle,
-  .width-toggle,
-  .refresh-toggle,
-  .hide-paid-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--button-height-sm);
-    height: var(--button-height-sm);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #333355;
-    border-radius: var(--radius-sm);
-    color: #888;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .compact-toggle:hover,
-  .width-toggle:hover,
-  .refresh-toggle:hover,
-  .hide-paid-toggle:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #24c8db;
-  }
-
-  .hide-paid-toggle.active {
-    background: rgba(74, 222, 128, 0.1);
-    border-color: #4ade80;
-    color: #4ade80;
   }
 
   /* Main layout with sidebar */
@@ -834,10 +621,6 @@
   /* Compact mode styles */
   .detailed-view.compact {
     padding: var(--space-3);
-  }
-
-  .detailed-view.compact .view-header {
-    margin-bottom: var(--space-3);
   }
 
   .detailed-view.compact .detailed-layout {

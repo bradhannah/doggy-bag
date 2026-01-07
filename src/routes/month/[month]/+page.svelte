@@ -4,6 +4,12 @@
   import DetailedMonthView from '../../../components/DetailedView/DetailedMonthView.svelte';
 
   $: month = $page.params.month;
+
+  let detailedView: DetailedMonthView;
+
+  function handleRefresh() {
+    detailedView?.refreshData();
+  }
 </script>
 
 <svelte:head>
@@ -11,8 +17,15 @@
 </svelte:head>
 
 {#if month}
-  <MonthPickerHeader basePath="/month" />
-  <DetailedMonthView {month} />
+  <MonthPickerHeader
+    basePath="/month"
+    showRefresh={true}
+    showWidthToggle={true}
+    showCompactToggle={true}
+    showHidePaid={true}
+    onRefresh={handleRefresh}
+  />
+  <DetailedMonthView {month} bind:this={detailedView} />
 {:else}
   <div class="error-page">
     <h1>Invalid Month</h1>

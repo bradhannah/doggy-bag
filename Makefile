@@ -1,4 +1,4 @@
-# BudgetForFun Makefile
+# Doggy Bag Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
 .PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage
@@ -11,7 +11,7 @@ BUN := $(shell command -v bun 2>/dev/null || echo ~/.bun/bin/bun)
 
 # Default target
 help: ## Show this help message
-	@echo "BudgetForFun Makefile - Build Automation"
+	@echo "Doggy Bag Makefile - Build Automation"
 	@echo ""
 	@echo "Development Targets:"
 	@echo "  make dev          Start Tauri dev mode (sidecar with dynamic port)"

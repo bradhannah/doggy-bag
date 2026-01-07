@@ -129,7 +129,7 @@
         <p class="hint">Please restart the app or check the logs.</p>
       {:else}
         <div class="spinner"></div>
-        <h2>Starting BudgetForFun...</h2>
+        <h2>Starting Doggy Bag...</h2>
         <p>Connecting to backend</p>
       {/if}
     </div>

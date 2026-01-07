@@ -1,10 +1,10 @@
-# Releasing BudgetForFun
+# Releasing Doggy Bag
 
-This document describes the release process for BudgetForFun.
+This document describes the release process for Doggy Bag.
 
 ## Versioning
 
-BudgetForFun uses semantic versioning (`MAJOR.MINOR.PATCH`):
+Doggy Bag uses semantic versioning (`MAJOR.MINOR.PATCH`):
 
 - **MAJOR**: Breaking changes or significant feature overhauls
 - **MINOR**: New features, enhancements
@@ -70,7 +70,7 @@ make prepare-dev-sidecar
 npm run tauri build
 
 # Ad-hoc sign (macOS)
-codesign --sign - --force --deep "src-tauri/target/release/bundle/macos/BudgetForFun.app"
+codesign --sign - --force --deep "src-tauri/target/release/bundle/macos/DoggyBag.app"
 ```
 
 ## macOS Gatekeeper Bypass
@@ -81,7 +81,7 @@ Since the app uses ad-hoc signing (not Apple Developer ID), users will see a Gat
 
 **Option 1: Right-click Open (Recommended)**
 
-1. Locate `BudgetForFun.app` in Finder
+1. Locate `DoggyBag.app` in Finder
 2. Right-click (or Control+click) the app
 3. Select "Open" from the context menu
 4. Click "Open" in the dialog
@@ -95,7 +95,7 @@ Since the app uses ad-hoc signing (not Apple Developer ID), users will see a Gat
 **Option 3: Terminal (Advanced)**
 
 ```bash
-xattr -cr /Applications/BudgetForFun.app
+xattr -cr /Applications/DoggyBag.app
 ```
 
 ### Why Ad-hoc Signing?
@@ -121,8 +121,8 @@ For production distribution to many users, consider:
 ### DMG Won't Open
 
 1. Try the Gatekeeper bypass methods above
-2. Check the app wasn't quarantined: `xattr -l BudgetForFun.app`
-3. Remove quarantine if needed: `xattr -d com.apple.quarantine BudgetForFun.app`
+2. Check the app wasn't quarantined: `xattr -l DoggyBag.app`
+3. Remove quarantine if needed: `xattr -d com.apple.quarantine DoggyBag.app`
 
 ### Backend Doesn't Start
 

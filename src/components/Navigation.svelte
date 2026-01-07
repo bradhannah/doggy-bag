@@ -42,7 +42,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `budgetforfun-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `doggybag-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -109,7 +109,7 @@
 <nav class="sidebar" class:collapsed={$sidebarCollapsed}>
   <div class="sidebar-header">
     <div class="header-row">
-      <h2 class="app-title">BudgetForFun</h2>
+      <h2 class="app-title">Doggy Bag</h2>
       <button
         class="collapse-toggle"
         on:click={() => sidebarCollapsed.toggle()}

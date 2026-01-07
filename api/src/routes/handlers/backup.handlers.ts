@@ -17,7 +17,7 @@ export function createBackupHandlerGET() {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Content-Disposition': `attachment; filename="budgetforfun-backup-${new Date().toISOString().split('T')[0]}.json"`,
+          'Content-Disposition': `attachment; filename="doggybag-backup-${new Date().toISOString().split('T')[0]}.json"`,
         },
       });
     } catch (error) {

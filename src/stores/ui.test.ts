@@ -146,13 +146,13 @@ describe('UI Store', () => {
 
     it('persists to localStorage', () => {
       widthMode.set('wide');
-      expect(localStorageMock.getItem('budgetforfun-width-mode')).toBe('wide');
+      expect(localStorageMock.getItem('doggybag-width-mode')).toBe('wide');
     });
 
     it('persists on cycle', () => {
       widthMode.set('medium');
       widthMode.cycle();
-      expect(localStorageMock.getItem('budgetforfun-width-mode')).toBe('wide');
+      expect(localStorageMock.getItem('doggybag-width-mode')).toBe('wide');
     });
   });
 
@@ -179,10 +179,10 @@ describe('UI Store', () => {
 
     it('persists to localStorage', () => {
       compactMode.set(true);
-      expect(localStorageMock.getItem('budgetforfun-compact-mode')).toBe('true');
+      expect(localStorageMock.getItem('doggybag-compact-mode')).toBe('true');
 
       compactMode.set(false);
-      expect(localStorageMock.getItem('budgetforfun-compact-mode')).toBe('false');
+      expect(localStorageMock.getItem('doggybag-compact-mode')).toBe('false');
     });
   });
 
@@ -210,10 +210,10 @@ describe('UI Store', () => {
 
     it('persists to localStorage', () => {
       hidePaidItems.set(true);
-      expect(localStorageMock.getItem('budgetforfun-hide-paid-items')).toBe('true');
+      expect(localStorageMock.getItem('doggybag-hide-paid-items')).toBe('true');
 
       hidePaidItems.set(false);
-      expect(localStorageMock.getItem('budgetforfun-hide-paid-items')).toBe('false');
+      expect(localStorageMock.getItem('doggybag-hide-paid-items')).toBe('false');
     });
   });
 
@@ -261,7 +261,7 @@ describe('UI Store', () => {
       it('persists to localStorage', () => {
         sidebarCollapsed.set(true);
         sidebarCollapsed.expand();
-        expect(localStorageMock.getItem('budgetforfun-sidebar-collapsed')).toBe('false');
+        expect(localStorageMock.getItem('doggybag-sidebar-collapsed')).toBe('false');
       });
 
       it('is idempotent when already expanded', () => {
@@ -283,7 +283,7 @@ describe('UI Store', () => {
       it('persists to localStorage', () => {
         sidebarCollapsed.set(false);
         sidebarCollapsed.collapse();
-        expect(localStorageMock.getItem('budgetforfun-sidebar-collapsed')).toBe('true');
+        expect(localStorageMock.getItem('doggybag-sidebar-collapsed')).toBe('true');
       });
 
       it('is idempotent when already collapsed', () => {

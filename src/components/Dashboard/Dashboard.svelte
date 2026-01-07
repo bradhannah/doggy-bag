@@ -20,8 +20,19 @@
   } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
-  import { onMount } from 'svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
+
+  const dispatch = createEventDispatcher<{ refresh: void }>();
+
+  // Refresh function that can be called externally
+  export function refresh() {
+    if ($currentMonth) {
+      monthsStore.loadMonth($currentMonth);
+      loadPaymentSources();
+      loadAdjacentMonths();
+    }
+  }
 
   // Load payment sources on mount
   onMount(() => {

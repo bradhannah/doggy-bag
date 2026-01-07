@@ -1846,14 +1846,14 @@
 		"securitySchemes": {}
 	},
 	"info": {
-		"title": "BudgetForFun API",
+		"title": "Doggy Bag API",
 		"version": "1.0.0",
-		"description": "BudgetForFun API - Personal budget tracking application",
+		"description": "Doggy Bag API - Personal budget tracking application",
 		"license": {
 			"name": "MIT"
 		},
 		"contact": {
-			"name": "BudgetForFun Team"
+			"name": "Doggy Bag Team"
 		}
 	},
 	"paths": {
