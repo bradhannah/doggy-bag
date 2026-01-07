@@ -11,8 +11,8 @@
 | --------- | ------ |
 | High      | 3      |
 | Medium    | 11     |
-| Low       | 3      |
-| **Total** | **17** |
+| Low       | 4      |
+| **Total** | **18** |
 
 **Completed This Session**: TD-R4, TD-F5, TD-F6, TD-CC4 (includes TD-F4, TD-B4, TD-R1), TD-R7
 
@@ -22,15 +22,16 @@
 
 ### Frontend (Svelte)
 
-| ID        | Issue                                                              | Severity   | Effort      | Location                           | Notes                                      |
-| --------- | ------------------------------------------------------------------ | ---------- | ----------- | ---------------------------------- | ------------------------------------------ |
-| TD-F1     | `Navigation.svelte` too large (645 lines)                          | Medium     | Medium      | `src/components/Navigation.svelte` | Split into smaller components              |
-| TD-F2     | `detailed-month.ts` repetitive optimistic update logic (582 lines) | Medium     | Medium      | `src/stores/detailed-month.ts`     | Extract shared update patterns             |
-| TD-F3     | Inconsistent persistence (localStorage vs Tauri Store)             | Medium     | Medium      | Various stores                     | Standardize on Tauri Store                 |
-| ~~TD-F4~~ | ~~Hardcoded API URL fallback~~                                     | ~~High~~   | ~~Low~~     | ~~`src/lib/api/client.ts:5`~~      | ✅ COMPLETED - Dynamic port via TD-CC4     |
-| ~~TD-F5~~ | ~~Debug console.logs left in code~~                                | ~~Low~~    | ~~Trivial~~ | ~~`src/lib/api/client.ts`~~        | ✅ COMPLETED - Replaced with logger        |
-| ~~TD-F6~~ | ~~No frontend logging utility~~                                    | ~~Medium~~ | ~~Low~~     | ~~N/A~~                            | ✅ COMPLETED - Created `src/lib/logger.ts` |
-| TD-F7     | Frontend test coverage at ~2%                                      | Medium     | High        | `src/stores/`, `src/components/`   | Threshold lowered to 5% to unblock CI      |
+| ID        | Issue                                                              | Severity   | Effort      | Location                                              | Notes                                                                   |
+| --------- | ------------------------------------------------------------------ | ---------- | ----------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| TD-F1     | `Navigation.svelte` too large (645 lines)                          | Medium     | Medium      | `src/components/Navigation.svelte`                    | Split into smaller components                                           |
+| TD-F2     | `detailed-month.ts` repetitive optimistic update logic (582 lines) | Medium     | Medium      | `src/stores/detailed-month.ts`                        | Extract shared update patterns                                          |
+| TD-F3     | Inconsistent persistence (localStorage vs Tauri Store)             | Medium     | Medium      | Various stores                                        | Standardize on Tauri Store                                              |
+| ~~TD-F4~~ | ~~Hardcoded API URL fallback~~                                     | ~~High~~   | ~~Low~~     | ~~`src/lib/api/client.ts:5`~~                         | ✅ COMPLETED - Dynamic port via TD-CC4                                  |
+| ~~TD-F5~~ | ~~Debug console.logs left in code~~                                | ~~Low~~    | ~~Trivial~~ | ~~`src/lib/api/client.ts`~~                           | ✅ COMPLETED - Replaced with logger                                     |
+| ~~TD-F6~~ | ~~No frontend logging utility~~                                    | ~~Medium~~ | ~~Low~~     | ~~N/A~~                                               | ✅ COMPLETED - Created `src/lib/logger.ts`                              |
+| TD-F7     | Frontend test coverage at ~2%                                      | Medium     | High        | `src/stores/`, `src/components/`                      | Threshold lowered to 5% to unblock CI                                   |
+| TD-F8     | Mixed dynamic/static imports of `@tauri-apps/api/core`             | Low        | Low         | `src/stores/settings.ts`, `src/routes/+layout.svelte` | Vite warning; dynamic used for SSR safety but plugins import statically |
 
 ### Backend (Bun)
 
@@ -144,12 +145,13 @@ Medium severity improvements for maintainability.
 
 Lower priority items for future consideration.
 
-| ID    | Task                       | Effort | Notes               |
-| ----- | -------------------------- | ------ | ------------------- |
-| TD-F3 | Standardize on Tauri Store | Medium | Requires testing    |
-| TD-B5 | Dependency injection       | High   | Major refactor      |
-| TD-R5 | Add tracing crate          | Medium | Nice to have        |
-| TD-B1 | Simplify matchRoute        | High   | Works, low priority |
+| ID    | Task                             | Effort | Notes                                         |
+| ----- | -------------------------------- | ------ | --------------------------------------------- |
+| TD-F3 | Standardize on Tauri Store       | Medium | Requires testing                              |
+| TD-F8 | Fix mixed dynamic/static imports | Low    | Convert to static imports with browser guards |
+| TD-B5 | Dependency injection             | High   | Major refactor                                |
+| TD-R5 | Add tracing crate                | Medium | Nice to have                                  |
+| TD-B1 | Simplify matchRoute              | High   | Works, low priority                           |
 
 ---
 
