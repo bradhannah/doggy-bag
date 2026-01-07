@@ -137,3 +137,32 @@ See `docs/testing.md` for details.
 - Navigation updated: Added Settings link to sidebar
 
 <!-- MANUAL ADDITIONS END -->
+
+## Release & Distribution
+
+### Releasing a New Version
+
+1. Bump version in `src-tauri/tauri.conf.json`
+2. Commit: `git commit -m "chore: bump version to X.Y.Z"`
+3. Tag and push: `git tag vX.Y.Z && git push && git push origin vX.Y.Z`
+4. GitHub Actions builds DMG, creates release, auto-updates Homebrew tap
+
+### Homebrew Tap
+
+- Repo: `bradhannah/homebrew-doggy-bag`
+- Install: `brew install bradhannah/doggy-bag/doggy-bag`
+- Auto-updated via `repository_dispatch` from release workflow
+- Requires `HOMEBREW_TAP_TOKEN` secret (PAT with `repo` + `workflow` scopes)
+
+### Release Workflow (`.github/workflows/release.yml`)
+
+- Triggers on `v*.*.*` tags
+- Builds macOS ARM64 DMG with ad-hoc signing
+- Calculates SHA256, uploads to GitHub Release
+- Dispatches to homebrew-doggy-bag to update cask
+
+### Key Files
+
+- `src-tauri/tauri.conf.json` - version, productName ("Doggy Bag")
+- `.github/workflows/release.yml` - release automation
+- Homebrew tap: `Casks/doggy-bag.rb`, `.github/workflows/update-cask.yml`
