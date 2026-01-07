@@ -1,8 +1,14 @@
 # Doggy Bag
 
+<p align="center">
+  <img src="docs/assets/DoggyBagLogo.png" alt="Doggy Bag Logo" width="200">
+</p>
+
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![Doggy Bag Detailed View](docs/assets/BudgetForFunExample-Dec-2025.png)
+<p align="center">
+  <img src="docs/assets/BudgetForFunExample-Dec-2025.png" alt="Doggy Bag Detailed View" width="800">
+</p>
 
 Desktop budgeting app focused on fixed monthly costs. Answers one question: **"How much do I have left at end of month?"**
 
