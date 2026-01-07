@@ -6,7 +6,7 @@
    * @prop onSave - Callback after successful save
    * @prop onCancel - Callback to close form without saving
    */
-  import { createCategory, updateCategory } from '../../stores/categories';
+  import { createCategory, updateCategory, categories } from '../../stores/categories';
   import type { Category, CategoryType } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
 
@@ -15,10 +15,50 @@
   export let onCancel: () => void = () => {};
   export let defaultType: CategoryType = 'bill'; // Default type when creating new
 
+  // Curated palette of 16 distinct colors for categories
+  const COLOR_PALETTE = [
+    '#24c8db', // Cyan (default/primary)
+    '#22c55e', // Green
+    '#f59e0b', // Amber
+    '#ef4444', // Red
+    '#8b5cf6', // Purple
+    '#ec4899', // Pink
+    '#3b82f6', // Blue
+    '#f97316', // Orange
+    '#14b8a6', // Teal
+    '#a855f7', // Violet
+    '#06b6d4', // Sky
+    '#84cc16', // Lime
+    '#eab308', // Yellow
+    '#6366f1', // Indigo
+    '#d946ef', // Fuchsia
+    '#10b981', // Emerald
+  ];
+
+  /**
+   * Get a unique color not already used by existing categories.
+   * Falls back to generating a color using HSL hue spacing if palette exhausted.
+   */
+  function getUniqueColor(existingCategories: Category[]): string {
+    const usedColors = new Set(existingCategories.map((c) => c.color?.toLowerCase()));
+
+    // Try to find an unused color from the palette
+    for (const color of COLOR_PALETTE) {
+      if (!usedColors.has(color.toLowerCase())) {
+        return color;
+      }
+    }
+
+    // If all palette colors are used, generate using HSL hue spacing
+    const numExisting = existingCategories.length;
+    const hue = (numExisting * 137.5) % 360; // Golden angle for good distribution
+    return `hsl(${Math.round(hue)}, 70%, 50%)`;
+  }
+
   // Form state
   let name = editingItem?.name || '';
   let type: CategoryType = editingItem?.type || defaultType;
-  let color = editingItem?.color || '#24c8db';
+  let color = editingItem?.color || getUniqueColor($categories);
   let error = '';
   let saving = false;
 
