@@ -1,7 +1,5 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { addToast } from '../stores/toast';
-  import { apiClient } from '../lib/api/client';
   import { currentMonth, sidebarCollapsed } from '../stores/ui';
   import {
     isTauri,
@@ -29,81 +27,6 @@
   $: zoomPercentage = getZoomPercentage($zoomLevel);
   $: canZoomIn = $zoomLevel < ZOOM_CONFIG.max;
   $: canZoomOut = $zoomLevel > ZOOM_CONFIG.min;
-
-  let backupLoading = false;
-  let fileInput: HTMLInputElement | null = null;
-
-  // Export backup
-  async function handleExport() {
-    backupLoading = true;
-    try {
-      const data = await apiClient.get('/api/backup');
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `doggybag-backup-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      addToast('Backup exported successfully', 'success');
-    } catch {
-      addToast('Failed to export backup', 'error');
-    } finally {
-      backupLoading = false;
-    }
-  }
-
-  // Import backup - trigger file picker
-  function handleImportClick() {
-    fileInput?.click();
-  }
-
-  // Handle file selection for import
-  async function handleFileSelect(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    backupLoading = true;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-
-      // Validate first
-      const validation = await apiClient.post('/api/backup/validate', data);
-      if (!validation.isValid) {
-        addToast(`Invalid backup: ${validation.errors.join(', ')}`, 'error');
-        return;
-      }
-
-      // Confirm import
-      const confirmed = confirm(
-        `Import backup from ${data.export_date}?\n\n` +
-          `This will overwrite:\n` +
-          `- ${validation.summary.bills} bills\n` +
-          `- ${validation.summary.incomes} incomes\n` +
-          `- ${validation.summary.payment_sources} payment sources\n` +
-          `- ${validation.summary.categories} categories\n\n` +
-          `This action cannot be undone.`
-      );
-
-      if (!confirmed) return;
-
-      // Import the backup
-      await apiClient.post('/api/backup', data);
-      addToast('Backup imported successfully', 'success');
-      // Refresh the page to load new data
-      window.location.reload();
-    } catch {
-      addToast('Failed to import backup: Invalid file format', 'error');
-    } finally {
-      backupLoading = false;
-      // Reset file input
-      input.value = '';
-    }
-  }
 </script>
 
 <nav class="sidebar" class:collapsed={$sidebarCollapsed}>
@@ -163,7 +86,7 @@
         href="/month/{$currentMonth}"
         class="nav-item"
         class:active={isDetailsActive}
-        title="Details"
+        title="Budget"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <path
@@ -176,7 +99,7 @@
           <path d="M9 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           <path d="M9 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
-        <span>Details</span>
+        <span>Budget</span>
       </a>
     </li>
     <li>
@@ -216,16 +139,7 @@
     </li>
   </ul>
 
-  <!-- Hidden file input for import -->
-  <input
-    type="file"
-    accept=".json"
-    bind:this={fileInput}
-    on:change={handleFileSelect}
-    style="display: none;"
-  />
-
-  <!-- Footer with Zoom, Undo and Backup buttons -->
+  <!-- Footer with Zoom and Settings -->
   <div class="sidebar-footer">
     <!-- Zoom Control (Tauri only) -->
     {#if inTauri}
@@ -258,77 +172,7 @@
       <div class="footer-separator"></div>
     {/if}
 
-    <!-- Backup buttons -->
-    <div class="backup-buttons">
-      <button
-        class="backup-button"
-        on:click={handleExport}
-        disabled={backupLoading}
-        title="Export all data to a backup file"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M7 10L12 15L17 10"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M12 15V3"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <span>Export</span>
-      </button>
-      <button
-        class="backup-button"
-        on:click={handleImportClick}
-        disabled={backupLoading}
-        title="Import data from a backup file"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M17 8L12 3L7 8"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M12 3V15"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <span>Import</span>
-      </button>
-    </div>
-    {#if backupLoading}
-      <div class="backup-loading">Processing...</div>
-    {/if}
-
     <!-- Settings link in footer -->
-    <div class="footer-separator"></div>
     <a
       href="/settings"
       class="settings-footer-link"
@@ -437,7 +281,7 @@
     flex-shrink: 0;
   }
 
-  /* Footer with zoom and backup */
+  /* Footer with zoom and settings */
   .sidebar-footer {
     margin-top: auto;
     padding: var(--space-3);
@@ -502,53 +346,6 @@
   .footer-separator {
     border-top: 1px solid #333355;
     margin: 0 0 var(--space-2) 0;
-  }
-
-  /* Backup buttons */
-  .backup-buttons {
-    display: flex;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
-  }
-
-  .backup-button {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid #333355;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: #888;
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-  }
-
-  .backup-button:hover:not(:disabled) {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #e4e4e7;
-  }
-
-  .backup-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .backup-button svg {
-    flex-shrink: 0;
-  }
-
-  .backup-loading {
-    text-align: center;
-    color: #24c8db;
-    font-size: 0.75rem;
-    margin-top: var(--space-2);
   }
 
   /* Settings link in footer */
@@ -656,18 +453,6 @@
     font-size: 0.65rem;
   }
 
-  .sidebar.collapsed .backup-buttons {
-    flex-direction: column;
-  }
-
-  .sidebar.collapsed .backup-button {
-    padding: var(--space-2);
-  }
-
-  .sidebar.collapsed .backup-button span {
-    display: none;
-  }
-
   .sidebar.collapsed .settings-footer-link {
     justify-content: center;
     padding: var(--space-2);
@@ -675,9 +460,5 @@
 
   .sidebar.collapsed .settings-footer-link span {
     display: none;
-  }
-
-  .sidebar.collapsed .backup-loading {
-    font-size: 0.65rem;
   }
 </style>

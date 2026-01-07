@@ -196,8 +196,8 @@
     --main-content-min: 600px; /* Minimum width for main content column in Details View */
 
     /* Panel Widths - Bills/Income sections */
-    --panel-width-medium: 550px; /* Fixed width in Medium mode */
-    --panel-width-min-wide: 600px; /* Minimum width in Wide mode */
+    --panel-width-medium: 660px; /* Fixed width in Medium mode */
+    --panel-width-min-wide: 720px; /* Minimum width in Wide mode */
 
     /* Content Padding */
     --content-padding: 24px;

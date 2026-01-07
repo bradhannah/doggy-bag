@@ -426,24 +426,31 @@
     /* Container query context for responsive internal layout */
     container-type: inline-size;
     container-name: content;
-    /* Centering: account for sidebar, center in remaining space */
-    max-width: var(--content-max-lg);
-    width: 100%;
-    /* Minimum width: summary sidebar + gap + main content minimum */
-    min-width: calc(var(--summary-sidebar-width) + var(--space-6) + var(--main-content-min));
-    margin-left: max(0px, calc(50vw - 150px - 900px));
+    /* Explicit width based on content: summary sidebar + gap + 2 panels + gap between panels */
+    width: calc(
+      var(--summary-sidebar-width) + var(--space-6) + (2 * var(--panel-width-medium)) +
+        var(--space-6)
+    );
+    max-width: 100%;
+    /* Center with auto margins */
+    margin-left: auto;
     margin-right: auto;
     transition:
-      max-width 0.3s ease,
+      width 0.3s ease,
       margin 0.3s ease;
   }
 
   .content-wrapper.medium {
-    max-width: 1400px;
-    margin-left: max(0px, calc(50vw - 150px - 700px));
+    /* Same calculation for medium mode */
+    width: calc(
+      var(--summary-sidebar-width) + var(--space-6) + (2 * var(--panel-width-medium)) +
+        var(--space-6)
+    );
   }
 
   .content-wrapper.wide {
+    /* Wide mode uses flexible width */
+    width: 100%;
     max-width: 100%;
     margin-left: 0;
     margin-right: 0;
@@ -452,7 +459,7 @@
   /* Main layout with sidebar */
   .detailed-layout {
     display: grid;
-    grid-template-columns: var(--summary-sidebar-width) minmax(var(--main-content-min), 1fr);
+    grid-template-columns: var(--summary-sidebar-width) auto;
     gap: var(--space-6);
     align-items: start;
   }
@@ -461,16 +468,19 @@
     min-width: 0; /* Prevent grid blowout */
   }
 
-  /* Medium mode: fixed-size grid, left-aligned */
+  /* Medium mode: two columns side by side */
   .sections-container {
     display: grid;
-    grid-template-columns: var(--panel-width-medium);
+    grid-template-columns: var(--panel-width-medium) var(--panel-width-medium);
     gap: var(--space-6);
   }
 
-  /* Wide mode: flexible grid */
+  /* Wide mode: flexible grid with two columns */
   .content-wrapper.wide .sections-container {
-    grid-template-columns: minmax(var(--panel-width-min-wide), 1fr);
+    grid-template-columns: minmax(var(--panel-width-min-wide), 1fr) minmax(
+        var(--panel-width-min-wide),
+        1fr
+      );
   }
 
   .section {
@@ -599,16 +609,16 @@
 
   /* Container query: 2-column layout when content-wrapper is wide enough
      Note: CSS container queries don't support var() or calc() in conditions.
-     Medium mode breakpoint = 2 * var(--panel-width-medium) + var(--space-6) = 2*550 + 24 = 1124px
-     Wide mode breakpoint = 2 * var(--panel-width-min-wide) + var(--space-6) = 2*600 + 24 = 1224px */
-  @container content (min-width: 1124px) {
+     Medium mode breakpoint = 2 * var(--panel-width-medium) + var(--space-6) = 2*660 + 24 = 1344px
+     Wide mode breakpoint = 2 * var(--panel-width-min-wide) + var(--space-6) = 2*720 + 24 = 1464px */
+  @container content (min-width: 1344px) {
     /* Medium mode: two fixed columns */
     .sections-container {
       grid-template-columns: var(--panel-width-medium) var(--panel-width-medium);
     }
   }
 
-  @container content (min-width: 1224px) {
+  @container content (min-width: 1464px) {
     /* Wide mode: two flexible columns */
     .content-wrapper.wide .sections-container {
       grid-template-columns: minmax(var(--panel-width-min-wide), 1fr) minmax(
