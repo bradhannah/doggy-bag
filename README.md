@@ -5,7 +5,20 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/bradhannah/BudgetForFun/releases"><img src="https://img.shields.io/github/v/release/bradhannah/BudgetForFun" alt="Release"></a>
+  <a href="https://github.com/bradhannah/BudgetForFun/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/bradhannah/BudgetForFun/release.yml?label=build" alt="Build"></a>
+  <a href="https://github.com/bradhannah/BudgetForFun/releases"><img src="https://img.shields.io/github/downloads/bradhannah/BudgetForFun/total" alt="Downloads"></a>
+  <a href="https://github.com/bradhannah/BudgetForFun/stargazers"><img src="https://img.shields.io/github/stars/bradhannah/BudgetForFun" alt="Stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Tauri-2.x-blue?logo=tauri" alt="Tauri">
+  <img src="https://img.shields.io/badge/Svelte-5-orange?logo=svelte" alt="Svelte">
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Bun-1.x-black?logo=bun" alt="Bun">
+  <img src="https://img.shields.io/badge/platform-macOS%20ARM64-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/Homebrew-available-brown?logo=homebrew" alt="Homebrew">
 </p>
 
 _Doggy Bag_ is a desktop budgeting app focused on fixed monthly costs. Answers one question: **"How much do I have left in my doggy bag at the end of month?"**
