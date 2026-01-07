@@ -314,25 +314,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "budgetforfun"
-version = "0.1.0"
-dependencies = [
- "dirs 5.0.1",
- "reqwest",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
- "tauri-plugin-shell",
- "tauri-plugin-store",
- "tauri-plugin-window-state",
- "tokio",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -821,6 +802,25 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.111",
+]
+
+[[package]]
+name = "doggybag"
+version = "0.1.0"
+dependencies = [
+ "dirs 5.0.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+ "tauri-plugin-shell",
+ "tauri-plugin-store",
+ "tauri-plugin-window-state",
+ "tokio",
 ]
 
 [[package]]

@@ -46,6 +46,11 @@
     loadData();
   }
 
+  // Refresh function for the header button
+  function handleRefresh() {
+    loadData();
+  }
+
   async function loadData() {
     loading = true;
     error = '';
@@ -229,7 +234,7 @@
   }
 </script>
 
-<MonthPickerHeader />
+<MonthPickerHeader showRefresh={true} onRefresh={handleRefresh} />
 
 <div class="savings-page">
   {#if loading}

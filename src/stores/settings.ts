@@ -98,7 +98,7 @@ export async function loadZoom(): Promise<number> {
     }
   } else {
     // Browser fallback - use localStorage
-    const value = localStorage.getItem('budgetforfun_zoom');
+    const value = localStorage.getItem('doggybag_zoom');
     if (value) {
       const parsed = parseFloat(value);
       if (!isNaN(parsed) && parsed >= ZOOM_CONFIG.min && parsed <= ZOOM_CONFIG.max) {
@@ -129,7 +129,7 @@ async function saveZoom(level: number): Promise<void> {
     }
   } else {
     // Browser fallback - use localStorage
-    localStorage.setItem('budgetforfun_zoom', clampedLevel.toString());
+    localStorage.setItem('doggybag_zoom', clampedLevel.toString());
   }
 }
 
@@ -322,7 +322,7 @@ export async function openFolderPicker(): Promise<string | null> {
   if (!inTauri) {
     // In browser dev mode, show a prompt
     log.debug('Not in Tauri, using prompt fallback');
-    const path = prompt('Enter folder path (browser dev mode):', '~/Documents/BudgetForFun');
+    const path = prompt('Enter folder path (browser dev mode):', '~/Documents/DoggyBag');
     return path;
   }
 
@@ -350,7 +350,7 @@ export async function openFolderPicker(): Promise<string | null> {
  */
 export async function getDefaultDataDir(): Promise<string> {
   if (!isTauri()) {
-    return '~/Documents/BudgetForFun';
+    return '~/Documents/DoggyBag';
   }
 
   try {
@@ -358,7 +358,7 @@ export async function getDefaultDataDir(): Promise<string> {
     return await invoke('get_default_data_dir');
   } catch (e) {
     log.error('Failed to get default data dir:', e);
-    return '~/Documents/BudgetForFun';
+    return '~/Documents/DoggyBag';
   }
 }
 
@@ -369,7 +369,7 @@ export async function getDefaultDataDir(): Promise<string> {
 export async function saveDataDirectorySetting(path: string): Promise<void> {
   if (!isTauri()) {
     // In browser dev mode, save to localStorage
-    localStorage.setItem('budgetforfun_data_dir', path);
+    localStorage.setItem('doggybag_data_dir', path);
     return;
   }
 
@@ -389,7 +389,7 @@ export async function saveDataDirectorySetting(path: string): Promise<void> {
  */
 export async function getSavedDataDirectory(): Promise<string | null> {
   if (!isTauri()) {
-    return localStorage.getItem('budgetforfun_data_dir');
+    return localStorage.getItem('doggybag_data_dir');
   }
 
   try {
@@ -504,7 +504,7 @@ export async function getDebugModeSetting(): Promise<boolean> {
     }
   } else {
     // Browser fallback - use localStorage
-    return localStorage.getItem('budgetforfun_debug') === 'true';
+    return localStorage.getItem('doggybag_debug') === 'true';
   }
 }
 
@@ -525,7 +525,7 @@ export async function saveDebugMode(enabled: boolean): Promise<void> {
     }
   } else {
     // Browser fallback - use localStorage
-    localStorage.setItem('budgetforfun_debug', enabled.toString());
+    localStorage.setItem('doggybag_debug', enabled.toString());
   }
 }
 

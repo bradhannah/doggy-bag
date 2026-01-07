@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to BudgetForFun will be documented in this file.
+All notable changes to Doggy Bag will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial release of BudgetForFun
+- Initial release of Doggy Bag
 - Monthly budget dashboard with income, bills, and expenses tracking
 - Detailed monthly view with day-by-day breakdown
 - Payment sources management (checking, credit cards, cash)
@@ -41,5 +41,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESLint + Prettier code formatting
 - Vitest test framework with coverage
 
-[Unreleased]: https://github.com/bradhannah/BudgetForFun/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/bradhannah/BudgetForFun/releases/tag/v0.1.0
+[Unreleased]: https://github.com/bradhannah/DoggyBag/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/bradhannah/DoggyBag/releases/tag/v0.1.0

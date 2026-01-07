@@ -194,11 +194,11 @@ fn get_sidecar_port(app: tauri::AppHandle) -> Option<u16> {
 }
 
 /// Get the default data directory path
-/// Returns ~/Documents/BudgetForFun/ for production use
+/// Returns ~/Documents/DoggyBag/ for production use
 #[tauri::command]
 fn get_default_data_dir() -> Result<String, String> {
     let home = dirs::home_dir().ok_or("Could not determine home directory")?;
-    let data_dir = home.join("Documents").join("BudgetForFun");
+    let data_dir = home.join("Documents").join("DoggyBag");
     data_dir
         .to_str()
         .map(|s| s.to_string())
@@ -229,9 +229,9 @@ async fn start_bun_sidecar_internal(
     let effective_data_dir = match data_dir {
         Some(dir) if !dir.is_empty() => dir,
         _ => {
-            // Use default ~/Documents/BudgetForFun/
+            // Use default ~/Documents/DoggyBag/
             let home = dirs::home_dir().ok_or("Could not determine home directory")?;
-            let default_dir = home.join("Documents").join("BudgetForFun");
+            let default_dir = home.join("Documents").join("DoggyBag");
             default_dir
                 .to_str()
                 .ok_or("Invalid path encoding")?
@@ -372,7 +372,7 @@ async fn start_bun_sidecar_internal(
 }
 
 /// Start the Bun sidecar with an optional data directory
-/// If data_dir is not provided, uses the default ~/Documents/BudgetForFun/
+/// If data_dir is not provided, uses the default ~/Documents/DoggyBag/
 #[tauri::command]
 async fn start_bun_sidecar(
     app: tauri::AppHandle,
@@ -522,7 +522,7 @@ pub fn run() {
 
             // Create the main window dynamically
             let window_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-                .title("BudgetForFun")
+                .title("Doggy Bag")
                 .inner_size(800.0, 600.0)
                 .min_inner_size(600.0, 400.0);
 
@@ -545,7 +545,7 @@ pub fn run() {
                 let data_dir = read_saved_data_dir(&app_handle)
                     .or_else(|| {
                         dirs::home_dir()
-                            .map(|h| h.join("Documents").join("BudgetForFun"))
+                            .map(|h| h.join("Documents").join("DoggyBag"))
                             .and_then(|p| p.to_str().map(|s| s.to_string()))
                     });
 

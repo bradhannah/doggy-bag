@@ -192,7 +192,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `budgetforfun-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `doggybag-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -727,9 +727,9 @@
 
         <p>Please choose a directory where you have write permissions, such as:</p>
         <ul class="suggestion-list">
-          <li>~/Documents/BudgetForFun</li>
-          <li>~/iCloud Drive/BudgetForFun</li>
-          <li>~/Dropbox/BudgetForFun</li>
+          <li>~/Documents/DoggyBag</li>
+          <li>~/iCloud Drive/DoggyBag</li>
+          <li>~/Dropbox/DoggyBag</li>
         </ul>
       </div>
       <div class="modal-footer">

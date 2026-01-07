@@ -1,8 +1,8 @@
-# BudgetForFun
+# Doggy Bag
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![BudgetForFun Detailed View](docs/assets/BudgetForFunExample-Dec-2025.png)
+![Doggy Bag Detailed View](docs/assets/BudgetForFunExample-Dec-2025.png)
 
 Desktop budgeting app focused on fixed monthly costs. Answers one question: **"How much do I have left at end of month?"**
 
@@ -32,7 +32,7 @@ _Detailed view of the Budget Details pane showing bills grouped by category with
 
 **Download Binary (macOS ARM)**
 
-Grab the latest `.dmg` from [GitHub Releases](https://github.com/bradhannah/BudgetForFun/releases).
+Grab the latest `.dmg` from [GitHub Releases](https://github.com/bradhannah/DoggyBag/releases).
 
 Windows and Linux builds coming.
 

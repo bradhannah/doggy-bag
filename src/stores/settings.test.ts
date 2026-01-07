@@ -95,15 +95,15 @@ const mockPost = vi.mocked(apiClient.post);
 
 // Sample data
 const sampleSettings: AppSettings & { isDevelopment: boolean } = {
-  dataDirectory: '/Users/test/BudgetForFun',
+  dataDirectory: '/Users/test/DoggyBag',
   version: '0.1.0',
   isDevelopment: false,
 };
 
 const sampleDataDirectory: DataDirectoryInfo = {
-  path: '/Users/test/BudgetForFun',
-  entitiesDir: '/Users/test/BudgetForFun/entities',
-  monthsDir: '/Users/test/BudgetForFun/months',
+  path: '/Users/test/DoggyBag',
+  entitiesDir: '/Users/test/DoggyBag/entities',
+  monthsDir: '/Users/test/DoggyBag/months',
   isDevelopment: false,
   isWritable: true,
 };
@@ -317,19 +317,19 @@ describe('Settings Store', () => {
       });
 
       it('loads zoom from localStorage in browser', async () => {
-        localStorageMock.setItem('budgetforfun_zoom', '1.5');
+        localStorageMock.setItem('doggybag_zoom', '1.5');
         const zoom = await loadZoom();
         expect(zoom).toBe(1.5);
       });
 
       it('ignores invalid localStorage values', async () => {
-        localStorageMock.setItem('budgetforfun_zoom', 'invalid');
+        localStorageMock.setItem('doggybag_zoom', 'invalid');
         const zoom = await loadZoom();
         expect(zoom).toBe(ZOOM_CONFIG.default);
       });
 
       it('ignores out-of-range localStorage values', async () => {
-        localStorageMock.setItem('budgetforfun_zoom', '5.0');
+        localStorageMock.setItem('doggybag_zoom', '5.0');
         const zoom = await loadZoom();
         expect(zoom).toBe(ZOOM_CONFIG.default);
       });
@@ -339,7 +339,7 @@ describe('Settings Store', () => {
       it('sets zoom level and saves to localStorage', async () => {
         await setZoom(1.5);
         expect(get(zoomLevel)).toBe(1.5);
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('budgetforfun_zoom', '1.5');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('doggybag_zoom', '1.5');
       });
 
       it('clamps zoom to min', async () => {
@@ -430,7 +430,7 @@ describe('Settings Store', () => {
     describe('getDefaultDataDir', () => {
       it('returns fallback path in browser mode', async () => {
         const result = await getDefaultDataDir();
-        expect(result).toBe('~/Documents/BudgetForFun');
+        expect(result).toBe('~/Documents/DoggyBag');
       });
     });
   });
@@ -440,7 +440,7 @@ describe('Settings Store', () => {
       it('saves to localStorage in browser mode', async () => {
         await saveDataDirectorySetting('/test/data/dir');
         expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'budgetforfun_data_dir',
+          'doggybag_data_dir',
           '/test/data/dir'
         );
       });
@@ -448,7 +448,7 @@ describe('Settings Store', () => {
 
     describe('getSavedDataDirectory', () => {
       it('reads from localStorage in browser mode', async () => {
-        localStorageMock.setItem('budgetforfun_data_dir', '/saved/path');
+        localStorageMock.setItem('doggybag_data_dir', '/saved/path');
         const result = await getSavedDataDirectory();
         expect(result).toBe('/saved/path');
       });
@@ -505,13 +505,13 @@ describe('Settings Store', () => {
       });
 
       it('returns true when localStorage has true', async () => {
-        localStorageMock.setItem('budgetforfun_debug', 'true');
+        localStorageMock.setItem('doggybag_debug', 'true');
         const result = await getDebugModeSetting();
         expect(result).toBe(true);
       });
 
       it('returns false when localStorage has other values', async () => {
-        localStorageMock.setItem('budgetforfun_debug', 'false');
+        localStorageMock.setItem('doggybag_debug', 'false');
         const result = await getDebugModeSetting();
         expect(result).toBe(false);
       });
@@ -520,10 +520,10 @@ describe('Settings Store', () => {
     describe('saveDebugMode', () => {
       it('saves to localStorage in browser mode', async () => {
         await saveDebugMode(true);
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('budgetforfun_debug', 'true');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('doggybag_debug', 'true');
 
         await saveDebugMode(false);
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('budgetforfun_debug', 'false');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('doggybag_debug', 'false');
       });
     });
 
@@ -531,11 +531,11 @@ describe('Settings Store', () => {
       it('toggles from false to true', async () => {
         const result = await toggleDebugMode();
         expect(result).toBe(true);
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('budgetforfun_debug', 'true');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('doggybag_debug', 'true');
       });
 
       it('toggles from true to false', async () => {
-        localStorageMock.setItem('budgetforfun_debug', 'true');
+        localStorageMock.setItem('doggybag_debug', 'true');
         const result = await toggleDebugMode();
         expect(result).toBe(false);
       });

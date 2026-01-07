@@ -17,8 +17,6 @@
 
   // Check if we're on the details page (any month)
   $: isDetailsActive = currentPath.startsWith('/month/');
-  // Check if we're on the manage page
-  $: isManageActive = currentPath.startsWith('/manage');
   // Check if we're on the settings page
   $: isSettingsActive = currentPath.startsWith('/settings');
   // Check if we're on the savings page
@@ -44,7 +42,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `budgetforfun-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `doggybag-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -111,7 +109,7 @@
 <nav class="sidebar" class:collapsed={$sidebarCollapsed}>
   <div class="sidebar-header">
     <div class="header-row">
-      <h2 class="app-title">BudgetForFun</h2>
+      <h2 class="app-title">Doggy Bag</h2>
       <button
         class="collapse-toggle"
         on:click={() => sidebarCollapsed.toggle()}
@@ -184,15 +182,15 @@
     <li>
       <a href="/savings" class="nav-item" class:active={isSavingsActive} title="Savings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M19 5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21L12 17L19 21V5Z"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path d="M9 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M12 7V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <text
+            x="12"
+            y="16"
+            text-anchor="middle"
+            fill="currentColor"
+            font-size="16"
+            font-weight="bold"
+            font-family="system-ui, sans-serif">$</text
+          >
         </svg>
         <span>Savings</span>
       </a>
@@ -204,26 +202,7 @@
 
   <ul class="nav-list bottom-nav">
     <li>
-      <a href="/manage" class="nav-item" class:active={isManageActive} title="Manage Months">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-          <path d="M8 14H10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M14 14H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M8 18H10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
-        <span>Manage Months</span>
-      </a>
-    </li>
-    <li>
-      <a
-        href="/setup"
-        class="nav-item"
-        class:active={currentPath === '/setup'}
-        title="Budget Config"
-      >
+      <a href="/setup" class="nav-item" class:active={currentPath === '/setup'} title="Manage">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
           <path
@@ -232,7 +211,7 @@
             stroke-width="2"
           />
         </svg>
-        <span>Budget Config</span>
+        <span>Manage</span>
       </a>
     </li>
   </ul>

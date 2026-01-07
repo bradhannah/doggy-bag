@@ -66,7 +66,7 @@ export type WidthMode = 'medium' | 'wide';
 
 function getStoredWidthMode(): WidthMode {
   if (typeof window === 'undefined') return 'medium';
-  const stored = localStorage.getItem('budgetforfun-width-mode');
+  const stored = localStorage.getItem('doggybag-width-mode');
   // Handle legacy values (map 'small' to 'medium')
   if (stored === 'true' || stored === 'wide') return 'wide';
   if (stored === 'false' || stored === 'small') return 'medium';
@@ -89,7 +89,7 @@ function createWidthModeStore() {
       update((current) => {
         const nextMode: WidthMode = current === 'medium' ? 'wide' : 'medium';
         if (typeof window !== 'undefined') {
-          localStorage.setItem('budgetforfun-width-mode', nextMode);
+          localStorage.setItem('doggybag-width-mode', nextMode);
         }
         return nextMode;
       });
@@ -97,7 +97,7 @@ function createWidthModeStore() {
     set: (value: WidthMode) => {
       set(value);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('budgetforfun-width-mode', value);
+        localStorage.setItem('doggybag-width-mode', value);
       }
     },
   };
@@ -108,7 +108,7 @@ export const widthMode = createWidthModeStore();
 // Compact mode store with localStorage persistence
 function getStoredCompactMode(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem('budgetforfun-compact-mode') === 'true';
+  return localStorage.getItem('doggybag-compact-mode') === 'true';
 }
 
 function createCompactModeStore() {
@@ -125,7 +125,7 @@ function createCompactModeStore() {
       update((current) => {
         const next = !current;
         if (typeof window !== 'undefined') {
-          localStorage.setItem('budgetforfun-compact-mode', String(next));
+          localStorage.setItem('doggybag-compact-mode', String(next));
         }
         return next;
       });
@@ -133,7 +133,7 @@ function createCompactModeStore() {
     set: (value: boolean) => {
       set(value);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('budgetforfun-compact-mode', String(value));
+        localStorage.setItem('doggybag-compact-mode', String(value));
       }
     },
   };
@@ -144,7 +144,7 @@ export const compactMode = createCompactModeStore();
 // Hide paid items mode store with localStorage persistence
 function getStoredHidePaidItems(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem('budgetforfun-hide-paid-items') === 'true';
+  return localStorage.getItem('doggybag-hide-paid-items') === 'true';
 }
 
 function createHidePaidItemsStore() {
@@ -161,7 +161,7 @@ function createHidePaidItemsStore() {
       update((current) => {
         const next = !current;
         if (typeof window !== 'undefined') {
-          localStorage.setItem('budgetforfun-hide-paid-items', String(next));
+          localStorage.setItem('doggybag-hide-paid-items', String(next));
         }
         return next;
       });
@@ -169,7 +169,7 @@ function createHidePaidItemsStore() {
     set: (value: boolean) => {
       set(value);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('budgetforfun-hide-paid-items', String(value));
+        localStorage.setItem('doggybag-hide-paid-items', String(value));
       }
     },
   };
@@ -186,7 +186,7 @@ export const wideMode = {
 // Sidebar collapsed state with localStorage persistence
 function getStoredSidebarCollapsed(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem('budgetforfun-sidebar-collapsed') === 'true';
+  return localStorage.getItem('doggybag-sidebar-collapsed') === 'true';
 }
 
 function createSidebarCollapsedStore() {
@@ -203,7 +203,7 @@ function createSidebarCollapsedStore() {
       update((current) => {
         const next = !current;
         if (typeof window !== 'undefined') {
-          localStorage.setItem('budgetforfun-sidebar-collapsed', String(next));
+          localStorage.setItem('doggybag-sidebar-collapsed', String(next));
         }
         return next;
       });
@@ -211,19 +211,19 @@ function createSidebarCollapsedStore() {
     set: (value: boolean) => {
       set(value);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('budgetforfun-sidebar-collapsed', String(value));
+        localStorage.setItem('doggybag-sidebar-collapsed', String(value));
       }
     },
     expand: () => {
       set(false);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('budgetforfun-sidebar-collapsed', 'false');
+        localStorage.setItem('doggybag-sidebar-collapsed', 'false');
       }
     },
     collapse: () => {
       set(true);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('budgetforfun-sidebar-collapsed', 'true');
+        localStorage.setItem('doggybag-sidebar-collapsed', 'true');
       }
     },
   };

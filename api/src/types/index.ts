@@ -1,4 +1,4 @@
-// BudgetForFun Type Definitions
+// Doggy Bag Type Definitions
 // All entity interfaces, enums, and union types for the application
 
 // ============================================================================

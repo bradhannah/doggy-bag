@@ -65,7 +65,7 @@ export class BackupServiceImpl implements BackupService {
         months: monthData.filter((m): m is MonthlyData => m !== null),
       };
 
-      await this.storage.writeJSON('data/budgetforfun-backup.json', backupData);
+      await this.storage.writeJSON('data/doggybag-backup.json', backupData);
 
       console.log('[BackupService] Export completed');
       return backupData;
