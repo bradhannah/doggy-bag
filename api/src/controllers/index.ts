@@ -8,6 +8,5 @@ export * from './IncomesController';
 export * from './PaymentSourcesController';
 export * from './CategoriesController';
 export * from './MonthsController';
-export * from './UndoController';
 export * from './BackupController';
 export * from './SettingsController';

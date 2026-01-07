@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { apiClient } from '../../lib/api/client';
 
   // Stores
   import {
@@ -29,7 +31,7 @@
     incomeCategories,
   } from '../../stores/categories';
 
-  import { success, error as showError } from '../../stores/toast';
+  import { success, error as showError, addToast } from '../../stores/toast';
 
   // Components
   import Drawer from './Drawer.svelte';
@@ -54,9 +56,37 @@
   import type { Income } from '../../stores/incomes';
   import type { Category } from '../../stores/categories';
 
+  // ============ Months Tab Types ============
+  interface MonthSummary {
+    month: string;
+    exists: boolean;
+    is_read_only: boolean;
+    created_at: string;
+    updated_at: string;
+    total_income: number;
+    total_bills: number;
+    total_expenses: number;
+    leftover: number;
+  }
+
+  interface MonthsResponse {
+    months: MonthSummary[];
+    count: number;
+  }
+
   // Tab state
-  type TabId = 'payment-sources' | 'bills' | 'incomes' | 'categories';
-  let activeTab: TabId = 'payment-sources';
+  type TabId = 'months' | 'payment-sources' | 'bills' | 'incomes' | 'categories';
+  let activeTab: TabId = 'months';
+
+  // ============ Months Tab State ============
+  let months: MonthSummary[] = [];
+  let monthsLoading = true;
+  let monthsError = '';
+  let monthConfirmTitle = '';
+  let monthConfirmMessage = '';
+  let monthConfirmAction: (() => Promise<void>) | null = null;
+  let monthActionLoading = false;
+  let showMonthConfirm = false;
 
   // Drawer state
   type DrawerMode = 'add' | 'edit' | 'view';
@@ -77,6 +107,7 @@
 
   // Tab definitions
   const tabs: { id: TabId; label: string }[] = [
+    { id: 'months', label: 'Months' },
     { id: 'payment-sources', label: 'Payment Sources' },
     { id: 'bills', label: 'Bills' },
     { id: 'incomes', label: 'Incomes' },
@@ -85,8 +116,132 @@
 
   // Load all data on mount
   onMount(async () => {
-    await Promise.all([loadPaymentSources(), loadBills(), loadIncomes(), loadCategories()]);
+    await Promise.all([
+      loadMonths(),
+      loadPaymentSources(),
+      loadBills(),
+      loadIncomes(),
+      loadCategories(),
+    ]);
   });
+
+  // ============ Months Tab Functions ============
+  async function loadMonths() {
+    monthsLoading = true;
+    monthsError = '';
+    try {
+      const data = (await apiClient.get('/api/months/manage')) as MonthsResponse;
+      months = data.months;
+    } catch (e) {
+      monthsError = e instanceof Error ? e.message : 'Failed to load months';
+      console.error('Failed to load months:', e);
+    } finally {
+      monthsLoading = false;
+    }
+  }
+
+  function formatMonth(monthStr: string): string {
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  }
+
+  function formatMonthAmount(cents: number): string {
+    const amount = Math.abs(cents / 100);
+    const formatted =
+      '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return cents < 0 ? '-' + formatted : formatted;
+  }
+
+  function getStatusBadge(month: MonthSummary): { text: string; class: string } {
+    if (!month.exists) {
+      return { text: 'Not Created', class: 'badge-muted' };
+    }
+    if (month.is_read_only) {
+      return { text: 'Locked', class: 'badge-warning' };
+    }
+    return { text: 'Active', class: 'badge-success' };
+  }
+
+  async function handleCreateMonth(month: string) {
+    monthConfirmTitle = 'Create Month';
+    monthConfirmMessage = `Create ${formatMonth(month)}? This will copy your current bills, incomes, and variable expense templates into this month.`;
+    monthConfirmAction = async () => {
+      try {
+        await apiClient.post(`/api/months/${month}/create`, {});
+        addToast(`Created ${formatMonth(month)}`, 'success');
+        await loadMonths();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to create month';
+        addToast(msg, 'error');
+      }
+    };
+    showMonthConfirm = true;
+  }
+
+  async function handleToggleLock(month: MonthSummary) {
+    const action = month.is_read_only ? 'Unlock' : 'Lock';
+    monthConfirmTitle = `${action} Month`;
+    monthConfirmMessage = month.is_read_only
+      ? `Unlock ${formatMonth(month.month)}? You will be able to make changes again.`
+      : `Lock ${formatMonth(month.month)}? This will prevent any changes to this month's data.`;
+    monthConfirmAction = async () => {
+      try {
+        await apiClient.post(`/api/months/${month.month}/lock`, {});
+        addToast(
+          `${formatMonth(month.month)} ${month.is_read_only ? 'unlocked' : 'locked'}`,
+          'success'
+        );
+        await loadMonths();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : `Failed to ${action.toLowerCase()} month`;
+        addToast(msg, 'error');
+      }
+    };
+    showMonthConfirm = true;
+  }
+
+  async function handleDeleteMonth(month: MonthSummary) {
+    if (month.is_read_only) {
+      addToast('Cannot delete a locked month. Unlock it first.', 'error');
+      return;
+    }
+
+    monthConfirmTitle = 'Delete Month';
+    monthConfirmMessage = `Delete ${formatMonth(month.month)}? All bills, incomes, expenses, and payment records for this month will be permanently deleted. This cannot be undone.`;
+    monthConfirmAction = async () => {
+      try {
+        await apiClient.deletePath(`/api/months/${month.month}`);
+        addToast(`Deleted ${formatMonth(month.month)}`, 'success');
+        await loadMonths();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to delete month';
+        addToast(msg, 'error');
+      }
+    };
+    showMonthConfirm = true;
+  }
+
+  async function handleMonthConfirm() {
+    if (!monthConfirmAction) return;
+    monthActionLoading = true;
+    try {
+      await monthConfirmAction();
+    } finally {
+      monthActionLoading = false;
+      showMonthConfirm = false;
+      monthConfirmAction = null;
+    }
+  }
+
+  function handleMonthCancel() {
+    showMonthConfirm = false;
+    monthConfirmAction = null;
+  }
+
+  function navigateToMonth(month: string) {
+    goto(`/month/${month}`);
+  }
 
   // Drawer title based on mode and active tab
   $: drawerTitle = (() => {
@@ -102,6 +257,8 @@
 
   function getTabSingular(tab: TabId): string {
     switch (tab) {
+      case 'months':
+        return 'Month';
       case 'payment-sources':
         return 'Payment Source';
       case 'bills':
@@ -260,7 +417,7 @@
   <!-- Header -->
   <header class="setup-header">
     <a href="/" class="back-link"> &larr; Dashboard </a>
-    <h1>Entity Configuration</h1>
+    <h1>Manage</h1>
     <div class="header-spacer"></div>
     <LoadDefaultsButton />
   </header>
@@ -284,89 +441,174 @@
 
     <!-- Main Content Area -->
     <main class="setup-content">
-      <!-- Content Header -->
-      <div class="content-header">
-        <h2>
-          {tabs.find((t) => t.id === activeTab)?.label}
-          <span class="count">
-            ({#if activeTab === 'payment-sources'}
-              {$paymentSourcesStore.paymentSources.length}
-            {:else if activeTab === 'bills'}
-              {$billsStore.bills.length}
-            {:else if activeTab === 'incomes'}
-              {$incomesStore.incomes.length}
-            {:else if activeTab === 'categories'}
-              {$categoriesStore.categories.length}
-            {/if})
-          </span>
-        </h2>
-        <button class="btn btn-primary" on:click={openAddDrawer}> + Add New </button>
-      </div>
+      {#if activeTab === 'months'}
+        <!-- Months Tab Content -->
+        <div class="content-header">
+          <h2>Months</h2>
+        </div>
 
-      <!-- Entity List -->
-      <div class="entity-list">
-        {#if activeTab === 'payment-sources'}
-          {#if $paymentSourcesStore.paymentSources.length === 0}
-            <div class="empty-state">
-              <p>No payment sources yet.</p>
-              <p class="hint">Add your first payment source to get started.</p>
+        <div class="months-list">
+          {#if monthsLoading}
+            <div class="loading-state">Loading months...</div>
+          {:else if monthsError}
+            <div class="error-state">
+              <p>{monthsError}</p>
+              <button class="btn btn-primary" on:click={loadMonths}>Retry</button>
             </div>
           {:else}
-            <PaymentSourcesList
-              paymentSources={$paymentSourcesStore.paymentSources}
-              onView={openViewDrawer}
-              onEdit={openEditDrawer}
-              onDelete={(ps) => confirmDelete({ id: ps.id, name: ps.name })}
-            />
+            {#each months as month (month.month)}
+              <div class="month-card" class:not-exists={!month.exists}>
+                <div class="month-header">
+                  <h3 class="month-name">{formatMonth(month.month)}</h3>
+                  <span class="month-badge {getStatusBadge(month).class}">
+                    {getStatusBadge(month).text}
+                  </span>
+                </div>
+
+                {#if month.exists}
+                  <div class="month-stats">
+                    <div class="stat">
+                      <span class="stat-label">Income</span>
+                      <span class="stat-value income">{formatMonthAmount(month.total_income)}</span>
+                    </div>
+                    <div class="stat">
+                      <span class="stat-label">Bills</span>
+                      <span class="stat-value expense">{formatMonthAmount(month.total_bills)}</span>
+                    </div>
+                    <div class="stat">
+                      <span class="stat-label">Expenses</span>
+                      <span class="stat-value expense"
+                        >{formatMonthAmount(month.total_expenses)}</span
+                      >
+                    </div>
+                    <div class="stat">
+                      <span class="stat-label">Leftover</span>
+                      <span
+                        class="stat-value"
+                        class:positive={month.leftover >= 0}
+                        class:negative={month.leftover < 0}
+                      >
+                        {formatMonthAmount(month.leftover)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="month-actions">
+                    <button class="btn btn-secondary" on:click={() => navigateToMonth(month.month)}>
+                      View Details
+                    </button>
+                    <button class="btn btn-outline" on:click={() => handleToggleLock(month)}>
+                      {month.is_read_only ? 'Unlock' : 'Lock'}
+                    </button>
+                    <button
+                      class="btn btn-danger"
+                      disabled={month.is_read_only}
+                      title={month.is_read_only ? 'Unlock to delete' : 'Delete month'}
+                      on:click={() => handleDeleteMonth(month)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                {:else}
+                  <div class="month-empty">
+                    <p>This month hasn't been created yet.</p>
+                  </div>
+                  <div class="month-actions">
+                    <button class="btn btn-primary" on:click={() => handleCreateMonth(month.month)}>
+                      Create Month
+                    </button>
+                  </div>
+                {/if}
+              </div>
+            {/each}
           {/if}
-        {:else if activeTab === 'bills'}
-          {#if $billsStore.bills.length === 0}
-            <div class="empty-state">
-              <p>No bills yet.</p>
-              <p class="hint">Add your recurring bills like rent, utilities, subscriptions.</p>
+        </div>
+      {:else}
+        <!-- Other Tabs Content -->
+        <!-- Content Header -->
+        <div class="content-header">
+          <h2>
+            {tabs.find((t) => t.id === activeTab)?.label}
+            <span class="count">
+              ({#if activeTab === 'payment-sources'}
+                {$paymentSourcesStore.paymentSources.length}
+              {:else if activeTab === 'bills'}
+                {$billsStore.bills.length}
+              {:else if activeTab === 'incomes'}
+                {$incomesStore.incomes.length}
+              {:else if activeTab === 'categories'}
+                {$categoriesStore.categories.length}
+              {/if})
+            </span>
+          </h2>
+          <button class="btn btn-primary" on:click={openAddDrawer}> + Add New </button>
+        </div>
+
+        <!-- Entity List -->
+        <div class="entity-list">
+          {#if activeTab === 'payment-sources'}
+            {#if $paymentSourcesStore.paymentSources.length === 0}
+              <div class="empty-state">
+                <p>No payment sources yet.</p>
+                <p class="hint">Add your first payment source to get started.</p>
+              </div>
+            {:else}
+              <PaymentSourcesList
+                paymentSources={$paymentSourcesStore.paymentSources}
+                onView={openViewDrawer}
+                onEdit={openEditDrawer}
+                onDelete={(ps) => confirmDelete({ id: ps.id, name: ps.name })}
+              />
+            {/if}
+          {:else if activeTab === 'bills'}
+            {#if $billsStore.bills.length === 0}
+              <div class="empty-state">
+                <p>No bills yet.</p>
+                <p class="hint">Add your recurring bills like rent, utilities, subscriptions.</p>
+              </div>
+            {:else}
+              <BillsListByCategory
+                billsByCategory={$billsByCategory}
+                totalFixedCosts={$totalFixedCosts}
+                onView={openViewDrawer}
+                onEdit={openEditDrawer}
+                onDelete={(bill) => confirmDelete({ id: bill.id, name: bill.name })}
+                {getPaymentSourceName}
+              />
+            {/if}
+          {:else if activeTab === 'incomes'}
+            {#if $incomesStore.incomes.length === 0}
+              <div class="empty-state">
+                <p>No incomes yet.</p>
+                <p class="hint">Add your salary, freelance income, or other recurring income.</p>
+              </div>
+            {:else}
+              <IncomesListByCategory
+                incomesByCategory={$incomesByCategory}
+                totalMonthlyIncome={$totalMonthlyIncome}
+                onView={openViewDrawer}
+                onEdit={openEditDrawer}
+                onDelete={(income) => confirmDelete({ id: income.id, name: income.name })}
+                {getPaymentSourceName}
+              />
+            {/if}
+          {:else if activeTab === 'categories'}
+            <!-- Category Orderers for drag-and-drop reordering -->
+            <div class="category-orderers">
+              <CategoryOrderer
+                categories={$billCategories}
+                type="bill"
+                on:edit={(e) => openEditDrawer(e.detail.category)}
+              />
+              <CategoryOrderer
+                categories={$incomeCategories}
+                type="income"
+                on:edit={(e) => openEditDrawer(e.detail.category)}
+              />
             </div>
-          {:else}
-            <BillsListByCategory
-              billsByCategory={$billsByCategory}
-              totalFixedCosts={$totalFixedCosts}
-              onView={openViewDrawer}
-              onEdit={openEditDrawer}
-              onDelete={(bill) => confirmDelete({ id: bill.id, name: bill.name })}
-              {getPaymentSourceName}
-            />
           {/if}
-        {:else if activeTab === 'incomes'}
-          {#if $incomesStore.incomes.length === 0}
-            <div class="empty-state">
-              <p>No incomes yet.</p>
-              <p class="hint">Add your salary, freelance income, or other recurring income.</p>
-            </div>
-          {:else}
-            <IncomesListByCategory
-              incomesByCategory={$incomesByCategory}
-              totalMonthlyIncome={$totalMonthlyIncome}
-              onView={openViewDrawer}
-              onEdit={openEditDrawer}
-              onDelete={(income) => confirmDelete({ id: income.id, name: income.name })}
-              {getPaymentSourceName}
-            />
-          {/if}
-        {:else if activeTab === 'categories'}
-          <!-- Category Orderers for drag-and-drop reordering -->
-          <div class="category-orderers">
-            <CategoryOrderer
-              categories={$billCategories}
-              type="bill"
-              on:edit={(e) => openEditDrawer(e.detail.category)}
-            />
-            <CategoryOrderer
-              categories={$incomeCategories}
-              type="income"
-              on:edit={(e) => openEditDrawer(e.detail.category)}
-            />
-          </div>
-        {/if}
-      </div>
+        </div>
+      {/if}
     </main>
   </div>
 
@@ -409,6 +651,16 @@
     confirmText="Delete"
     on:confirm={handleConfirmDelete}
     on:cancel={cancelDelete}
+  />
+
+  <!-- Month Action Confirmation Dialog -->
+  <ConfirmDialog
+    open={showMonthConfirm}
+    title={monthConfirmTitle}
+    message={monthConfirmMessage}
+    confirmText={monthActionLoading ? 'Processing...' : 'Confirm'}
+    on:confirm={handleMonthConfirm}
+    on:cancel={handleMonthCancel}
   />
 </div>
 
@@ -569,6 +821,171 @@
     background: #1ab0c9;
   }
 
+  /* ============ Months Tab Styles ============ */
+  .months-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+    max-width: var(--content-max-setup);
+    margin: 0 auto;
+  }
+
+  .loading-state,
+  .error-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #888;
+  }
+
+  .error-state p {
+    margin-bottom: 20px;
+    color: #ff6b6b;
+  }
+
+  .month-card {
+    background: #16213e;
+    border: 1px solid #333355;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    transition: border-color 0.15s ease;
+  }
+
+  .month-card:hover {
+    border-color: #24c8db;
+  }
+
+  .month-card.not-exists {
+    opacity: 0.7;
+  }
+
+  .month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+  }
+
+  .month-name {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .month-badge {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--space-1);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .badge-warning {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+  }
+
+  .badge-muted {
+    background: rgba(136, 136, 136, 0.15);
+    color: #888;
+  }
+
+  .month-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .stat-value.income {
+    color: #22c55e;
+  }
+
+  .stat-value.expense {
+    color: #ff6b6b;
+  }
+
+  .stat-value.positive {
+    color: #22c55e;
+  }
+
+  .stat-value.negative {
+    color: #ff6b6b;
+  }
+
+  .month-empty {
+    padding: var(--space-4) 0;
+    text-align: center;
+    color: #888;
+  }
+
+  .month-empty p {
+    margin: 0;
+  }
+
+  .month-actions {
+    display: flex;
+    gap: var(--space-2);
+    padding-top: var(--space-4);
+    border-top: 1px solid #333355;
+  }
+
+  .btn-secondary {
+    background: #333355;
+    color: #fff;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: #444466;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #333355;
+    color: #e4e4e7;
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    border-color: #24c8db;
+    color: #24c8db;
+  }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: #ff4444;
+    color: #fff;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* Mobile responsive */
   @media (max-width: 768px) {
     .setup-header {
@@ -609,6 +1026,19 @@
 
     .category-orderers {
       grid-template-columns: 1fr;
+    }
+
+    .month-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .month-actions {
+      flex-wrap: wrap;
+    }
+
+    .month-actions .btn {
+      flex: 1;
+      min-width: 100px;
     }
   }
 </style>

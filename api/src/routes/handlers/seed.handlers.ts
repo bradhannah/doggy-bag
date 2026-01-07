@@ -204,18 +204,55 @@ export function createSeedDefaultsHandler() {
 
       // Create categories first (needed for bill/income assignment later)
       let categoriesCreated = 0;
+      const createdBillCategories: Array<{ name: string; id: string }> = [];
+      const createdIncomeCategories: Array<{ name: string; id: string }> = [];
+
       if (existingCategories.length === 0) {
         // Create bill categories
         for (const cat of DEFAULT_BILL_CATEGORIES) {
-          await categoriesService.create(cat);
+          const created = await categoriesService.create(cat);
+          createdBillCategories.push({ name: cat.name, id: created.id });
           categoriesCreated++;
         }
         // Create income categories
         for (const cat of DEFAULT_INCOME_CATEGORIES) {
-          await categoriesService.create(cat);
+          const created = await categoriesService.create(cat);
+          createdIncomeCategories.push({ name: cat.name, id: created.id });
           categoriesCreated++;
         }
         console.log(`[SeedHandler] Created ${categoriesCreated} default categories`);
+      } else {
+        // Use existing categories
+        for (const cat of existingCategories) {
+          if (cat.type === 'bill') {
+            createdBillCategories.push({ name: cat.name, id: cat.id });
+          } else if (cat.type === 'income') {
+            createdIncomeCategories.push({ name: cat.name, id: cat.id });
+          }
+        }
+      }
+
+      // Get default category IDs for bills and incomes
+      const homeCategoryId = createdBillCategories.find((c) => c.name === 'Home')?.id;
+      const utilitiesCategoryId = createdBillCategories.find((c) => c.name === 'Utilities')?.id;
+      const transportationCategoryId = createdBillCategories.find(
+        (c) => c.name === 'Transportation'
+      )?.id;
+      const streamingCategoryId = createdBillCategories.find((c) => c.name === 'Streaming')?.id;
+      const subscriptionsCategoryId = createdBillCategories.find(
+        (c) => c.name === 'Subscriptions'
+      )?.id;
+      const salaryCategoryId = createdIncomeCategories.find((c) => c.name === 'Salary')?.id;
+      const freelanceCategoryId = createdIncomeCategories.find(
+        (c) => c.name === 'Freelance/Contract'
+      )?.id;
+
+      // Fallback to first category if specific one not found
+      const defaultBillCategoryId = homeCategoryId || createdBillCategories[0]?.id;
+      const defaultIncomeCategoryId = salaryCategoryId || createdIncomeCategories[0]?.id;
+
+      if (!defaultBillCategoryId || !defaultIncomeCategoryId) {
+        throw new Error('Failed to find or create required categories');
       }
 
       // Create payment sources and track their IDs
@@ -232,19 +269,36 @@ export function createSeedDefaultsHandler() {
         throw new Error('Failed to create Main Checking payment source');
       }
 
-      // Create bills
+      // Create bills with category assignments
+      // Map bill names to categories
+      const billCategoryMap: Record<string, string> = {
+        'Rent/Mortgage': homeCategoryId || defaultBillCategoryId,
+        Electric: utilitiesCategoryId || defaultBillCategoryId,
+        Internet: utilitiesCategoryId || defaultBillCategoryId,
+        'Car Insurance': transportationCategoryId || defaultBillCategoryId,
+        'Streaming Services': streamingCategoryId || defaultBillCategoryId,
+        Phone: subscriptionsCategoryId || defaultBillCategoryId,
+      };
+
       for (const bill of DEFAULT_BILLS) {
         await billsService.create({
           ...bill,
           payment_source_id: mainCheckingId,
+          category_id: billCategoryMap[bill.name] || defaultBillCategoryId,
         });
       }
 
-      // Create incomes
+      // Create incomes with category assignments
+      const incomeCategoryMap: Record<string, string> = {
+        Salary: salaryCategoryId || defaultIncomeCategoryId,
+        'Side Gig': freelanceCategoryId || defaultIncomeCategoryId,
+      };
+
       for (const income of DEFAULT_INCOMES) {
         await incomesService.create({
           ...income,
           payment_source_id: mainCheckingId,
+          category_id: incomeCategoryMap[income.name] || defaultIncomeCategoryId,
         });
       }
 
