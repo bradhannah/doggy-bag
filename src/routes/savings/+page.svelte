@@ -8,6 +8,8 @@
   } from '../../stores/payment-sources';
   import { currentMonth } from '../../stores/ui';
   import { success, error as showError } from '../../stores/toast';
+  import MonthPickerHeader from '../../components/MonthPickerHeader.svelte';
+  import MonthNotCreated from '../../components/MonthNotCreated.svelte';
 
   interface SavingsBalances {
     start: Record<string, number>;
@@ -16,7 +18,9 @@
 
   let loading = true;
   let saving = false;
+  let creating = false;
   let error = '';
+  let monthExists = true;
   let balances: SavingsBalances = { start: {}, end: {} };
 
   // Editing state - store values in dollars for display
@@ -36,6 +40,11 @@
   onMount(async () => {
     await loadData();
   });
+
+  // Reload when month changes via MonthPickerHeader
+  $: if ($currentMonth) {
+    loadData();
+  }
 
   async function loadData() {
     loading = true;
@@ -61,6 +70,7 @@
       // Load current month data to get existing balances
       const monthData = await apiClient.get(`/api/months/${$currentMonth}`);
       if (monthData) {
+        monthExists = true;
         const currentStart =
           (monthData as { savings_balances_start?: Record<string, number> })
             .savings_balances_start || {};
@@ -86,8 +96,12 @@
       // Initialize editing values from current balances
       initEditingValues(previousMonthEndBalances);
     } catch (e) {
-      if ((e as { status?: number }).status === 404) {
-        // Month doesn't exist yet - that's OK, use previous month's end balances if available
+      if (
+        (e as { status?: number }).status === 404 ||
+        (e instanceof Error && e.message.includes('Not Found'))
+      ) {
+        // Month doesn't exist yet - show create prompt
+        monthExists = false;
         balances = { start: {}, end: {} };
         initEditingValues(previousMonthEndBalances);
       } else {
@@ -197,18 +211,38 @@
     const date = new Date(parseInt(year), parseInt(monthNum) - 1);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
   }
+
+  async function handleCreateMonth() {
+    if (!$currentMonth) return;
+    creating = true;
+    try {
+      await apiClient.post(`/api/months/${$currentMonth}/generate`, {});
+      success(`Month ${$currentMonth} created`);
+      monthExists = true;
+      await loadData();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create month';
+      showError(msg);
+    } finally {
+      creating = false;
+    }
+  }
 </script>
 
-<div class="savings-page">
-  <header class="page-header">
-    <h1>Savings & Investments</h1>
-    <p class="month-label">{formatMonthDisplay($currentMonth)}</p>
-  </header>
+<MonthPickerHeader />
 
+<div class="savings-page">
   {#if loading}
     <div class="loading-state">Loading...</div>
   {:else if error}
     <div class="error-state">{error}</div>
+  {:else if !monthExists}
+    <MonthNotCreated
+      monthDisplay={formatMonthDisplay($currentMonth)}
+      {creating}
+      hint="Create this month to start tracking savings and investments."
+      on:create={handleCreateMonth}
+    />
   {:else if allAccounts.length === 0}
     <div class="empty-state">
       <h2>No Savings or Investment Accounts</h2>
@@ -375,23 +409,7 @@
   .savings-page {
     max-width: 900px;
     margin: 0 auto;
-    padding: var(--content-padding);
-  }
-
-  .page-header {
-    margin-bottom: var(--space-6);
-  }
-
-  .page-header h1 {
-    margin: 0 0 var(--space-2) 0;
-    font-size: 1.5rem;
-    color: #e4e4e7;
-  }
-
-  .month-label {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #888;
+    padding: var(--space-4) var(--content-padding) var(--content-padding) var(--content-padding);
   }
 
   .loading-state,

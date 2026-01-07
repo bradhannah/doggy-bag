@@ -1,33 +1,11 @@
 <script lang="ts">
   import type { PaymentSource } from '../../stores/payment-sources';
-  import {
-    isDebtAccount,
-    formatBalanceForDisplay,
-    getTypeDisplayName,
-    getTypeIcon,
-  } from '../../stores/payment-sources';
+  import { isDebtAccount, getTypeDisplayName, getTypeIcon } from '../../stores/payment-sources';
 
   export let paymentSources: PaymentSource[];
   export let onView: (ps: PaymentSource) => void;
   export let onEdit: (ps: PaymentSource) => void;
   export let onDelete: (ps: PaymentSource) => void;
-
-  function formatCurrency(cents: number): string {
-    const abs = Math.abs(cents);
-    const formatted = '$' + (abs / 100).toFixed(2);
-    return cents < 0 ? '-' + formatted : formatted;
-  }
-
-  // Calculate totals
-  $: totalAssets = paymentSources
-    .filter((ps) => !isDebtAccount(ps.type))
-    .reduce((sum, ps) => sum + ps.balance, 0);
-
-  $: totalDebt = paymentSources
-    .filter((ps) => isDebtAccount(ps.type))
-    .reduce((sum, ps) => sum + ps.balance, 0);
-
-  $: netWorth = totalAssets - totalDebt;
 </script>
 
 <div class="payment-sources-list">
@@ -36,7 +14,6 @@
     <div class="column-header">
       <span class="col-name">Name</span>
       <span class="col-type">Type</span>
-      <span class="col-balance">Balance</span>
       <span class="col-actions">Actions</span>
     </div>
 
@@ -46,7 +23,6 @@
     {:else}
       {#each paymentSources as ps (ps.id)}
         {@const isDebt = isDebtAccount(ps.type)}
-        {@const displayBalance = formatBalanceForDisplay(ps.balance, ps.type)}
         <div class="source-row" class:debt={isDebt} on:click={() => onView(ps)}>
           <span class="col-name">
             <span class="type-icon">{getTypeIcon(ps.type)}</span>
@@ -56,13 +32,6 @@
             <span class="type-badge" class:debt={isDebt}>
               {getTypeDisplayName(ps.type)}
             </span>
-          </span>
-          <span
-            class="col-balance"
-            class:negative={displayBalance < 0}
-            class:positive={displayBalance >= 0 && !isDebt}
-          >
-            {formatCurrency(displayBalance)}
           </span>
           <span class="col-actions" on:click|stopPropagation>
             <button class="btn-icon" on:click={() => onEdit(ps)} title="Edit">
@@ -98,26 +67,6 @@
       {/each}
     {/if}
   </div>
-
-  <!-- Totals Row -->
-  <div class="totals-row">
-    <div class="total-item">
-      <span class="total-label">Total Assets</span>
-      <span class="total-value positive">{formatCurrency(totalAssets)}</span>
-    </div>
-    <div class="total-divider"></div>
-    <div class="total-item">
-      <span class="total-label">Total Debt</span>
-      <span class="total-value negative">-{formatCurrency(totalDebt)}</span>
-    </div>
-    <div class="total-divider"></div>
-    <div class="total-item">
-      <span class="total-label">Net Worth</span>
-      <span class="total-value" class:positive={netWorth >= 0} class:negative={netWorth < 0}>
-        {formatCurrency(netWorth)}
-      </span>
-    </div>
-  </div>
 </div>
 
 <style>
@@ -138,7 +87,7 @@
   /* Column Header */
   .column-header {
     display: grid;
-    grid-template-columns: 1fr 140px 140px 80px;
+    grid-template-columns: 1fr 140px 80px;
     gap: 12px;
     padding: 12px 16px;
     background: #16213e;
@@ -153,7 +102,7 @@
   /* Source Row */
   .source-row {
     display: grid;
-    grid-template-columns: 1fr 140px 140px 80px;
+    grid-template-columns: 1fr 140px 80px;
     gap: 12px;
     padding: 14px 16px;
     align-items: center;
@@ -209,21 +158,6 @@
     color: #ff6b6b;
   }
 
-  .source-row .col-balance {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    text-align: right;
-    color: #e4e4e7;
-  }
-
-  .source-row .col-balance.positive {
-    color: #22c55e;
-  }
-
-  .source-row .col-balance.negative {
-    color: #ff6b6b;
-  }
-
   .source-row .col-actions {
     display: flex;
     gap: 6px;
@@ -263,58 +197,11 @@
     font-size: 0.875rem;
   }
 
-  /* Totals Row */
-  .totals-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    padding: 16px 20px;
-    background: #16213e;
-    border-radius: 8px;
-    border: 2px solid #333355;
-    margin-top: 16px;
-  }
-
-  .total-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .total-label {
-    font-size: 0.6875rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .total-value {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #e4e4e7;
-  }
-
-  .total-value.positive {
-    color: #22c55e;
-  }
-
-  .total-value.negative {
-    color: #ff6b6b;
-  }
-
-  .total-divider {
-    width: 1px;
-    height: 36px;
-    background: #333355;
-  }
-
   /* Responsive */
   @media (max-width: 768px) {
     .column-header,
     .source-row {
-      grid-template-columns: 1fr 100px 80px;
+      grid-template-columns: 1fr 80px;
     }
 
     .col-type {
@@ -322,15 +209,6 @@
     }
 
     .column-header .col-type {
-      display: none;
-    }
-
-    .totals-row {
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .total-divider {
       display: none;
     }
   }

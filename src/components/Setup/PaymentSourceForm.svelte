@@ -19,10 +19,9 @@
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
 
-  // Form state - balance is stored in dollars for user input
+  // Form state
   let name = editingItem?.name || '';
   let type: PaymentSourceType = editingItem?.type || 'bank_account';
-  let balanceDollars = editingItem ? (editingItem.balance / 100).toFixed(2) : '0.00';
   let excludeFromLeftover = editingItem?.exclude_from_leftover ?? false;
   let payOffMonthly = editingItem?.pay_off_monthly ?? false;
   let isSavings = editingItem?.is_savings ?? false;
@@ -78,17 +77,10 @@
   $: if (editingItem) {
     name = editingItem.name;
     type = editingItem.type;
-    balanceDollars = (editingItem.balance / 100).toFixed(2);
     excludeFromLeftover = editingItem.exclude_from_leftover ?? false;
     payOffMonthly = editingItem.pay_off_monthly ?? false;
     isSavings = editingItem.is_savings ?? false;
     isInvestment = editingItem.is_investment ?? false;
-  }
-
-  // Convert dollars to cents
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   async function handleSubmit() {
@@ -101,14 +93,11 @@
     saving = true;
     error = '';
 
-    const balanceCents = dollarsToCents(balanceDollars);
-
     try {
       if (editingItem) {
         await updatePaymentSource(editingItem.id, {
           name,
           type,
-          balance: balanceCents,
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
@@ -119,7 +108,7 @@
         await createPaymentSource({
           name,
           type,
-          balance: balanceCents,
+          balance: 0, // Balance is set per-month, not on the payment source
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
@@ -162,26 +151,6 @@
       <option value="line_of_credit">🏧 Line of Credit</option>
       <option value="cash">💵 Cash</option>
     </select>
-  </div>
-
-  <div class="form-group">
-    <label for="ps-balance">{isDebt ? 'Balance Owed' : 'Current Balance'}</label>
-    <div class="amount-input-wrapper">
-      <span class="currency-prefix">$</span>
-      <input
-        id="ps-balance"
-        type="text"
-        bind:value={balanceDollars}
-        placeholder="0.00"
-        required
-        disabled={saving}
-      />
-    </div>
-    {#if isDebt}
-      <div class="help-text">
-        Enter amount owed as positive. Enter negative if you have a credit balance.
-      </div>
-    {/if}
   </div>
 
   {#if isBankAccount}
@@ -315,25 +284,6 @@
   select:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  .amount-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .currency-prefix {
-    position: absolute;
-    left: 12px;
-    color: #888;
-    font-size: 0.9375rem;
-    pointer-events: none;
-  }
-
-  .amount-input-wrapper input {
-    padding-left: 28px;
-    width: 100%;
   }
 
   .help-text {

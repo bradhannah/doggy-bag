@@ -1,9 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { addToast } from '../stores/toast';
   import { apiClient } from '../lib/api/client';
-  import { currentMonth, goToCurrentMonth, getCurrentMonth, sidebarCollapsed } from '../stores/ui';
+  import { currentMonth, sidebarCollapsed } from '../stores/ui';
   import {
     isTauri,
     zoomLevel,
@@ -35,13 +34,6 @@
 
   let backupLoading = false;
   let fileInput: HTMLInputElement | null = null;
-
-  // Navigate to today's month
-  function handleTodayClick() {
-    goToCurrentMonth();
-    const todayMonth = getCurrentMonth();
-    goto(`/month/${todayMonth}`);
-  }
 
   // Export backup
   async function handleExport() {
@@ -148,18 +140,6 @@
         </svg>
       </button>
     </div>
-    <div class="header-actions">
-      <button class="today-button" on:click={handleTodayClick} title="Go to current month">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-          <circle cx="12" cy="16" r="2" fill="currentColor" />
-        </svg>
-        <span>Today</span>
-      </button>
-    </div>
   </div>
 
   <!-- Main navigation -->
@@ -175,6 +155,11 @@
         <span>Dashboard</span>
       </a>
     </li>
+  </ul>
+
+  <div class="nav-separator"></div>
+
+  <ul class="nav-list">
     <li>
       <a
         href="/month/{$currentMonth}"
@@ -417,7 +402,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--space-3);
   }
 
   .app-title {
@@ -428,38 +412,6 @@
     white-space: nowrap;
     overflow: hidden;
     transition: opacity 0.2s ease;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .today-button {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    background: rgba(36, 200, 219, 0.1);
-    border: 1px solid rgba(36, 200, 219, 0.3);
-    border-radius: var(--radius-sm);
-    color: #24c8db;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .today-button:hover {
-    background: rgba(36, 200, 219, 0.2);
-    border-color: #24c8db;
-  }
-
-  .today-button svg {
-    flex-shrink: 0;
   }
 
   .nav-list {
@@ -693,10 +645,6 @@
     display: none;
   }
 
-  .sidebar.collapsed .header-actions {
-    display: none;
-  }
-
   /* Nav list adjustments when collapsed */
   .sidebar.collapsed .nav-list {
     padding: var(--space-3) var(--space-2);
@@ -752,15 +700,5 @@
 
   .sidebar.collapsed .backup-loading {
     font-size: 0.65rem;
-  }
-
-  /* Today button in collapsed state - show only icon */
-  .sidebar.collapsed .today-button {
-    padding: var(--space-2);
-    width: auto;
-  }
-
-  .sidebar.collapsed .today-button span {
-    display: none;
   }
 </style>

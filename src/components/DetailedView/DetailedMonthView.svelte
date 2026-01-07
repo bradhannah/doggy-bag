@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from 'svelte';
-  import { goto } from '$app/navigation';
   import {
     detailedMonth,
     detailedMonthData,
@@ -9,8 +8,9 @@
   } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
+  import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import { widthMode, compactMode, hidePaidItems } from '../../stores/ui';
+  import { widthMode, compactMode, hidePaidItems, goToMonth } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
 
@@ -36,27 +36,9 @@
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
-  function getPrevMonth(monthStr: string): string {
-    const [year, monthNum] = monthStr.split('-').map(Number);
-    const date = new Date(year, monthNum - 2);
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  function getNextMonth(monthStr: string): string {
-    const [year, monthNum] = monthStr.split('-').map(Number);
-    const date = new Date(year, monthNum);
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  function navigateToPrev() {
-    goto(`/month/${getPrevMonth(month)}`);
-  }
-
-  function navigateToNext() {
-    goto(`/month/${getNextMonth(month)}`);
-  }
-
   onMount(() => {
+    // Sync URL month param to the global store
+    goToMonth(month);
     detailedMonth.loadMonth(month);
     monthsStore.loadMonth(month);
     loadPaymentSources();
@@ -290,46 +272,6 @@
     class:wide={$widthMode === 'wide'}
   >
     <header class="view-header">
-      <div class="header-content">
-        <a href="/" class="back-link">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          Dashboard
-        </a>
-        <div class="month-nav">
-          <button class="nav-arrow" on:click={navigateToPrev} title="Previous month">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M15 18L9 12L15 6"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-          <h1>{formatMonthDisplay(month)}</h1>
-          <button class="nav-arrow" on:click={navigateToNext} title="Next month">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M9 18L15 12L9 6"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
       {#if $detailedMonthData}
         <div class="header-summary">
           <!-- Width toggle (toggles: medium <-> wide) -->
@@ -512,31 +454,11 @@
         <p>Loading detailed view...</p>
       </div>
     {:else if !$monthExists}
-      <!-- Month not created prompt -->
-      <div class="create-month-prompt">
-        <div class="prompt-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <rect
-              x="3"
-              y="4"
-              width="18"
-              height="18"
-              rx="2"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-            <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </div>
-        <h2>Month Not Created</h2>
-        <p>{formatMonthDisplay(month)} doesn't exist yet.</p>
-        <p class="prompt-hint">Create this month to start tracking bills, income, and expenses.</p>
-        <button class="btn btn-primary" on:click={handleCreateMonth} disabled={creating}>
-          {creating ? 'Creating...' : 'Create Month'}
-        </button>
-      </div>
+      <MonthNotCreated
+        monthDisplay={formatMonthDisplay(month)}
+        {creating}
+        on:create={handleCreateMonth}
+      />
     {:else if $detailedMonthError}
       <div class="error-state">
         <p>{$detailedMonthError}</p>
@@ -665,7 +587,7 @@
 
 <style>
   .detailed-view {
-    padding: var(--content-padding);
+    padding: 0 var(--content-padding) var(--content-padding) var(--content-padding);
   }
 
   .content-wrapper {
@@ -697,64 +619,9 @@
 
   .view-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: var(--space-6);
-    flex-wrap: wrap;
-    gap: var(--space-4);
-  }
-
-  .header-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .back-link {
-    display: inline-flex;
+    justify-content: flex-end;
     align-items: center;
-    gap: 6px;
-    color: #888;
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: color 0.2s;
-  }
-
-  .back-link:hover {
-    color: #24c8db;
-  }
-
-  .month-nav {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .nav-arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--icon-button-size);
-    height: var(--icon-button-size);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #333355;
-    border-radius: var(--radius-md);
-    color: #888;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .nav-arrow:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #24c8db;
-  }
-
-  .view-header h1 {
-    margin: 0;
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #e4e4e7;
+    margin-bottom: var(--space-4);
   }
 
   .header-summary {
@@ -887,13 +754,6 @@
     padding: 40px 20px;
   }
 
-  .empty-text.all-paid {
-    color: #4ade80;
-    background: rgba(74, 222, 128, 0.05);
-    border-radius: var(--radius-md);
-    padding: 30px 20px;
-  }
-
   /* Completed categories divider */
   .completed-divider {
     display: flex;
@@ -918,68 +778,6 @@
   .detailed-view.compact .completed-divider {
     margin: var(--space-2) 0;
     font-size: 0.6rem;
-  }
-
-  /* Create month prompt styles */
-  .create-month-prompt {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px var(--content-padding);
-    text-align: center;
-    background: #1a1a2e;
-    border-radius: var(--radius-xl);
-    border: 1px solid #333355;
-  }
-
-  .prompt-icon {
-    color: #888;
-    margin-bottom: var(--space-4);
-  }
-
-  .create-month-prompt h2 {
-    margin: 0 0 8px 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #e4e4e7;
-  }
-
-  .create-month-prompt p {
-    margin: 0 0 4px 0;
-    color: #888;
-    font-size: 1rem;
-  }
-
-  .prompt-hint {
-    font-size: 0.875rem !important;
-    color: #666 !important;
-    margin-bottom: 20px !important;
-  }
-
-  .btn {
-    height: var(--button-height);
-    padding: 0 var(--space-6);
-    border-radius: var(--radius-md);
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-  }
-
-  .btn-primary {
-    background: #24c8db;
-    color: #000;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   /* Read-only banner styles */
@@ -1039,17 +837,7 @@
   }
 
   .detailed-view.compact .view-header {
-    margin-bottom: var(--space-4);
-    gap: var(--space-2);
-  }
-
-  .detailed-view.compact .view-header h1 {
-    font-size: 1.25rem;
-  }
-
-  .detailed-view.compact .nav-arrow {
-    width: 28px;
-    height: 28px;
+    margin-bottom: var(--space-3);
   }
 
   .detailed-view.compact .detailed-layout {
@@ -1081,7 +869,8 @@
   /* Mobile responsive */
   @media (max-width: 768px) {
     .detailed-view {
-      padding: var(--content-padding-mobile);
+      padding: 0 var(--content-padding-mobile) var(--content-padding-mobile)
+        var(--content-padding-mobile);
     }
   }
 

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { currentMonth, goToPreviousMonth, goToNextMonth, goToMonth } from '../../stores/ui';
+  import { currentMonth, goToMonth } from '../../stores/ui';
   import {
     monthsStore,
     monthlyLoading,
     monthExists,
     monthIsReadOnly,
-    leftover,
+    leftoverSummary,
     billInstances,
     incomeInstances,
     bankBalances,
@@ -21,6 +21,7 @@
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
   import { onMount } from 'svelte';
+  import MonthNotCreated from '../MonthNotCreated.svelte';
 
   // Load payment sources on mount
   onMount(() => {
@@ -102,18 +103,24 @@
     amount?: number;
     occurrences?: Occurrence[];
     payments?: Payment[];
+    is_payoff_bill?: boolean;
+    payoff_source_id?: string;
   }
 
   // Calculate totals from instances - use expected_amount and occurrence-based payments
-  $: billsExpected = $billInstances.reduce(
+  // Filter out payoff bills from regular bills calculation
+  $: regularBills = $billInstances.filter((b) => !(b as InstanceWithExpectedAmount).is_payoff_bill);
+  $: payoffBills = $billInstances.filter((b) => (b as InstanceWithExpectedAmount).is_payoff_bill);
+
+  $: billsExpected = regularBills.reduce(
     (sum, b) => sum + ((b as InstanceWithExpectedAmount).expected_amount || b.amount || 0),
     0
   );
-  $: billsPaid = $billInstances.reduce(
+  $: billsPaid = regularBills.reduce(
     (sum, b) => sum + sumOccurrencePayments(b as ItemWithOccurrences),
     0
   );
-  $: billsProgress = billsExpected > 0 ? Math.round((billsPaid / billsExpected) * 100) : 0;
+  $: billsRemaining = billsExpected - billsPaid;
 
   $: incomeExpected = $incomeInstances.reduce(
     (sum, i) => sum + ((i as InstanceWithExpectedAmount).expected_amount || i.amount || 0),
@@ -123,7 +130,34 @@
     (sum, i) => sum + sumOccurrencePayments(i as ItemWithOccurrences),
     0
   );
-  $: incomeProgress = incomeExpected > 0 ? Math.round((incomeReceived / incomeExpected) * 100) : 0;
+  $: incomeRemaining = incomeExpected - incomeReceived;
+
+  // CC Payoffs - calculate paid/remaining for each
+  interface CCPayoffInfo {
+    id: string;
+    name: string;
+    balance: number;
+    paid: number;
+    remaining: number;
+  }
+
+  $: ccPayoffs = payoffBills.map((bill) => {
+    const expected = (bill as InstanceWithExpectedAmount).expected_amount || bill.amount || 0;
+    const paid = sumOccurrencePayments(bill as ItemWithOccurrences);
+    const sourceId = (bill as InstanceWithExpectedAmount).payoff_source_id;
+    const source = $paymentSources.find((ps) => ps.id === sourceId);
+    return {
+      id: bill.id,
+      name: source?.name || bill.name,
+      balance: expected,
+      paid: paid,
+      remaining: expected - paid,
+    } as CCPayoffInfo;
+  });
+
+  $: totalCCPayoffs = ccPayoffs.reduce((sum, cc) => sum + cc.balance, 0);
+  $: totalCCPaid = ccPayoffs.reduce((sum, cc) => sum + cc.paid, 0);
+  $: totalCCRemaining = ccPayoffs.reduce((sum, cc) => sum + cc.remaining, 0);
 
   // Adjacent month data
   interface MonthSummary {
@@ -374,27 +408,30 @@
     goToMonth(month);
   }
 
-  $: isPositive = $leftover >= 0;
-
   // Bank balances - filter out savings/investment accounts (they're on /savings page)
+  // Also filter out pay_off_monthly accounts (they show in CC Payoffs section)
   $: regularAccounts = $paymentSources.filter(
-    (ps: PaymentSource) => !ps.is_savings && !ps.is_investment
+    (ps: PaymentSource) => !ps.is_savings && !ps.is_investment && !ps.pay_off_monthly
   );
 
-  // Separate asset accounts from debt accounts
+  // Only asset accounts for Starting Cash (no debt)
   $: assetAccounts = regularAccounts.filter((ps: PaymentSource) => !isDebtAccount(ps.type));
-  $: debtAccounts = regularAccounts.filter((ps: PaymentSource) => isDebtAccount(ps.type));
 
   // Get balance for a payment source (use month-specific balance or fall back to default)
   function getBalance(source: PaymentSource): number {
     return $bankBalances[source.id] ?? source.balance;
   }
 
-  // Calculate totals
-  $: totalAssets = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
-  $: totalDebt = debtAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
-  $: netPosition = totalAssets - totalDebt;
-  $: hasAccounts = regularAccounts.length > 0;
+  // Calculate starting cash total
+  $: totalStartingCash = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
+
+  // API-driven leftover values (guaranteed to match Details sidebar)
+  $: apiLeftover = $leftoverSummary?.leftover ?? 0;
+  $: apiBankBalances = $leftoverSummary?.bankBalances ?? 0;
+  $: apiRemainingIncome = $leftoverSummary?.remainingIncome ?? 0;
+  $: apiRemainingExpenses = $leftoverSummary?.remainingExpenses ?? 0;
+  $: apiIsValid = $leftoverSummary?.isValid ?? false;
+  $: isPositive = apiLeftover >= 0;
 </script>
 
 <div class="dashboard">
@@ -403,172 +440,187 @@
       <p>Loading...</p>
     </div>
   {:else if !$monthExists}
-    <!-- Month not created prompt -->
-    <div class="create-month-prompt">
-      <div class="prompt-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-          <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
-      </div>
-      <h2>Month Not Created</h2>
-      <p>{$currentMonth ? formatMonthDisplay($currentMonth) : 'This month'} doesn't exist yet.</p>
-      <p class="prompt-hint">Create this month to start tracking bills, income, and expenses.</p>
-      <button class="btn btn-primary" on:click={handleCreateMonth} disabled={creating}>
-        {creating ? 'Creating...' : 'Create Month'}
-      </button>
-    </div>
+    <MonthNotCreated
+      monthDisplay={$currentMonth ? formatMonthDisplay($currentMonth) : 'This month'}
+      {creating}
+      on:create={handleCreateMonth}
+    />
   {:else}
-    <!-- Current Month Hero Section -->
-    <section class="hero-section">
-      <div class="hero-header">
-        <button class="nav-arrow" on:click={goToPreviousMonth} title="Previous month">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <!-- Budget Math Breakdown -->
+    <section class="budget-breakdown">
+      {#if $monthIsReadOnly}
+        <div class="locked-banner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <rect
+              x="3"
+              y="11"
+              width="18"
+              height="11"
+              rx="2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
             <path
-              d="M15 18L9 12L15 6"
+              d="M7 11V7C7 4.23858 9.23858 2 12 2C14.7614 2 17 4.23858 17 7V11"
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round"
             />
           </svg>
-        </button>
-        <div class="month-title">
-          <span class="star-icon">★</span>
-          <h1>{formatMonthDisplay($currentMonth)}</h1>
-          {#if $monthIsReadOnly}
-            <span class="lock-badge" title="Month is locked">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <rect
-                  x="3"
-                  y="11"
-                  width="18"
-                  height="11"
-                  rx="2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M7 11V7C7 4.23858 9.23858 2 12 2C14.7614 2 17 4.23858 17 7V11"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </span>
-          {/if}
+          <span>Month Locked</span>
         </div>
-        <button class="nav-arrow" on:click={goToNextMonth} title="Next month">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M9 18L15 12L9 6"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
+      {/if}
 
-      <div class="progress-cards">
-        <!-- Bills Progress -->
-        <div class="progress-card">
-          <div class="progress-header">
-            <span class="progress-label">BILLS</span>
-            <span class="progress-amounts">
-              {formatCurrency(billsPaid)} / {formatCurrency(billsExpected)}
-            </span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill bills" style="width: {billsProgress}%"></div>
-          </div>
-          <span class="progress-percent">{billsProgress}% paid</span>
+      <!-- Starting Cash Section -->
+      <div class="math-section">
+        <div class="section-header">
+          <span class="section-title">STARTING CASH</span>
         </div>
-
-        <!-- Income Progress -->
-        <div class="progress-card">
-          <div class="progress-header">
-            <span class="progress-label">INCOME</span>
-            <span class="progress-amounts">
-              {formatCurrency(incomeReceived)} / {formatCurrency(incomeExpected)}
-            </span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill income" style="width: {incomeProgress}%"></div>
-          </div>
-          <span class="progress-percent">{incomeProgress}% received</span>
-        </div>
-      </div>
-
-      <!-- Projected Leftover -->
-      <div class="leftover-display" class:positive={isPositive} class:negative={!isPositive}>
-        <span class="leftover-label">PROJECTED LEFTOVER</span>
-        <span class="leftover-amount">{formatCurrency($leftover)}</span>
-      </div>
-
-      <!-- Bank Balances -->
-      {#if hasAccounts}
-        <div class="bank-balances-section">
-          <div class="balances-header">
-            <span class="balances-label">ACCOUNT BALANCES</span>
-          </div>
-          <div class="balances-grid">
-            {#if assetAccounts.length > 0}
-              <div class="balance-group">
-                <span class="group-label">Assets</span>
-                {#each assetAccounts as account (account.id)}
-                  <div class="balance-row">
-                    <span class="account-name">{account.name}</span>
-                    <span class="account-balance positive"
-                      >{formatCurrency(getBalance(account))}</span
-                    >
-                  </div>
-                {/each}
-                {#if assetAccounts.length > 1}
-                  <div class="balance-row total">
-                    <span class="account-name">Total Assets</span>
-                    <span class="account-balance positive">{formatCurrency(totalAssets)}</span>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-            {#if debtAccounts.length > 0}
-              <div class="balance-group">
-                <span class="group-label">Debt</span>
-                {#each debtAccounts as account (account.id)}
-                  <div class="balance-row">
-                    <span class="account-name">{account.name}</span>
-                    <span class="account-balance negative"
-                      >{formatCurrency(
-                        formatBalanceForDisplay(getBalance(account), account.type)
-                      )}</span
-                    >
-                  </div>
-                {/each}
-                {#if debtAccounts.length > 1}
-                  <div class="balance-row total">
-                    <span class="account-name">Total Debt</span>
-                    <span class="account-balance negative">{formatCurrency(-totalDebt)}</span>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-          </div>
-          {#if assetAccounts.length > 0 && debtAccounts.length > 0}
-            <div
-              class="net-position"
-              class:positive={netPosition >= 0}
-              class:negative={netPosition < 0}
-            >
-              <span class="net-label">Net Position</span>
-              <span class="net-amount">{formatCurrency(netPosition)}</span>
+        <div class="section-items">
+          {#each assetAccounts as account (account.id)}
+            <div class="item-row">
+              <span class="item-name">{account.name}</span>
+              <span class="item-dots"></span>
+              <span class="item-amount">{formatCurrency(getBalance(account))}</span>
+            </div>
+          {/each}
+          {#if assetAccounts.length === 0}
+            <div class="item-row empty">
+              <span class="item-name">No bank accounts configured</span>
             </div>
           {/if}
         </div>
+        <div class="section-total">
+          <div class="total-line"></div>
+          <span class="total-amount">{formatCurrency(totalStartingCash)}</span>
+        </div>
+      </div>
+
+      <!-- Income Section -->
+      <div class="math-section income-section">
+        <div class="section-header">
+          <span class="section-operator">+</span>
+          <span class="section-title">INCOME</span>
+          <span class="section-expected">{formatCurrency(incomeExpected)}</span>
+        </div>
+        <div class="section-items indented">
+          <div class="item-row">
+            <span class="item-name">Received</span>
+            <span class="item-dots"></span>
+            <span class="item-amount">{formatCurrency(incomeReceived)}</span>
+          </div>
+          <div class="item-row">
+            <span class="item-name">Remaining</span>
+            <span class="item-dots"></span>
+            <span class="item-amount" class:complete={incomeRemaining === 0}>
+              {formatCurrency(incomeRemaining)}
+              {#if incomeRemaining === 0}
+                <span class="checkmark">✓</span>
+              {/if}
+            </span>
+          </div>
+        </div>
+        <div class="section-total">
+          <div class="total-line"></div>
+          <span class="total-amount">{formatCurrency(incomeExpected)}</span>
+        </div>
+      </div>
+
+      <!-- Bills Section -->
+      <div class="math-section bills-section">
+        <div class="section-header">
+          <span class="section-operator negative">−</span>
+          <span class="section-title">BILLS</span>
+          <span class="section-expected">{formatCurrency(billsExpected)}</span>
+        </div>
+        <div class="section-items indented">
+          <div class="item-row">
+            <span class="item-name">Paid</span>
+            <span class="item-dots"></span>
+            <span class="item-amount">{formatCurrency(billsPaid)}</span>
+          </div>
+          <div class="item-row">
+            <span class="item-name">Remaining</span>
+            <span class="item-dots"></span>
+            <span class="item-amount" class:complete={billsRemaining === 0}>
+              {formatCurrency(billsRemaining)}
+              {#if billsRemaining === 0}
+                <span class="checkmark">✓</span>
+              {/if}
+            </span>
+          </div>
+        </div>
+        <div class="section-total">
+          <div class="total-line"></div>
+          <span class="total-amount">{formatCurrency(billsExpected)}</span>
+        </div>
+      </div>
+
+      <!-- CC Payoffs Section -->
+      {#if ccPayoffs.length > 0}
+        <div class="math-section cc-section">
+          <div class="section-header">
+            <span class="section-operator negative">−</span>
+            <span class="section-title">CC PAYOFFS</span>
+          </div>
+          <div class="section-items indented">
+            {#each ccPayoffs as cc (cc.id)}
+              <div class="cc-group">
+                <div class="cc-name">{cc.name}</div>
+                <div class="cc-details">
+                  <div class="item-row">
+                    <span class="item-name">Balance</span>
+                    <span class="item-dots"></span>
+                    <span class="item-amount">{formatCurrency(cc.balance)}</span>
+                  </div>
+                  <div class="item-row">
+                    <span class="item-name">Paid</span>
+                    <span class="item-dots"></span>
+                    <span class="item-amount">{formatCurrency(cc.paid)}</span>
+                  </div>
+                  <div class="item-row">
+                    <span class="item-name">Remaining</span>
+                    <span class="item-dots"></span>
+                    <span class="item-amount" class:complete={cc.remaining === 0}>
+                      {formatCurrency(cc.remaining)}
+                      {#if cc.remaining === 0}
+                        <span class="checkmark">✓</span>
+                      {/if}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+          <div class="section-total">
+            <div class="total-line"></div>
+            <span class="total-amount">{formatCurrency(totalCCPayoffs)}</span>
+          </div>
+        </div>
       {/if}
+
+      <!-- Equation Bar -->
+      <div class="equation-bar">
+        <div class="equation-box positive">
+          <span class="eq-amount">{formatCurrency(apiBankBalances)}</span>
+          <span class="eq-label">Bank Balances</span>
+        </div>
+        <span class="eq-operator">+</span>
+        <div class="equation-box positive">
+          <span class="eq-amount">{formatCurrency(apiRemainingIncome)}</span>
+          <span class="eq-label">Remaining Income</span>
+        </div>
+        <span class="eq-operator negative">−</span>
+        <div class="equation-box negative">
+          <span class="eq-amount">{formatCurrency(apiRemainingExpenses)}</span>
+          <span class="eq-label">Remaining Expenses</span>
+        </div>
+        <span class="eq-equals">=</span>
+        <div class="equation-box result" class:positive={isPositive} class:negative={!isPositive}>
+          <span class="eq-amount">{formatCurrency(apiLeftover)}</span>
+          <span class="eq-label">LEFTOVER</span>
+        </div>
+      </div>
 
       <button class="view-details-btn" on:click={viewDetails}>
         View Details
@@ -753,9 +805,9 @@
           it later if needed.
         </p>
         <div class="modal-actions">
-          <button class="btn btn-secondary" on:click={cancelLock} disabled={lockingMonth}>
-            Cancel
-          </button>
+          <button class="btn btn-secondary" on:click={cancelLock} disabled={lockingMonth}
+            >Cancel</button
+          >
           <button class="btn btn-primary" on:click={confirmLockMonth} disabled={lockingMonth}>
             {lockingMonth ? 'Locking...' : 'Lock Month'}
           </button>
@@ -769,12 +821,13 @@
   .dashboard {
     max-width: var(--content-max-sm);
     margin: 0 auto;
-    padding: var(--content-padding);
+    padding: var(--space-4) var(--content-padding) var(--content-padding) var(--content-padding);
   }
 
   @media (max-width: 768px) {
     .dashboard {
-      padding: var(--content-padding-mobile);
+      padding: var(--space-3) var(--content-padding-mobile) var(--content-padding-mobile)
+        var(--content-padding-mobile);
     }
   }
 
@@ -784,366 +837,255 @@
     color: #888;
   }
 
-  /* Create Month Prompt */
-  .create-month-prompt {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    background: #1a1a2e;
-    border-radius: 16px;
-    border: 1px solid #333355;
-  }
-
-  .prompt-icon {
-    color: #24c8db;
-    margin-bottom: 20px;
-  }
-
-  .create-month-prompt h2 {
-    margin: 0 0 12px;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #e4e4e7;
-  }
-
-  .create-month-prompt p {
-    margin: 0 0 8px;
-    color: #888;
-    font-size: 1rem;
-  }
-
-  .prompt-hint {
-    margin-bottom: 24px !important;
-    font-size: 0.875rem !important;
-    color: #666 !important;
-  }
-
-  .btn {
-    height: var(--button-height);
-    padding: 0 var(--space-6);
-    border-radius: var(--radius-md);
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    transition: all 0.2s;
-  }
-
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-primary {
-    background: #24c8db;
-    color: #000;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: #1ab0c9;
-  }
-
-  /* Hero Section */
-  .hero-section {
+  /* Budget Breakdown Section */
+  .budget-breakdown {
     background: #1a1a2e;
     border-radius: var(--radius-xl);
     border: 1px solid #333355;
-    padding: var(--space-8);
+    padding: var(--space-6);
     margin-bottom: var(--card-gap);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-6);
   }
 
-  .hero-header {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .nav-arrow {
+  .locked-banner {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--icon-button-size);
-    height: var(--icon-button-size);
-    background: transparent;
-    border: 1px solid #333355;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-4);
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
     border-radius: var(--radius-md);
-    color: #888;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .nav-arrow:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #24c8db;
-  }
-
-  .month-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .star-icon {
     color: #fbbf24;
-    font-size: 1.5rem;
-  }
-
-  .month-title h1 {
-    margin: 0;
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #e4e4e7;
-  }
-
-  .lock-badge {
-    color: #fbbf24;
-    display: flex;
-    align-items: center;
-  }
-
-  /* Progress Cards */
-  .progress-cards {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--card-gap);
-    width: 100%;
-    max-width: 600px;
-  }
-
-  .progress-card {
-    background: #151525;
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    border: 1px solid #333355;
-  }
-
-  .progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-3);
-  }
-
-  .progress-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .progress-amounts {
     font-size: 0.85rem;
     font-weight: 500;
-    color: #e4e4e7;
   }
 
-  .progress-bar {
-    height: 8px;
-    background: #333355;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 8px;
+  /* Math Sections */
+  .math-section {
+    margin-bottom: var(--space-5);
   }
 
-  .progress-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.3s ease;
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
   }
 
-  .progress-fill.bills {
-    background: linear-gradient(90deg, #f87171, #fb923c);
-  }
-
-  .progress-fill.income {
-    background: linear-gradient(90deg, #4ade80, #22d3ee);
-  }
-
-  .progress-percent {
-    font-size: 0.75rem;
-    color: #888;
-  }
-
-  /* Leftover Display */
-  .leftover-display {
-    text-align: center;
-    padding: var(--space-4) var(--space-8);
-    border-radius: var(--radius-lg);
-  }
-
-  .leftover-display.positive {
-    background: rgba(74, 222, 128, 0.1);
-  }
-
-  .leftover-display.negative {
-    background: rgba(248, 113, 113, 0.1);
-  }
-
-  .leftover-label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 8px;
-  }
-
-  .leftover-amount {
-    font-size: 2rem;
+  .section-operator {
+    font-size: 1.1rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  .leftover-display.positive .leftover-amount {
     color: #4ade80;
+    width: 20px;
+    text-align: center;
   }
 
-  .leftover-display.negative .leftover-amount {
+  .section-operator.negative {
     color: #f87171;
   }
 
-  /* Bank Balances Section */
-  .bank-balances-section {
-    width: 100%;
-    max-width: 600px;
-    background: #151525;
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    border: 1px solid #333355;
-  }
-
-  .balances-header {
-    margin-bottom: var(--space-3);
-  }
-
-  .balances-label {
-    font-size: 0.7rem;
+  .section-title {
+    font-size: 0.75rem;
     font-weight: 600;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
 
-  .balances-grid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .balance-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .group-label {
-    font-size: 0.75rem;
+  .section-expected {
+    margin-left: auto;
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
+    color: #e4e4e7;
   }
 
-  .balance-row {
+  .section-items {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .section-items.indented {
+    padding-left: 28px;
+  }
+
+  .item-row {
+    display: flex;
     align-items: center;
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid #2a2a40;
-  }
-
-  .balance-row:last-child {
-    border-bottom: none;
-  }
-
-  .balance-row.total {
-    border-top: 1px solid #444;
-    border-bottom: none;
-    padding-top: var(--space-3);
-    margin-top: var(--space-1);
-  }
-
-  .account-name {
     font-size: 0.875rem;
     color: #e4e4e7;
   }
 
-  .balance-row.total .account-name {
-    font-weight: 600;
-    color: #888;
+  .item-row.empty {
+    color: #666;
+    font-style: italic;
   }
 
-  .account-balance {
-    font-size: 0.95rem;
-    font-weight: 600;
+  .item-name {
+    flex-shrink: 0;
   }
 
-  .account-balance.positive {
+  .item-dots {
+    flex: 1;
+    border-bottom: 1px dotted #444;
+    margin: 0 8px;
+    min-width: 20px;
+  }
+
+  .item-amount {
+    flex-shrink: 0;
+    font-weight: 500;
+    text-align: right;
+    min-width: 80px;
+  }
+
+  .item-amount.complete {
     color: #4ade80;
   }
 
-  .account-balance.negative {
-    color: #f87171;
+  .checkmark {
+    margin-left: 4px;
+    color: #4ade80;
   }
 
-  .net-position {
+  .section-total {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-top: var(--space-4);
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-md);
+    justify-content: flex-end;
+    margin-top: var(--space-2);
+    padding-right: 0;
   }
 
-  .net-position.positive {
+  .total-line {
+    width: 100px;
+    border-top: 1px solid #555;
+    margin-right: 8px;
+  }
+
+  .total-amount {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e4e4e7;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* CC Payoffs */
+  .cc-group {
+    margin-bottom: var(--space-3);
+  }
+
+  .cc-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .cc-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #a78bfa;
+    margin-bottom: var(--space-1);
+  }
+
+  .cc-details {
+    padding-left: var(--space-3);
+  }
+
+  /* Equation Bar */
+  .equation-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-3);
+    margin: var(--space-8) 0;
+    background: #151525;
+    border-radius: var(--radius-lg);
+    border: 1px solid #333355;
+    flex-wrap: wrap;
+  }
+
+  .equation-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-4) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid #444;
+    min-width: 70px;
+  }
+
+  .equation-box.positive {
+    border-color: rgba(74, 222, 128, 0.4);
     background: rgba(74, 222, 128, 0.1);
   }
 
-  .net-position.negative {
+  .equation-box.negative {
+    border-color: rgba(248, 113, 113, 0.4);
     background: rgba(248, 113, 113, 0.1);
   }
 
-  .net-label {
-    font-size: 0.8rem;
+  .equation-box.result {
+    min-width: 90px;
+  }
+
+  .equation-box.result.positive {
+    border-color: #4ade80;
+    background: rgba(74, 222, 128, 0.2);
+  }
+
+  .equation-box.result.negative {
+    border-color: #f87171;
+    background: rgba(248, 113, 113, 0.2);
+  }
+
+  .eq-amount {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #e4e4e7;
+  }
+
+  .equation-box.positive .eq-amount {
+    color: #4ade80;
+  }
+
+  .equation-box.negative .eq-amount {
+    color: #f87171;
+  }
+
+  .eq-label {
+    font-size: 0.65rem;
     font-weight: 600;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin-top: 2px;
   }
 
-  .net-amount {
-    font-size: 1.1rem;
+  .eq-operator {
+    font-size: 1.25rem;
     font-weight: 700;
-  }
-
-  .net-position.positive .net-amount {
     color: #4ade80;
   }
 
-  .net-position.negative .net-amount {
+  .eq-operator.negative {
     color: #f87171;
+  }
+
+  .eq-equals {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #888;
   }
 
   /* View Details Button */
   .view-details-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-2);
+    width: 100%;
     height: var(--button-height);
-    padding: 0 var(--space-6);
     background: transparent;
     border: 1px solid #24c8db;
     border-radius: var(--radius-md);
@@ -1321,20 +1263,27 @@
 
   /* Responsive */
   @media (max-width: 768px) {
-    .progress-cards {
-      grid-template-columns: 1fr;
-    }
-
     .adjacent-months {
       grid-template-columns: 1fr;
     }
 
-    .hero-header {
-      flex-wrap: wrap;
+    .equation-bar {
+      gap: var(--space-1);
+      padding: var(--space-3);
     }
 
-    .month-title h1 {
-      font-size: 1.25rem;
+    .equation-box {
+      min-width: 55px;
+      padding: var(--space-3) var(--space-2);
+    }
+
+    .eq-amount {
+      font-size: 0.8rem;
+    }
+
+    .eq-operator,
+    .eq-equals {
+      font-size: 1rem;
     }
   }
 

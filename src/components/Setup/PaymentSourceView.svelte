@@ -7,25 +7,11 @@
    * @prop onClose - Callback to close the drawer
    */
   import type { PaymentSource } from '../../stores/payment-sources';
-  import {
-    isDebtAccount,
-    formatBalanceForDisplay,
-    getTypeDisplayName,
-    getTypeIcon,
-  } from '../../stores/payment-sources';
+  import { getTypeDisplayName, getTypeIcon } from '../../stores/payment-sources';
 
   export let item: PaymentSource;
   export let onEdit: () => void = () => {};
   export let onClose: () => void = () => {};
-
-  $: isDebt = isDebtAccount(item.type);
-  $: displayBalance = formatBalanceForDisplay(item.balance, item.type);
-
-  function formatAmount(cents: number): string {
-    const absValue = Math.abs(cents);
-    const formatted = '$' + (absValue / 100).toFixed(2);
-    return cents < 0 ? '-' + formatted : formatted;
-  }
 
   function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString();
@@ -43,13 +29,6 @@
     <div class="view-value type-with-icon">
       <span class="type-icon">{getTypeIcon(item.type)}</span>
       {getTypeDisplayName(item.type)}
-    </div>
-  </div>
-
-  <div class="view-field">
-    <span class="field-label">{isDebt ? 'Balance Owed' : 'Current Balance'}</span>
-    <div class="view-value amount" style="color: {displayBalance < 0 ? '#ff6b6b' : '#24c8db'};">
-      {formatAmount(displayBalance)}
     </div>
   </div>
 
@@ -92,11 +71,6 @@
   .view-value {
     font-size: 1rem;
     color: #e4e4e7;
-  }
-
-  .view-value.amount {
-    font-size: 1.5rem;
-    font-weight: bold;
   }
 
   .view-value.muted {

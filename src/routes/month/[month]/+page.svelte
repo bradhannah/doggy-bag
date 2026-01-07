@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import MonthPickerHeader from '../../../components/MonthPickerHeader.svelte';
   import DetailedMonthView from '../../../components/DetailedView/DetailedMonthView.svelte';
 
   $: month = $page.params.month;
@@ -10,6 +11,7 @@
 </svelte:head>
 
 {#if month}
+  <MonthPickerHeader basePath="/month" />
   <DetailedMonthView {month} />
 {:else}
   <div class="error-page">
