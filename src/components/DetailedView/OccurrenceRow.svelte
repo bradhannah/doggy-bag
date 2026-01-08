@@ -447,19 +447,18 @@
     gap: 8px;
     padding: 6px 12px;
     padding-left: 20px; /* Indent for sub-row appearance */
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
     border-radius: 6px;
     transition: all 0.15s ease;
     font-size: 0.8rem; /* Smaller font for occurrence rows */
   }
 
   .occurrence-row:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-surface);
   }
 
   .occurrence-row.closed {
-    background: rgba(74, 222, 128, 0.05);
-    opacity: 0.7;
+    background: var(--success-bg);
   }
 
   .occ-date {
@@ -473,7 +472,7 @@
     border: none;
     padding: 2px 4px;
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-secondary);
     cursor: default;
     border-radius: 4px;
     transition: all 0.15s;
@@ -485,13 +484,13 @@
   }
 
   .date-value.editable:hover {
-    background: rgba(36, 200, 219, 0.1);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .closed-date {
     font-size: 0.8rem;
-    color: #4ade80;
+    color: var(--success);
     text-align: center;
   }
 
@@ -503,10 +502,10 @@
   .date-input {
     width: 40px;
     padding: 2px 4px;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.75rem;
     text-align: center;
   }
@@ -536,8 +535,8 @@
   }
 
   .adhoc-badge {
-    background: rgba(167, 139, 250, 0.2);
-    color: #a78bfa;
+    background: var(--purple-bg);
+    color: var(--purple);
   }
 
   .badges-column {
@@ -547,7 +546,7 @@
   }
 
   .arrow {
-    color: #555;
+    color: var(--border-default);
     font-size: 0.7rem;
     text-align: center;
   }
@@ -561,7 +560,7 @@
 
   .amount-label {
     font-size: 0.5rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     display: flex;
@@ -570,13 +569,13 @@
   }
 
   .payment-count {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .amount-value {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     background: none;
     border: none;
     padding: 0;
@@ -589,7 +588,7 @@
   }
 
   .amount-value.clickable:hover:not(.disabled) {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: underline;
   }
 
@@ -599,35 +598,35 @@
   }
 
   .amount-value.amber {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .amount-value.remaining {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .amount-value.remaining.zero {
-    color: #4ade80;
+    color: var(--success);
   }
 
   /* Yellow/amber highlight for editable values */
   .amount-value.editable-highlight {
-    background: rgba(251, 191, 36, 0.15);
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     padding: 2px 6px;
     border-radius: 4px;
   }
 
   .amount-value.editable-highlight:hover:not(.disabled) {
-    background: rgba(251, 191, 36, 0.25);
-    border-color: rgba(251, 191, 36, 0.6);
-    color: #fbbf24;
+    background: var(--warning-bg);
+    border-color: var(--warning);
+    color: var(--warning);
   }
 
   .add-payment-link {
     background: none;
     border: none;
-    color: #24c8db;
+    color: var(--accent);
     font-size: 0.7rem;
     padding: 0;
     cursor: pointer;
@@ -646,17 +645,17 @@
   }
 
   .inline-edit .prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.75rem;
   }
 
   .inline-edit input {
     width: 55px;
     padding: 2px 4px;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.75rem;
     font-weight: 600;
     text-align: right;
@@ -679,18 +678,18 @@
   }
 
   .closed-badge {
-    background: rgba(74, 222, 128, 0.15);
-    color: #4ade80;
+    background: var(--success-bg);
+    color: var(--success);
   }
 
   .partial-badge {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
+    background: var(--warning-bg);
+    color: var(--warning);
   }
 
   .open-badge {
-    background: rgba(136, 136, 136, 0.15);
-    color: #888;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
   }
 
   .action-buttons {
@@ -716,9 +715,9 @@
   }
 
   .action-btn.pay-full {
-    background: #24c8db;
-    border-color: #24c8db;
-    color: #000;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-inverse);
   }
 
   .action-btn.pay-full:hover:not(:disabled) {
@@ -727,23 +726,23 @@
 
   .action-btn.close {
     background: transparent;
-    border-color: #4ade80;
-    color: #4ade80;
+    border-color: var(--success);
+    color: var(--success);
   }
 
   .action-btn.close:hover:not(:disabled) {
-    background: rgba(74, 222, 128, 0.1);
+    background: var(--success-bg);
   }
 
   .action-btn.reopen {
     background: transparent;
-    border-color: #888;
-    color: #888;
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
   }
 
   .action-btn.reopen:hover:not(:disabled) {
-    border-color: #e4e4e7;
-    color: #e4e4e7;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
   }
 
   .action-btn:disabled {
@@ -761,19 +760,19 @@
     border-radius: 4px;
     border: none;
     background: transparent;
-    color: #666;
+    color: var(--text-tertiary);
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .action-btn-icon:hover:not(:disabled) {
-    background: rgba(255, 68, 68, 0.1);
-    color: #ff4444;
+    background: var(--error-bg);
+    color: var(--error);
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-inverse);
   }
 
   .action-btn-icon:disabled {
@@ -793,8 +792,8 @@
   }
 
   .confirm-dialog {
-    background: #1a1a2e;
-    border: 1px solid #333355;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
     border-radius: 12px;
     padding: 24px;
     max-width: 360px;
@@ -804,17 +803,17 @@
   .confirm-dialog h3 {
     margin: 0 0 12px;
     font-size: 1rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .confirm-dialog p {
     margin: 0 0 6px;
-    color: #a0a0a0;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
   .confirm-warning {
-    color: #f87171 !important;
+    color: var(--error) !important;
     font-size: 0.75rem !important;
     margin-bottom: 16px !important;
   }
@@ -836,23 +835,23 @@
 
   .confirm-btn.cancel {
     background: transparent;
-    border: 1px solid #444;
-    color: #888;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
   }
 
   .confirm-btn.cancel:hover {
-    border-color: #666;
-    color: #e4e4e7;
+    border-color: var(--border-hover);
+    color: var(--text-primary);
   }
 
   .confirm-btn.delete {
-    background: #ff4444;
+    background: var(--error);
     border: none;
-    color: #fff;
+    color: var(--text-inverse);
   }
 
   .confirm-btn.delete:hover:not(:disabled) {
-    background: #cc3333;
+    background: var(--error-dark);
   }
 
   .confirm-btn.delete:disabled {

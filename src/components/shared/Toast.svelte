@@ -37,7 +37,7 @@
     border-radius: 8px;
     background: var(--bg-elevated);
     border: 1px solid var(--border-default);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px var(--shadow-medium);
     min-width: 280px;
     max-width: 400px;
     animation: slideIn 0.3s ease-out;

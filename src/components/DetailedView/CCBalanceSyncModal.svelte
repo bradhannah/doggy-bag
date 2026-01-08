@@ -151,8 +151,8 @@
   }
 
   .modal-content {
-    background: #1a1a2e;
-    border: 1px solid #333355;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
     border-radius: 12px;
     padding: 24px;
     max-width: 400px;
@@ -174,22 +174,22 @@
   h3 {
     margin: 0 0 8px;
     font-size: 1.2rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .subtitle {
     margin: 0 0 20px;
-    color: #a0a0a0;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.5;
   }
 
   .subtitle strong {
-    color: #8b5cf6;
+    color: var(--purple);
   }
 
   .balance-summary {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--bg-base);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
@@ -211,12 +211,12 @@
   }
 
   .label {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.9rem;
   }
 
   .balance-row.total .label {
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
@@ -227,19 +227,19 @@
   }
 
   .value.debt {
-    color: #f87171;
+    color: var(--error);
   }
 
   .value.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .value.zero {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .value.credit {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .balance-row.total .value {
@@ -248,7 +248,7 @@
 
   .divider {
     height: 1px;
-    background: #333;
+    background: var(--border-default);
     margin: 8px 0;
   }
 
@@ -269,23 +269,23 @@
 
   .btn.skip {
     background: transparent;
-    border: 1px solid #444;
-    color: #888;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
   }
 
   .btn.skip:hover:not(:disabled) {
-    border-color: #666;
-    color: #e4e4e7;
+    border-color: var(--border-hover);
+    color: var(--text-primary);
   }
 
   .btn.update {
-    background: #8b5cf6;
+    background: var(--purple);
     border: none;
-    color: #fff;
+    color: var(--text-inverse);
   }
 
   .btn.update:hover:not(:disabled) {
-    background: #7c3aed;
+    background: var(--purple-dark);
   }
 
   .btn:disabled {

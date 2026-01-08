@@ -264,7 +264,7 @@
   .month-label {
     font-size: 0.75rem;
     color: var(--text-tertiary);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-elevated);
     padding: 4px 8px;
     border-radius: 4px;
   }
@@ -334,7 +334,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 10px 14px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
     border-radius: 8px;
     border: 1px solid transparent;
     min-width: 180px;
@@ -343,12 +343,12 @@
   }
 
   .account-item.customized {
-    border-color: rgba(36, 200, 219, 0.3);
+    border-color: var(--accent-border, rgba(36, 200, 219, 0.3));
     background: var(--accent-muted);
   }
 
   .account-item.debt {
-    border-color: rgba(248, 113, 113, 0.2);
+    border-color: var(--error-border, rgba(248, 113, 113, 0.2));
   }
 
   .account-info {
@@ -380,7 +380,7 @@
   }
 
   .balance-button:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.08));
     border-color: var(--bg-hover);
   }
 
@@ -425,7 +425,7 @@
     justify-content: center;
     gap: 20px;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
     border-radius: 8px;
     border-top: 1px solid var(--border-default);
   }

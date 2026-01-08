@@ -693,12 +693,11 @@
   }
 
   .bill-row:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-hover);
   }
 
   .bill-row.closed {
     background: var(--success-bg);
-    opacity: 0.7;
   }
 
   .bill-main {
@@ -945,8 +944,8 @@
   }
 
   .amount-value.editable-highlight:hover:not(.disabled) {
-    background: rgba(251, 191, 36, 0.25);
-    border-color: rgba(251, 191, 36, 0.6);
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
     color: var(--warning-light);
   }
 
@@ -1051,7 +1050,7 @@
   .action-btn.reopen:hover:not(:disabled) {
     border-color: var(--text-primary);
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
   }
 
   .action-btn:disabled {
@@ -1173,7 +1172,7 @@
   .confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--overlay-bg);
     display: flex;
     align-items: center;
     justify-content: center;

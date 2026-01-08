@@ -50,7 +50,7 @@
 
   <div class="view-field">
     <span class="field-label">Amount</span>
-    <div class="view-value amount" style="color: #22c55e;">
+    <div class="view-value amount income-amount">
       {formatAmount(item.amount)}
     </div>
   </div>
@@ -116,6 +116,10 @@
   .view-value.amount {
     font-size: 1.5rem;
     font-weight: bold;
+  }
+
+  .view-value.income-amount {
+    color: var(--income-color);
   }
 
   .view-value.muted {

@@ -191,16 +191,15 @@
 
 <style>
   .occurrence-card {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-default);
     overflow: hidden;
     margin-bottom: 8px;
   }
 
   .occurrence-card.closed {
-    background: rgba(74, 222, 128, 0.05);
-    opacity: 0.7;
+    background: var(--success-bg);
   }
 
   .card-header {
@@ -208,8 +207,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 14px 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
   }
 
   .header-info {
@@ -221,7 +220,7 @@
   .item-name {
     font-weight: 600;
     font-size: 1rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -236,19 +235,19 @@
     font-size: 0.65rem;
     padding: 2px 8px;
     border-radius: 10px;
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
     font-weight: 500;
     text-transform: uppercase;
   }
 
   .occurrence-summary {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .closed-count {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .header-totals {
@@ -265,7 +264,7 @@
 
   .total-label {
     font-size: 0.6rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -273,11 +272,11 @@
   .total-value {
     font-size: 1rem;
     font-weight: 700;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .total-value.amber {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .extra-banner {
@@ -285,18 +284,18 @@
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    background: rgba(74, 222, 128, 0.1);
-    border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+    background: var(--success-bg);
+    border-bottom: 1px solid var(--success-border);
   }
 
   .extra-icon {
     font-size: 1.2rem;
-    color: #4ade80;
+    color: var(--success);
   }
 
   .extra-text {
     font-size: 0.8rem;
-    color: #4ade80;
+    color: var(--success);
     font-weight: 500;
   }
 
@@ -309,13 +308,13 @@
 
   .card-footer {
     padding: 8px 16px 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    border-top: 1px solid var(--border-default);
   }
 
   .add-occurrence-btn {
     background: transparent;
-    border: 1px dashed #555;
-    color: #888;
+    border: 1px dashed var(--border-default);
+    color: var(--text-secondary);
     font-size: 0.75rem;
     padding: 6px 12px;
     border-radius: 6px;
@@ -324,9 +323,9 @@
   }
 
   .add-occurrence-btn:hover:not(:disabled) {
-    border-color: #24c8db;
-    color: #24c8db;
-    background: rgba(36, 200, 219, 0.05);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-muted);
   }
 
   .add-occurrence-btn:disabled {

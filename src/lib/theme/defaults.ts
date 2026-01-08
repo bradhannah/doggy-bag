@@ -73,6 +73,19 @@ export const DARK_THEME_COLORS: ThemeColors = {
   orange: '#fb923c',
   'orange-bg': 'rgba(251, 146, 60, 0.1)',
 
+  // Optional: Overlays and shadows
+  'overlay-bg': 'rgba(0, 0, 0, 0.6)',
+  'shadow-light': 'rgba(0, 0, 0, 0.2)',
+  'shadow-medium': 'rgba(0, 0, 0, 0.3)',
+  'shadow-heavy': 'rgba(0, 0, 0, 0.4)',
+
+  // Optional: Hover states
+  'bg-hover': 'rgba(255, 255, 255, 0.05)',
+  'bg-hover-strong': 'rgba(255, 255, 255, 0.1)',
+
+  // Optional: Accent border
+  'accent-border': 'rgba(36, 200, 219, 0.5)',
+
   // Optional: Financial
   'income-color': '#22c55e',
   'expense-color': '#f87171',
@@ -88,41 +101,41 @@ export const DARK_THEME_COLORS: ThemeColors = {
 
 /**
  * Default light theme colors.
- * Adjusted for light backgrounds.
+ * Adjusted for light backgrounds with WCAG AA compliance.
  */
 export const LIGHT_THEME_COLORS: ThemeColors = {
   // Required: Backgrounds
-  'bg-base': '#f5f5f7',
+  'bg-base': '#e5e7eb',
   'bg-surface': '#ffffff',
-  'bg-elevated': '#ffffff',
+  'bg-elevated': '#f3f4f6',
 
   // Required: Text
   'text-primary': '#1a1a2e',
-  'text-secondary': '#666666',
+  'text-secondary': '#525252',
 
   // Required: Accent
-  accent: '#0891b2',
+  accent: '#0e7490',
 
   // Required: Border
-  'border-default': '#d1d5db',
+  'border-default': '#6b7280',
 
   // Optional: Text variants
-  'text-tertiary': '#888888',
+  'text-tertiary': '#6b7280',
   'text-inverse': '#ffffff',
-  'text-disabled': '#a1a1aa',
+  'text-disabled': '#9ca3af',
 
   // Optional: Border variants
-  'border-hover': '#9ca3af',
-  'border-focus': '#0891b2',
+  'border-hover': '#4b5563',
+  'border-focus': '#0e7490',
 
   // Optional: Accent variants
-  'accent-hover': '#0e7490',
-  'accent-muted': 'rgba(8, 145, 178, 0.1)',
+  'accent-hover': '#0a5c70',
+  'accent-muted': 'rgba(14, 116, 144, 0.1)',
 
   // Optional: Success
   success: '#16a34a',
   'success-dark': '#15803d',
-  'success-bg': 'rgba(22, 163, 74, 0.1)',
+  'success-bg': '#dcfce7',
   'success-border': 'rgba(22, 163, 74, 0.3)',
 
   // Optional: Error/Danger
@@ -140,8 +153,8 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   'warning-border': 'rgba(217, 119, 6, 0.3)',
 
   // Optional: Info
-  info: '#0891b2',
-  'info-bg': 'rgba(8, 145, 178, 0.1)',
+  info: '#0e7490',
+  'info-bg': 'rgba(14, 116, 144, 0.1)',
 
   // Optional: Purple
   purple: '#7c3aed',
@@ -151,6 +164,19 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   // Optional: Orange
   orange: '#ea580c',
   'orange-bg': 'rgba(234, 88, 12, 0.1)',
+
+  // Optional: Overlays and shadows
+  'overlay-bg': 'rgba(0, 0, 0, 0.5)',
+  'shadow-light': 'rgba(0, 0, 0, 0.1)',
+  'shadow-medium': 'rgba(0, 0, 0, 0.2)',
+  'shadow-heavy': 'rgba(0, 0, 0, 0.3)',
+
+  // Optional: Hover states
+  'bg-hover': 'rgba(0, 0, 0, 0.05)',
+  'bg-hover-strong': 'rgba(0, 0, 0, 0.1)',
+
+  // Optional: Accent border
+  'accent-border': 'rgba(14, 116, 144, 0.5)',
 
   // Optional: Financial
   'income-color': '#16a34a',

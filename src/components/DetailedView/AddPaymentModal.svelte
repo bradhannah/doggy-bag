@@ -193,8 +193,8 @@
     width: 100%;
     max-width: 400px;
     height: 100%;
-    background: #1a1a2e;
-    border-left: 1px solid #333355;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-default);
     display: flex;
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
@@ -214,20 +214,20 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .drawer-header h3 {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .close-btn {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     padding: 4px;
     display: flex;
@@ -237,7 +237,7 @@
   }
 
   .close-btn:hover {
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .drawer-content {
@@ -247,7 +247,7 @@
   }
 
   .bill-info {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 24px;
@@ -256,7 +256,7 @@
   .bill-name {
     display: block;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     margin-bottom: 8px;
   }
 
@@ -265,11 +265,11 @@
     flex-direction: column;
     gap: 4px;
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .bill-details .remaining {
-    color: #f59e0b;
+    color: var(--warning);
     font-weight: 500;
   }
 
@@ -280,7 +280,7 @@
   .form-group label {
     display: block;
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
     margin-bottom: 8px;
   }
 
@@ -291,35 +291,35 @@
   }
 
   .amount-input-group .prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1rem;
   }
 
   .amount-input-group input {
     flex: 1;
     padding: 10px 12px;
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: 6px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 1rem;
   }
 
   .amount-input-group input:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .amount-input-group input.error {
-    border-color: #f87171;
+    border-color: var(--error);
   }
 
   .suggest-btn {
     padding: 8px 12px;
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     border-radius: 6px;
-    color: #f59e0b;
+    color: var(--warning);
     font-size: 0.75rem;
     cursor: pointer;
     white-space: nowrap;
@@ -327,26 +327,27 @@
   }
 
   .suggest-btn:hover {
-    background: rgba(245, 158, 11, 0.2);
+    background: var(--warning-bg);
+    border-color: var(--warning);
   }
 
   input[type='date'] {
     width: 100%;
     padding: 10px 12px;
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: 6px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 1rem;
   }
 
   input[type='date']:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .error-message {
-    color: #f87171;
+    color: var(--error);
     font-size: 0.875rem;
     margin: 0 0 16px 0;
   }
@@ -370,19 +371,19 @@
 
   .cancel-btn {
     background: transparent;
-    border: 1px solid #333355;
-    color: #888;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
   }
 
   .cancel-btn:hover:not(:disabled) {
-    border-color: #e4e4e7;
-    color: #e4e4e7;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
   }
 
   .submit-btn {
-    background: #24c8db;
+    background: var(--accent);
     border: none;
-    color: #000;
+    color: var(--text-inverse);
   }
 
   .submit-btn:hover:not(:disabled) {

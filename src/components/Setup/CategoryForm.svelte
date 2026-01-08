@@ -275,7 +275,7 @@
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 0.8125rem;
-    color: #fff;
+    color: var(--text-inverse);
     font-family: monospace;
   }
 

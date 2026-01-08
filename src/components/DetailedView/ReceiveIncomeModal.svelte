@@ -177,7 +177,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--overlay-bg);
     display: flex;
     justify-content: flex-end;
     z-index: 1000;
@@ -187,8 +187,8 @@
     width: 100%;
     max-width: 400px;
     height: 100%;
-    background: #1a1a2e;
-    border-left: 1px solid #333355;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-default);
     display: flex;
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
@@ -208,20 +208,20 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .drawer-header h3 {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .close-btn {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     padding: 4px;
     display: flex;
@@ -231,7 +231,7 @@
   }
 
   .close-btn:hover {
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .drawer-content {
@@ -241,7 +241,7 @@
   }
 
   .income-info {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 24px;
@@ -250,7 +250,7 @@
   .income-name {
     display: block;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     margin-bottom: 8px;
   }
 
@@ -259,7 +259,7 @@
     flex-direction: column;
     gap: 4px;
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .form-group {
@@ -269,7 +269,7 @@
   .form-group label {
     display: block;
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
     margin-bottom: 8px;
   }
 
@@ -280,35 +280,35 @@
   }
 
   .amount-input-group .prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1rem;
   }
 
   .amount-input-group input {
     flex: 1;
     padding: 10px 12px;
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: 6px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 1rem;
   }
 
   .amount-input-group input:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .amount-input-group input.error {
-    border-color: #f87171;
+    border-color: var(--error);
   }
 
   .suggest-btn {
     padding: 8px 12px;
-    background: rgba(74, 222, 128, 0.1);
-    border: 1px solid rgba(74, 222, 128, 0.3);
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
     border-radius: 6px;
-    color: #4ade80;
+    color: var(--success);
     font-size: 0.75rem;
     cursor: pointer;
     white-space: nowrap;
@@ -316,11 +316,12 @@
   }
 
   .suggest-btn:hover {
-    background: rgba(74, 222, 128, 0.2);
+    background: var(--success-bg);
+    border-color: var(--success);
   }
 
   .error-message {
-    color: #f87171;
+    color: var(--error);
     font-size: 0.875rem;
     margin: 0 0 16px 0;
   }
@@ -344,19 +345,19 @@
 
   .cancel-btn {
     background: transparent;
-    border: 1px solid #333355;
-    color: #888;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
   }
 
   .cancel-btn:hover:not(:disabled) {
-    border-color: #e4e4e7;
-    color: #e4e4e7;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
   }
 
   .submit-btn {
-    background: #4ade80;
+    background: var(--success);
     border: none;
-    color: #000;
+    color: var(--text-inverse);
   }
 
   .submit-btn:hover:not(:disabled) {

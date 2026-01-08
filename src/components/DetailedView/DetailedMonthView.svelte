@@ -717,8 +717,8 @@
 
   @keyframes reopened-highlight {
     0% {
-      background: rgba(36, 200, 219, 0.3);
-      box-shadow: 0 0 0 2px rgba(36, 200, 219, 0.5);
+      background: var(--accent-muted);
+      box-shadow: 0 0 0 2px var(--accent-border);
       border-radius: 8px;
     }
     100% {

@@ -40,23 +40,23 @@
 <style>
   .section-tally {
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
     border-radius: 8px;
-    border-left: 3px solid #555;
+    border-left: 3px solid var(--border-default);
   }
 
   .section-tally.bills {
-    border-left-color: #f87171;
+    border-left-color: var(--error);
   }
 
   .section-tally.income {
-    border-left-color: #4ade80;
+    border-left-color: var(--success);
   }
 
   .tally-label {
     display: block;
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 8px;
@@ -77,7 +77,7 @@
 
   .tally-title {
     font-size: 0.7rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -85,14 +85,14 @@
   .tally-value {
     font-size: 1rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .tally-value.amber {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .tally-value.remaining {
-    color: #888;
+    color: var(--text-secondary);
   }
 </style>

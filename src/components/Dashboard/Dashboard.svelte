@@ -1042,12 +1042,12 @@
 
   .equation-box.result.positive {
     border-color: var(--success);
-    background: rgba(74, 222, 128, 0.2);
+    background: var(--success-bg);
   }
 
   .equation-box.result.negative {
     border-color: var(--error);
-    background: rgba(248, 113, 113, 0.2);
+    background: var(--error-bg);
   }
 
   .eq-amount {
@@ -1305,7 +1305,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--overlay-bg);
     display: flex;
     align-items: center;
     justify-content: center;

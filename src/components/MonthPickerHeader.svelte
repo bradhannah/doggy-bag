@@ -435,7 +435,7 @@
     justify-content: center;
     width: var(--button-height-sm);
     height: var(--button-height-sm);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);

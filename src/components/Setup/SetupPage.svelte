@@ -877,7 +877,7 @@
   }
 
   .badge-muted {
-    background: rgba(136, 136, 136, 0.15);
+    background: var(--bg-hover);
     color: var(--text-secondary);
   }
 

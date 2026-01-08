@@ -619,8 +619,8 @@
   }
 
   .balance-value.editable-highlight:hover {
-    background: rgba(251, 191, 36, 0.25);
-    border-color: rgba(251, 191, 36, 0.6);
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
     color: var(--warning-light);
   }
 
@@ -851,7 +851,7 @@
     padding: var(--space-3);
     background: var(--orange-bg);
     border-radius: var(--radius-md);
-    border: 1px solid rgba(251, 146, 60, 0.3);
+    border: 1px solid var(--orange);
   }
 
   .error-icon {

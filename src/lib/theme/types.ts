@@ -73,6 +73,19 @@ export const OPTIONAL_COLOR_KEYS = [
   'orange',
   'orange-bg',
 
+  // UI: Overlays and shadows
+  'overlay-bg',
+  'shadow-light',
+  'shadow-medium',
+  'shadow-heavy',
+
+  // UI: Hover states
+  'bg-hover',
+  'bg-hover-strong',
+
+  // Accent border (for highlighted elements)
+  'accent-border',
+
   // Financial semantics
   'income-color',
   'expense-color',

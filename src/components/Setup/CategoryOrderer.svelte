@@ -269,7 +269,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
     border: 1px solid transparent;
     border-radius: 8px;
     cursor: grab;
@@ -277,7 +277,7 @@
   }
 
   .category-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.06));
     border-color: var(--border-default);
   }
 
@@ -304,7 +304,7 @@
   }
 
   .category-color:hover {
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: var(--border-hover, rgba(255, 255, 255, 0.3));
     transform: scale(1.1);
   }
 
@@ -330,7 +330,7 @@
     letter-spacing: 0.05em;
     color: var(--text-tertiary);
     padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
     border-radius: 4px;
   }
 
@@ -390,16 +390,16 @@
   }
 
   .btn-confirm:hover {
-    background: rgba(34, 197, 94, 0.2);
+    background: var(--success-bg, rgba(34, 197, 94, 0.2));
   }
 
   .btn-cancel {
     color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
   }
 
   .btn-cancel:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-hover-strong, rgba(255, 255, 255, 0.1));
     color: var(--text-primary);
   }
 

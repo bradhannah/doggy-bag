@@ -638,7 +638,6 @@
 
   .income-row.closed {
     background: var(--success-bg);
-    opacity: 0.7;
   }
 
   .income-main {

@@ -86,7 +86,7 @@
   .dialog-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--overlay-bg);
     backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
@@ -112,7 +112,7 @@
     width: 90%;
     min-width: 320px;
     max-width: var(--modal-width-sm);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 16px 48px var(--shadow-heavy);
     animation: slideIn 0.2s ease-out;
   }
 
@@ -165,7 +165,7 @@
   }
 
   .btn-cancel:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
     border-color: var(--text-tertiary);
     color: var(--text-primary);
   }
@@ -176,7 +176,7 @@
   }
 
   .btn-confirm.danger:hover {
-    background: #dc2626;
+    background: var(--danger-hover);
   }
 
   .btn-confirm.primary {
