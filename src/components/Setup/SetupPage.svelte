@@ -416,7 +416,6 @@
 <div class="setup-page">
   <!-- Header -->
   <header class="setup-header">
-    <a href="/" class="back-link"> &larr; Dashboard </a>
     <h1>Manage</h1>
     <div class="header-spacer"></div>
     <LoadDefaultsButton />
@@ -667,8 +666,8 @@
 <style>
   .setup-page {
     min-height: 100vh;
-    background: #1a1a2e;
-    color: #e4e4e7;
+    background: var(--bg-surface);
+    color: var(--text-primary);
   }
 
   /* Header */
@@ -677,19 +676,8 @@
     align-items: center;
     gap: var(--space-4);
     padding: var(--space-4) var(--content-padding);
-    background: #16213e;
-    border-bottom: 1px solid #333355;
-  }
-
-  .back-link {
-    color: #24c8db;
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-
-  .back-link:hover {
-    text-decoration: underline;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-default);
   }
 
   .setup-header h1 {
@@ -711,8 +699,8 @@
   /* Sidebar */
   .setup-sidebar {
     width: var(--tab-sidebar-width);
-    background: #16213e;
-    border-right: 1px solid #333355;
+    background: var(--bg-elevated);
+    border-right: 1px solid var(--border-default);
     padding: var(--space-4) 0;
     flex-shrink: 0;
   }
@@ -723,7 +711,7 @@
     padding: 0 var(--space-4);
     border: none;
     background: none;
-    color: #888;
+    color: var(--text-secondary);
     text-align: left;
     font-size: 0.875rem;
     font-weight: 500;
@@ -732,13 +720,13 @@
   }
 
   .tab-button:hover {
-    background: rgba(36, 200, 219, 0.1);
-    color: #e4e4e7;
+    background: var(--accent-muted);
+    color: var(--text-primary);
   }
 
   .tab-button.active {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   /* Main Content */
@@ -765,7 +753,7 @@
   }
 
   .count {
-    color: #888;
+    color: var(--text-secondary);
     font-weight: normal;
   }
 
@@ -781,7 +769,7 @@
   .empty-state {
     text-align: center;
     padding: 60px var(--space-4);
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .empty-state p {
@@ -790,7 +778,7 @@
 
   .empty-state .hint {
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-tertiary);
   }
 
   /* Category Orderers */
@@ -813,12 +801,12 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   /* ============ Months Tab Styles ============ */
@@ -834,24 +822,24 @@
   .error-state {
     text-align: center;
     padding: 60px 20px;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .error-state p {
     margin-bottom: 20px;
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .month-card {
-    background: #16213e;
-    border: 1px solid #333355;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     padding: var(--space-4);
     transition: border-color 0.15s ease;
   }
 
   .month-card:hover {
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .month-card.not-exists {
@@ -879,18 +867,18 @@
   }
 
   .badge-success {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
+    background: var(--success-muted);
+    color: var(--success);
   }
 
   .badge-warning {
-    background: rgba(234, 179, 8, 0.15);
-    color: #eab308;
+    background: var(--warning-muted);
+    color: var(--warning);
   }
 
   .badge-muted {
     background: rgba(136, 136, 136, 0.15);
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .month-stats {
@@ -908,7 +896,7 @@
 
   .stat-label {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
   }
 
@@ -918,25 +906,25 @@
   }
 
   .stat-value.income {
-    color: #22c55e;
+    color: var(--success);
   }
 
   .stat-value.expense {
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .stat-value.positive {
-    color: #22c55e;
+    color: var(--success);
   }
 
   .stat-value.negative {
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .month-empty {
     padding: var(--space-4) 0;
     text-align: center;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .month-empty p {
@@ -947,38 +935,38 @@
     display: flex;
     gap: var(--space-2);
     padding-top: var(--space-4);
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--border-default);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #444466;
+    background: var(--bg-hover);
   }
 
   .btn-outline {
     background: transparent;
-    border: 1px solid #333355;
-    color: #e4e4e7;
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
   }
 
   .btn-outline:hover:not(:disabled) {
-    border-color: #24c8db;
-    color: #24c8db;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .btn-danger {
     background: transparent;
-    border: 1px solid #ff4444;
-    color: #ff4444;
+    border: 1px solid var(--error);
+    color: var(--error);
   }
 
   .btn-danger:hover:not(:disabled) {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-on-error, #fff);
   }
 
   .btn:disabled {
@@ -1002,7 +990,7 @@
       overflow-x: auto;
       padding: 0;
       border-right: none;
-      border-bottom: 1px solid #333355;
+      border-bottom: 1px solid var(--border-default);
     }
 
     .tab-button {

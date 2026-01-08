@@ -101,9 +101,9 @@
     align-items: center;
     gap: 16px;
     padding: 20px;
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 12px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
   }
 
   .card-icon {
@@ -117,18 +117,18 @@
   }
 
   .income .card-icon {
-    background: rgba(74, 222, 128, 0.15);
-    color: #4ade80;
+    background: var(--success-bg);
+    color: var(--success);
   }
 
   .expenses .card-icon {
-    background: rgba(248, 113, 113, 0.15);
-    color: #f87171;
+    background: var(--error-bg);
+    color: var(--error);
   }
 
   .networth .card-icon {
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .card-content {
@@ -140,7 +140,7 @@
   .card-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -148,6 +148,6 @@
   .card-value {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 </style>

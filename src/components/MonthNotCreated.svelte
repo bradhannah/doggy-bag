@@ -39,13 +39,13 @@
     margin: var(--space-4) auto 0 auto;
     padding: 60px var(--content-padding);
     text-align: center;
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: var(--radius-xl);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
   }
 
   .prompt-icon {
-    color: #888;
+    color: var(--text-secondary);
     margin-bottom: var(--space-4);
   }
 
@@ -53,18 +53,18 @@
     margin: 0 0 8px 0;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .create-month-prompt p {
     margin: 0 0 4px 0;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1rem;
   }
 
   .prompt-hint {
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-tertiary);
     margin-bottom: 20px;
   }
 
@@ -80,8 +80,8 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {

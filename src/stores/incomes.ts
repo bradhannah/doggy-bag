@@ -1,6 +1,8 @@
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 import { categories, type Category } from './categories';
+import type { EntityMetadata } from './bills';
+export type { EntityMetadata };
 
 export interface Income {
   id: string;
@@ -15,6 +17,7 @@ export interface Income {
   payment_source_id: string;
   category_id: string; // Required - reference to income category
   due_day?: number; // Day of month when expected (1-31, optional)
+  metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -35,6 +38,7 @@ export interface IncomeData {
   payment_source_id: string;
   category_id: string; // Required - reference to income category
   due_day?: number; // Day of month when expected (1-31, optional)
+  metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
 }
 
 // Billing period multipliers (average instances per month)

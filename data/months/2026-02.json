@@ -23,8 +23,14 @@
       "is_default": true,
       "is_closed": false,
       "is_adhoc": false,
+      "metadata": {
+        "bank_transaction_name": "RENT PAYMENT LLC",
+        "account_number": "APT-12345",
+        "account_url": "https://tenantportal.example.com",
+        "notes": "Due on 1st, late fee after 5th"
+      },
       "created_at": "2026-01-05T22:46:33.548Z",
-      "updated_at": "2026-01-05T22:46:33.548Z"
+      "updated_at": "2026-01-07T21:32:14.802Z"
     },
     {
       "id": "e0e111c4-be4d-4851-94f0-7b0c0dcaca69",
@@ -478,8 +484,14 @@
       "is_default": true,
       "is_closed": false,
       "is_adhoc": false,
+      "metadata": {
+        "bank_transaction_name": "ACME CORP PAYROLL",
+        "account_number": "EMP-98765",
+        "account_url": "https://workday.example.com",
+        "notes": "Bi-weekly on Fridays, direct deposit"
+      },
       "created_at": "2026-01-05T22:46:33.548Z",
-      "updated_at": "2026-01-05T22:46:33.548Z"
+      "updated_at": "2026-01-07T21:32:14.802Z"
     },
     {
       "id": "e7231ce8-c3c4-477a-a53a-6a2d4fc48d5b",
@@ -512,5 +524,5 @@
   "bank_balances": {},
   "is_read_only": false,
   "created_at": "2026-01-05T22:46:33.548Z",
-  "updated_at": "2026-01-05T22:46:33.548Z"
+  "updated_at": "2026-01-07T21:32:14.802Z"
 }

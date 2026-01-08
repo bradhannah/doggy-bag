@@ -157,9 +157,9 @@
 
 <style>
   .collapsible-section {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 12px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     overflow: hidden;
   }
 
@@ -178,7 +178,7 @@
   }
 
   .section-header:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
   }
 
   .header-left {
@@ -191,21 +191,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #888;
+    color: var(--text-secondary);
     transition: transform 0.2s;
   }
 
   .section-title {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
 
   .item-count {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-secondary);
     font-weight: normal;
   }
 
@@ -224,7 +224,7 @@
 
   .total-label {
     font-size: 0.65rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -232,33 +232,33 @@
   .total-value {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .total-value.income {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .total-value.expense {
-    color: #f87171;
+    color: var(--error);
   }
 
   .total-value.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .total-value.zero {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   /* Expanded content */
   .section-content {
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
     padding: 16px 20px;
   }
 
   .empty-message {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.875rem;
     text-align: center;
     padding: 20px;
@@ -277,10 +277,10 @@
     gap: 12px;
     padding: 8px 12px;
     font-size: 0.7rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .item-row {
@@ -293,11 +293,11 @@
   }
 
   .item-row:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
   }
 
   .item-row.paid {
-    background: rgba(74, 222, 128, 0.05);
+    background: var(--success-bg);
   }
 
   .col-name {
@@ -305,7 +305,7 @@
     align-items: center;
     gap: 8px;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .paid-indicator {
@@ -314,8 +314,8 @@
     justify-content: center;
     width: 18px;
     height: 18px;
-    background: #4ade80;
-    color: #000;
+    background: var(--success);
+    color: var(--text-inverse);
     border-radius: 4px;
     font-size: 0.7rem;
     font-weight: bold;
@@ -325,7 +325,7 @@
     display: flex;
     width: 18px;
     height: 18px;
-    border: 2px solid #555;
+    border: 2px solid var(--border-default);
     border-radius: 4px;
   }
 
@@ -343,15 +343,15 @@
   .col-remaining {
     font-size: 0.875rem;
     text-align: right;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .col-actual.income {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .col-actual.expense {
-    color: #f87171;
+    color: var(--error);
   }
 
   .col-actual.paid-text {
@@ -359,11 +359,11 @@
   }
 
   .col-remaining.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .col-remaining.zero {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .total-row {
@@ -372,10 +372,10 @@
     gap: 12px;
     padding: 12px;
     margin-top: 8px;
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
     font-weight: 600;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .total-row .col-name {

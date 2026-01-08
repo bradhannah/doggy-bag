@@ -200,6 +200,7 @@
             {month}
             {compactMode}
             {readOnly}
+            categoryName={section.category.name}
             on:refresh={handleRefresh}
             on:reopened
             on:closed
@@ -211,6 +212,7 @@
             {month}
             {compactMode}
             {readOnly}
+            categoryName={section.category.name}
             on:refresh={handleRefresh}
             on:reopened
             on:closed
@@ -257,7 +259,7 @@
     align-items: center;
     padding: 12px 16px;
     border-radius: 8px;
-    border-left: 4px solid #555;
+    border-left: 4px solid var(--border-default);
     margin-bottom: 8px;
   }
 
@@ -278,30 +280,30 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .occurrence-stats {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #888;
+    color: var(--text-secondary);
     padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-elevated);
     border-radius: 10px;
   }
 
   .occurrence-stats.complete {
-    color: #4ade80;
-    background: rgba(74, 222, 128, 0.1);
+    color: var(--success);
+    background: var(--success-bg);
   }
 
   .add-adhoc-btn {
     width: 22px;
     height: 22px;
     border-radius: 4px;
-    border: 1px dashed #555;
+    border: 1px dashed var(--border-default);
     background: transparent;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
@@ -313,9 +315,9 @@
   }
 
   .add-adhoc-btn:hover {
-    border-color: #24c8db;
-    color: #24c8db;
-    background: rgba(36, 200, 219, 0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-muted);
   }
 
   .category-subtotal {
@@ -332,7 +334,7 @@
 
   .subtotal-label {
     font-size: 0.625rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -340,11 +342,11 @@
   .subtotal-value {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .subtotal-value.amber {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .category-items {
@@ -413,9 +415,9 @@
   /* Hidden count badge for partially complete categories */
   .hidden-count {
     font-size: 0.7rem;
-    color: #888;
+    color: var(--text-secondary);
     padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-elevated);
     border-radius: 10px;
     font-style: italic;
   }
@@ -427,7 +429,7 @@
     gap: 10px;
     padding: 10px 16px;
     border-radius: 8px;
-    border-left: 4px solid #555;
+    border-left: 4px solid var(--border-default);
     margin-bottom: 8px;
     opacity: 0.7;
     transition: opacity 0.2s;
@@ -438,7 +440,7 @@
   }
 
   .collapse-chevron {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.8rem;
     width: 12px;
     flex-shrink: 0;
@@ -453,18 +455,18 @@
 
   .category-collapsed .category-name {
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 1rem;
   }
 
   .category-collapsed .checkmark {
-    color: #4ade80;
+    color: var(--success);
     font-weight: bold;
     font-size: 0.9rem;
   }
 
   .category-collapsed .item-count {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     margin-left: auto;
   }
@@ -472,9 +474,9 @@
   .category-collapsed .occurrence-stats {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #4ade80;
+    color: var(--success);
     padding: 2px 8px;
-    background: rgba(74, 222, 128, 0.1);
+    background: var(--success-bg);
     border-radius: 10px;
   }
 
@@ -482,9 +484,9 @@
     width: 22px;
     height: 22px;
     border-radius: 4px;
-    border: 1px dashed #555;
+    border: 1px dashed var(--border-default);
     background: transparent;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
@@ -498,9 +500,9 @@
   }
 
   .category-collapsed .add-adhoc-btn:hover {
-    border-color: #24c8db;
-    color: #24c8db;
-    background: rgba(36, 200, 219, 0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-muted);
   }
 
   /* Compact mode for collapsed categories */

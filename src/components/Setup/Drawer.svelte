@@ -69,8 +69,8 @@
     width: var(--drawer-width);
     max-width: 90vw;
     height: 100%;
-    background: #1a1a2e;
-    border-left: 1px solid #333355;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-default);
     display: flex;
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
@@ -90,21 +90,21 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--space-4);
-    border-bottom: 1px solid #333355;
-    background: #16213e;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-elevated);
   }
 
   .drawer-header h2 {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .close-btn {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1.75rem;
     cursor: pointer;
     padding: 0;
@@ -118,8 +118,8 @@
   }
 
   .close-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e4e4e7;
+    background: var(--accent-muted);
+    color: var(--text-primary);
   }
 
   .drawer-content {
@@ -139,7 +139,7 @@
       width: 100%;
       height: 90%;
       border-left: none;
-      border-top: 1px solid #333355;
+      border-top: 1px solid var(--border-default);
       border-radius: var(--radius-xl) var(--radius-xl) 0 0;
       animation: slideUp 0.2s ease-out;
     }

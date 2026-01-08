@@ -8,9 +8,10 @@
   } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
+  import SectionStatsHeader from './SectionStatsHeader.svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import { widthMode, compactMode, hidePaidItems, goToMonth } from '../../stores/ui';
+  import { widthMode, compactMode, hidePaidItems, goToMonth, columnMode } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
 
@@ -312,12 +313,20 @@
 
         <!-- Right: Main Content -->
         <div class="main-content">
-          <div class="sections-container">
+          <div class="sections-container" class:single-column={$columnMode === '1-col'}>
             <!-- Bills Section -->
             <section class="section bills-section">
               <div class="section-header">
                 <h2>Bills</h2>
               </div>
+
+              {#if totalBills > 0}
+                <SectionStatsHeader
+                  sections={sortedBillSections}
+                  tally={$detailedMonthData.tallies.totalExpenses}
+                  type="bills"
+                />
+              {/if}
 
               {#if totalBills === 0}
                 <p class="empty-text">No bill categories. Add categories in Setup.</p>
@@ -367,6 +376,14 @@
               <div class="section-header">
                 <h2>Income</h2>
               </div>
+
+              {#if totalIncomes > 0}
+                <SectionStatsHeader
+                  sections={sortedIncomeSections}
+                  tally={$detailedMonthData.tallies.totalIncome}
+                  type="income"
+                />
+              {/if}
 
               {#if totalIncomes === 0}
                 <p class="empty-text">No income categories. Add categories in Setup.</p>
@@ -475,6 +492,19 @@
     gap: var(--space-6);
   }
 
+  /* Single column mode: stack vertically (Bills on top, Income below) */
+  /* Uses 2/3 of the total 2-column width, centered */
+  .sections-container.single-column {
+    grid-template-columns: var(--panel-width-single-medium);
+    justify-content: center;
+  }
+
+  .sections-container.single-column .section {
+    width: var(--panel-width-single-medium);
+    min-width: 0;
+    max-width: var(--panel-width-single-medium);
+  }
+
   /* Wide mode: flexible grid with two columns */
   .content-wrapper.wide .sections-container {
     grid-template-columns: minmax(var(--panel-width-min-wide), 1fr) minmax(
@@ -483,10 +513,22 @@
       );
   }
 
+  /* Wide mode + Single column: use wider single column width, centered */
+  .content-wrapper.wide .sections-container.single-column {
+    grid-template-columns: var(--panel-width-single-wide);
+    justify-content: center;
+  }
+
+  .content-wrapper.wide .sections-container.single-column .section {
+    width: var(--panel-width-single-wide);
+    min-width: 0;
+    max-width: var(--panel-width-single-wide);
+  }
+
   .section {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: var(--radius-xl);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: var(--space-6);
     /* Medium mode: fixed width panels */
     width: var(--panel-width-medium);
@@ -515,27 +557,27 @@
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .loading-state,
   .error-state {
     text-align: center;
     padding: 60px 20px;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .error-state {
-    color: #f87171;
+    color: var(--error);
   }
 
   .error-state button {
     margin-top: var(--space-4);
     padding: var(--space-2) var(--space-4);
-    background: #24c8db;
+    background: var(--accent);
     border: none;
     border-radius: var(--radius-sm);
-    color: #000;
+    color: var(--text-inverse);
     font-weight: 500;
     cursor: pointer;
     transition: opacity 0.2s;
@@ -546,7 +588,7 @@
   }
 
   .empty-text {
-    color: #666;
+    color: var(--text-tertiary);
     text-align: center;
     padding: 40px 20px;
   }
@@ -557,7 +599,7 @@
     align-items: center;
     gap: var(--space-3);
     margin: var(--space-4) 0 var(--space-3) 0;
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -568,7 +610,7 @@
     content: '';
     flex: 1;
     height: 1px;
-    background: #333355;
+    background: var(--border-default);
   }
 
   /* Compact mode for divider */
@@ -583,11 +625,11 @@
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     border-radius: var(--radius-md);
     margin-bottom: var(--section-gap);
-    color: #fbbf24;
+    color: var(--warning-light);
   }
 
   .read-only-banner svg {

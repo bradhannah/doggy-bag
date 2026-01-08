@@ -1,7 +1,7 @@
 # Doggy Bag Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
-.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage
+.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage ensure-dev-sidecar
 
 # Log directory
 LOGS_DIR := logs
@@ -134,6 +134,7 @@ check-typescript: ## Check if TypeScript is installed (optional - uses local tsc
 # Development
 dev: ## Start Tauri dev mode (sidecar manages backend with dynamic port)
 	@$(MAKE) check-prereqs
+	@$(MAKE) ensure-dev-sidecar
 	@$(MAKE) logs-clear
 	@echo "Starting Tauri development mode..."
 	@echo "  - Backend: Managed by Tauri sidecar (dynamic port)"
@@ -199,6 +200,18 @@ prepare-dev-sidecar: ## Download Bun runtime for dev mode sidecar
 	@echo "Preparing Bun runtime for dev mode..."
 	@./scripts/prepare-sidecar.sh
 
+ensure-dev-sidecar: ## Ensure dev sidecar is Bun runtime (not compiled binary)
+	@SIDECAR="src-tauri/binaries/bun-sidecar-aarch64-apple-darwin"; \
+	if [ ! -f "$$SIDECAR" ]; then \
+		echo "Sidecar not found, downloading Bun runtime..."; \
+		$(MAKE) prepare-dev-sidecar; \
+	elif ! "$$SIDECAR" --version 2>/dev/null | grep -qE '^[0-9]+\.[0-9]+'; then \
+		echo "Sidecar is compiled binary, replacing with Bun runtime..."; \
+		$(MAKE) prepare-dev-sidecar; \
+	else \
+		echo "✓ Dev sidecar is Bun runtime"; \
+	fi
+
 # Clean
 clean: ## Remove build artifacts and temporary files
 	@echo "Removing build artifacts..."
@@ -218,7 +231,7 @@ types: ## Generate OpenAPI spec and Svelte types
 	@echo "✓ Type generation complete"
 
 # Testing
-test: ## Run all tests (Bun backend + Jest frontend + Playwright E2E)
+test: ## Run all tests (Bun backend + Vitest frontend + Playwright E2E)
 	@echo "Running all test suites..."
 	@make test-backend
 	@make test-frontend
@@ -233,9 +246,21 @@ test-frontend: ## Run frontend tests with Vitest
 	@echo "Running frontend tests (Vitest)..."
 	@$(BUN)x vitest run
 
-test-e2e: ## Run E2E tests with Playwright
+test-e2e: ## Run E2E tests with Playwright (requires Node.js via nvm)
 	@echo "Running E2E tests (Playwright)..."
-	@cd src && bunx playwright test
+	@if [ -f "playwright.config.ts" ] || [ -f "playwright.config.js" ]; then \
+		if [ -f "$$HOME/.nvm/nvm.sh" ]; then \
+			. "$$HOME/.nvm/nvm.sh" && npx playwright test; \
+		elif command -v npx >/dev/null 2>&1; then \
+			npx playwright test; \
+		else \
+			echo "ERROR: Node.js/npx not found. Install Node.js or nvm to run E2E tests."; \
+			exit 1; \
+		fi \
+	else \
+		echo "⚠ No playwright.config.ts found - skipping E2E tests"; \
+		echo "  To set up E2E tests, run: bunx playwright init"; \
+	fi
 
 test-backend-coverage: ## Run backend tests with coverage (Bun native)
 	@echo "Running backend tests with coverage..."

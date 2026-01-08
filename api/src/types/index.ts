@@ -18,6 +18,44 @@ type CategoryType = 'bill' | 'income' | 'variable';
 type PaymentMethod = 'auto' | 'manual';
 
 // ============================================================================
+// Shared Metadata Interface
+// ============================================================================
+
+/**
+ * EntityMetadata - Common metadata fields for Bills and Incomes
+ * This is copied to monthly instances as a point-in-time snapshot
+ */
+interface EntityMetadata {
+  bank_transaction_name?: string; // Name as it appears on bank statement
+  account_number?: string; // Account/reference number
+  account_url?: string; // URL to manage/pay the bill or view income source
+  notes?: string; // Freeform notes
+}
+
+/**
+ * PaymentSourceMetadata - Metadata fields for Payment Sources
+ * Fields are conditional based on payment source type:
+ * - last_four_digits: All types
+ * - credit_limit: credit_card, line_of_credit
+ * - interest_rate: All types
+ * - interest_rate_cash_advance: credit_card only
+ * - is_variable_rate: line_of_credit, savings, investment
+ * - statement_day: credit_card, line_of_credit
+ * - account_url: All types
+ * - notes: All types
+ */
+interface PaymentSourceMetadata {
+  last_four_digits?: string; // Last 4 digits of account/card number
+  credit_limit?: number; // Credit limit in cents (credit_card, line_of_credit)
+  interest_rate?: number; // Interest rate as decimal (e.g., 0.1999 for 19.99%)
+  interest_rate_cash_advance?: number; // Cash advance rate (credit_card only)
+  is_variable_rate?: boolean; // True if rate is variable (line_of_credit, savings, investment)
+  statement_day?: number; // Day of month statement closes (1-31)
+  account_url?: string; // URL to manage account
+  notes?: string; // Freeform notes
+}
+
+// ============================================================================
 // Entity Interfaces
 // ============================================================================
 
@@ -34,6 +72,7 @@ interface Bill {
   payment_source_id: string;
   category_id: string; // Required - reference to bill category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
+  metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -51,6 +90,7 @@ interface Income {
   recurrence_day?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   category_id: string; // Required - reference to income category
+  metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -105,6 +145,7 @@ interface BillInstance {
   name?: string; // For ad-hoc items (bill_id is null)
   category_id?: string; // For ad-hoc items (no bill reference)
   payment_source_id?: string; // For ad-hoc items (no bill reference)
+  metadata?: EntityMetadata; // Copied from Bill at month generation (point-in-time snapshot)
   created_at: string;
   updated_at: string;
 }
@@ -123,6 +164,7 @@ interface IncomeInstance {
   name?: string; // For ad-hoc items (income_id is null)
   category_id?: string; // For ad-hoc items (no income reference)
   payment_source_id?: string; // For ad-hoc items (no income reference)
+  metadata?: EntityMetadata; // Copied from Income at month generation (point-in-time snapshot)
   created_at: string;
   updated_at: string;
 }
@@ -176,6 +218,7 @@ interface PaymentSource {
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
   is_savings?: boolean; // If true, this is a savings account (mutually exclusive with is_investment and pay_off_monthly)
   is_investment?: boolean; // If true, this is an investment account (mutually exclusive with is_savings and pay_off_monthly)
+  metadata?: PaymentSourceMetadata; // Optional metadata (last 4, limits, rates, etc.)
   created_at: string;
   updated_at: string;
 }
@@ -264,6 +307,7 @@ interface BillInstanceDetailed {
   } | null;
   category_id: string;
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
+  metadata?: EntityMetadata; // Point-in-time snapshot from Bill
 }
 
 interface IncomeInstanceDetailed {
@@ -287,6 +331,7 @@ interface IncomeInstanceDetailed {
     name: string;
   } | null;
   category_id: string;
+  metadata?: EntityMetadata; // Point-in-time snapshot from Income
 }
 
 interface LeftoverBreakdown {
@@ -381,6 +426,8 @@ export type {
   CategoryType,
   PaymentMethod,
   VariableExpenseFrequency,
+  EntityMetadata,
+  PaymentSourceMetadata,
   Bill,
   Income,
   Payment,

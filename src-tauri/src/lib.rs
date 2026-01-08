@@ -326,6 +326,9 @@ async fn start_bun_sidecar_internal(
                 CommandEvent::Stdout(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
 
+                    // Print ALL stdout to terminal for debugging
+                    println!("[Sidecar] {}", line);
+
                     // Check if this is the PORT=XXXX line from the backend
                     if let Some(port_str) = line.strip_prefix("PORT=") {
                         if let Ok(port) = port_str.trim().parse::<u16>() {

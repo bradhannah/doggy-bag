@@ -4,10 +4,16 @@
   import ToastContainer from '../components/shared/ToastContainer.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom } from '../stores/settings';
   import { sidebarCollapsed } from '../stores/ui';
+  import { initializeTheme } from '../stores/theme';
   import { setApiPort } from '../lib/api/client';
   import { createLogger } from '../lib/logger';
 
   const log = createLogger('Layout');
+
+  // Initialize theme system immediately (before mount to prevent flash)
+  if (typeof window !== 'undefined') {
+    initializeTheme();
+  }
 
   let backendReady = false;
   let backendError: string | null = null;
@@ -153,9 +159,9 @@
     line-height: 1.5;
     font-weight: 400;
 
-    /* Colors */
-    color: #e4e4e7;
-    background-color: #0f0f1a;
+    /* Base Colors - Use CSS variables set by theme system, with fallbacks */
+    color: var(--text-primary, #e4e4e7);
+    background-color: var(--bg-base, #0f0f1a);
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -199,6 +205,10 @@
     --panel-width-medium: 660px; /* Fixed width in Medium mode */
     --panel-width-min-wide: 720px; /* Minimum width in Wide mode */
 
+    /* Single Column Mode - 2/3 of total 2-column width */
+    --panel-width-single-medium: 880px; /* 2/3 of (2 × 660px) = 880px */
+    --panel-width-single-wide: 960px; /* 2/3 of (2 × 720px) = 960px */
+
     /* Content Padding */
     --content-padding: 24px;
     --content-padding-mobile: 16px;
@@ -240,7 +250,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #0f0f1a;
+    background: var(--bg-base);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -254,13 +264,13 @@
   }
 
   .loading-content h2 {
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 1.25rem;
     margin: 24px 0 8px;
   }
 
   .loading-content p {
-    color: #888;
+    color: var(--text-secondary);
     margin: 0;
   }
 
@@ -270,15 +280,15 @@
   }
 
   .error-icon {
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .spinner {
     width: 48px;
     height: 48px;
     margin: 0 auto;
-    border: 3px solid #333355;
-    border-top-color: #24c8db;
+    border: 3px solid var(--border-default);
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }

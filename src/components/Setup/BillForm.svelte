@@ -10,7 +10,7 @@
   import { paymentSourcesStore } from '../../stores/payment-sources';
   import { billCategories, loadCategories } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
-  import type { Bill, BillData } from '../../stores/bills';
+  import type { Bill, BillData, EntityMetadata } from '../../stores/bills';
   import { onMount } from 'svelte';
 
   export let editingItem: Bill | null = null;
@@ -37,6 +37,12 @@
   // Payment method (auto or manual) - defaults to 'manual'
   let payment_method: 'auto' | 'manual' = editingItem?.payment_method || 'manual';
 
+  // Metadata fields (stored in nested metadata object)
+  let bank_transaction_name = editingItem?.metadata?.bank_transaction_name || '';
+  let account_number = editingItem?.metadata?.account_number || '';
+  let account_url = editingItem?.metadata?.account_url || '';
+  let notes = editingItem?.metadata?.notes || '';
+
   let error = '';
   let saving = false;
 
@@ -62,6 +68,11 @@
     recurrence_week = editingItem.recurrence_week || 1;
     recurrence_day = editingItem.recurrence_day || 0;
     payment_method = editingItem.payment_method || 'manual';
+    // Metadata fields (from nested metadata object)
+    bank_transaction_name = editingItem.metadata?.bank_transaction_name || '';
+    account_number = editingItem.metadata?.account_number || '';
+    account_url = editingItem.metadata?.account_url || '';
+    notes = editingItem.metadata?.notes || '';
   }
 
   // Convert dollars to cents
@@ -133,6 +144,27 @@
 
       // Always include payment_method (defaults to 'manual')
       billData.payment_method = payment_method;
+
+      // Build metadata object (only if any metadata field has a value)
+      const hasMetadata =
+        bank_transaction_name.trim() || account_number.trim() || account_url.trim() || notes.trim();
+
+      if (hasMetadata) {
+        const metadata: EntityMetadata = {};
+        if (bank_transaction_name.trim()) {
+          metadata.bank_transaction_name = bank_transaction_name.trim();
+        }
+        if (account_number.trim()) {
+          metadata.account_number = account_number.trim();
+        }
+        if (account_url.trim()) {
+          metadata.account_url = account_url.trim();
+        }
+        if (notes.trim()) {
+          metadata.notes = notes.trim();
+        }
+        billData.metadata = metadata;
+      }
 
       if (editingItem) {
         await updateBill(editingItem.id, billData);
@@ -336,6 +368,58 @@
     <div class="help-text">How is this bill paid? Autopay or manual payment</div>
   </div>
 
+  <!-- Metadata Section -->
+  <div class="metadata-section">
+    <div class="section-header">Additional Details</div>
+
+    <div class="form-group">
+      <label for="bill-bank-transaction-name">Bank Transaction Name</label>
+      <input
+        id="bill-bank-transaction-name"
+        type="text"
+        bind:value={bank_transaction_name}
+        placeholder="e.g., NETFLIX.COM"
+        disabled={saving || !hasPaymentSources}
+      />
+      <div class="help-text">How this appears on your bank statement</div>
+    </div>
+
+    <div class="form-group">
+      <label for="bill-account-number">Account Number</label>
+      <input
+        id="bill-account-number"
+        type="text"
+        bind:value={account_number}
+        placeholder="e.g., 1234-5678-90"
+        disabled={saving || !hasPaymentSources}
+      />
+      <div class="help-text">Account or reference number for this bill</div>
+    </div>
+
+    <div class="form-group">
+      <label for="bill-account-url">Account URL</label>
+      <input
+        id="bill-account-url"
+        type="url"
+        bind:value={account_url}
+        placeholder="https://..."
+        disabled={saving || !hasPaymentSources}
+      />
+      <div class="help-text">Link to manage or pay this bill online</div>
+    </div>
+
+    <div class="form-group">
+      <label for="bill-notes">Notes</label>
+      <textarea
+        id="bill-notes"
+        bind:value={notes}
+        placeholder="Any additional notes..."
+        rows="3"
+        disabled={saving || !hasPaymentSources}
+      ></textarea>
+    </div>
+  </div>
+
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" on:click={onCancel} disabled={saving}>
       Cancel
@@ -354,18 +438,18 @@
   }
 
   .error-message {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-on-error, #fff);
     padding: 12px;
     border-radius: 6px;
   }
 
   .warning-message {
-    background: rgba(255, 193, 7, 0.2);
-    color: #ffc107;
+    background: var(--warning-muted, rgba(255, 193, 7, 0.2));
+    color: var(--warning);
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #ffc107;
+    border: 1px solid var(--warning);
   }
 
   .form-group {
@@ -378,16 +462,16 @@
   .group-label {
     font-weight: 500;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   input,
   select {
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #333355;
-    background: #0f0f0f;
-    color: #fff;
+    border: 1px solid var(--border-default);
+    background: var(--input-bg, var(--bg-base));
+    color: var(--text-primary);
     font-size: 0.9375rem;
     height: 46px;
     box-sizing: border-box;
@@ -396,7 +480,7 @@
   input:focus,
   select:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   input:disabled,
@@ -414,7 +498,7 @@
   .currency-prefix {
     position: absolute;
     left: 12px;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.9375rem;
     pointer-events: none;
   }
@@ -426,7 +510,7 @@
 
   .help-text {
     font-size: 0.75rem;
-    color: #24c8db;
+    color: var(--accent);
     margin-top: 4px;
   }
 
@@ -448,7 +532,7 @@
   .radio-label input[type='radio'] {
     width: 18px;
     height: 18px;
-    accent-color: #24c8db;
+    accent-color: var(--accent);
   }
 
   .form-actions {
@@ -473,20 +557,57 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #444466;
+    background: var(--bg-hover);
+  }
+
+  /* Metadata section styles */
+  .metadata-section {
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-default);
+  }
+
+  .section-header {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  textarea {
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-default);
+    background: var(--input-bg, var(--bg-base));
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    box-sizing: border-box;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>

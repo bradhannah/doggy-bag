@@ -61,6 +61,7 @@ export interface MonthsService {
   getAllMonths(): Promise<MonthSummary[]>;
   generateMonthlyData(month: string): Promise<MonthlyData>;
   syncMonthlyData(month: string): Promise<MonthlyData>;
+  syncMetadata(month: string): Promise<MonthlyData>;
   updateBankBalances(month: string, balances: Record<string, number>): Promise<MonthlyData>;
   updateSavingsBalances(
     month: string,
@@ -362,6 +363,7 @@ export class MonthsServiceImpl implements MonthsService {
           is_default: true,
           is_closed: false,
           is_adhoc: false,
+          metadata: bill.metadata, // Copy metadata as point-in-time snapshot
           created_at: now,
           updated_at: now,
         });
@@ -436,6 +438,7 @@ export class MonthsServiceImpl implements MonthsService {
           is_default: true,
           is_closed: false,
           is_adhoc: false,
+          metadata: income.metadata, // Copy metadata as point-in-time snapshot
           created_at: now,
           updated_at: now,
         });
@@ -609,6 +612,87 @@ export class MonthsServiceImpl implements MonthsService {
       return existingData;
     } catch (error) {
       console.error('[MonthsService] Failed to sync monthly data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync metadata from source bills/incomes to existing month instances.
+   * This updates metadata without regenerating the month or losing payment data.
+   */
+  public async syncMetadata(month: string): Promise<MonthlyData> {
+    console.log(`[MonthsService] Syncing metadata for ${month}`);
+
+    try {
+      const data = await this.getMonthlyData(month);
+
+      if (!data) {
+        throw new Error(`Monthly data for ${month} not found`);
+      }
+
+      const bills = await this.billsService.getAll();
+      const incomes = await this.incomesService.getAll();
+
+      // Create lookup maps for quick access
+      const billMap = new Map(bills.map((b) => [b.id, b]));
+      const incomeMap = new Map(incomes.map((i) => [i.id, i]));
+
+      const now = new Date().toISOString();
+      let updated = false;
+
+      // Update bill instances with source metadata
+      for (let i = 0; i < data.bill_instances.length; i++) {
+        const bi = data.bill_instances[i];
+        if (bi.bill_id) {
+          const sourceBill = billMap.get(bi.bill_id);
+          if (sourceBill) {
+            // Only update if metadata has changed
+            const currentMeta = JSON.stringify(bi.metadata ?? null);
+            const sourceMeta = JSON.stringify(sourceBill.metadata ?? null);
+            if (currentMeta !== sourceMeta) {
+              data.bill_instances[i] = {
+                ...bi,
+                metadata: sourceBill.metadata,
+                updated_at: now,
+              };
+              updated = true;
+            }
+          }
+        }
+      }
+
+      // Update income instances with source metadata
+      for (let i = 0; i < data.income_instances.length; i++) {
+        const ii = data.income_instances[i];
+        if (ii.income_id) {
+          const sourceIncome = incomeMap.get(ii.income_id);
+          if (sourceIncome) {
+            // Only update if metadata has changed
+            const currentMeta = JSON.stringify(ii.metadata ?? null);
+            const sourceMeta = JSON.stringify(sourceIncome.metadata ?? null);
+            if (currentMeta !== sourceMeta) {
+              data.income_instances[i] = {
+                ...ii,
+                metadata: sourceIncome.metadata,
+                updated_at: now,
+              };
+              updated = true;
+            }
+          }
+        }
+      }
+
+      if (updated) {
+        data.updated_at = now;
+        await this.saveMonthlyData(month, data);
+        console.log(`[MonthsService] Metadata synced for ${month}`);
+      } else {
+        console.log(`[MonthsService] No metadata changes for ${month}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[MonthsService] Failed to sync metadata:', error);
       throw error;
     }
   }

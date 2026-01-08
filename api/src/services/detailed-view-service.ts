@@ -234,6 +234,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
         category_id: instance.category_id || bill?.category_id || '',
         payment_method: bill?.payment_method,
+        metadata: instance.metadata,
       };
     });
   }
@@ -288,6 +289,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         is_overdue: overdueStatus,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
         category_id: instance.category_id || income?.category_id || '',
+        metadata: instance.metadata,
       };
     });
   }

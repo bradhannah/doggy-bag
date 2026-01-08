@@ -305,16 +305,16 @@
 
 <style>
   .payment-sources-card {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 12px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: 20px;
   }
 
   .card-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 16px 0;
@@ -325,7 +325,7 @@
 
   .month-label {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-tertiary);
     font-weight: normal;
     text-transform: none;
   }
@@ -342,7 +342,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
     border-radius: 8px;
   }
 
@@ -357,18 +357,18 @@
   }
 
   .cash .item-icon {
-    background: rgba(74, 222, 128, 0.15);
-    color: #4ade80;
+    background: var(--success-bg);
+    color: var(--success);
   }
 
   .debt .item-icon {
-    background: rgba(248, 113, 113, 0.15);
-    color: #f87171;
+    background: var(--error-bg);
+    color: var(--error);
   }
 
   .networth .item-icon {
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .item-content {
@@ -380,34 +380,34 @@
 
   .item-label {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .item-value {
     font-size: 1rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .cash .item-value {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .debt .item-value {
-    color: #f87171;
+    color: var(--error);
   }
 
   .networth.positive .item-value {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .networth.negative .item-value {
-    color: #f87171;
+    color: var(--error);
   }
 
   /* Individual sources list */
   .sources-list {
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
     padding-top: 16px;
   }
 
@@ -416,7 +416,7 @@
     justify-content: space-between;
     padding: 0 8px 8px 8px;
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -424,11 +424,11 @@
   .list-header.debt-header {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .source-row.debt-row {
-    border-left: 2px solid rgba(248, 113, 113, 0.3);
+    border-left: 2px solid var(--error-border);
   }
 
   .source-row {
@@ -441,11 +441,11 @@
   }
 
   .source-row:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
   }
 
   .source-row.customized {
-    background: rgba(36, 200, 219, 0.05);
+    background: var(--accent-muted);
   }
 
   .source-info {
@@ -460,11 +460,11 @@
 
   .source-name {
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .customized-badge {
-    color: #24c8db;
+    color: var(--accent);
     font-weight: bold;
     font-size: 0.75rem;
   }
@@ -480,7 +480,7 @@
     padding: 4px 8px;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #4ade80;
+    color: var(--success);
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.15s;
@@ -488,25 +488,25 @@
   }
 
   .balance-button:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: #444466;
+    background: var(--bg-elevated);
+    border-color: var(--border-hover);
   }
 
   .balance-button.debt {
-    color: #f87171;
+    color: var(--error);
   }
 
   .edit-container {
     display: flex;
     align-items: center;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
     padding: 2px 6px;
   }
 
   .currency-prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     margin-right: 2px;
   }
@@ -515,7 +515,7 @@
     width: 80px;
     background: transparent;
     border: none;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.875rem;
     font-family: inherit;
     text-align: right;
@@ -523,7 +523,7 @@
   }
 
   .empty-message {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.875rem;
     text-align: center;
     padding: 16px;

@@ -2,13 +2,31 @@
   import { page } from '$app/stores';
   import MonthPickerHeader from '../../../components/MonthPickerHeader.svelte';
   import DetailedMonthView from '../../../components/DetailedView/DetailedMonthView.svelte';
+  import { apiClient } from '../../../lib/api/client';
+  import { success, error as showError } from '../../../stores/toast';
 
   $: month = $page.params.month;
 
   let detailedView: DetailedMonthView;
+  let isSyncingMetadata = false;
 
   function handleRefresh() {
     detailedView?.refreshData();
+  }
+
+  async function handleSyncMetadata() {
+    if (!month || isSyncingMetadata) return;
+
+    isSyncingMetadata = true;
+    try {
+      await apiClient.post(`/api/months/${month}/sync-metadata`, {});
+      success('Metadata synced from source bills/incomes');
+      detailedView?.refreshData();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to sync metadata');
+    } finally {
+      isSyncingMetadata = false;
+    }
   }
 </script>
 
@@ -21,9 +39,13 @@
     basePath="/month"
     showRefresh={true}
     showWidthToggle={true}
+    showColumnToggle={true}
     showCompactToggle={true}
     showHidePaid={true}
+    showSyncMetadata={true}
+    {isSyncingMetadata}
     onRefresh={handleRefresh}
+    onSyncMetadata={handleSyncMetadata}
   />
   <DetailedMonthView {month} bind:this={detailedView} />
 {:else}
@@ -41,17 +63,17 @@
   }
 
   .error-page h1 {
-    color: #f87171;
+    color: var(--error);
     margin-bottom: 12px;
   }
 
   .error-page p {
-    color: #888;
+    color: var(--text-secondary);
     margin-bottom: 24px;
   }
 
   .error-page a {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: none;
   }
 

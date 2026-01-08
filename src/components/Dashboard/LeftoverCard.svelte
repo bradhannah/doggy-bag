@@ -45,18 +45,18 @@
 <style>
   .leftover-card {
     padding: 24px;
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 16px;
-    border: 2px solid #333355;
+    border: 2px solid var(--border-default);
     transition: border-color 0.3s;
   }
 
   .leftover-card.positive {
-    border-color: #4ade80;
+    border-color: var(--success);
   }
 
   .leftover-card.negative {
-    border-color: #f87171;
+    border-color: var(--error);
   }
 
   .card-header {
@@ -69,7 +69,7 @@
   .card-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -83,13 +83,13 @@
   }
 
   .card-badge.positive {
-    background: rgba(74, 222, 128, 0.15);
-    color: #4ade80;
+    background: var(--success-bg);
+    color: var(--success);
   }
 
   .card-badge.negative {
-    background: rgba(248, 113, 113, 0.15);
-    color: #f87171;
+    background: var(--error-bg);
+    color: var(--error);
   }
 
   .card-value {
@@ -105,28 +105,28 @@
   }
 
   .positive .sign {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .negative .sign {
-    color: #f87171;
+    color: var(--error);
   }
 
   .amount {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #e4e4e7;
+    color: var(--text-primary);
     letter-spacing: -0.02em;
   }
 
   .loading {
     font-size: 1.5rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .card-subtext {
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
     line-height: 1.4;
   }
 </style>

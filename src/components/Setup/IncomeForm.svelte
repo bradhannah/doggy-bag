@@ -11,6 +11,7 @@
   import { incomeCategories, loadCategories } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
   import type { Income, IncomeData } from '../../stores/incomes';
+  import type { EntityMetadata } from '../../stores/bills';
   import { onMount } from 'svelte';
 
   export let editingItem: Income | null = null;
@@ -44,6 +45,12 @@
   // Category (optional)
   let category_id = editingItem?.category_id || '';
 
+  // Metadata fields (stored in nested metadata object)
+  let bank_transaction_name = editingItem?.metadata?.bank_transaction_name || '';
+  let account_number = editingItem?.metadata?.account_number || '';
+  let account_url = editingItem?.metadata?.account_url || '';
+  let notes = editingItem?.metadata?.notes || '';
+
   let error = '';
   let saving = false;
 
@@ -64,6 +71,11 @@
     recurrence_day = editingItem.recurrence_day || 0;
     due_day = editingItem.due_day || '';
     category_id = editingItem.category_id || '';
+    // Metadata fields (from nested metadata object)
+    bank_transaction_name = editingItem.metadata?.bank_transaction_name || '';
+    account_number = editingItem.metadata?.account_number || '';
+    account_url = editingItem.metadata?.account_url || '';
+    notes = editingItem.metadata?.notes || '';
   }
 
   // Convert dollars to cents
@@ -130,6 +142,27 @@
       // Add due_day if specified
       if (due_day !== '' && typeof due_day === 'number') {
         incomeData.due_day = due_day;
+      }
+
+      // Build metadata object (only if any metadata field has a value)
+      const hasMetadata =
+        bank_transaction_name.trim() || account_number.trim() || account_url.trim() || notes.trim();
+
+      if (hasMetadata) {
+        const metadata: EntityMetadata = {};
+        if (bank_transaction_name.trim()) {
+          metadata.bank_transaction_name = bank_transaction_name.trim();
+        }
+        if (account_number.trim()) {
+          metadata.account_number = account_number.trim();
+        }
+        if (account_url.trim()) {
+          metadata.account_url = account_url.trim();
+        }
+        if (notes.trim()) {
+          metadata.notes = notes.trim();
+        }
+        incomeData.metadata = metadata;
       }
 
       if (editingItem) {
@@ -332,6 +365,58 @@
     <div class="help-text">Used to track if income is late in the monthly view</div>
   </div>
 
+  <!-- Metadata Section -->
+  <div class="metadata-section">
+    <div class="section-header">Additional Details</div>
+
+    <div class="form-group">
+      <label for="income-bank-transaction-name">Bank Transaction Name</label>
+      <input
+        id="income-bank-transaction-name"
+        type="text"
+        bind:value={bank_transaction_name}
+        placeholder="e.g., DIRECT DEP ACME INC"
+        disabled={saving || !hasPaymentSources}
+      />
+      <div class="help-text">How this appears on your bank statement</div>
+    </div>
+
+    <div class="form-group">
+      <label for="income-account-number">Account Number</label>
+      <input
+        id="income-account-number"
+        type="text"
+        bind:value={account_number}
+        placeholder="e.g., Employee ID: 12345"
+        disabled={saving || !hasPaymentSources}
+      />
+      <div class="help-text">Account or reference number</div>
+    </div>
+
+    <div class="form-group">
+      <label for="income-account-url">Account URL</label>
+      <input
+        id="income-account-url"
+        type="url"
+        bind:value={account_url}
+        placeholder="https://..."
+        disabled={saving || !hasPaymentSources}
+      />
+      <div class="help-text">Link to payroll portal or income source</div>
+    </div>
+
+    <div class="form-group">
+      <label for="income-notes">Notes</label>
+      <textarea
+        id="income-notes"
+        bind:value={notes}
+        placeholder="Any additional notes..."
+        rows="3"
+        disabled={saving || !hasPaymentSources}
+      ></textarea>
+    </div>
+  </div>
+
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" on:click={onCancel} disabled={saving}>
       Cancel
@@ -350,18 +435,18 @@
   }
 
   .error-message {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-on-error, #fff);
     padding: 12px;
     border-radius: 6px;
   }
 
   .warning-message {
-    background: rgba(255, 193, 7, 0.2);
-    color: #ffc107;
+    background: var(--warning-muted, rgba(255, 193, 7, 0.2));
+    color: var(--warning);
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #ffc107;
+    border: 1px solid var(--warning);
   }
 
   .form-group {
@@ -374,16 +459,16 @@
   .group-label {
     font-weight: 500;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   input,
   select {
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #333355;
-    background: #0f0f0f;
-    color: #fff;
+    border: 1px solid var(--border-default);
+    background: var(--input-bg, var(--bg-base));
+    color: var(--text-primary);
     font-size: 0.9375rem;
     height: 46px;
     box-sizing: border-box;
@@ -392,7 +477,7 @@
   input:focus,
   select:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   input:disabled,
@@ -410,7 +495,7 @@
   .currency-prefix {
     position: absolute;
     left: 12px;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.9375rem;
     pointer-events: none;
   }
@@ -422,7 +507,7 @@
 
   .help-text {
     font-size: 0.75rem;
-    color: #24c8db;
+    color: var(--accent);
     margin-top: 4px;
   }
 
@@ -444,7 +529,7 @@
   .radio-label input[type='radio'] {
     width: 18px;
     height: 18px;
-    accent-color: #24c8db;
+    accent-color: var(--accent);
   }
 
   .form-actions {
@@ -469,20 +554,57 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #444466;
+    background: var(--bg-hover);
+  }
+
+  /* Metadata section styles */
+  .metadata-section {
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-default);
+  }
+
+  .section-header {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  textarea {
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-default);
+    background: var(--input-bg, var(--bg-base));
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    box-sizing: border-box;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>

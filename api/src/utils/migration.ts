@@ -66,10 +66,13 @@ export function migrateBillInstance(instance: LegacyData): BillInstance {
     is_default: instance.is_default ?? false,
     is_closed: instance.is_closed ?? instance.is_paid ?? false,
     is_adhoc: instance.is_adhoc ?? false,
+    is_payoff_bill: instance.is_payoff_bill ?? undefined,
+    payoff_source_id: instance.payoff_source_id ?? undefined,
     closed_date: instance.closed_date ?? undefined,
     name: instance.name ?? undefined,
     category_id: instance.category_id ?? undefined,
     payment_source_id: instance.payment_source_id ?? undefined,
+    metadata: instance.metadata ?? undefined,
     created_at: instance.created_at ?? now,
     updated_at: instance.updated_at ?? now,
   };
@@ -112,6 +115,7 @@ export function migrateIncomeInstance(instance: LegacyData): IncomeInstance {
     name: instance.name ?? undefined,
     category_id: instance.category_id ?? undefined,
     payment_source_id: instance.payment_source_id ?? undefined,
+    metadata: instance.metadata ?? undefined,
     created_at: instance.created_at ?? now,
     updated_at: instance.updated_at ?? now,
   };

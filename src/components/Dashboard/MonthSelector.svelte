@@ -183,9 +183,9 @@
     align-items: center;
     gap: 16px;
     padding: 12px 20px;
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 12px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
   }
 
   .nav-btn {
@@ -195,17 +195,17 @@
     width: 36px;
     height: 36px;
     background: transparent;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: 8px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .nav-btn:hover {
-    background: #24c8db;
-    border-color: #24c8db;
-    color: #000;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-inverse);
   }
 
   .month-display-container {
@@ -229,26 +229,26 @@
   }
 
   .month-display:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db33;
+    background: var(--accent-muted);
+    border-color: var(--accent-muted);
   }
 
   .month-label {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .data-indicator {
     width: 8px;
     height: 8px;
-    background: #22c55e;
+    background: var(--success);
     border-radius: 50%;
     flex-shrink: 0;
   }
 
   .dropdown-arrow {
-    color: #888;
+    color: var(--text-secondary);
     transition: transform 0.2s;
     margin-left: auto;
   }
@@ -260,9 +260,9 @@
   .today-btn {
     padding: 4px 12px;
     background: transparent;
-    border: 1px solid #24c8db;
+    border: 1px solid var(--accent);
     border-radius: 6px;
-    color: #24c8db;
+    color: var(--accent);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
@@ -270,8 +270,8 @@
   }
 
   .today-btn:hover {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .dropdown-menu {
@@ -280,10 +280,10 @@
     left: 0;
     right: 0;
     margin-top: 8px;
-    background: #1e1e2e;
-    border: 1px solid #333355;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
     border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px var(--shadow);
     overflow: hidden;
     z-index: 100;
     min-width: 220px;
@@ -293,17 +293,17 @@
     padding: 10px 14px;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .dropdown-loading,
   .dropdown-empty {
     padding: 16px;
     text-align: center;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 
@@ -315,19 +315,19 @@
     padding: 10px 14px;
     background: transparent;
     border: none;
-    color: #e4e4e7;
+    color: var(--text-primary);
     cursor: pointer;
     transition: background 0.15s;
     text-align: left;
   }
 
   .dropdown-item:hover {
-    background: rgba(36, 200, 219, 0.1);
+    background: var(--accent-muted);
   }
 
   .dropdown-item.selected {
-    background: rgba(36, 200, 219, 0.15);
-    border-left: 3px solid #24c8db;
+    background: var(--accent-muted);
+    border-left: 3px solid var(--accent);
   }
 
   .dropdown-month {
@@ -341,10 +341,10 @@
   }
 
   .dropdown-leftover.positive {
-    color: #22c55e;
+    color: var(--success);
   }
 
   .dropdown-leftover.negative {
-    color: #ef4444;
+    color: var(--error);
   }
 </style>

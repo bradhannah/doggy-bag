@@ -4,6 +4,7 @@
   import { detailedMonth } from '../../stores/detailed-month';
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
+  import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
 
@@ -11,12 +12,14 @@
   export let month: string = '';
   export let compactMode: boolean = false;
   export let readOnly: boolean = false;
+  export let categoryName: string = '';
 
   const dispatch = createEventDispatcher();
 
   let showTransactionsDrawer = false;
   let showMakeRegularDrawer = false;
   let showDeleteConfirm = false;
+  let showDetailsDrawer = false;
   let isEditingExpected = false;
   let expectedEditValue = '';
   let isEditingDueDay = false;
@@ -90,6 +93,10 @@
   $: occurrences = (income as unknown as IncomeInstanceExtended).occurrences ?? [];
   $: isSingleOccurrence = occurrences.length <= 1;
   $: firstOccurrenceDate = occurrences[0]?.expected_date || income.due_date;
+
+  function openDetailsDrawer() {
+    showDetailsDrawer = true;
+  }
 
   // Helper to get last day of month from month string (YYYY-MM)
   function getLastDayOfMonth(monthStr: string): string {
@@ -356,7 +363,9 @@
     <div class="income-main">
       <div class="income-info">
         <span class="income-name" class:closed-text={isClosed}>
-          {income.name}
+          <button class="name-link" on:click={openDetailsDrawer} title="View details">
+            {income.name}
+          </button>
           {#if isSingleOccurrence && firstOccurrenceDate && !isClosed}
             {#if isEditingDueDay}
               <span class="due-day-edit">
@@ -509,6 +518,22 @@
           </button>
         {/if}
 
+        <!-- Info button -->
+        <button class="action-btn-icon info" on:click={openDetailsDrawer} title="View details">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+        </button>
+
         <!-- Delete button for any income (when not read-only) -->
         {#if !readOnly}
           <button
@@ -588,6 +613,9 @@
   </div>
 {/if}
 
+<!-- Item Details Drawer -->
+<ItemDetailsDrawer bind:open={showDetailsDrawer} type="income" item={income} {categoryName} />
+
 <style>
   .income-row-container {
     margin-bottom: 4px;
@@ -598,18 +626,18 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-surface);
     border-radius: 8px;
     border: 1px solid transparent;
     transition: all 0.15s ease;
   }
 
   .income-row:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-elevated);
   }
 
   .income-row.closed {
-    background: rgba(74, 222, 128, 0.05);
+    background: var(--success-bg);
     opacity: 0.7;
   }
 
@@ -630,7 +658,7 @@
 
   .income-name {
     font-weight: 500;
-    color: #e4e4e7;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -642,9 +670,35 @@
     opacity: 0.6;
   }
 
+  .name-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .name-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .closed-text .name-link {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .closed-text .name-link:hover {
+    text-decoration: underline line-through;
+  }
+
   .due-day {
     font-weight: 400;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
     background: none;
     border: none;
@@ -654,23 +708,23 @@
   }
 
   .due-day:hover {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: underline;
   }
 
   .due-day-edit {
     font-weight: 400;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
   .due-day-input {
     width: 35px;
     padding: 1px 4px;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.8rem;
     text-align: center;
   }
@@ -700,14 +754,14 @@
   }
 
   .adhoc-badge {
-    background: rgba(167, 139, 250, 0.2);
-    color: #a78bfa;
+    background: var(--purple-bg);
+    color: var(--purple);
   }
 
   .make-regular-link {
     background: none;
     border: none;
-    color: #a78bfa;
+    color: var(--purple);
     font-size: 0.7rem;
     padding: 0;
     cursor: pointer;
@@ -721,32 +775,32 @@
   }
 
   .partial-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    background: var(--warning-bg);
+    color: var(--warning);
   }
 
   .overdue-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    background: var(--warning-bg);
+    color: var(--warning);
   }
 
   .income-due {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .income-closed-date {
     font-size: 0.75rem;
-    color: #4ade80;
+    color: var(--success);
   }
 
   .overdue-text {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .income-source {
     font-size: 0.7rem;
-    color: #666;
+    color: var(--text-tertiary);
   }
 
   .income-amounts {
@@ -766,7 +820,7 @@
 
   .amount-label {
     font-size: 0.625rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     display: flex;
@@ -775,13 +829,13 @@
   }
 
   .payment-count {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .amount-value {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     background: none;
     border: none;
     padding: 0;
@@ -794,7 +848,7 @@
   }
 
   .amount-value.clickable:hover:not(.disabled) {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: underline;
   }
 
@@ -804,35 +858,35 @@
   }
 
   .amount-value.amber {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   /* Yellow/amber highlight for editable values */
   .amount-value.editable-highlight {
-    background: rgba(251, 191, 36, 0.15);
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     padding: 2px 6px;
     border-radius: 4px;
   }
 
   .amount-value.editable-highlight:hover:not(.disabled) {
-    background: rgba(251, 191, 36, 0.25);
-    border-color: rgba(251, 191, 36, 0.6);
-    color: #fbbf24;
+    background: var(--warning-bg);
+    border-color: var(--warning);
+    color: var(--warning-light);
   }
 
   .amount-value.remaining {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .amount-value.remaining.zero {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .add-receipt-link {
     background: none;
     border: none;
-    color: #24c8db;
+    color: var(--accent);
     font-size: 0.8rem;
     padding: 0;
     cursor: pointer;
@@ -851,17 +905,17 @@
   }
 
   .inline-edit .prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
   .inline-edit input {
     width: 70px;
     padding: 2px 4px;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.85rem;
     font-weight: 600;
     text-align: right;
@@ -889,9 +943,9 @@
   }
 
   .action-btn.receive-full {
-    background: #4ade80;
+    background: var(--success);
     border: none;
-    color: #000;
+    color: var(--text-inverse);
   }
 
   .action-btn.receive-full:hover:not(:disabled) {
@@ -900,24 +954,24 @@
 
   .action-btn.close {
     background: transparent;
-    border: 1px solid #4ade80;
-    color: #4ade80;
+    border: 1px solid var(--success);
+    color: var(--success);
   }
 
   .action-btn.close:hover:not(:disabled) {
-    background: rgba(74, 222, 128, 0.1);
+    background: var(--success-bg);
   }
 
   .action-btn.reopen {
     background: transparent;
-    border: 1px solid #a1a1aa;
-    color: #a1a1aa;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
   }
 
   .action-btn.reopen:hover:not(:disabled) {
-    border-color: #e4e4e7;
-    color: #e4e4e7;
-    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+    background: var(--bg-elevated);
   }
 
   .action-btn:disabled {
@@ -1001,24 +1055,33 @@
     border-radius: 4px;
     border: none;
     background: transparent;
-    color: #666;
+    color: var(--text-tertiary);
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .action-btn-icon:hover:not(:disabled) {
-    background: rgba(255, 68, 68, 0.1);
-    color: #ff4444;
+    background: var(--error-bg);
+    color: var(--danger);
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {
-    background: #ff4444;
-    color: #fff;
+    background: var(--danger);
+    color: var(--text-on-accent);
   }
 
   .action-btn-icon.add:hover:not(:disabled) {
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .action-btn-icon.info {
+    color: var(--text-secondary);
+  }
+
+  .action-btn-icon.info:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .action-btn-icon:disabled {
@@ -1030,7 +1093,7 @@
   .confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1038,8 +1101,8 @@
   }
 
   .confirm-dialog {
-    background: #1a1a2e;
-    border: 1px solid #333355;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
     border-radius: 12px;
     padding: 24px;
     max-width: 400px;
@@ -1049,17 +1112,17 @@
   .confirm-dialog h3 {
     margin: 0 0 16px;
     font-size: 1.1rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .confirm-dialog p {
     margin: 0 0 8px;
-    color: #a0a0a0;
+    color: var(--text-secondary);
     font-size: 0.9rem;
   }
 
   .confirm-warning {
-    color: #f87171 !important;
+    color: var(--error) !important;
     font-size: 0.8rem !important;
     margin-bottom: 20px !important;
   }
@@ -1081,23 +1144,23 @@
 
   .confirm-btn.cancel {
     background: transparent;
-    border: 1px solid #444;
-    color: #888;
+    border: 1px solid var(--border-hover);
+    color: var(--text-secondary);
   }
 
   .confirm-btn.cancel:hover {
-    border-color: #666;
-    color: #e4e4e7;
+    border-color: var(--text-tertiary);
+    color: var(--text-primary);
   }
 
   .confirm-btn.delete {
-    background: #ff4444;
+    background: var(--danger);
     border: none;
-    color: #fff;
+    color: var(--text-on-accent);
   }
 
   .confirm-btn.delete:hover:not(:disabled) {
-    background: #cc3333;
+    background: var(--danger-hover);
   }
 
   .confirm-btn.delete:disabled {

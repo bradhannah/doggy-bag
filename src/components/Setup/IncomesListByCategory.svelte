@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { IncomeCategoryGroup, IncomeWithContribution } from '../../stores/incomes';
+  import NotesModal from '../shared/NotesModal.svelte';
 
   export let incomesByCategory: IncomeCategoryGroup[];
   export let totalMonthlyIncome: number;
@@ -7,6 +8,41 @@
   export let onEdit: (income: IncomeWithContribution) => void;
   export let onDelete: (income: IncomeWithContribution) => void;
   export let getPaymentSourceName: (id: string) => string;
+
+  // Notes modal state
+  let notesModalOpen = false;
+  let notesModalTitle = '';
+  let notesModalContent = '';
+
+  function showNotes(income: IncomeWithContribution) {
+    notesModalTitle = `${income.name} - Notes`;
+    notesModalContent = income.metadata?.notes || '';
+    notesModalOpen = true;
+  }
+
+  function closeNotes() {
+    notesModalOpen = false;
+  }
+
+  // Check if income has any metadata to display
+  function hasMetadata(income: IncomeWithContribution): boolean {
+    return !!(
+      income.metadata?.bank_transaction_name ||
+      income.metadata?.account_number ||
+      income.metadata?.account_url ||
+      income.metadata?.notes
+    );
+  }
+
+  // Shorten URL for display
+  function shortenUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      return url.substring(0, 20) + (url.length > 20 ? '...' : '');
+    }
+  }
 
   function formatAmount(income: IncomeWithContribution): string {
     const amount = income.amount / 100;
@@ -90,8 +126,99 @@
         <div class="empty-category">No incomes in this category</div>
       {:else}
         {#each group.incomes as income (income.id)}
-          <div class="income-row" on:click={() => onView(income)}>
-            <span class="col-name">{income.name}</span>
+          <div
+            class="income-row"
+            class:has-metadata={hasMetadata(income)}
+            on:click={() => onView(income)}
+          >
+            <div class="col-name">
+              <span class="income-name">{income.name}</span>
+              {#if hasMetadata(income)}
+                <div class="metadata-row">
+                  {#if income.metadata?.bank_transaction_name}
+                    <span class="metadata-item" title="Bank transaction name">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="21" x2="9" y2="9" />
+                      </svg>
+                      {income.metadata.bank_transaction_name}
+                    </span>
+                  {/if}
+                  {#if income.metadata?.account_number}
+                    <span class="metadata-item" title="Account number">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                        />
+                        <polyline points="22,6 12,13 2,6" />
+                      </svg>
+                      {income.metadata.account_number}
+                    </span>
+                  {/if}
+                  {#if income.metadata?.account_url}
+                    <a
+                      href={income.metadata.account_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="metadata-link"
+                      title={income.metadata.account_url}
+                      on:click|stopPropagation
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                      {shortenUrl(income.metadata.account_url)}
+                    </a>
+                  {/if}
+                  {#if income.metadata?.notes}
+                    <button
+                      class="metadata-notes-btn"
+                      title="View notes"
+                      on:click|stopPropagation={() => showNotes(income)}
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                      Notes
+                    </button>
+                  {/if}
+                </div>
+              {/if}
+            </div>
             <span class="col-period">{formatPeriod(income.billing_period)}</span>
             <span class="col-source">{getPaymentSourceName(income.payment_source_id)}</span>
             <span class="col-amount" class:zero={income.amount === 0}>
@@ -140,6 +267,14 @@
   </div>
 </div>
 
+<!-- Notes Modal -->
+<NotesModal
+  title={notesModalTitle}
+  notes={notesModalContent}
+  open={notesModalOpen}
+  on:close={closeNotes}
+/>
+
 <style>
   .incomes-by-category {
     display: flex;
@@ -149,9 +284,9 @@
 
   /* Container with border and rounded edges */
   .list-container {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 16px;
-    border: 2px solid #333355;
+    border: 2px solid var(--border-default);
     overflow: hidden;
   }
 
@@ -161,12 +296,12 @@
     grid-template-columns: 1fr 90px 130px 150px 80px;
     gap: 12px;
     padding: 12px 16px;
-    background: #16213e;
-    border-bottom: 2px solid #333355;
+    background: var(--bg-elevated);
+    border-bottom: 2px solid var(--border-default);
     font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
-    color: #888;
+    color: var(--text-secondary);
     letter-spacing: 0.5px;
   }
 
@@ -201,24 +336,24 @@
   .category-name {
     font-size: 1rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .category-count {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .category-subtotal-header {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #22c55e;
+    color: var(--success);
   }
 
   /* Empty Category */
   .empty-category {
     padding: 16px 16px 16px 44px;
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.8125rem;
     font-style: italic;
   }
@@ -231,31 +366,112 @@
     padding: 12px 16px;
     padding-left: 32px;
     align-items: center;
-    border-bottom: 1px solid #2a2a4a;
+    border-bottom: 1px solid var(--border-subtle);
     cursor: pointer;
     transition: background 0.15s ease;
   }
 
+  .income-row.has-metadata {
+    align-items: start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
   .income-row:hover {
-    background: rgba(34, 197, 94, 0.05);
+    background: var(--success-muted, rgba(34, 197, 94, 0.05));
   }
 
   .income-row .col-name {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .income-row .income-name {
     font-weight: 500;
-    color: #e4e4e7;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  /* Metadata Row */
+  .metadata-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .metadata-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .metadata-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .metadata-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    color: var(--accent);
+    background: var(--accent-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .metadata-link:hover {
+    background: var(--accent-muted);
+    filter: brightness(1.2);
+  }
+
+  .metadata-link svg {
+    flex-shrink: 0;
+  }
+
+  .metadata-notes-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    color: var(--warning);
+    background: var(--warning-muted, rgba(255, 193, 7, 0.1));
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .metadata-notes-btn:hover {
+    filter: brightness(1.2);
+  }
+
+  .metadata-notes-btn svg {
+    flex-shrink: 0;
+  }
+
   .income-row .col-period {
     font-size: 0.8125rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .income-row .col-source {
     font-size: 0.8125rem;
-    color: #888;
+    color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -264,12 +480,12 @@
   .income-row .col-amount {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #22c55e;
+    color: var(--success);
     text-align: right;
   }
 
   .income-row .col-amount.zero {
-    color: #666;
+    color: var(--text-tertiary);
     font-style: italic;
   }
 
@@ -288,20 +504,20 @@
     height: 28px;
     border-radius: 4px;
     border: none;
-    background: #333355;
-    color: #888;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .btn-icon:hover {
-    background: #444466;
-    color: #e4e4e7;
+    background: var(--bg-hover);
+    color: var(--text-primary);
   }
 
   .btn-icon.btn-danger:hover {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-on-error, #fff);
   }
 
   /* Total Row */
@@ -310,8 +526,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: #16213e;
-    border-top: 2px solid #333355;
+    background: var(--bg-elevated);
+    border-top: 2px solid var(--border-default);
     margin-top: 16px;
     border-radius: 8px;
   }
@@ -319,14 +535,14 @@
   .total-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     letter-spacing: 0.5px;
   }
 
   .total-value {
     font-size: 1.25rem;
     font-weight: bold;
-    color: #22c55e;
+    color: var(--success);
   }
 
   /* Responsive - hide source column on narrow screens */

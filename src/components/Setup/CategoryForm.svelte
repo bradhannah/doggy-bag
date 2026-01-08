@@ -193,24 +193,24 @@
   }
 
   .error-message {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-on-error, #fff);
     padding: 12px;
     border-radius: 6px;
   }
 
   .info-message {
-    background: rgba(36, 200, 219, 0.2);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #24c8db;
+    border: 1px solid var(--accent);
   }
 
   .info-message.variable {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
-    border-color: rgba(245, 158, 11, 0.4);
+    background: var(--warning-muted, rgba(245, 158, 11, 0.2));
+    color: var(--warning);
+    border-color: var(--warning-border, rgba(245, 158, 11, 0.4));
   }
 
   .form-group {
@@ -222,23 +222,23 @@
   label {
     font-weight: 500;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   input,
   select {
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #333355;
-    background: #0f0f0f;
-    color: #fff;
+    border: 1px solid var(--border-default);
+    background: var(--input-bg, var(--bg-base));
+    color: var(--text-primary);
     font-size: 0.9375rem;
   }
 
   input:focus,
   select:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   input:disabled,
@@ -249,12 +249,12 @@
 
   .help-text {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     margin-top: 4px;
   }
 
   .help-text.warning {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .color-input-wrapper {
@@ -301,20 +301,20 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #444466;
+    background: var(--bg-hover);
   }
 </style>

@@ -421,34 +421,34 @@
   .error-state {
     text-align: center;
     padding: var(--space-8);
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .error-state {
-    color: #f87171;
+    color: var(--error);
   }
 
   .empty-state {
     text-align: center;
     padding: var(--space-8);
-    background: #151525;
+    background: var(--bg-elevated);
     border-radius: var(--radius-lg);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
   }
 
   .empty-state h2 {
     margin: 0 0 var(--space-3) 0;
     font-size: 1.25rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .empty-state p {
     margin: 0;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .empty-state a {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: none;
   }
 
@@ -463,9 +463,9 @@
   }
 
   .account-section {
-    background: #151525;
+    background: var(--bg-elevated);
     border-radius: var(--radius-lg);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: var(--space-4);
   }
 
@@ -478,11 +478,11 @@
   }
 
   .section-title.savings-title {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .section-title.investment-title {
-    color: #a78bfa;
+    color: var(--purple);
   }
 
   .accounts-table {
@@ -503,30 +503,30 @@
 
   .table-header {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
     padding-bottom: var(--space-3);
   }
 
   .table-row {
-    border-bottom: 1px solid #252540;
+    border-bottom: 1px solid var(--bg-elevated);
   }
 
   .table-footer {
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
     padding-top: var(--space-3);
     font-weight: 600;
   }
 
   .col-name {
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .col-value {
     text-align: right;
-    color: #a1a1aa;
+    color: var(--text-secondary);
   }
 
   .col-change {
@@ -538,11 +538,11 @@
   }
 
   .col-change.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .col-change.negative {
-    color: #f87171;
+    color: var(--error);
   }
 
   .percent {
@@ -553,18 +553,18 @@
   .input-wrapper {
     display: flex;
     align-items: center;
-    background: #0f0f0f;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     padding: 0 var(--space-2);
   }
 
   .input-wrapper:focus-within {
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
@@ -573,7 +573,7 @@
     padding: var(--space-2);
     background: transparent;
     border: none;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.9rem;
     text-align: right;
   }
@@ -587,9 +587,9 @@
   }
 
   .grand-total-section {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: var(--radius-lg);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: var(--space-4);
   }
 
@@ -602,7 +602,7 @@
   .grand-total .label {
     font-size: 1rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .grand-total .values {
@@ -613,11 +613,11 @@
 
   .grand-total .value {
     font-size: 1rem;
-    color: #a1a1aa;
+    color: var(--text-secondary);
   }
 
   .grand-total .arrow {
-    color: #555;
+    color: var(--text-tertiary);
   }
 
   .grand-total .change {
@@ -628,11 +628,11 @@
   }
 
   .grand-total .change.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .grand-total .change.negative {
-    color: #f87171;
+    color: var(--error);
   }
 
   .actions {
@@ -657,11 +657,11 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 </style>

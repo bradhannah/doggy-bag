@@ -11,6 +11,7 @@
     updatePaymentSource,
     isDebtAccount,
     type PaymentSourceType,
+    type PaymentSourceMetadata,
   } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import type { PaymentSource } from '../../stores/payment-sources';
@@ -27,11 +28,41 @@
   let isSavings = editingItem?.is_savings ?? false;
   let isInvestment = editingItem?.is_investment ?? false;
 
+  // Metadata form state
+  let lastFourDigits = editingItem?.metadata?.last_four_digits || '';
+  let creditLimit = editingItem?.metadata?.credit_limit
+    ? (editingItem.metadata.credit_limit / 100).toString()
+    : '';
+  let interestRate = editingItem?.metadata?.interest_rate
+    ? (editingItem.metadata.interest_rate * 100).toFixed(2)
+    : '';
+  let interestRateCashAdvance = editingItem?.metadata?.interest_rate_cash_advance
+    ? (editingItem.metadata.interest_rate_cash_advance * 100).toFixed(2)
+    : '';
+  let isVariableRate = editingItem?.metadata?.is_variable_rate ?? false;
+  let statementDay = editingItem?.metadata?.statement_day?.toString() || '';
+  let accountUrl = editingItem?.metadata?.account_url || '';
+  let notes = editingItem?.metadata?.notes || '';
+
   // Reactive helper for debt account detection
   $: isDebt = isDebtAccount(type);
 
   // Show savings/investment options only for bank accounts
   $: isBankAccount = type === 'bank_account';
+
+  // Conditional field visibility based on type
+  // - last_four_digits: All types
+  // - credit_limit: credit_card, line_of_credit
+  // - interest_rate: All types
+  // - interest_rate_cash_advance: credit_card only
+  // - is_variable_rate: line_of_credit, savings (bank_account with is_savings), investment (bank_account with is_investment)
+  // - statement_day: credit_card, line_of_credit
+  // - account_url: All types
+  // - notes: All types
+  $: showCreditLimit = type === 'credit_card' || type === 'line_of_credit';
+  $: showCashAdvanceRate = type === 'credit_card';
+  $: showVariableRate = type === 'line_of_credit' || (isBankAccount && (isSavings || isInvestment));
+  $: showStatementDay = type === 'credit_card' || type === 'line_of_credit';
 
   // Savings or investment mode disables pay_off_monthly
   $: isSavingsOrInvestment = isSavings || isInvestment;
@@ -81,6 +112,66 @@
     payOffMonthly = editingItem.pay_off_monthly ?? false;
     isSavings = editingItem.is_savings ?? false;
     isInvestment = editingItem.is_investment ?? false;
+    // Reset metadata fields
+    lastFourDigits = editingItem.metadata?.last_four_digits || '';
+    creditLimit = editingItem.metadata?.credit_limit
+      ? (editingItem.metadata.credit_limit / 100).toString()
+      : '';
+    interestRate = editingItem.metadata?.interest_rate
+      ? (editingItem.metadata.interest_rate * 100).toFixed(2)
+      : '';
+    interestRateCashAdvance = editingItem.metadata?.interest_rate_cash_advance
+      ? (editingItem.metadata.interest_rate_cash_advance * 100).toFixed(2)
+      : '';
+    isVariableRate = editingItem.metadata?.is_variable_rate ?? false;
+    statementDay = editingItem.metadata?.statement_day?.toString() || '';
+    accountUrl = editingItem.metadata?.account_url || '';
+    notes = editingItem.metadata?.notes || '';
+  }
+
+  // Build metadata object from form fields
+  function buildMetadata(): PaymentSourceMetadata | undefined {
+    const meta: PaymentSourceMetadata = {};
+
+    if (lastFourDigits.trim()) {
+      meta.last_four_digits = lastFourDigits.trim();
+    }
+    if (showCreditLimit && creditLimit.trim()) {
+      const cents = Math.round(parseFloat(creditLimit) * 100);
+      if (!isNaN(cents) && cents > 0) {
+        meta.credit_limit = cents;
+      }
+    }
+    if (interestRate.trim()) {
+      const rate = parseFloat(interestRate) / 100;
+      if (!isNaN(rate) && rate >= 0) {
+        meta.interest_rate = rate;
+      }
+    }
+    if (showCashAdvanceRate && interestRateCashAdvance.trim()) {
+      const rate = parseFloat(interestRateCashAdvance) / 100;
+      if (!isNaN(rate) && rate >= 0) {
+        meta.interest_rate_cash_advance = rate;
+      }
+    }
+    if (showVariableRate) {
+      meta.is_variable_rate = isVariableRate;
+    }
+    if (showStatementDay && statementDay.trim()) {
+      const day = parseInt(statementDay, 10);
+      if (!isNaN(day) && day >= 1 && day <= 31) {
+        meta.statement_day = day;
+      }
+    }
+    if (accountUrl.trim()) {
+      meta.account_url = accountUrl.trim();
+    }
+    if (notes.trim()) {
+      meta.notes = notes.trim();
+    }
+
+    // Return undefined if metadata is empty
+    return Object.keys(meta).length > 0 ? meta : undefined;
   }
 
   async function handleSubmit() {
@@ -94,6 +185,8 @@
     error = '';
 
     try {
+      const metadata = buildMetadata();
+
       if (editingItem) {
         await updatePaymentSource(editingItem.id, {
           name,
@@ -102,6 +195,7 @@
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
           is_investment: isBankAccount ? isInvestment : undefined,
+          metadata,
         });
         success(`Payment source "${name}" updated`);
       } else {
@@ -113,6 +207,7 @@
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
           is_investment: isBankAccount ? isInvestment : undefined,
+          metadata,
         });
         success(`Payment source "${name}" added`);
       }
@@ -226,6 +321,123 @@
     </div>
   {/if}
 
+  <!-- Metadata Section -->
+  <div class="metadata-section">
+    <div class="section-header">Account Details (Optional)</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="ps-last4">Last 4 Digits</label>
+        <input
+          id="ps-last4"
+          type="text"
+          bind:value={lastFourDigits}
+          placeholder="1234"
+          maxlength="4"
+          pattern="[0-9]*"
+          disabled={saving}
+        />
+      </div>
+
+      {#if showStatementDay}
+        <div class="form-group">
+          <label for="ps-statement-day">Statement Day</label>
+          <input
+            id="ps-statement-day"
+            type="number"
+            bind:value={statementDay}
+            placeholder="1-31"
+            min="1"
+            max="31"
+            disabled={saving}
+          />
+        </div>
+      {/if}
+    </div>
+
+    {#if showCreditLimit}
+      <div class="form-group">
+        <label for="ps-credit-limit">Credit Limit</label>
+        <div class="input-with-prefix">
+          <span class="input-prefix">$</span>
+          <input
+            id="ps-credit-limit"
+            type="text"
+            bind:value={creditLimit}
+            placeholder="5,000.00"
+            disabled={saving}
+          />
+        </div>
+      </div>
+    {/if}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="ps-interest-rate">Interest Rate</label>
+        <div class="input-with-suffix">
+          <input
+            id="ps-interest-rate"
+            type="text"
+            bind:value={interestRate}
+            placeholder="19.99"
+            disabled={saving}
+          />
+          <span class="input-suffix">%</span>
+        </div>
+      </div>
+
+      {#if showCashAdvanceRate}
+        <div class="form-group">
+          <label for="ps-cash-advance-rate">Cash Advance Rate</label>
+          <div class="input-with-suffix">
+            <input
+              id="ps-cash-advance-rate"
+              type="text"
+              bind:value={interestRateCashAdvance}
+              placeholder="24.99"
+              disabled={saving}
+            />
+            <span class="input-suffix">%</span>
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    {#if showVariableRate}
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" bind:checked={isVariableRate} disabled={saving} />
+          <span class="checkbox-text">
+            <strong>Variable Rate</strong>
+            <span class="checkbox-description">Interest rate may change over time</span>
+          </span>
+        </label>
+      </div>
+    {/if}
+
+    <div class="form-group">
+      <label for="ps-account-url">Account URL</label>
+      <input
+        id="ps-account-url"
+        type="url"
+        bind:value={accountUrl}
+        placeholder="https://mybank.com/account"
+        disabled={saving}
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="ps-notes">Notes</label>
+      <textarea
+        id="ps-notes"
+        bind:value={notes}
+        placeholder="Optional notes about this account..."
+        disabled={saving}
+        rows="3"
+      ></textarea>
+    </div>
+  </div>
+
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" on:click={onCancel} disabled={saving}>
       Cancel
@@ -244,8 +456,8 @@
   }
 
   .error-message {
-    background: #ff4444;
-    color: #fff;
+    background: var(--error);
+    color: var(--text-on-error, #fff);
     padding: 12px;
     border-radius: 6px;
   }
@@ -259,41 +471,54 @@
   label {
     font-weight: 500;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-default);
+    background: var(--input-bg, var(--bg-base));
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    box-sizing: border-box;
   }
 
   input,
   select {
-    padding: 12px;
-    border-radius: 6px;
-    border: 1px solid #333355;
-    background: #0f0f0f;
-    color: #fff;
-    font-size: 0.9375rem;
     height: 46px;
-    box-sizing: border-box;
+  }
+
+  textarea {
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
   }
 
   input:focus,
-  select:focus {
+  select:focus,
+  textarea:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   input:disabled,
-  select:disabled {
+  select:disabled,
+  textarea:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 
   .help-text {
     font-size: 0.75rem;
-    color: #24c8db;
+    color: var(--accent);
     margin-top: 4px;
   }
 
   .help-text.locked {
-    color: #888;
+    color: var(--text-secondary);
     font-style: italic;
   }
 
@@ -302,9 +527,9 @@
     flex-direction: column;
     gap: 16px;
     padding: 16px;
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 8px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
   }
 
   .bank-options {
@@ -312,9 +537,9 @@
     flex-direction: column;
     gap: 16px;
     padding: 16px;
-    background: #1a2e1a;
+    background: var(--success-muted, rgba(74, 222, 128, 0.1));
     border-radius: 8px;
-    border: 1px solid #335533;
+    border: 1px solid var(--success-border, rgba(74, 222, 128, 0.3));
   }
 
   .checkbox-group {
@@ -335,7 +560,7 @@
     height: 20px;
     margin: 0;
     flex-shrink: 0;
-    accent-color: #24c8db;
+    accent-color: var(--accent);
     cursor: pointer;
   }
 
@@ -352,12 +577,12 @@
 
   .checkbox-text strong {
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .checkbox-description {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .form-actions {
@@ -382,20 +607,89 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #444466;
+    background: var(--bg-hover);
+  }
+
+  .metadata-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .section-header {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 16px;
+  }
+
+  .form-row .form-group {
+    flex: 1;
+  }
+
+  .input-with-prefix,
+  .input-with-suffix {
+    display: flex;
+    align-items: center;
+    background: var(--input-bg, var(--bg-base));
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .input-with-prefix:focus-within,
+  .input-with-suffix:focus-within {
+    border-color: var(--accent);
+  }
+
+  .input-prefix,
+  .input-suffix {
+    padding: 0 12px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    font-size: 0.9375rem;
+    height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-with-prefix input,
+  .input-with-suffix input {
+    border: none;
+    height: 44px;
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+  }
+
+  .input-with-prefix input:focus,
+  .input-with-suffix input:focus {
+    outline: none;
+    border: none;
   }
 </style>

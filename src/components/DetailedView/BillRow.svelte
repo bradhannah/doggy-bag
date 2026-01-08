@@ -5,6 +5,7 @@
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
   import CCBalanceSyncModal from './CCBalanceSyncModal.svelte';
+  import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import { paymentSources, type PaymentSourceType } from '../../stores/payment-sources';
@@ -13,6 +14,7 @@
   export let month: string = '';
   export let compactMode: boolean = false;
   export let readOnly: boolean = false;
+  export let categoryName: string = '';
 
   const dispatch = createEventDispatcher();
 
@@ -20,6 +22,7 @@
   let showMakeRegularDrawer = false;
   let showDeleteConfirm = false;
   let showCCBalanceSyncModal = false;
+  let showDetailsDrawer = false;
   let ccSyncPaymentAmount = 0;
   let isEditingExpected = false;
   let expectedEditValue = '';
@@ -96,6 +99,20 @@
   $: occurrences = (bill as unknown as BillInstanceExtended).occurrences ?? [];
   $: isSingleOccurrence = occurrences.length <= 1;
   $: firstOccurrenceDate = occurrences[0]?.expected_date || bill.due_date;
+
+  // Check if bill has any metadata to display
+  function hasMetadata(b: BillInstanceDetailed): boolean {
+    return !!(
+      b.metadata?.bank_transaction_name ||
+      b.metadata?.account_number ||
+      b.metadata?.account_url ||
+      b.metadata?.notes
+    );
+  }
+
+  function openDetailsDrawer() {
+    showDetailsDrawer = true;
+  }
 
   // Helper to get last day of month from month string (YYYY-MM)
   function getLastDayOfMonth(monthStr: string): string {
@@ -379,7 +396,9 @@
     <div class="bill-main">
       <div class="bill-info">
         <span class="bill-name" class:closed-text={isClosed}>
-          {bill.name}
+          <button class="name-link" on:click={openDetailsDrawer} title="View details">
+            {bill.name}
+          </button>
           {#if isSingleOccurrence && firstOccurrenceDate && !isClosed && !isPayoffBill}
             {#if isEditingDueDay}
               <span class="due-day-edit">
@@ -544,6 +563,22 @@
           </button>
         {/if}
 
+        <!-- Info button to view details -->
+        <button class="action-btn-icon info" on:click={openDetailsDrawer} title="View details">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+        </button>
+
         <!-- Delete button for any bill (when not read-only and not payoff bill) -->
         {#if !readOnly && !isPayoffBill}
           <button
@@ -638,6 +673,9 @@
   />
 {/if}
 
+<!-- Item Details Drawer -->
+<ItemDetailsDrawer bind:open={showDetailsDrawer} type="bill" item={bill} {categoryName} />
+
 <style>
   .bill-row-container {
     margin-bottom: 4px;
@@ -648,7 +686,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-elevated);
     border-radius: 8px;
     border: 1px solid transparent;
     transition: all 0.15s ease;
@@ -659,7 +697,7 @@
   }
 
   .bill-row.closed {
-    background: rgba(74, 222, 128, 0.05);
+    background: var(--success-bg);
     opacity: 0.7;
   }
 
@@ -680,11 +718,37 @@
 
   .bill-name {
     font-weight: 500;
-    color: #e4e4e7;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+  }
+
+  .name-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .name-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .closed-text .name-link {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .closed-text .name-link:hover {
+    text-decoration: underline line-through;
   }
 
   .closed-text {
@@ -694,7 +758,7 @@
 
   .due-day {
     font-weight: 400;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
     background: none;
     border: none;
@@ -704,23 +768,23 @@
   }
 
   .due-day:hover {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: underline;
   }
 
   .due-day-edit {
     font-weight: 400;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
   .due-day-input {
     width: 35px;
     padding: 1px 4px;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.8rem;
     text-align: center;
   }
@@ -750,14 +814,14 @@
   }
 
   .adhoc-badge {
-    background: rgba(167, 139, 250, 0.2);
-    color: #a78bfa;
+    background: var(--purple-bg);
+    color: var(--purple);
   }
 
   .make-regular-link {
     background: none;
     border: none;
-    color: #a78bfa;
+    color: var(--purple);
     font-size: 0.7rem;
     padding: 0;
     cursor: pointer;
@@ -771,47 +835,47 @@
   }
 
   .partial-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    background: var(--warning-bg);
+    color: var(--warning);
   }
 
   .auto-badge {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
+    background: var(--success-bg);
+    color: var(--success-dark);
   }
 
   .manual-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    background: var(--warning-bg);
+    color: var(--warning);
   }
 
   .payoff-badge {
-    background: rgba(139, 92, 246, 0.2);
-    color: #8b5cf6;
+    background: var(--purple-bg);
+    color: var(--purple-dark);
   }
 
   .overdue-badge {
-    background: rgba(248, 113, 113, 0.2);
-    color: #f87171;
+    background: var(--error-bg);
+    color: var(--error);
   }
 
   .bill-due {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .bill-closed-date {
     font-size: 0.75rem;
-    color: #4ade80;
+    color: var(--success);
   }
 
   .overdue-text {
-    color: #f87171;
+    color: var(--error);
   }
 
   .bill-source {
     font-size: 0.7rem;
-    color: #666;
+    color: var(--text-tertiary);
   }
 
   .bill-amounts {
@@ -831,7 +895,7 @@
 
   .amount-label {
     font-size: 0.625rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     display: flex;
@@ -840,13 +904,13 @@
   }
 
   .payment-count {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   .amount-value {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     background: none;
     border: none;
     padding: 0;
@@ -859,7 +923,7 @@
   }
 
   .amount-value.clickable:hover:not(.disabled) {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: underline;
   }
 
@@ -869,13 +933,13 @@
   }
 
   .amount-value.amber {
-    color: #f59e0b;
+    color: var(--warning);
   }
 
   /* Yellow/amber highlight for editable values */
   .amount-value.editable-highlight {
-    background: rgba(251, 191, 36, 0.15);
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     padding: 2px 6px;
     border-radius: 4px;
   }
@@ -883,26 +947,26 @@
   .amount-value.editable-highlight:hover:not(.disabled) {
     background: rgba(251, 191, 36, 0.25);
     border-color: rgba(251, 191, 36, 0.6);
-    color: #fbbf24;
+    color: var(--warning-light);
   }
 
   .amount-value.synced {
-    color: #8b5cf6;
+    color: var(--purple-dark);
     font-style: italic;
   }
 
   .amount-value.remaining {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .amount-value.remaining.zero {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .add-payment-link {
     background: none;
     border: none;
-    color: #24c8db;
+    color: var(--accent);
     font-size: 0.8rem;
     padding: 0;
     cursor: pointer;
@@ -921,17 +985,17 @@
   }
 
   .inline-edit .prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
   .inline-edit input {
     width: 70px;
     padding: 2px 4px;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.85rem;
     font-weight: 600;
     text-align: right;
@@ -959,9 +1023,9 @@
   }
 
   .action-btn.pay-full {
-    background: #24c8db;
+    background: var(--accent);
     border: none;
-    color: #000;
+    color: var(--text-inverse);
   }
 
   .action-btn.pay-full:hover:not(:disabled) {
@@ -970,23 +1034,23 @@
 
   .action-btn.close {
     background: transparent;
-    border: 1px solid #4ade80;
-    color: #4ade80;
+    border: 1px solid var(--success);
+    color: var(--success);
   }
 
   .action-btn.close:hover:not(:disabled) {
-    background: rgba(74, 222, 128, 0.1);
+    background: var(--success-bg);
   }
 
   .action-btn.reopen {
     background: transparent;
-    border: 1px solid #a1a1aa;
-    color: #a1a1aa;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
   }
 
   .action-btn.reopen:hover:not(:disabled) {
-    border-color: #e4e4e7;
-    color: #e4e4e7;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
     background: rgba(255, 255, 255, 0.05);
   }
 
@@ -1071,24 +1135,33 @@
     border-radius: 4px;
     border: none;
     background: transparent;
-    color: #666;
+    color: var(--text-tertiary);
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .action-btn-icon:hover:not(:disabled) {
-    background: rgba(255, 68, 68, 0.1);
-    color: #ff4444;
+    background: var(--error-bg);
+    color: var(--error);
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {
-    background: #ff4444;
-    color: #fff;
+    background: var(--danger);
+    color: var(--text-inverse);
   }
 
   .action-btn-icon.add:hover:not(:disabled) {
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .action-btn-icon.info {
+    color: var(--text-secondary);
+  }
+
+  .action-btn-icon.info:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .action-btn-icon:disabled {
@@ -1108,8 +1181,8 @@
   }
 
   .confirm-dialog {
-    background: #1a1a2e;
-    border: 1px solid #333355;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
     border-radius: 12px;
     padding: 24px;
     max-width: 400px;
@@ -1119,17 +1192,17 @@
   .confirm-dialog h3 {
     margin: 0 0 16px;
     font-size: 1.1rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .confirm-dialog p {
     margin: 0 0 8px;
-    color: #a0a0a0;
+    color: var(--text-secondary);
     font-size: 0.9rem;
   }
 
   .confirm-warning {
-    color: #f87171 !important;
+    color: var(--error) !important;
     font-size: 0.8rem !important;
     margin-bottom: 20px !important;
   }
@@ -1151,23 +1224,23 @@
 
   .confirm-btn.cancel {
     background: transparent;
-    border: 1px solid #444;
-    color: #888;
+    border: 1px solid var(--border-hover);
+    color: var(--text-secondary);
   }
 
   .confirm-btn.cancel:hover {
-    border-color: #666;
-    color: #e4e4e7;
+    border-color: var(--border-hover);
+    color: var(--text-primary);
   }
 
   .confirm-btn.delete {
-    background: #ff4444;
+    background: var(--danger);
     border: none;
-    color: #fff;
+    color: var(--text-inverse);
   }
 
   .confirm-btn.delete:hover:not(:disabled) {
-    background: #cc3333;
+    background: var(--danger-hover);
   }
 
   .confirm-btn.delete:disabled {
