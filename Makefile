@@ -1,7 +1,7 @@
 # Doggy Bag Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
-.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage ensure-dev-sidecar
+.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage ensure-dev-sidecar show-palette
 
 # Log directory
 LOGS_DIR := logs
@@ -354,3 +354,7 @@ prepare: ## Install git hooks (lefthook)
 	@echo "Installing git hooks..."
 	@$(BUN)x lefthook install
 	@echo "✓ Git hooks installed"
+
+# Color palette visualization
+show-palette: ## Show color palette in terminal (usage: make show-palette theme=dark|light|compare)
+	@$(BUN) run scripts/show-palette.ts $(theme)
