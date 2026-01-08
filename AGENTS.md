@@ -28,7 +28,7 @@ docs/             # Documentation
 
 - **NO HARDCODED COLORS**: Never use hardcoded hex colors (e.g., `#1a1a2e`, `#24c8db`) in CSS. Always use CSS variables from the theme system (e.g., `var(--bg-surface)`, `var(--accent)`). This ensures Light Mode and Dark Mode work correctly. See `color-expert` skill or `docs/colour-themes.md`.
 
-- **NO HARDCODED PIXEL SIZES**: Avoid hardcoded pixel values (e.g., `width: 660px`, `padding: 24px`) in CSS. Use shared CSS variables defined in `src/routes/+layout.svelte` (e.g., `var(--panel-width-medium)`, `var(--space-6)`).
+- **NO HARDCODED PIXEL SIZES**: Avoid hardcoded pixel values (e.g., `width: 660px`, `padding: 24px`) in CSS. Use shared CSS variables defined in `src/routes/+layout.svelte` (e.g., `var(--panel-width-medium)`, `var(--space-6)`). Fix opportunistically when editing files that contain hardcoded values. Use existing variables only - don't create new ones for one-off values. Available: `--space-1` (4px) through `--space-8` (32px), `--radius-sm/md/lg/xl`, `--section-gap`, `--card-gap`.
 
 ## Available Skills
 
