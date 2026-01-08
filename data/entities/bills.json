@@ -9,8 +9,14 @@
     "category_id": "550e8400-e29b-41d4-a716-446655440001",
     "is_active": true,
     "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2026-01-05T23:06:01.729Z",
-    "payment_method": "auto"
+    "updated_at": "2026-01-07T20:26:17.775Z",
+    "payment_method": "auto",
+    "metadata": {
+      "bank_transaction_name": "RENT PAYMENT LLC",
+      "account_number": "APT-12345",
+      "account_url": "https://tenantportal.example.com",
+      "notes": "Due on 1st, late fee after 5th"
+    }
   },
   {
     "id": "b1b2c3d4-0002-4000-8000-000000000002",
