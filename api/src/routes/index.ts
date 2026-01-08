@@ -29,6 +29,7 @@ import {
   createMonthsHandlerList,
   createMonthsHandlerGenerate,
   createMonthsHandlerSync,
+  createMonthsHandlerSyncMetadata,
   createMonthsHandlerUpdateBalances,
   createMonthsHandlerUpdateSavingsBalances,
   createMonthsHandlerSummary,
@@ -105,6 +106,11 @@ import {
   createBackupHandlerGET,
   createBackupHandlerPOST,
   createBackupHandlerValidate,
+  createVersionHandlerGET,
+  createVersionCheckHandler,
+  createVersionBackupsListHandler,
+  createVersionBackupRestoreHandler,
+  createVersionBackupDeleteHandler,
 } from './handlers/backup.handlers';
 
 import {
@@ -152,6 +158,33 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/backup/validate',
     definition: { method: 'POST', handler: createBackupHandlerValidate() },
+  },
+
+  // Version & Version Backups
+  { path: '/api/version', definition: { method: 'GET', handler: createVersionHandlerGET() } },
+  {
+    path: '/api/version/check',
+    definition: { method: 'POST', handler: createVersionCheckHandler() },
+  },
+  {
+    path: '/api/version/backups',
+    definition: { method: 'GET', handler: createVersionBackupsListHandler() },
+  },
+  {
+    path: '/api/version/backups/restore',
+    definition: {
+      method: 'POST',
+      handler: createVersionBackupRestoreHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/version/backups',
+    definition: {
+      method: 'DELETE',
+      handler: createVersionBackupDeleteHandler(),
+      hasPathParam: true,
+    },
   },
 
   // Settings
@@ -272,6 +305,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/months/sync',
     definition: { method: 'POST', handler: createMonthsHandlerSync(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/sync-metadata',
+    definition: { method: 'POST', handler: createMonthsHandlerSyncMetadata(), hasPathParam: true },
   },
   {
     path: '/api/months/bank-balances',

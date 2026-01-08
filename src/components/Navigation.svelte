@@ -204,8 +204,8 @@
   .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
-    background: #1a1a2e;
-    border-right: 1px solid #333355;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-default);
     padding: var(--section-gap) 0;
     display: flex;
     flex-direction: column;
@@ -218,7 +218,7 @@
 
   .sidebar-header {
     padding: 0 var(--space-4) var(--space-4);
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .header-row {
@@ -230,7 +230,7 @@
   .app-title {
     font-size: 1.125rem;
     font-weight: 700;
-    color: #24c8db;
+    color: var(--accent);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -248,7 +248,7 @@
 
   .nav-separator {
     margin: 0 var(--space-3);
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .bottom-nav {
@@ -261,20 +261,20 @@
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-md);
-    color: #888;
+    color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
     transition: all 0.2s;
   }
 
   .nav-item:hover {
-    background: rgba(36, 200, 219, 0.1);
-    color: #e4e4e7;
+    background: var(--accent-muted);
+    color: var(--text-primary);
   }
 
   .nav-item.active {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .nav-item svg {
@@ -285,7 +285,7 @@
   .sidebar-footer {
     margin-top: auto;
     padding: var(--space-3);
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   /* Zoom control */
@@ -304,18 +304,18 @@
     width: 28px;
     height: 28px;
     padding: 0;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     background: transparent;
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .zoom-button:hover:not(:disabled) {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #e4e4e7;
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--text-primary);
   }
 
   .zoom-button:disabled {
@@ -329,7 +329,7 @@
     border: none;
     border-radius: var(--radius-sm);
     background: transparent;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.75rem;
     font-weight: 500;
     font-family: inherit;
@@ -339,12 +339,12 @@
   }
 
   .zoom-percentage:hover {
-    background: rgba(36, 200, 219, 0.1);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .footer-separator {
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
     margin: 0 0 var(--space-2) 0;
   }
 
@@ -355,7 +355,7 @@
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
-    color: #666;
+    color: var(--text-tertiary);
     text-decoration: none;
     font-size: 0.8rem;
     font-weight: 500;
@@ -364,13 +364,13 @@
   }
 
   .settings-footer-link:hover {
-    background: rgba(36, 200, 219, 0.1);
-    color: #888;
+    background: var(--accent-muted);
+    color: var(--text-secondary);
   }
 
   .settings-footer-link.active {
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .settings-footer-link svg {
@@ -385,19 +385,19 @@
     width: 28px;
     height: 28px;
     padding: 0;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     background: transparent;
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
     flex-shrink: 0;
   }
 
   .collapse-toggle:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #e4e4e7;
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--text-primary);
   }
 
   /* ========================================

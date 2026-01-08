@@ -56,6 +56,12 @@ See `docs/testing.md` for details.
 
 : Follow standard conventions
 
+### HARD RULES
+
+- **NO HARDCODED COLORS**: Never use hardcoded hex colors (e.g., `#1a1a2e`, `#24c8db`) in CSS. Always use CSS variables from the theme system (e.g., `var(--bg-surface)`, `var(--accent)`). This ensures Light Mode and Dark Mode work correctly. See `src/lib/theme/defaults.ts` for available variables and `docs/colour-themes.md` for the complete mapping.
+
+- **NO HARDCODED PIXEL SIZES**: Avoid hardcoded pixel values (e.g., `width: 660px`, `padding: 24px`) in CSS. Instead, use shared CSS variables defined in `src/routes/+layout.svelte` (e.g., `var(--panel-width-medium)`, `var(--space-6)`). This ensures consistent look and feel across the app and makes future adjustments easier.
+
 ## Recent Changes
 
 - 008-misc-fixes-improvements: Added TypeScript 5.x (strict mode), Rust 2021 edition (Tauri) + Svelte 5.x, Bun 1.x, Tauri 2.x, tauri-plugin-store

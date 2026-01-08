@@ -183,6 +183,48 @@ export const wideMode = {
   toggle: widthMode.cycle,
 };
 
+// Column mode store with localStorage persistence
+// Supports 2 modes: '1-col' (stacked), '2-col' (side by side)
+export type ColumnMode = '1-col' | '2-col';
+
+function getStoredColumnMode(): ColumnMode {
+  if (typeof window === 'undefined') return '2-col';
+  const stored = localStorage.getItem('doggybag-column-mode');
+  if (stored === '1-col' || stored === '2-col') return stored;
+  return '2-col'; // Default to 2 columns
+}
+
+function createColumnModeStore() {
+  const { subscribe, set, update } = writable<ColumnMode>('2-col');
+
+  // Initialize from localStorage on client side
+  if (typeof window !== 'undefined') {
+    set(getStoredColumnMode());
+  }
+
+  return {
+    subscribe,
+    // Toggle between modes: 1-col <-> 2-col
+    toggle: () => {
+      update((current) => {
+        const nextMode: ColumnMode = current === '1-col' ? '2-col' : '1-col';
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('doggybag-column-mode', nextMode);
+        }
+        return nextMode;
+      });
+    },
+    set: (value: ColumnMode) => {
+      set(value);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('doggybag-column-mode', value);
+      }
+    },
+  };
+}
+
+export const columnMode = createColumnModeStore();
+
 // Sidebar collapsed state with localStorage persistence
 function getStoredSidebarCollapsed(): boolean {
   if (typeof window === 'undefined') return false;

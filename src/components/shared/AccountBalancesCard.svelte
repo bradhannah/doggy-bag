@@ -239,9 +239,9 @@
 
 <style>
   .account-balances-card {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 12px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: 16px 20px;
   }
 
@@ -255,7 +255,7 @@
   .card-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     margin: 0;
     display: flex;
     align-items: center;
@@ -263,21 +263,21 @@
 
   .month-label {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-tertiary);
     background: rgba(255, 255, 255, 0.05);
     padding: 4px 8px;
     border-radius: 4px;
   }
 
   .loading-state {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     text-align: center;
     padding: 20px;
   }
 
   .empty-message {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.875rem;
     text-align: center;
     padding: 16px;
@@ -285,7 +285,7 @@
   }
 
   .empty-message a {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: none;
   }
 
@@ -309,14 +309,14 @@
   .section-title {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .section-subtitle {
     font-size: 0.65rem;
-    color: #666;
+    color: var(--text-tertiary);
     font-style: italic;
   }
 
@@ -344,7 +344,7 @@
 
   .account-item.customized {
     border-color: rgba(36, 200, 219, 0.3);
-    background: rgba(36, 200, 219, 0.05);
+    background: var(--accent-muted);
   }
 
   .account-item.debt {
@@ -363,7 +363,7 @@
 
   .account-name {
     font-size: 0.8rem;
-    color: #a0a0a0;
+    color: var(--text-secondary);
     font-weight: 500;
   }
 
@@ -381,28 +381,28 @@
 
   .balance-button:hover {
     background: rgba(255, 255, 255, 0.08);
-    border-color: #444466;
+    border-color: var(--bg-hover);
   }
 
   .balance-button.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .balance-button.negative {
-    color: #f87171;
+    color: var(--error);
   }
 
   .edit-container {
     display: flex;
     align-items: center;
-    background: #0f0f1a;
-    border: 1px solid #24c8db;
+    background: var(--bg-base);
+    border: 1px solid var(--accent);
     border-radius: 4px;
     padding: 2px 6px;
   }
 
   .currency-prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     margin-right: 2px;
   }
@@ -411,7 +411,7 @@
     width: 80px;
     background: transparent;
     border: none;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.875rem;
     font-family: inherit;
     text-align: right;
@@ -427,7 +427,7 @@
     padding: 12px 16px;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px;
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .total-item {
@@ -439,7 +439,7 @@
 
   .total-label {
     font-size: 0.7rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -447,21 +447,21 @@
   .total-value {
     font-size: 1rem;
     font-weight: 700;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .total-value.positive {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .total-value.negative {
-    color: #f87171;
+    color: var(--error);
   }
 
   .total-divider {
     width: 1px;
     height: 30px;
-    background: #333355;
+    background: var(--border-default);
   }
 
   /* Responsive */

@@ -22,6 +22,8 @@
     type MigrationResult,
     type MigrationMode,
   } from '../../stores/settings';
+  import { themeMode } from '../../stores/theme';
+  import type { ThemeMode } from '$lib/theme';
 
   // Store Tauri check result (reactive won't help since isTauri() doesn't depend on reactive values)
   const inTauri = isTauri();
@@ -51,6 +53,20 @@
   let debugModeLoading = false;
   let debugModeChanged = false; // Track if user changed the setting (restart needed)
 
+  // Version backup state
+  interface VersionBackup {
+    filename: string;
+    fromVersion: string;
+    toVersion: string;
+    timestamp: string;
+    size: number;
+  }
+  let versionBackups: VersionBackup[] = [];
+  let versionBackupsLoading = false;
+  let showRestoreConfirmDialog = false;
+  let pendingRestoreBackup: VersionBackup | null = null;
+  let restoreInProgress = false;
+
   onMount(async () => {
     loadSettings().catch((err) => {
       console.error('Failed to load settings:', err);
@@ -60,7 +76,81 @@
     if (isTauri()) {
       debugModeEnabled = await getDebugModeSetting();
     }
+
+    // Check version and create backup if needed, then load backups list
+    checkVersionAndLoadBackups();
   });
+
+  // Check version on startup and load backups
+  async function checkVersionAndLoadBackups() {
+    try {
+      // Check if version changed (creates backup automatically if needed)
+      await apiClient.post('/api/version/check', {});
+      // Load the list of version backups
+      await loadVersionBackups();
+    } catch (err) {
+      console.error('Failed to check version:', err);
+    }
+  }
+
+  // Load version backups list
+  async function loadVersionBackups() {
+    versionBackupsLoading = true;
+    try {
+      const response = (await apiClient.get('/api/version/backups')) as VersionBackup[];
+      versionBackups = response;
+    } catch (err) {
+      console.error('Failed to load version backups:', err);
+      versionBackups = [];
+    } finally {
+      versionBackupsLoading = false;
+    }
+  }
+
+  // Initiate restore (show confirmation)
+  function initiateRestore(backup: VersionBackup) {
+    pendingRestoreBackup = backup;
+    showRestoreConfirmDialog = true;
+  }
+
+  // Cancel restore
+  function cancelRestore() {
+    pendingRestoreBackup = null;
+    showRestoreConfirmDialog = false;
+  }
+
+  // Confirm and execute restore
+  async function confirmRestore() {
+    if (!pendingRestoreBackup) return;
+
+    restoreInProgress = true;
+    try {
+      await apiClient.post(`/api/version/backups/restore/${pendingRestoreBackup.filename}`, {});
+      addToast('Backup restored successfully. Reloading...', 'success');
+      showRestoreConfirmDialog = false;
+      pendingRestoreBackup = null;
+      // Reload to reflect restored data
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      addToast('Failed to restore backup', 'error');
+      console.error('Failed to restore backup:', err);
+    } finally {
+      restoreInProgress = false;
+    }
+  }
+
+  // Format file size
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // Format date
+  function formatDate(timestamp: string): string {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+  }
 
   // Handle Browse button click
   async function handleBrowse() {
@@ -409,6 +499,54 @@
         {/if}
       </section>
 
+      <!-- Version Backups Section -->
+      <section class="settings-section">
+        <h2>Version Backups</h2>
+        <p class="setting-description">
+          Automatic backups are created when the app is updated to a new version.
+        </p>
+
+        {#if versionBackupsLoading}
+          <p class="setting-hint">Loading backups...</p>
+        {:else if versionBackups.length === 0}
+          <p class="setting-hint">No version backups available.</p>
+        {:else}
+          <div class="backup-list">
+            {#each versionBackups as backup}
+              <div class="backup-item">
+                <div class="backup-info">
+                  <div class="backup-version">
+                    <span class="version-tag">{backup.fromVersion}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M5 12H19M19 12L12 5M19 12L12 19"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <span class="version-tag">{backup.toVersion}</span>
+                  </div>
+                  <div class="backup-meta">
+                    <span>{formatDate(backup.timestamp)}</span>
+                    <span class="separator">|</span>
+                    <span>{formatBytes(backup.size)}</span>
+                  </div>
+                </div>
+                <button
+                  class="restore-button"
+                  on:click={() => initiateRestore(backup)}
+                  title="Restore this backup"
+                >
+                  Restore
+                </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </section>
+
       <!-- Appearance Section -->
       <section class="settings-section">
         <h2>Appearance</h2>
@@ -444,19 +582,37 @@
           <span class="setting-label">Theme</span>
           <div class="radio-group">
             <label class="radio-label">
-              <input type="radio" name="theme" value="dark" checked disabled />
+              <input
+                type="radio"
+                name="theme"
+                value="dark"
+                checked={$themeMode === 'dark'}
+                on:change={() => themeMode.set('dark')}
+              />
               Dark
             </label>
             <label class="radio-label">
-              <input type="radio" name="theme" value="light" disabled />
+              <input
+                type="radio"
+                name="theme"
+                value="light"
+                checked={$themeMode === 'light'}
+                on:change={() => themeMode.set('light')}
+              />
               Light
             </label>
             <label class="radio-label">
-              <input type="radio" name="theme" value="system" disabled />
+              <input
+                type="radio"
+                name="theme"
+                value="system"
+                checked={$themeMode === 'system'}
+                on:change={() => themeMode.set('system')}
+              />
               System
             </label>
           </div>
-          <p class="setting-hint">(Coming soon)</p>
+          <p class="setting-hint">System follows your OS preference</p>
         </div>
       </section>
 
@@ -785,6 +941,72 @@
   </div>
 {/if}
 
+<!-- Restore Confirmation Modal -->
+{#if showRestoreConfirmDialog && pendingRestoreBackup}
+  <div
+    class="modal-overlay"
+    on:click={cancelRestore}
+    on:keydown={(e) => e.key === 'Escape' && cancelRestore()}
+    role="presentation"
+  >
+    <div
+      class="modal"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+    >
+      <div class="modal-header warning">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <h3>Restore Backup?</h3>
+        <button class="modal-close" on:click={cancelRestore}>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>You are about to restore a backup from:</p>
+        <div class="backup-restore-info">
+          <div class="restore-detail">
+            <span class="restore-label">Version:</span>
+            <span class="restore-value">{pendingRestoreBackup.fromVersion}</span>
+          </div>
+          <div class="restore-detail">
+            <span class="restore-label">Date:</span>
+            <span class="restore-value">{formatDate(pendingRestoreBackup.timestamp)}</span>
+          </div>
+          <div class="restore-detail">
+            <span class="restore-label">Size:</span>
+            <span class="restore-value">{formatBytes(pendingRestoreBackup.size)}</span>
+          </div>
+        </div>
+        <p class="warning-text">
+          <strong>Warning:</strong> This will overwrite your current data with the backup. This action
+          cannot be undone.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" on:click={cancelRestore} disabled={restoreInProgress}>
+          Cancel
+        </button>
+        <button class="btn-danger" on:click={confirmRestore} disabled={restoreInProgress}>
+          {#if restoreInProgress}
+            Restoring...
+          {:else}
+            Restore Backup
+          {/if}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .settings-page {
     max-width: var(--content-max-sm);
@@ -808,7 +1030,7 @@
   .settings-header h1 {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     margin: 0;
   }
 
@@ -819,29 +1041,29 @@
     height: var(--button-height);
     padding: 0 var(--space-4);
     background: transparent;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .back-button:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #e4e4e7;
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--text-primary);
   }
 
   .loading,
   .error-message {
     text-align: center;
     padding: 48px;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .error-message {
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .settings-content {
@@ -851,8 +1073,8 @@
   }
 
   .settings-section {
-    background: #1a1a2e;
-    border: 1px solid #333355;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     padding: var(--space-6);
   }
@@ -860,7 +1082,7 @@
   .settings-section h2 {
     font-size: 1rem;
     font-weight: 600;
-    color: #24c8db;
+    color: var(--accent);
     margin: 0 0 var(--space-4) 0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -878,7 +1100,7 @@
   .setting-label {
     display: block;
     font-size: 0.875rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
     margin-bottom: var(--space-2);
   }
 
@@ -891,10 +1113,10 @@
     flex: 1;
     height: var(--input-height);
     padding: 0 var(--space-4);
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-family: monospace;
     font-size: 0.875rem;
   }
@@ -902,33 +1124,33 @@
   .browse-button {
     height: var(--button-height);
     padding: 0 var(--space-6);
-    background: #24c8db;
+    background: var(--accent);
     border: none;
     border-radius: var(--radius-md);
-    color: #000;
+    color: var(--text-inverse);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .browse-button:hover:not(:disabled) {
-    background: #1ba8b8;
+    background: var(--accent-hover);
   }
 
   .browse-button:disabled {
-    background: #333355;
-    color: #666;
+    background: var(--border-default);
+    color: var(--text-disabled);
     cursor: not-allowed;
   }
 
   .setting-hint {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     margin-top: var(--space-2);
   }
 
   .setting-hint.warning {
-    color: #f0ad4e;
+    color: var(--warning);
   }
 
   .button-row {
@@ -943,17 +1165,17 @@
     height: var(--button-height);
     padding: 0 var(--space-4);
     background: transparent;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .action-button:hover:not(:disabled) {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
+    background: var(--accent-muted);
+    border-color: var(--accent);
   }
 
   .action-button:disabled {
@@ -970,13 +1192,13 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     cursor: pointer;
   }
 
   .radio-label input {
-    accent-color: #24c8db;
+    accent-color: var(--accent);
   }
 
   .about-info {
@@ -991,13 +1213,13 @@
   }
 
   .about-label {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     min-width: 100px;
   }
 
   .about-value {
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.875rem;
   }
 
@@ -1016,8 +1238,8 @@
   }
 
   .modal {
-    background: #1a1a2e;
-    border: 1px solid #333355;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-xl);
     width: 90%;
     max-width: var(--modal-width);
@@ -1034,36 +1256,36 @@
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-4) var(--space-6);
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .modal-header h3 {
     flex: 1;
     margin: 0;
     font-size: 1.125rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .modal-header.success {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .modal-header.success h3 {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .modal-header.error {
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .modal-header.error h3 {
-    color: #ff6b6b;
+    color: var(--error);
   }
 
   .modal-close {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0;
@@ -1071,7 +1293,7 @@
   }
 
   .modal-close:hover {
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .modal-body {
@@ -1084,7 +1306,7 @@
 
   .modal-body p {
     margin: 0 0 var(--space-4) 0;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .modal-footer {
@@ -1092,43 +1314,43 @@
     justify-content: flex-end;
     gap: var(--space-3);
     padding: var(--space-4) var(--space-6);
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .btn-primary {
     height: var(--button-height);
     padding: 0 var(--space-6);
-    background: #24c8db;
+    background: var(--accent);
     border: none;
     border-radius: var(--radius-md);
-    color: #000;
+    color: var(--text-inverse);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .btn-primary:hover {
-    background: #1ba8b8;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
     height: var(--button-height);
     padding: 0 var(--space-6);
     background: transparent;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .btn-secondary:hover {
-    border-color: #24c8db;
-    color: #e4e4e7;
+    border-color: var(--accent);
+    color: var(--text-primary);
   }
 
   .path-change {
-    background: #0f0f1a;
+    background: var(--bg-base);
     border-radius: var(--radius-md);
     padding: var(--space-4);
     margin-bottom: var(--space-4);
@@ -1145,13 +1367,13 @@
   }
 
   .path-label {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.75rem;
     min-width: 50px;
   }
 
   .path-value {
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-family: monospace;
     font-size: 0.875rem;
     word-break: break-all;
@@ -1173,15 +1395,15 @@
     align-items: flex-start;
     gap: var(--space-3);
     padding: var(--space-3);
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .radio-option:hover:not(.disabled) {
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .radio-option.disabled {
@@ -1191,7 +1413,7 @@
 
   .radio-option input {
     margin-top: 2px;
-    accent-color: #24c8db;
+    accent-color: var(--accent);
   }
 
   .radio-content {
@@ -1201,19 +1423,19 @@
   }
 
   .radio-title {
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.875rem;
     font-weight: 500;
   }
 
   .radio-desc {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.75rem;
   }
 
   .progress-bar {
     height: var(--space-2);
-    background: #333355;
+    background: var(--border-default);
     border-radius: var(--space-1);
     overflow: hidden;
     margin-bottom: var(--space-4);
@@ -1221,33 +1443,33 @@
 
   .progress-fill {
     height: 100%;
-    background: #24c8db;
+    background: var(--accent);
     transition: width 0.3s ease;
   }
 
   .progress-status {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 
   .path-highlight {
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     padding: var(--space-3) var(--space-4);
     font-family: monospace;
-    color: #24c8db;
+    color: var(--accent);
     margin-bottom: var(--space-4);
     word-break: break-all;
   }
 
   .path-highlight.error {
-    color: #ff6b6b;
-    border-color: #ff6b6b;
+    color: var(--error);
+    border-color: var(--error);
   }
 
   .migration-summary {
-    background: #0f0f1a;
+    background: var(--bg-base);
     border-radius: var(--radius-md);
     padding: var(--space-4);
     margin-bottom: var(--space-4);
@@ -1260,7 +1482,7 @@
   .migration-summary ul {
     margin: 0;
     padding-left: 20px;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .migration-summary li {
@@ -1269,27 +1491,27 @@
 
   .note {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .note code {
     display: inline-block;
-    background: #0f0f1a;
+    background: var(--bg-base);
     padding: 4px 8px;
     border-radius: 4px;
     margin-top: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.75rem;
   }
 
   .error-reason {
-    color: #ff6b6b !important;
+    color: var(--error) !important;
   }
 
   .suggestion-list {
     margin: 8px 0 0 0;
     padding-left: 20px;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .suggestion-list li {
@@ -1301,14 +1523,14 @@
   /* Font Size Options */
   .setting-description {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     margin: 0 0 var(--space-3) 0;
   }
 
   /* Keyboard shortcuts display */
   .keyboard-shortcuts {
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     padding: var(--space-3) var(--space-4);
   }
@@ -1321,14 +1543,14 @@
   }
 
   .shortcut-row:not(:last-child) {
-    border-bottom: 1px solid #333355;
+    border-bottom: 1px solid var(--border-default);
   }
 
   .shortcut-key {
     font-family: monospace;
     font-size: 0.75rem;
-    color: #24c8db;
-    background: rgba(36, 200, 219, 0.1);
+    color: var(--accent);
+    background: var(--accent-muted);
     padding: 4px 8px;
     border-radius: 4px;
     min-width: 100px;
@@ -1337,7 +1559,7 @@
 
   .shortcut-desc {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   /* Toggle Switch Styles */
@@ -1364,7 +1586,7 @@
     flex-shrink: 0;
     width: 48px;
     height: 26px;
-    background: #333355;
+    background: var(--border-default);
     border: none;
     border-radius: 13px;
     cursor: pointer;
@@ -1374,11 +1596,11 @@
   }
 
   .toggle-switch:hover:not(:disabled) {
-    background: #444466;
+    background: var(--border-hover);
   }
 
   .toggle-switch.active {
-    background: #24c8db;
+    background: var(--accent);
   }
 
   .toggle-switch:disabled {
@@ -1392,7 +1614,7 @@
     left: 3px;
     width: 20px;
     height: 20px;
-    background: #e4e4e7;
+    background: var(--text-primary);
     border-radius: 50%;
     transition: transform 0.2s;
   }
@@ -1408,10 +1630,10 @@
     gap: var(--space-2);
     margin-top: var(--space-3);
     padding: var(--space-3) var(--space-4);
-    background: rgba(36, 200, 219, 0.1);
-    border: 1px solid rgba(36, 200, 219, 0.3);
+    background: var(--accent-muted);
+    border: 1px solid var(--border-focus);
     border-radius: var(--radius-md);
-    color: #24c8db;
+    color: var(--accent);
     font-size: 0.875rem;
   }
 
@@ -1426,10 +1648,10 @@
   .restart-button {
     height: var(--button-height-sm);
     padding: 0 var(--space-4);
-    background: #24c8db;
+    background: var(--accent);
     border: none;
     border-radius: var(--radius-sm);
-    color: #000;
+    color: var(--text-inverse);
     font-weight: 600;
     font-size: 0.75rem;
     cursor: pointer;
@@ -1437,6 +1659,140 @@
   }
 
   .restart-button:hover {
-    background: #1ba8b8;
+    background: var(--accent-hover);
+  }
+
+  /* Version Backups List */
+  .backup-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .backup-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+  }
+
+  .backup-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .backup-version {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-secondary);
+  }
+
+  .version-tag {
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: var(--accent);
+    background: var(--accent-muted);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .backup-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .backup-meta .separator {
+    color: var(--text-tertiary);
+  }
+
+  .restore-button {
+    height: var(--button-height-sm);
+    padding: 0 var(--space-4);
+    background: transparent;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .restore-button:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+
+  /* Restore Confirmation Modal */
+  .modal-header.warning {
+    color: var(--warning);
+  }
+
+  .modal-header.warning h3 {
+    color: var(--warning);
+  }
+
+  .backup-restore-info {
+    background: var(--bg-base);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .restore-detail {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+
+  .restore-detail:last-child {
+    margin-bottom: 0;
+  }
+
+  .restore-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    min-width: 60px;
+  }
+
+  .restore-value {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+  }
+
+  .warning-text {
+    color: var(--warning) !important;
+    font-size: 0.875rem;
+  }
+
+  .btn-danger {
+    height: var(--button-height);
+    padding: 0 var(--space-6);
+    background: var(--error);
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-inverse);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: var(--error-dark);
+  }
+
+  .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

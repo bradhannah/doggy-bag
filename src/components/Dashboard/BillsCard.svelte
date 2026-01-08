@@ -235,9 +235,9 @@
 
 <style>
   .bills-card {
-    background: #1a1a2e;
+    background: var(--bg-surface);
     border-radius: 12px;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: 20px;
   }
 
@@ -251,7 +251,7 @@
   .card-header-row h3 {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0;
@@ -263,7 +263,7 @@
   }
 
   .card-total.expense {
-    color: #f87171;
+    color: var(--error);
   }
 
   .bills-list {
@@ -277,28 +277,28 @@
 
   .bill-item {
     padding: 12px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-elevated);
     border-radius: 8px;
     border: 1px solid transparent;
   }
 
   .bill-item.editing {
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .bill-item.modified {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--warning);
   }
 
   .bill-item.paid {
-    background: rgba(74, 222, 128, 0.05);
+    background: var(--success-bg);
   }
 
   .paid-checkbox {
     width: 20px;
     height: 20px;
     border-radius: 4px;
-    border: 2px solid #555;
+    border: 2px solid var(--border-default);
     background: transparent;
     cursor: pointer;
     display: flex;
@@ -306,17 +306,17 @@
     justify-content: center;
     padding: 0;
     transition: all 0.2s;
-    color: #000;
+    color: var(--text-inverse);
     flex-shrink: 0;
   }
 
   .paid-checkbox:hover:not(:disabled) {
-    border-color: #4ade80;
+    border-color: var(--success);
   }
 
   .paid-checkbox.checked {
-    background: #4ade80;
-    border-color: #4ade80;
+    background: var(--success);
+    border-color: var(--success);
   }
 
   .paid-checkbox:disabled {
@@ -332,8 +332,8 @@
   .paid-badge {
     font-size: 0.625rem;
     padding: 2px 6px;
-    background: rgba(74, 222, 128, 0.2);
-    color: #4ade80;
+    background: var(--success-bg);
+    color: var(--success);
     border-radius: 4px;
     text-transform: uppercase;
     font-weight: 600;
@@ -352,15 +352,15 @@
   }
 
   .bill-name {
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-weight: 500;
   }
 
   .modified-badge {
     font-size: 0.625rem;
     padding: 2px 6px;
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    background: var(--warning-bg);
+    color: var(--warning);
     border-radius: 4px;
     text-transform: uppercase;
     font-weight: 600;
@@ -371,7 +371,7 @@
   }
 
   .bill-amount.expense {
-    color: #f87171;
+    color: var(--error);
   }
 
   .bill-actions {
@@ -384,22 +384,22 @@
   .reset-btn {
     padding: 4px 8px;
     background: transparent;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: 4px;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .edit-btn:hover {
-    border-color: #24c8db;
-    color: #24c8db;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .reset-btn:hover {
-    border-color: #f59e0b;
-    color: #f59e0b;
+    border-color: var(--warning);
+    color: var(--warning);
   }
 
   .edit-row {
@@ -421,27 +421,27 @@
     left: 8px;
     top: 50%;
     transform: translateY(-50%);
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
   }
 
   .edit-input-group input {
     width: 100%;
     padding: 6px 8px 6px 24px;
-    background: #0f0f1a;
-    border: 1px solid #333355;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
     border-radius: 4px;
-    color: #e4e4e7;
+    color: var(--text-primary);
     font-size: 0.875rem;
   }
 
   .edit-input-group input:focus {
     outline: none;
-    border-color: #24c8db;
+    border-color: var(--accent);
   }
 
   .edit-input-group input.error {
-    border-color: #f87171;
+    border-color: var(--error);
   }
 
   .edit-actions {
@@ -460,9 +460,9 @@
   }
 
   .save-btn {
-    background: #24c8db;
+    background: var(--accent);
     border: none;
-    color: #000;
+    color: var(--text-inverse);
   }
 
   .save-btn:hover:not(:disabled) {
@@ -471,13 +471,13 @@
 
   .cancel-btn {
     background: transparent;
-    border: 1px solid #333355;
-    color: #888;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
   }
 
   .cancel-btn:hover {
-    border-color: #e4e4e7;
-    color: #e4e4e7;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
   }
 
   .save-btn:disabled,
@@ -487,21 +487,21 @@
   }
 
   .error-message {
-    color: #f87171;
+    color: var(--error);
     font-size: 0.75rem;
     margin: 8px 0 0 0;
   }
 
   .loading-text,
   .empty-text {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     text-align: center;
     padding: 20px;
   }
 
   .empty-text a {
-    color: #24c8db;
+    color: var(--accent);
     text-decoration: none;
   }
 

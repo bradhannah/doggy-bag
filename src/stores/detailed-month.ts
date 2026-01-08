@@ -1,6 +1,7 @@
 // Detailed Month Store - Manages detailed monthly view data
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '../lib/api/client';
+import type { EntityMetadata } from './bills';
 
 // Types matching the API response
 export interface Payment {
@@ -56,6 +57,7 @@ export interface BillInstanceDetailed {
   } | null;
   category_id: string;
   payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
+  metadata?: EntityMetadata; // Point-in-time snapshot from Bill
 }
 
 export interface IncomeInstanceDetailed {
@@ -82,6 +84,7 @@ export interface IncomeInstanceDetailed {
     name: string;
   } | null;
   category_id: string;
+  metadata?: EntityMetadata; // Point-in-time snapshot from Income
 }
 
 export interface CategorySection {

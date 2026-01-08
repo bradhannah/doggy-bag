@@ -1,6 +1,7 @@
 // Settings Service - Manages application settings and data directory configuration
 
 import { StorageServiceImpl, type StorageService } from './storage';
+import { getVersionService } from './version-service';
 import type {
   SettingsResponse,
   DataDirectoryResponse,
@@ -10,9 +11,6 @@ import type {
 } from '../models/settings';
 import { access, constants, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-
-// Application version
-const APP_VERSION = '0.1.0';
 
 export class SettingsService {
   private storage: StorageService;
@@ -26,10 +24,11 @@ export class SettingsService {
    */
   getSettings(): SettingsResponse {
     const config = StorageServiceImpl.getConfig();
+    const versionService = getVersionService();
     return {
       dataDirectory: config.basePath,
       isDevelopment: config.isDevelopment,
-      version: APP_VERSION,
+      version: versionService.getAppVersion(),
     };
   }
 

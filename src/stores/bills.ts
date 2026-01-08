@@ -2,6 +2,14 @@ import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 import { categories, type Category } from './categories';
 
+// Shared metadata interface matching backend EntityMetadata
+export interface EntityMetadata {
+  bank_transaction_name?: string; // Name as it appears on bank statement
+  account_number?: string; // Account/reference number
+  account_url?: string; // URL to manage/pay the bill or view income source
+  notes?: string; // Freeform notes
+}
+
 export interface Bill {
   id: string;
   name: string;
@@ -15,6 +23,7 @@ export interface Bill {
   payment_source_id: string;
   category_id: string; // Required
   payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
+  metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -35,6 +44,7 @@ export interface BillData {
   payment_source_id: string;
   category_id: string; // Required
   payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
+  metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
 }
 
 // Billing period multipliers (average instances per month)

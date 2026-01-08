@@ -86,12 +86,12 @@
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--border-default);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #444466;
+    background: var(--bg-hover);
   }
 
   .message {
@@ -101,17 +101,17 @@
   }
 
   .message.success {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    background: var(--success-muted);
   }
 
   .message.error {
-    color: #ff4444;
-    background: rgba(255, 68, 68, 0.1);
+    color: var(--error);
+    background: var(--error-muted);
   }
 
   .message.exists {
-    color: #fbbf24;
-    background: rgba(251, 191, 36, 0.1);
+    color: var(--warning);
+    background: var(--warning-muted);
   }
 </style>

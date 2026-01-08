@@ -1,0 +1,19 @@
+{
+  "id": "light",
+  "name": "Light",
+  "version": "1.0",
+  "isDark": false,
+  "colors": {
+    "bg-base": "#f5f5f7",
+    "bg-surface": "#ffffff",
+    "bg-elevated": "#ffffff",
+    "text-primary": "#1a1a2e",
+    "text-secondary": "#666666",
+    "accent": "#0891b2",
+    "border-default": "#d1d5db"
+  },
+  "meta": {
+    "description": "Light theme for Doggy Bag",
+    "author": "Doggy Bag Team"
+  }
+}

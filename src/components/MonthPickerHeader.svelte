@@ -10,6 +10,7 @@
     widthMode,
     compactMode,
     hidePaidItems,
+    columnMode,
   } from '../stores/ui';
 
   // Optional: If provided, navigation will use goto() instead of just store updates
@@ -19,9 +20,13 @@
   // Optional control buttons
   export let showRefresh: boolean = false;
   export let showWidthToggle: boolean = false;
+  export let showColumnToggle: boolean = false;
   export let showCompactToggle: boolean = false;
   export let showHidePaid: boolean = false;
+  export let showSyncMetadata: boolean = false;
+  export let isSyncingMetadata: boolean = false;
   export let onRefresh: (() => void) | undefined = undefined;
+  export let onSyncMetadata: (() => void) | undefined = undefined;
 
   // Check if we're viewing the current calendar month
   $: isCurrentMonth = $currentMonth === getCurrentMonth();
@@ -57,7 +62,19 @@
     }
   }
 
-  $: hasControls = showRefresh || showWidthToggle || showCompactToggle || showHidePaid;
+  function handleSyncMetadata() {
+    if (onSyncMetadata) {
+      onSyncMetadata();
+    }
+  }
+
+  $: hasControls =
+    showRefresh ||
+    showWidthToggle ||
+    showColumnToggle ||
+    showCompactToggle ||
+    showHidePaid ||
+    showSyncMetadata;
 </script>
 
 <div class="month-picker-header">
@@ -164,6 +181,19 @@
           </button>
         {/if}
 
+        {#if showColumnToggle}
+          <!-- Column layout toggle (1-col stacked vs 2-col side by side) -->
+          <button
+            class="control-btn"
+            on:click={() => columnMode.toggle()}
+            title={$columnMode === '2-col'
+              ? '2 columns (click for 1 column)'
+              : '1 column (click for 2 columns)'}
+          >
+            <span class="column-number">{$columnMode === '2-col' ? '2' : '1'}</span>
+          </button>
+        {/if}
+
         {#if showCompactToggle}
           <!-- Compact toggle -->
           <button
@@ -242,6 +272,40 @@
           </button>
         {/if}
 
+        {#if showSyncMetadata}
+          <!-- Sync metadata button -->
+          <button
+            class="control-btn"
+            class:syncing={isSyncingMetadata}
+            on:click={handleSyncMetadata}
+            disabled={isSyncingMetadata}
+            title="Sync metadata from source bills/incomes"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              class:spinning={isSyncingMetadata}
+            >
+              <path
+                d="M4 12a8 8 0 0 1 8-8V1l4 3-4 3V4a6 6 0 0 0-6 6H4z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M20 12a8 8 0 0 1-8 8v3l-4-3 4-3v3a6 6 0 0 0 6-6h2z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        {/if}
+
         {#if showRefresh}
           <!-- Refresh button -->
           <button class="control-btn" on:click={handleRefresh} title="Refresh data">
@@ -281,12 +345,17 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--space-4) var(--space-4);
-    background: #1a1a2e;
-    border-bottom: 1px solid #333355;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    /* Sticky positioning */
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
 
   .spacer {
     flex: 1;
+    min-width: 0; /* Prevent flex overflow */
   }
 
   .controls-spacer {
@@ -307,24 +376,24 @@
     width: 36px;
     height: 36px;
     background: transparent;
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    color: #e4e4e7;
+    color: var(--text-primary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .nav-btn:hover {
-    background: #24c8db;
-    border-color: #24c8db;
-    color: #000;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-inverse);
   }
 
   .month-title {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
     min-width: 180px;
     text-align: center;
   }
@@ -332,9 +401,9 @@
   .today-btn {
     padding: var(--space-2) var(--space-4);
     background: transparent;
-    border: 1px solid #24c8db;
+    border: 1px solid var(--accent);
     border-radius: var(--radius-md);
-    color: #24c8db;
+    color: var(--accent);
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
@@ -342,15 +411,15 @@
   }
 
   .today-btn:hover:not(:disabled) {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .today-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    border-color: #555;
-    color: #555;
+    border-color: var(--text-tertiary);
+    color: var(--text-tertiary);
   }
 
   /* Header controls */
@@ -367,23 +436,48 @@
     width: var(--button-height-sm);
     height: var(--button-height-sm);
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .control-btn:hover {
-    background: rgba(36, 200, 219, 0.1);
-    border-color: #24c8db;
-    color: #24c8db;
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .control-btn.active {
-    background: rgba(74, 222, 128, 0.1);
-    border-color: #4ade80;
-    color: #4ade80;
+    background: var(--success-muted);
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  .control-btn.syncing {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .control-btn .spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  /* Column number display */
+  .column-number {
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   @media (max-width: 480px) {

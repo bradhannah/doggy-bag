@@ -54,6 +54,29 @@ export function getTypeIcon(type: PaymentSourceType): string {
   }
 }
 
+/**
+ * PaymentSourceMetadata - Metadata fields for Payment Sources
+ * Fields are conditional based on payment source type:
+ * - last_four_digits: All types
+ * - credit_limit: credit_card, line_of_credit
+ * - interest_rate: All types
+ * - interest_rate_cash_advance: credit_card only
+ * - is_variable_rate: line_of_credit, savings, investment
+ * - statement_day: credit_card, line_of_credit
+ * - account_url: All types
+ * - notes: All types
+ */
+export interface PaymentSourceMetadata {
+  last_four_digits?: string; // Last 4 digits of account/card number
+  credit_limit?: number; // Credit limit in cents (credit_card, line_of_credit)
+  interest_rate?: number; // Interest rate as decimal (e.g., 0.1999 for 19.99%)
+  interest_rate_cash_advance?: number; // Cash advance rate (credit_card only)
+  is_variable_rate?: boolean; // True if rate is variable (line_of_credit, savings, investment)
+  statement_day?: number; // Day of month statement closes (1-31)
+  account_url?: string; // URL to manage account
+  notes?: string; // Freeform notes
+}
+
 export interface PaymentSource {
   id: string;
   name: string;
@@ -64,6 +87,7 @@ export interface PaymentSource {
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
   is_savings?: boolean; // If true, this is a savings account (mutually exclusive with is_investment and pay_off_monthly)
   is_investment?: boolean; // If true, this is an investment account (mutually exclusive with is_savings and pay_off_monthly)
+  metadata?: PaymentSourceMetadata; // Optional metadata (last 4, limits, rates, etc.)
   created_at: string;
   updated_at: string;
 }
@@ -76,6 +100,7 @@ export interface PaymentSourceData {
   pay_off_monthly?: boolean;
   is_savings?: boolean;
   is_investment?: boolean;
+  metadata?: PaymentSourceMetadata;
 }
 
 type PaymentSourceState = {

@@ -103,14 +103,14 @@
 
   .field-label {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .view-value {
     font-size: 1rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .view-value.amount {
@@ -120,7 +120,7 @@
 
   .view-value.muted {
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .view-actions {
@@ -128,7 +128,7 @@
     gap: 12px;
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .btn {
@@ -142,20 +142,20 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #444466;
+    background: var(--bg-hover);
   }
 </style>

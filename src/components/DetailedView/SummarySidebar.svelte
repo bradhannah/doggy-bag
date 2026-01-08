@@ -482,9 +482,9 @@
 
   /* Box styling for distinct sections */
   .sidebar-box {
-    background: #151525;
+    background: var(--bg-elevated);
     border-radius: var(--radius-lg);
-    border: 1px solid #333355;
+    border: 1px solid var(--border-default);
     padding: 14px;
     display: flex;
     flex-direction: column;
@@ -495,17 +495,17 @@
     margin: 0;
     font-size: 0.7rem;
     font-weight: 600;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
 
   .box-title.asset-title {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .box-title.debt-title {
-    color: #f87171;
+    color: var(--error);
   }
 
   .box-section {
@@ -516,7 +516,7 @@
 
   .section-divider {
     height: 1px;
-    background: #333355;
+    background: var(--border-default);
     margin: var(--space-1) 0;
   }
 
@@ -525,24 +525,24 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 6px;
-    border-top: 1px dashed #444;
+    border-top: 1px dashed var(--border-hover);
     margin-top: 2px;
   }
 
   .subtotal-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #a1a1aa;
+    color: var(--text-secondary);
   }
 
   .subtotal-value {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .subtotal-value.negative {
-    color: #f87171;
+    color: var(--error);
   }
 
   /* Balance list */
@@ -560,12 +560,12 @@
   }
 
   .balance-name {
-    color: #a1a1aa;
+    color: var(--text-secondary);
   }
 
   .balance-value {
     font-weight: 500;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .balance-info {
@@ -577,8 +577,8 @@
   .payoff-indicator {
     font-size: 0.55rem;
     padding: 1px var(--space-1);
-    background: rgba(139, 92, 246, 0.2);
-    color: #8b5cf6;
+    background: var(--purple-bg);
+    color: var(--purple);
     border-radius: var(--radius-sm);
     text-transform: uppercase;
     font-weight: 600;
@@ -587,7 +587,7 @@
 
   .payoff-progress {
     font-size: 0.7rem;
-    color: #4ade80;
+    color: var(--success);
   }
 
   .balance-row.payoff-mode {
@@ -612,8 +612,8 @@
 
   /* Yellow/amber highlight for editable values */
   .balance-value.editable-highlight {
-    background: rgba(251, 191, 36, 0.15);
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
   }
@@ -621,21 +621,21 @@
   .balance-value.editable-highlight:hover {
     background: rgba(251, 191, 36, 0.25);
     border-color: rgba(251, 191, 36, 0.6);
-    color: #fbbf24;
+    color: var(--warning-light);
   }
 
   .balance-value.editable:hover {
-    background: rgba(36, 200, 219, 0.1);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   /* Color coding for balance types */
   .balance-value.credit {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .balance-value.debt {
-    color: #f87171;
+    color: var(--error);
   }
 
   /* Right-justify text in editable highlight boxes */
@@ -652,7 +652,7 @@
   }
 
   .currency-prefix {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.8rem;
   }
 
@@ -660,17 +660,17 @@
     width: 70px;
     padding: var(--space-1) var(--space-2);
     font-size: 0.8rem;
-    background: #1a1a2e;
-    border: 1px solid #24c8db;
+    background: var(--bg-surface);
+    border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
-    color: #e4e4e7;
+    color: var(--text-primary);
     text-align: right;
   }
 
   .balance-input:focus {
     outline: none;
-    border-color: #24c8db;
-    box-shadow: 0 0 0 2px rgba(36, 200, 219, 0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-muted);
   }
 
   .balance-input:disabled {
@@ -696,7 +696,7 @@
     width: 22px;
     height: 22px;
     background: transparent;
-    border: 1px solid #444;
+    border: 1px solid var(--border-hover);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.2s;
@@ -704,23 +704,23 @@
   }
 
   .edit-btn.save {
-    color: #4ade80;
-    border-color: rgba(74, 222, 128, 0.3);
+    color: var(--success);
+    border-color: var(--success-border);
   }
 
   .edit-btn.save:hover {
-    background: rgba(74, 222, 128, 0.1);
-    border-color: #4ade80;
+    background: var(--success-bg);
+    border-color: var(--success);
   }
 
   .edit-btn.cancel {
-    color: #f87171;
-    border-color: rgba(248, 113, 113, 0.3);
+    color: var(--error);
+    border-color: var(--error-border);
   }
 
   .edit-btn.cancel:hover {
-    background: rgba(248, 113, 113, 0.1);
-    border-color: #f87171;
+    background: var(--error-bg);
+    border-color: var(--error);
   }
 
   .edit-btn:disabled {
@@ -747,20 +747,20 @@
   }
 
   .row-label {
-    color: #a1a1aa;
+    color: var(--text-secondary);
   }
 
   .row-value {
     font-weight: 500;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .row-value.income {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .row-value.expense {
-    color: #f87171;
+    color: var(--error);
   }
 
   /* Leftover calculation */
@@ -778,20 +778,20 @@
   }
 
   .calc-label {
-    color: #a1a1aa;
+    color: var(--text-secondary);
   }
 
   .calc-value {
     font-weight: 500;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .calc-value.income {
-    color: #4ade80;
+    color: var(--success);
   }
 
   .calc-value.expense {
-    color: #f87171;
+    color: var(--error);
   }
 
   /* Current total */
@@ -801,47 +801,47 @@
     align-items: center;
     padding: var(--space-3);
     margin-top: var(--space-2);
-    background: rgba(74, 222, 128, 0.1);
+    background: var(--success-bg);
     border-radius: var(--radius-md);
-    border: 1px solid rgba(74, 222, 128, 0.2);
+    border: 1px solid var(--success-border);
   }
 
   .leftover-total.negative {
-    background: rgba(248, 113, 113, 0.1);
-    border-color: rgba(248, 113, 113, 0.2);
+    background: var(--error-bg);
+    border-color: var(--error-border);
   }
 
   .leftover-label {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #4ade80;
+    color: var(--success);
   }
 
   .leftover-total.negative .leftover-label {
-    color: #f87171;
+    color: var(--error);
   }
 
   .leftover-value {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #4ade80;
+    color: var(--success);
   }
 
   .leftover-total.negative .leftover-value {
-    color: #f87171;
+    color: var(--error);
   }
 
   .empty-text {
     margin: 0;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-tertiary);
     font-style: italic;
   }
 
   /* Invalid/Error state for leftover box */
   .sidebar-box.invalid {
-    border-color: rgba(251, 146, 60, 0.4);
-    background: #1a1520;
+    border-color: var(--orange);
+    background: var(--bg-elevated);
   }
 
   .error-message {
@@ -849,7 +849,7 @@
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3);
-    background: rgba(251, 146, 60, 0.1);
+    background: var(--orange-bg);
     border-radius: var(--radius-md);
     border: 1px solid rgba(251, 146, 60, 0.3);
   }
@@ -861,8 +861,8 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: rgba(251, 146, 60, 0.2);
-    color: #fb923c;
+    background: var(--orange-bg);
+    color: var(--orange);
     font-weight: 700;
     font-size: 0.9rem;
     flex-shrink: 0;
@@ -870,7 +870,7 @@
 
   .error-text {
     font-size: 0.8rem;
-    color: #fb923c;
+    color: var(--orange);
     line-height: 1.4;
   }
 
@@ -884,11 +884,11 @@
   }
 
   .summary-sidebar::-webkit-scrollbar-thumb {
-    background: #333355;
+    background: var(--border-default);
     border-radius: 3px;
   }
 
   .summary-sidebar::-webkit-scrollbar-thumb:hover {
-    background: #444466;
+    background: var(--border-hover);
   }
 </style>

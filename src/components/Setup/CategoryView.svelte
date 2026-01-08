@@ -71,19 +71,19 @@
 
   .field-label {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .view-value {
     font-size: 1rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .view-value.muted {
     font-size: 0.875rem;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .badge {
@@ -94,18 +94,18 @@
   }
 
   .badge.predefined {
-    background: rgba(136, 136, 136, 0.2);
-    color: #888;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
   }
 
   .badge.custom {
-    background: rgba(36, 200, 219, 0.2);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .info-message {
-    background: rgba(136, 136, 136, 0.1);
-    color: #888;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
     padding: 12px;
     border-radius: 6px;
     font-size: 0.8125rem;
@@ -117,7 +117,7 @@
     gap: 12px;
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #333355;
+    border-top: 1px solid var(--border-default);
   }
 
   .btn {
@@ -131,20 +131,20 @@
   }
 
   .btn-primary {
-    background: #24c8db;
-    color: #000;
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-primary:hover {
-    background: #1ab0c9;
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
-    background: #333355;
-    color: #fff;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #444466;
+    background: var(--bg-hover);
   }
 </style>

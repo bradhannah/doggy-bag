@@ -247,11 +247,11 @@
     margin: 0 0 12px 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .empty-text {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.875rem;
   }
 
@@ -278,16 +278,16 @@
 
   .category-item:hover {
     background: rgba(255, 255, 255, 0.06);
-    border-color: #333355;
+    border-color: var(--border-default);
   }
 
   .drag-handle {
-    color: #555;
+    color: var(--text-tertiary);
     cursor: grab;
   }
 
   .category-item:hover .drag-handle {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .category-color {
@@ -321,14 +321,14 @@
   .category-name {
     flex: 1;
     font-size: 0.9rem;
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .predefined-badge {
     font-size: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #666;
+    color: var(--text-tertiary);
     padding: 2px 6px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
@@ -349,7 +349,7 @@
 
   .confirm-text {
     font-size: 0.7rem;
-    color: #ef4444;
+    color: var(--error);
     margin-right: 4px;
   }
 
@@ -367,26 +367,26 @@
   }
 
   .btn-edit {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .btn-edit:hover {
-    background: rgba(36, 200, 219, 0.15);
-    color: #24c8db;
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .btn-delete {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .btn-delete:hover {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background: var(--error-muted);
+    color: var(--error);
   }
 
   .btn-confirm {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    background: var(--success-muted);
   }
 
   .btn-confirm:hover {
@@ -394,18 +394,18 @@
   }
 
   .btn-cancel {
-    color: #888;
+    color: var(--text-secondary);
     background: rgba(255, 255, 255, 0.05);
   }
 
   .btn-cancel:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #e4e4e7;
+    color: var(--text-primary);
   }
 
   .hint {
     margin: 12px 0 0 0;
     font-size: 0.75rem;
-    color: #555;
+    color: var(--text-tertiary);
   }
 </style>
