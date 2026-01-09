@@ -111,6 +111,7 @@ import {
   createVersionBackupsListHandler,
   createVersionBackupRestoreHandler,
   createVersionBackupDeleteHandler,
+  createManualBackupHandler,
 } from './handlers/backup.handlers';
 
 import {
@@ -169,6 +170,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/version/backups',
     definition: { method: 'GET', handler: createVersionBackupsListHandler() },
+  },
+  {
+    path: '/api/version/backups/manual',
+    definition: { method: 'POST', handler: createManualBackupHandler() },
   },
   {
     path: '/api/version/backups/restore',

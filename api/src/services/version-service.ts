@@ -21,6 +21,7 @@ export interface VersionBackup {
   toVersion: string;
   timestamp: string;
   size: number;
+  backupType: 'version_upgrade' | 'manual';
 }
 
 export interface VersionCheckResult {
@@ -36,10 +37,11 @@ export interface VersionService {
   getAppVersion(): string;
   getVersionInfo(): Promise<VersionInfo>;
   checkVersionAndBackup(): Promise<VersionCheckResult>;
+  createManualBackup(): Promise<string>;
   listVersionBackups(): Promise<VersionBackup[]>;
   restoreVersionBackup(filename: string): Promise<void>;
   deleteVersionBackup(filename: string): Promise<void>;
-  pruneOldBackups(keepCount?: number): Promise<string[]>;
+  pruneOldBackups(keepCount?: number, backupType?: 'version_upgrade' | 'manual'): Promise<string[]>;
 }
 
 export class VersionServiceImpl implements VersionService {
@@ -48,7 +50,8 @@ export class VersionServiceImpl implements VersionService {
   private backup: BackupService;
   private readonly VERSION_FILE = 'version.json';
   private readonly BACKUPS_DIR = 'backups';
-  private readonly MAX_BACKUPS = 5;
+  private readonly MAX_VERSION_BACKUPS = 5;
+  private readonly MAX_MANUAL_BACKUPS = 20;
 
   public static getInstance(): VersionService {
     if (!VersionServiceImpl.instance) {
@@ -225,7 +228,40 @@ export class VersionServiceImpl implements VersionService {
   }
 
   /**
-   * List all version backups.
+   * Create a manual backup triggered by user.
+   */
+  async createManualBackup(): Promise<string> {
+    const backupsDir = this.getBackupsDir();
+
+    // Ensure backups directory exists
+    await mkdir(backupsDir, { recursive: true });
+
+    // Generate filename: manual_{timestamp}.json
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `manual_${timestamp}.json`;
+
+    // Export backup data
+    const backupData = await this.backup.exportBackup();
+
+    // Add manual backup metadata
+    const manualBackupData = {
+      ...backupData,
+      backup_type: 'manual',
+      app_version: APP_VERSION,
+    };
+
+    // Write backup file
+    await this.storage.writeJSON(join(backupsDir, filename), manualBackupData);
+
+    // Prune old manual backups
+    await this.pruneOldBackups(this.MAX_MANUAL_BACKUPS, 'manual');
+
+    console.log(`[VersionService] Created manual backup: ${filename}`);
+    return filename;
+  }
+
+  /**
+   * List all version backups (both version upgrades and manual).
    */
   async listVersionBackups(): Promise<VersionBackup[]> {
     const backupsDir = this.getBackupsDir();
@@ -237,31 +273,50 @@ export class VersionServiceImpl implements VersionService {
       for (const file of files) {
         if (!file.endsWith('.json')) continue;
 
-        // Parse filename: v{from}_to_v{to}_{timestamp}.json
-        const match = file.match(/^v(.+?)_to_v(.+?)_(.+)\.json$/);
-        if (!match) continue;
+        // Try to parse as version upgrade: v{from}_to_v{to}_{timestamp}.json
+        const versionMatch = file.match(/^v(.+?)_to_v(.+?)_(.+)\.json$/);
+        // Try to parse as manual backup: manual_{timestamp}.json
+        const manualMatch = file.match(/^manual_(.+)\.json$/);
 
-        const [, fromVersion, toVersion, timestamp] = match;
+        if (!versionMatch && !manualMatch) continue;
 
         try {
           const filepath = join(backupsDir, file);
           const stats = await stat(filepath);
 
-          // Convert timestamp from filename format back to ISO format
-          // Filename timestamp: 2026-01-07T19-20-36-440Z
-          // Need: 2026-01-07T19:20:36.440Z
-          // The timestamp variable contains: 2026-01-07T19-20-36-440Z
-          const isoTimestamp = timestamp
-            // Fix time portion: T19-20-36-440Z -> T19:20:36.440Z
-            .replace(/T(\d{2})-(\d{2})-(\d{2})-(\d+)Z$/, 'T$1:$2:$3.$4Z');
+          if (versionMatch) {
+            const [, fromVersion, toVersion, timestamp] = versionMatch;
+            // Convert timestamp from filename format back to ISO format
+            const isoTimestamp = timestamp.replace(
+              /T(\d{2})-(\d{2})-(\d{2})-(\d+)Z$/,
+              'T$1:$2:$3.$4Z'
+            );
 
-          backups.push({
-            filename: file,
-            fromVersion,
-            toVersion,
-            timestamp: isoTimestamp,
-            size: stats.size,
-          });
+            backups.push({
+              filename: file,
+              fromVersion,
+              toVersion,
+              timestamp: isoTimestamp,
+              size: stats.size,
+              backupType: 'version_upgrade',
+            });
+          } else if (manualMatch) {
+            const [, timestamp] = manualMatch;
+            // Convert timestamp from filename format back to ISO format
+            const isoTimestamp = timestamp.replace(
+              /T(\d{2})-(\d{2})-(\d{2})-(\d+)Z$/,
+              'T$1:$2:$3.$4Z'
+            );
+
+            backups.push({
+              filename: file,
+              fromVersion: '', // Manual backups don't have version info in filename
+              toVersion: '',
+              timestamp: isoTimestamp,
+              size: stats.size,
+              backupType: 'manual',
+            });
+          }
         } catch {
           // Skip files we can't stat
         }
@@ -317,17 +372,29 @@ export class VersionServiceImpl implements VersionService {
 
   /**
    * Prune old backups, keeping only the most recent ones.
+   * @param keepCount Number of backups to keep (defaults to MAX_VERSION_BACKUPS)
+   * @param backupType Optional filter for backup type ('version_upgrade' or 'manual')
    */
-  async pruneOldBackups(keepCount: number = this.MAX_BACKUPS): Promise<string[]> {
-    const backups = await this.listVersionBackups();
+  async pruneOldBackups(
+    keepCount?: number,
+    backupType?: 'version_upgrade' | 'manual'
+  ): Promise<string[]> {
+    const allBackups = await this.listVersionBackups();
     const deleted: string[] = [];
 
-    if (backups.length <= keepCount) {
+    // Filter by backup type if specified
+    const backups = backupType ? allBackups.filter((b) => b.backupType === backupType) : allBackups;
+
+    // Determine keep count based on backup type
+    const limit =
+      keepCount ?? (backupType === 'manual' ? this.MAX_MANUAL_BACKUPS : this.MAX_VERSION_BACKUPS);
+
+    if (backups.length <= limit) {
       return deleted;
     }
 
     // Delete oldest backups (list is sorted newest first)
-    const toDelete = backups.slice(keepCount);
+    const toDelete = backups.slice(limit);
 
     for (const backup of toDelete) {
       try {

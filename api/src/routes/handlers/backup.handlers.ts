@@ -325,3 +325,39 @@ export function createVersionBackupDeleteHandler() {
     }
   };
 }
+
+/**
+ * POST /api/version/backups/manual - Create a manual backup
+ */
+export function createManualBackupHandler() {
+  const versionService = getVersionService();
+  return async (_req: Request): Promise<Response> => {
+    try {
+      const filename = await versionService.createManualBackup();
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          filename,
+          message: 'Manual backup created successfully',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (error) {
+      console.error('Error creating manual backup:', error);
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to create manual backup',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  };
+}

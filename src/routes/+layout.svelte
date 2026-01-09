@@ -2,10 +2,11 @@
   import { onMount, onDestroy } from 'svelte';
   import Navigation from '../components/Navigation.svelte';
   import ToastContainer from '../components/shared/ToastContainer.svelte';
+  import SplashScreen from '../components/SplashScreen.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom } from '../stores/settings';
   import { sidebarCollapsed } from '../stores/ui';
   import { initializeTheme } from '../stores/theme';
-  import { setApiPort } from '../lib/api/client';
+  import { setApiPort, apiClient } from '../lib/api/client';
   import { createLogger } from '../lib/logger';
 
   const log = createLogger('Layout');
@@ -19,6 +20,15 @@
   let backendError: string | null = null;
   let unlistenReady: (() => void) | null = null;
   let unlistenError: (() => void) | null = null;
+
+  // Splash screen state (Tauri desktop only)
+  const SPLASH_MIN_DURATION = 4000; // 4 seconds minimum
+  const inTauriMode = isTauri();
+  let showSplash = inTauriMode;
+  let splashFadeOut = false;
+  let splashMinTimeElapsed = false;
+  let splashStatus = 'Starting up...';
+  let appVersion = '';
 
   // Handle keyboard shortcuts for zoom (Ctrl+/-/0)
   function handleKeydown(event: KeyboardEvent) {
@@ -45,6 +55,48 @@
     }
   }
 
+  // Fetch version from backend API
+  async function fetchVersion() {
+    try {
+      const response = (await apiClient.get('/api/version')) as { current: string };
+      appVersion = response.current;
+    } catch (err) {
+      log.warn('Failed to fetch version:', err);
+      appVersion = ''; // Will show "..." in splash
+    }
+  }
+
+  // Check if splash screen can be dismissed
+  function checkSplashDismiss() {
+    if (!showSplash || splashFadeOut) return;
+
+    if (splashMinTimeElapsed && backendReady) {
+      // Update status before fade
+      splashStatus = 'Almost ready...';
+
+      // Start fade out animation
+      splashFadeOut = true;
+
+      // Hide splash after fade completes (500ms)
+      setTimeout(() => {
+        showSplash = false;
+      }, 500);
+    }
+  }
+
+  // Update splash status based on current state
+  function updateSplashStatus() {
+    if (!showSplash) return;
+
+    if (backendError) {
+      splashStatus = 'Connection failed. Retrying...';
+    } else if (backendReady && !splashMinTimeElapsed) {
+      splashStatus = 'Almost ready...';
+    } else if (!backendReady) {
+      splashStatus = 'Connecting to backend...';
+    }
+  }
+
   onMount(async () => {
     // Load zoom setting on startup (applies zoom in Tauri)
     await loadZoom();
@@ -52,10 +104,26 @@
     // Add keyboard listener for zoom shortcuts
     window.addEventListener('keydown', handleKeydown);
 
-    // In browser dev mode, backend is always ready (separate process)
+    // In browser dev mode, backend is always ready (no splash screen)
     if (!isTauri()) {
       backendReady = true;
       return;
+    }
+
+    // Start minimum splash timer (Tauri only)
+    if (showSplash) {
+      // Update status after 1 second to show "Connecting..."
+      setTimeout(() => {
+        if (!backendReady && showSplash) {
+          updateSplashStatus();
+        }
+      }, 1000);
+
+      // Set minimum time elapsed after SPLASH_MIN_DURATION
+      setTimeout(() => {
+        splashMinTimeElapsed = true;
+        checkSplashDismiss();
+      }, SPLASH_MIN_DURATION);
     }
 
     try {
@@ -63,17 +131,24 @@
       const { invoke } = await import('@tauri-apps/api/core');
 
       // Listen for sidecar ready event (payload contains port number)
-      unlistenReady = await listen<number>('sidecar-ready', (event) => {
+      unlistenReady = await listen<number>('sidecar-ready', async (event) => {
         const port = event.payload;
         log.info(`Sidecar is ready on port: ${port}`);
         setApiPort(port);
         backendReady = true;
+        updateSplashStatus();
+
+        // Fetch version from API
+        await fetchVersion();
+
+        checkSplashDismiss();
       });
 
       // Listen for sidecar error event
       unlistenError = await listen('sidecar-error', (event) => {
         log.error('Sidecar error:', event.payload);
         backendError = event.payload as string;
+        updateSplashStatus();
       });
 
       // Check if we missed the sidecar-ready event (race condition)
@@ -88,6 +163,12 @@
               log.info(`Got port from Tauri command: ${port}`);
               setApiPort(port);
               backendReady = true;
+              updateSplashStatus();
+
+              // Fetch version from API
+              await fetchVersion();
+
+              checkSplashDismiss();
               return;
             }
           } catch {
@@ -100,6 +181,7 @@
         // Timeout - show error
         if (!backendReady) {
           backendError = 'Backend failed to start (timeout)';
+          updateSplashStatus();
         }
       };
 
@@ -109,6 +191,7 @@
       log.error('Failed to set up Tauri listeners:', e);
       // Fallback: assume backend is ready
       backendReady = true;
+      checkSplashDismiss();
     }
   });
 
@@ -119,7 +202,12 @@
   });
 </script>
 
-{#if !backendReady && isTauri()}
+{#if showSplash && inTauriMode}
+  <SplashScreen status={splashStatus} version={appVersion} visible={true} fadeOut={splashFadeOut} />
+{/if}
+
+{#if !backendReady && inTauriMode && !showSplash}
+  <!-- Error state shown only after splash is dismissed (if backend still failing) -->
   <div class="loading-overlay">
     <div class="loading-content">
       {#if backendError}
@@ -140,7 +228,7 @@
       {/if}
     </div>
   </div>
-{:else}
+{:else if backendReady || !inTauriMode}
   <div class="app-layout" class:sidebar-collapsed={$sidebarCollapsed}>
     <Navigation />
     <main class="main-content">

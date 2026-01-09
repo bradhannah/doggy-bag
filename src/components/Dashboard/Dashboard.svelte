@@ -482,6 +482,29 @@
         </div>
       {/if}
 
+      <!-- Equation Bar (Hero Summary) -->
+      <div class="equation-bar">
+        <div class="equation-box positive">
+          <span class="eq-amount">{formatCurrency(apiBankBalances)}</span>
+          <span class="eq-label">Bank Balances</span>
+        </div>
+        <span class="eq-operator">+</span>
+        <div class="equation-box positive">
+          <span class="eq-amount">{formatCurrency(apiRemainingIncome)}</span>
+          <span class="eq-label">Remaining Income</span>
+        </div>
+        <span class="eq-operator negative">−</span>
+        <div class="equation-box negative">
+          <span class="eq-amount">{formatCurrency(apiRemainingExpenses)}</span>
+          <span class="eq-label">Remaining Expenses</span>
+        </div>
+        <span class="eq-equals">=</span>
+        <div class="equation-box result" class:positive={isPositive} class:negative={!isPositive}>
+          <span class="eq-amount">{formatCurrency(apiLeftover)}</span>
+          <span class="eq-label">LEFTOVER</span>
+        </div>
+      </div>
+
       <!-- Starting Cash Section -->
       <div class="math-section">
         <div class="section-header">
@@ -609,29 +632,6 @@
           </div>
         </div>
       {/if}
-
-      <!-- Equation Bar -->
-      <div class="equation-bar">
-        <div class="equation-box positive">
-          <span class="eq-amount">{formatCurrency(apiBankBalances)}</span>
-          <span class="eq-label">Bank Balances</span>
-        </div>
-        <span class="eq-operator">+</span>
-        <div class="equation-box positive">
-          <span class="eq-amount">{formatCurrency(apiRemainingIncome)}</span>
-          <span class="eq-label">Remaining Income</span>
-        </div>
-        <span class="eq-operator negative">−</span>
-        <div class="equation-box negative">
-          <span class="eq-amount">{formatCurrency(apiRemainingExpenses)}</span>
-          <span class="eq-label">Remaining Expenses</span>
-        </div>
-        <span class="eq-equals">=</span>
-        <div class="equation-box result" class:positive={isPositive} class:negative={!isPositive}>
-          <span class="eq-amount">{formatCurrency(apiLeftover)}</span>
-          <span class="eq-label">LEFTOVER</span>
-        </div>
-      </div>
 
       <button class="view-details-btn" on:click={viewDetails}>
         View Details

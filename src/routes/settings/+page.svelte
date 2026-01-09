@@ -60,9 +60,11 @@
     toVersion: string;
     timestamp: string;
     size: number;
+    backupType: 'version_upgrade' | 'manual';
   }
   let versionBackups: VersionBackup[] = [];
   let versionBackupsLoading = false;
+  let manualBackupLoading = false;
   let showRestoreConfirmDialog = false;
   let pendingRestoreBackup: VersionBackup | null = null;
   let restoreInProgress = false;
@@ -104,6 +106,22 @@
       versionBackups = [];
     } finally {
       versionBackupsLoading = false;
+    }
+  }
+
+  // Create a manual backup
+  async function handleManualBackup() {
+    manualBackupLoading = true;
+    try {
+      await apiClient.post('/api/version/backups/manual', {});
+      addToast('Backup created successfully', 'success');
+      // Reload backups list to show the new backup
+      await loadVersionBackups();
+    } catch (err) {
+      console.error('Failed to create manual backup:', err);
+      addToast('Failed to create backup', 'error');
+    } finally {
+      manualBackupLoading = false;
     }
   }
 
@@ -503,30 +521,74 @@
       <section class="settings-section">
         <h2>Version Backups</h2>
         <p class="setting-description">
-          Automatic backups are created when the app is updated to a new version.
+          Create a backup of your data, or restore from an automatic backup created when the app is
+          updated.
         </p>
+
+        <div class="backup-now-row">
+          <button
+            class="action-button backup-now-button"
+            on:click={handleManualBackup}
+            disabled={manualBackupLoading}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16L21 8V19C21 20.1046 20.1046 21 19 21Z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M17 21V13H7V21"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M7 3V8H15"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            {#if manualBackupLoading}
+              Creating...
+            {:else}
+              Backup Now
+            {/if}
+          </button>
+          <span class="backup-hint">Creates a snapshot of your current data</span>
+        </div>
 
         {#if versionBackupsLoading}
           <p class="setting-hint">Loading backups...</p>
         {:else if versionBackups.length === 0}
-          <p class="setting-hint">No version backups available.</p>
+          <p class="setting-hint">No backups available.</p>
         {:else}
           <div class="backup-list">
             {#each versionBackups as backup}
               <div class="backup-item">
                 <div class="backup-info">
                   <div class="backup-version">
-                    <span class="version-tag">{backup.fromVersion}</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M5 12H19M19 12L12 5M19 12L12 19"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                    <span class="version-tag">{backup.toVersion}</span>
+                    {#if backup.backupType === 'manual'}
+                      <span class="backup-type-badge manual">Manual</span>
+                    {:else}
+                      <span class="backup-type-badge auto">Auto</span>
+                      <span class="version-tag">{backup.fromVersion}</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M5 12H19M19 12L12 5M19 12L12 19"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span class="version-tag">{backup.toVersion}</span>
+                    {/if}
                   </div>
                   <div class="backup-meta">
                     <span>{formatDate(backup.timestamp)}</span>
@@ -974,8 +1036,14 @@
         <p>You are about to restore a backup from:</p>
         <div class="backup-restore-info">
           <div class="restore-detail">
-            <span class="restore-label">Version:</span>
-            <span class="restore-value">{pendingRestoreBackup.fromVersion}</span>
+            <span class="restore-label">Type:</span>
+            <span class="restore-value">
+              {#if pendingRestoreBackup.backupType === 'manual'}
+                Manual Backup
+              {:else}
+                Version Upgrade ({pendingRestoreBackup.fromVersion} to {pendingRestoreBackup.toVersion})
+              {/if}
+            </span>
           </div>
           <div class="restore-detail">
             <span class="restore-label">Date:</span>
@@ -1794,5 +1862,52 @@
   .btn-danger:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Backup Now Row */
+  .backup-now-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .backup-now-button {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-inverse);
+    font-weight: 600;
+  }
+
+  .backup-now-button:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  .backup-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  /* Backup Type Badge */
+  .backup-type-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .backup-type-badge.manual {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .backup-type-badge.auto {
+    background: var(--success-bg);
+    color: var(--success);
   }
 </style>
