@@ -146,11 +146,11 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   'accent-border': 'rgba(14, 116, 144, 0.5)',
 
   // Optional: Success
-  success: '#16a34a',
-  'success-hover': '#15803d',
-  'success-bg': 'rgba(22, 163, 74, 0.1)',
-  'success-muted': 'rgba(22, 163, 74, 0.05)',
-  'success-border': 'rgba(22, 163, 74, 0.3)',
+  success: '#15803d',
+  'success-hover': '#166534',
+  'success-bg': 'rgba(21, 128, 61, 0.1)',
+  'success-muted': 'rgba(21, 128, 61, 0.05)',
+  'success-border': 'rgba(21, 128, 61, 0.3)',
 
   // Optional: Error
   error: '#dc2626',
@@ -194,13 +194,13 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   'bg-hover-strong': 'rgba(0, 0, 0, 0.1)',
 
   // Optional: Financial
-  'income-color': '#16a34a',
+  'income-color': '#15803d',
   'expense-color': '#dc2626',
-  'positive-color': '#16a34a',
+  'positive-color': '#15803d',
   'negative-color': '#dc2626',
 
   // Optional: State
-  'paid-color': '#16a34a',
+  'paid-color': '#15803d',
   'unpaid-color': '#dc2626',
   'partial-color': '#d97706',
   'pending-color': '#f59e0b',

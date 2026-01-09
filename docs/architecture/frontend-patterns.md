@@ -288,19 +288,29 @@ src/routes/
 
 ### CSS Variables (Theme)
 
+The app uses a comprehensive theme system defined in `src/lib/theme/`. See `docs/colour-themes.md` for the complete reference.
+
+**Key variables (always use these, never hardcode colors):**
+
 ```css
-:root {
-  --primary: #24c8db;
-  --primary-hover: #1ea8b8;
-  --background: #1a1a1a;
-  --surface: #2a2a2a;
-  --text: #ffffff;
-  --text-muted: #888888;
-  --border: #3a3a3a;
-  --error: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-}
+/* Backgrounds */
+var(--bg-base)        /* Page background */
+var(--bg-surface)     /* Cards, panels */
+var(--bg-elevated)    /* Modals, dropdowns */
+
+/* Text */
+var(--text-primary)   /* Main text */
+var(--text-secondary) /* Muted text */
+var(--text-tertiary)  /* Even more muted */
+
+/* Accent & Semantic */
+var(--accent)         /* Primary action color */
+var(--success)        /* Success states */
+var(--error)          /* Error states */
+var(--warning)        /* Warning states */
+
+/* Borders */
+var(--border-default) /* Standard borders */
 ```
 
 ### Component Styles

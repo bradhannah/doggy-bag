@@ -74,7 +74,7 @@
   }
 
   function getCategoryColor(group: IncomeCategoryGroup): string {
-    return group.category?.color || '#888888';
+    return group.category?.color || '#949494';
   }
 
   // Generate a subtle background tint from the category color
