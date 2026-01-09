@@ -6,11 +6,11 @@
   "colors": {
     "bg-base": "#0f0f1a",
     "bg-surface": "#1a1a2e",
-    "bg-elevated": "#1e1e2e",
+    "bg-elevated": "#252538",
     "text-primary": "#e4e4e7",
-    "text-secondary": "#888888",
+    "text-secondary": "#949494",
     "accent": "#24c8db",
-    "border-default": "#333355"
+    "border-default": "#3d3d66"
   },
   "meta": {
     "description": "Default dark theme for Doggy Bag",

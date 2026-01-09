@@ -3,6 +3,13 @@
  *
  * Default color values for dark and light themes.
  * Used as fallbacks when optional colors are not defined.
+ *
+ * Naming conventions:
+ * - {color}         : Primary color (text, icons, solid elements)
+ * - {color}-hover   : Hover state for buttons/interactive elements
+ * - {color}-bg      : Background fill (~0.1 opacity)
+ * - {color}-muted   : Subtle background for hover states (~0.05 opacity)
+ * - {color}-border  : Border color (~0.3 opacity)
  */
 
 import type { ThemeColors, OptionalColorKey } from './types';
@@ -15,62 +22,69 @@ export const DARK_THEME_COLORS: ThemeColors = {
   // Required: Backgrounds
   'bg-base': '#0f0f1a',
   'bg-surface': '#1a1a2e',
-  'bg-elevated': '#1e1e2e',
+  'bg-elevated': '#252538',
 
   // Required: Text
   'text-primary': '#e4e4e7',
-  'text-secondary': '#888888',
+  'text-secondary': '#949494',
 
   // Required: Accent
   accent: '#24c8db',
 
   // Required: Border
-  'border-default': '#333355',
+  'border-default': '#3d3d66',
 
   // Optional: Text variants
-  'text-tertiary': '#666666',
+  'text-tertiary': '#7a7a7a',
   'text-inverse': '#000000',
   'text-disabled': '#555555',
 
   // Optional: Border variants
-  'border-hover': '#444466',
+  'border-hover': '#4d4d77',
   'border-focus': '#24c8db',
+  'border-subtle': 'rgba(61, 61, 102, 0.5)',
 
   // Optional: Accent variants
   'accent-hover': '#1ab0c9',
   'accent-muted': 'rgba(36, 200, 219, 0.1)',
+  'accent-border': 'rgba(36, 200, 219, 0.5)',
 
   // Optional: Success
   success: '#4ade80',
-  'success-dark': '#22c55e',
+  'success-hover': '#22c55e',
   'success-bg': 'rgba(74, 222, 128, 0.1)',
+  'success-muted': 'rgba(74, 222, 128, 0.05)',
   'success-border': 'rgba(74, 222, 128, 0.3)',
 
-  // Optional: Error/Danger
+  // Optional: Error
   error: '#f87171',
-  'error-dark': '#ef4444',
-  danger: '#ff4444',
-  'danger-hover': '#cc3333',
+  'error-hover': '#ef4444',
   'error-bg': 'rgba(248, 113, 113, 0.1)',
+  'error-muted': 'rgba(248, 113, 113, 0.05)',
   'error-border': 'rgba(248, 113, 113, 0.3)',
 
   // Optional: Warning
-  warning: '#f59e0b',
-  'warning-light': '#fbbf24',
-  'warning-bg': 'rgba(251, 191, 36, 0.15)',
-  'warning-border': 'rgba(251, 191, 36, 0.4)',
+  warning: '#e5a91f',
+  'warning-hover': '#d4970f',
+  'warning-bg': 'rgba(229, 169, 31, 0.15)',
+  'warning-muted': 'rgba(229, 169, 31, 0.08)',
+  'warning-border': 'rgba(229, 169, 31, 0.4)',
 
   // Optional: Info
   info: '#24c8db',
+  'info-hover': '#1ab0c9',
   'info-bg': 'rgba(36, 200, 219, 0.1)',
+  'info-muted': 'rgba(36, 200, 219, 0.05)',
 
   // Optional: Purple
   purple: '#a78bfa',
-  'purple-dark': '#8b5cf6',
+  'purple-hover': '#8b5cf6',
   'purple-bg': 'rgba(139, 92, 246, 0.2)',
+  'purple-muted': 'rgba(139, 92, 246, 0.1)',
 
   // Optional: Orange
   orange: '#fb923c',
+  'orange-hover': '#f97316',
   'orange-bg': 'rgba(251, 146, 60, 0.1)',
 
   // Optional: Overlays and shadows
@@ -83,9 +97,6 @@ export const DARK_THEME_COLORS: ThemeColors = {
   'bg-hover': 'rgba(255, 255, 255, 0.05)',
   'bg-hover-strong': 'rgba(255, 255, 255, 0.1)',
 
-  // Optional: Accent border
-  'accent-border': 'rgba(36, 200, 219, 0.5)',
-
   // Optional: Financial
   'income-color': '#22c55e',
   'expense-color': '#f87171',
@@ -95,8 +106,8 @@ export const DARK_THEME_COLORS: ThemeColors = {
   // Optional: State
   'paid-color': '#4ade80',
   'unpaid-color': '#f87171',
-  'partial-color': '#f59e0b',
-  'pending-color': '#fbbf24',
+  'partial-color': '#d4970f',
+  'pending-color': '#e5a91f',
 };
 
 /**
@@ -127,42 +138,49 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   // Optional: Border variants
   'border-hover': '#4b5563',
   'border-focus': '#0e7490',
+  'border-subtle': 'rgba(107, 114, 128, 0.3)',
 
   // Optional: Accent variants
   'accent-hover': '#0a5c70',
   'accent-muted': 'rgba(14, 116, 144, 0.1)',
+  'accent-border': 'rgba(14, 116, 144, 0.5)',
 
   // Optional: Success
   success: '#16a34a',
-  'success-dark': '#15803d',
-  'success-bg': '#dcfce7',
+  'success-hover': '#15803d',
+  'success-bg': 'rgba(22, 163, 74, 0.1)',
+  'success-muted': 'rgba(22, 163, 74, 0.05)',
   'success-border': 'rgba(22, 163, 74, 0.3)',
 
-  // Optional: Error/Danger
+  // Optional: Error
   error: '#dc2626',
-  'error-dark': '#b91c1c',
-  danger: '#dc2626',
-  'danger-hover': '#b91c1c',
+  'error-hover': '#b91c1c',
   'error-bg': 'rgba(220, 38, 38, 0.1)',
+  'error-muted': 'rgba(220, 38, 38, 0.05)',
   'error-border': 'rgba(220, 38, 38, 0.3)',
 
   // Optional: Warning
   warning: '#d97706',
-  'warning-light': '#f59e0b',
+  'warning-hover': '#b45309',
   'warning-bg': 'rgba(217, 119, 6, 0.1)',
+  'warning-muted': 'rgba(217, 119, 6, 0.05)',
   'warning-border': 'rgba(217, 119, 6, 0.3)',
 
   // Optional: Info
   info: '#0e7490',
+  'info-hover': '#0a5c70',
   'info-bg': 'rgba(14, 116, 144, 0.1)',
+  'info-muted': 'rgba(14, 116, 144, 0.05)',
 
   // Optional: Purple
   purple: '#7c3aed',
-  'purple-dark': '#6d28d9',
+  'purple-hover': '#6d28d9',
   'purple-bg': 'rgba(124, 58, 237, 0.1)',
+  'purple-muted': 'rgba(124, 58, 237, 0.05)',
 
   // Optional: Orange
   orange: '#ea580c',
+  'orange-hover': '#c2410c',
   'orange-bg': 'rgba(234, 88, 12, 0.1)',
 
   // Optional: Overlays and shadows
@@ -174,9 +192,6 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   // Optional: Hover states
   'bg-hover': 'rgba(0, 0, 0, 0.05)',
   'bg-hover-strong': 'rgba(0, 0, 0, 0.1)',
-
-  // Optional: Accent border
-  'accent-border': 'rgba(14, 116, 144, 0.5)',
 
   // Optional: Financial
   'income-color': '#16a34a',

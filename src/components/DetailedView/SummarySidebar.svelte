@@ -621,7 +621,7 @@
   .balance-value.editable-highlight:hover {
     background: var(--warning-bg);
     border-color: var(--warning-border);
-    color: var(--warning-light);
+    color: var(--warning);
   }
 
   .balance-value.editable:hover {

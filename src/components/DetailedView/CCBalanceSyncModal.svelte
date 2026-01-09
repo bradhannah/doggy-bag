@@ -285,7 +285,7 @@
   }
 
   .btn.update:hover:not(:disabled) {
-    background: var(--purple-dark);
+    background: var(--purple-hover);
   }
 
   .btn:disabled {

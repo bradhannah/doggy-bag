@@ -1788,7 +1788,7 @@
   }
 
   .btn-danger:hover:not(:disabled) {
-    background: var(--error-dark);
+    background: var(--error-hover);
   }
 
   .btn-danger:disabled {

@@ -537,7 +537,7 @@
     flex-direction: column;
     gap: 16px;
     padding: 16px;
-    background: var(--success-muted, rgba(74, 222, 128, 0.1));
+    background: var(--success-muted);
     border-radius: 8px;
     border: 1px solid var(--success-border, rgba(74, 222, 128, 0.3));
   }

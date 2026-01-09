@@ -208,7 +208,7 @@
   }
 
   .info-message.variable {
-    background: var(--warning-muted, rgba(245, 158, 11, 0.2));
+    background: var(--warning-muted);
     color: var(--warning);
     border-color: var(--warning-border, rgba(245, 158, 11, 0.4));
   }

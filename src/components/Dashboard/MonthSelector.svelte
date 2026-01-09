@@ -283,7 +283,7 @@
     background: var(--bg-elevated);
     border: 1px solid var(--border-default);
     border-radius: 10px;
-    box-shadow: 0 8px 24px var(--shadow);
+    box-shadow: 0 8px 24px var(--shadow-medium);
     overflow: hidden;
     z-index: 100;
     min-width: 220px;

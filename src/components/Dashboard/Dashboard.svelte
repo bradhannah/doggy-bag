@@ -867,7 +867,7 @@
     background: var(--warning-bg);
     border: 1px solid var(--warning-border);
     border-radius: var(--radius-md);
-    color: var(--warning-light);
+    color: var(--warning);
     font-size: 0.85rem;
     font-weight: 500;
   }
@@ -1176,7 +1176,7 @@
 
   .status-badge.locked {
     background: var(--warning-bg);
-    color: var(--warning-light);
+    color: var(--warning);
   }
 
   .status-badge.complete {
@@ -1228,7 +1228,7 @@
     margin: 0 0 var(--space-4);
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--warning-light);
+    color: var(--warning);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1331,7 +1331,7 @@
     margin: 0 auto 20px;
     background: var(--warning-bg);
     border-radius: 50%;
-    color: var(--warning-light);
+    color: var(--warning);
   }
 
   .modal-content h3 {

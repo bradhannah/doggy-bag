@@ -871,7 +871,7 @@
   .amount-value.editable-highlight:hover:not(.disabled) {
     background: var(--warning-bg);
     border-color: var(--warning);
-    color: var(--warning-light);
+    color: var(--warning);
   }
 
   .amount-value.remaining {
@@ -1061,12 +1061,12 @@
 
   .action-btn-icon:hover:not(:disabled) {
     background: var(--error-bg);
-    color: var(--danger);
+    color: var(--error);
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {
-    background: var(--danger);
-    color: var(--text-on-accent);
+    background: var(--error);
+    color: var(--text-inverse);
   }
 
   .action-btn-icon.add:hover:not(:disabled) {
@@ -1092,7 +1092,7 @@
   .confirm-overlay {
     position: fixed;
     inset: 0;
-    background: var(--overlay);
+    background: var(--overlay-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1153,13 +1153,13 @@
   }
 
   .confirm-btn.delete {
-    background: var(--danger);
+    background: var(--error);
     border: none;
-    color: var(--text-on-accent);
+    color: var(--text-inverse);
   }
 
   .confirm-btn.delete:hover:not(:disabled) {
-    background: var(--danger-hover);
+    background: var(--error-hover);
   }
 
   .confirm-btn.delete:disabled {

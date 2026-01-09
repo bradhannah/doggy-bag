@@ -442,7 +442,7 @@
   }
 
   .warning-message {
-    background: var(--warning-muted, rgba(255, 193, 7, 0.2));
+    background: var(--warning-muted);
     color: var(--warning);
     padding: 12px;
     border-radius: 6px;

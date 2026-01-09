@@ -851,7 +851,7 @@
   }
 
   .confirm-btn.delete:hover:not(:disabled) {
-    background: var(--error-dark);
+    background: var(--error-hover);
   }
 
   .confirm-btn.delete:disabled {

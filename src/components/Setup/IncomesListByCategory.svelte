@@ -378,7 +378,7 @@
   }
 
   .income-row:hover {
-    background: var(--success-muted, rgba(34, 197, 94, 0.05));
+    background: var(--success-muted);
   }
 
   .income-row .col-name {
@@ -448,7 +448,7 @@
     gap: 4px;
     font-size: 0.6875rem;
     color: var(--warning);
-    background: var(--warning-muted, rgba(255, 193, 7, 0.1));
+    background: var(--warning-muted);
     padding: 2px 6px;
     border-radius: 4px;
     border: none;

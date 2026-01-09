@@ -40,42 +40,127 @@ Themes work by setting CSS custom properties on `:root`. Components use these va
 
 #### Optional Colors (have defaults)
 
-| Variable           | Description                        |
-| ------------------ | ---------------------------------- |
-| `--text-tertiary`  | Even more muted text               |
-| `--text-inverse`   | Text on accent backgrounds         |
-| `--text-disabled`  | Disabled element text              |
-| `--border-hover`   | Border color on hover              |
-| `--border-focus`   | Border color on focus              |
-| `--accent-hover`   | Accent color on hover              |
-| `--accent-muted`   | Transparent accent for backgrounds |
-| `--success`        | Success/positive color             |
-| `--success-dark`   | Darker success variant             |
-| `--success-bg`     | Success background                 |
-| `--success-border` | Success border                     |
-| `--error`          | Error/danger color                 |
-| `--error-dark`     | Darker error variant               |
-| `--error-bg`       | Error background                   |
-| `--error-border`   | Error border                       |
-| `--warning`        | Warning color                      |
-| `--warning-light`  | Lighter warning variant            |
-| `--warning-bg`     | Warning background                 |
-| `--warning-border` | Warning border                     |
-| `--info`           | Info color                         |
-| `--info-bg`        | Info background                    |
-| `--purple`         | Purple accent                      |
-| `--purple-dark`    | Darker purple variant              |
-| `--purple-bg`      | Purple background                  |
-| `--orange`         | Orange accent                      |
-| `--orange-bg`      | Orange background                  |
-| `--income-color`   | Income amounts                     |
-| `--expense-color`  | Expense amounts                    |
-| `--positive-color` | Positive values                    |
-| `--negative-color` | Negative values                    |
-| `--paid-color`     | Paid status                        |
-| `--unpaid-color`   | Unpaid status                      |
-| `--partial-color`  | Partially paid status              |
-| `--pending-color`  | Pending status                     |
+**Naming conventions:**
+
+- `{color}` - Primary color (text, icons, solid elements)
+- `{color}-hover` - Hover state for buttons/interactive elements
+- `{color}-bg` - Background fill (~0.1 opacity)
+- `{color}-muted` - Subtle background for hover states (~0.05 opacity)
+- `{color}-border` - Border color (~0.3 opacity)
+
+**Text Variants:**
+
+| Variable          | Description                |
+| ----------------- | -------------------------- |
+| `--text-tertiary` | Even more muted text       |
+| `--text-inverse`  | Text on accent backgrounds |
+| `--text-disabled` | Disabled element text      |
+
+**Border Variants:**
+
+| Variable          | Description                          |
+| ----------------- | ------------------------------------ |
+| `--border-hover`  | Border color on hover                |
+| `--border-focus`  | Border color on focus                |
+| `--border-subtle` | Softer borders (list dividers, etc.) |
+
+**Accent Variants:**
+
+| Variable          | Description                        |
+| ----------------- | ---------------------------------- |
+| `--accent-hover`  | Accent color on hover              |
+| `--accent-muted`  | Transparent accent for backgrounds |
+| `--accent-border` | Accent border color                |
+
+**Semantic: Success:**
+
+| Variable           | Description               |
+| ------------------ | ------------------------- |
+| `--success`        | Success/positive color    |
+| `--success-hover`  | Success color on hover    |
+| `--success-bg`     | Success background (~0.1) |
+| `--success-muted`  | Subtle success background |
+| `--success-border` | Success border            |
+
+**Semantic: Error:**
+
+| Variable         | Description             |
+| ---------------- | ----------------------- |
+| `--error`        | Error/danger color      |
+| `--error-hover`  | Error color on hover    |
+| `--error-bg`     | Error background (~0.1) |
+| `--error-muted`  | Subtle error background |
+| `--error-border` | Error border            |
+
+**Semantic: Warning:**
+
+| Variable           | Description               |
+| ------------------ | ------------------------- |
+| `--warning`        | Warning color             |
+| `--warning-hover`  | Warning color on hover    |
+| `--warning-bg`     | Warning background        |
+| `--warning-muted`  | Subtle warning background |
+| `--warning-border` | Warning border            |
+
+**Semantic: Info:**
+
+| Variable       | Description            |
+| -------------- | ---------------------- |
+| `--info`       | Info color             |
+| `--info-hover` | Info color on hover    |
+| `--info-bg`    | Info background        |
+| `--info-muted` | Subtle info background |
+
+**Special: Purple (credit cards, etc.):**
+
+| Variable         | Description              |
+| ---------------- | ------------------------ |
+| `--purple`       | Purple accent            |
+| `--purple-hover` | Purple on hover          |
+| `--purple-bg`    | Purple background        |
+| `--purple-muted` | Subtle purple background |
+
+**Special: Orange:**
+
+| Variable         | Description       |
+| ---------------- | ----------------- |
+| `--orange`       | Orange accent     |
+| `--orange-hover` | Orange on hover   |
+| `--orange-bg`    | Orange background |
+
+**UI: Overlays and Shadows:**
+
+| Variable          | Description              |
+| ----------------- | ------------------------ |
+| `--overlay-bg`    | Modal overlay background |
+| `--shadow-light`  | Light shadow             |
+| `--shadow-medium` | Medium shadow            |
+| `--shadow-heavy`  | Heavy shadow             |
+
+**UI: Hover States:**
+
+| Variable            | Description                  |
+| ------------------- | ---------------------------- |
+| `--bg-hover`        | Background on hover          |
+| `--bg-hover-strong` | Stronger background on hover |
+
+**Financial Semantics:**
+
+| Variable           | Description     |
+| ------------------ | --------------- |
+| `--income-color`   | Income amounts  |
+| `--expense-color`  | Expense amounts |
+| `--positive-color` | Positive values |
+| `--negative-color` | Negative values |
+
+**State Colors:**
+
+| Variable          | Description           |
+| ----------------- | --------------------- |
+| `--paid-color`    | Paid status           |
+| `--unpaid-color`  | Unpaid status         |
+| `--partial-color` | Partially paid status |
+| `--pending-color` | Pending status        |
 
 ## For Developers
 
@@ -113,17 +198,17 @@ Always use CSS variables instead of hardcoded colors:
 | ------------------------------- | ----------------------- |
 | `#0f0f1a`                       | `var(--bg-base)`        |
 | `#1a1a2e`                       | `var(--bg-surface)`     |
-| `#1e1e2e`                       | `var(--bg-elevated)`    |
+| `#252538`                       | `var(--bg-elevated)`    |
 | `#e4e4e7`                       | `var(--text-primary)`   |
-| `#888888`, `#888`               | `var(--text-secondary)` |
-| `#666666`, `#666`               | `var(--text-tertiary)`  |
+| `#949494`                       | `var(--text-secondary)` |
+| `#7a7a7a`                       | `var(--text-tertiary)`  |
 | `#24c8db`                       | `var(--accent)`         |
-| `#1ba8b8`                       | `var(--accent-hover)`   |
+| `#1ab0c9`                       | `var(--accent-hover)`   |
 | `rgba(36, 200, 219, 0.1)`       | `var(--accent-muted)`   |
-| `#333355`                       | `var(--border-default)` |
+| `#3d3d66`                       | `var(--border-default)` |
 | `#4ade80`, `#22c55e`            | `var(--success)`        |
 | `#f87171`, `#ff6b6b`, `#ef4444` | `var(--error)`          |
-| `#f59e0b`                       | `var(--warning)`        |
+| `#e5a91f`                       | `var(--warning)`        |
 | `#000`, `#000000`               | `var(--text-inverse)`   |
 
 ### Theme Store API

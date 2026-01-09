@@ -176,7 +176,7 @@
   }
 
   .btn-confirm.danger:hover {
-    background: var(--danger-hover);
+    background: var(--error-hover);
   }
 
   .btn-confirm.primary {

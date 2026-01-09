@@ -224,7 +224,7 @@
   }
 
   .source-row.debt:hover {
-    background: var(--error-muted, rgba(255, 107, 107, 0.05));
+    background: var(--error-muted);
   }
 
   .source-row .col-name {
@@ -287,7 +287,7 @@
   }
 
   .type-badge.debt {
-    background: var(--error-muted, rgba(255, 107, 107, 0.1));
+    background: var(--error-muted);
     color: var(--error);
   }
 

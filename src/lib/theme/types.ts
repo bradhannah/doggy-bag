@@ -25,6 +25,13 @@ export const REQUIRED_COLOR_KEYS = [
 /**
  * Optional color keys with sensible defaults.
  * Themes can override these or inherit defaults.
+ *
+ * Naming conventions:
+ * - {color}         : Primary color (text, icons, solid elements)
+ * - {color}-hover   : Hover state for buttons/interactive elements
+ * - {color}-bg      : Background fill (~0.1 opacity)
+ * - {color}-muted   : Subtle background for hover states (~0.05 opacity)
+ * - {color}-border  : Border color (~0.3 opacity)
  */
 export const OPTIONAL_COLOR_KEYS = [
   // Text variants
@@ -33,44 +40,52 @@ export const OPTIONAL_COLOR_KEYS = [
   'text-disabled',
 
   // Border variants
+  'border-default',
   'border-hover',
   'border-focus',
+  'border-subtle',
 
   // Accent variants
   'accent-hover',
   'accent-muted',
+  'accent-border',
 
   // Semantic: Success
   'success',
-  'success-dark',
+  'success-hover',
   'success-bg',
+  'success-muted',
   'success-border',
 
-  // Semantic: Error/Danger
+  // Semantic: Error
   'error',
-  'error-dark',
-  'danger',
-  'danger-hover',
+  'error-hover',
   'error-bg',
+  'error-muted',
   'error-border',
 
   // Semantic: Warning
   'warning',
-  'warning-light',
+  'warning-hover',
   'warning-bg',
+  'warning-muted',
   'warning-border',
 
   // Semantic: Info
   'info',
+  'info-hover',
   'info-bg',
+  'info-muted',
 
   // Special: Purple (Credit cards, etc.)
   'purple',
-  'purple-dark',
+  'purple-hover',
   'purple-bg',
+  'purple-muted',
 
   // Special: Orange
   'orange',
+  'orange-hover',
   'orange-bg',
 
   // UI: Overlays and shadows
@@ -82,9 +97,6 @@ export const OPTIONAL_COLOR_KEYS = [
   // UI: Hover states
   'bg-hover',
   'bg-hover-strong',
-
-  // Accent border (for highlighted elements)
-  'accent-border',
 
   // Financial semantics
   'income-color',

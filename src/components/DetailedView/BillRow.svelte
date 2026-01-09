@@ -840,7 +840,7 @@
 
   .auto-badge {
     background: var(--success-bg);
-    color: var(--success-dark);
+    color: var(--success);
   }
 
   .manual-badge {
@@ -850,7 +850,7 @@
 
   .payoff-badge {
     background: var(--purple-bg);
-    color: var(--purple-dark);
+    color: var(--purple);
   }
 
   .overdue-badge {
@@ -946,11 +946,11 @@
   .amount-value.editable-highlight:hover:not(.disabled) {
     background: var(--warning-bg);
     border-color: var(--warning-border);
-    color: var(--warning-light);
+    color: var(--warning);
   }
 
   .amount-value.synced {
-    color: var(--purple-dark);
+    color: var(--purple);
     font-style: italic;
   }
 
@@ -1145,7 +1145,7 @@
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {
-    background: var(--danger);
+    background: var(--error);
     color: var(--text-inverse);
   }
 
@@ -1233,13 +1233,13 @@
   }
 
   .confirm-btn.delete {
-    background: var(--danger);
+    background: var(--error);
     border: none;
     color: var(--text-inverse);
   }
 
   .confirm-btn.delete:hover:not(:disabled) {
-    background: var(--danger-hover);
+    background: var(--error-hover);
   }
 
   .confirm-btn.delete:disabled {

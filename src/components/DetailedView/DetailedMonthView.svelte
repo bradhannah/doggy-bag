@@ -629,7 +629,7 @@
     border: 1px solid var(--warning-border);
     border-radius: var(--radius-md);
     margin-bottom: var(--section-gap);
-    color: var(--warning-light);
+    color: var(--warning);
   }
 
   .read-only-banner svg {
