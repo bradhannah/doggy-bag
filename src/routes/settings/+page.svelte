@@ -61,6 +61,7 @@
     timestamp: string;
     size: number;
     backupType: 'version_upgrade' | 'manual';
+    note?: string;
   }
   let versionBackups: VersionBackup[] = [];
   let versionBackupsLoading = false;
@@ -68,6 +69,10 @@
   let showRestoreConfirmDialog = false;
   let pendingRestoreBackup: VersionBackup | null = null;
   let restoreInProgress = false;
+
+  // Backup note modal state
+  let showBackupNoteModal = false;
+  let backupNote = '';
 
   onMount(async () => {
     loadSettings().catch((err) => {
@@ -109,11 +114,24 @@
     }
   }
 
-  // Create a manual backup
-  async function handleManualBackup() {
+  // Create a manual backup - show note modal first
+  function handleManualBackup() {
+    backupNote = '';
+    showBackupNoteModal = true;
+  }
+
+  // Cancel backup note modal
+  function cancelBackupNote() {
+    showBackupNoteModal = false;
+    backupNote = '';
+  }
+
+  // Confirm and create the backup with optional note
+  async function confirmBackupWithNote() {
+    showBackupNoteModal = false;
     manualBackupLoading = true;
     try {
-      await apiClient.post('/api/version/backups/manual', {});
+      await apiClient.post('/api/version/backups/manual', { note: backupNote.trim() || undefined });
       addToast('Backup created successfully', 'success');
       // Reload backups list to show the new backup
       await loadVersionBackups();
@@ -122,6 +140,7 @@
       addToast('Failed to create backup', 'error');
     } finally {
       manualBackupLoading = false;
+      backupNote = '';
     }
   }
 
@@ -575,6 +594,23 @@
                   <div class="backup-version">
                     {#if backup.backupType === 'manual'}
                       <span class="backup-type-badge manual">Manual</span>
+                      {#if backup.note}
+                        <span class="backup-note-badge" title={backup.note}>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                          </svg>
+                        </span>
+                      {/if}
                     {:else}
                       <span class="backup-type-badge auto">Auto</span>
                       <span class="version-tag">{backup.fromVersion}</span>
@@ -594,6 +630,10 @@
                     <span>{formatDate(backup.timestamp)}</span>
                     <span class="separator">|</span>
                     <span>{formatBytes(backup.size)}</span>
+                    {#if backup.note}
+                      <span class="separator">|</span>
+                      <span class="backup-note-text" title={backup.note}>{backup.note}</span>
+                    {/if}
                   </div>
                 </div>
                 <button
@@ -1070,6 +1110,44 @@
             Restore Backup
           {/if}
         </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Backup Note Modal -->
+{#if showBackupNoteModal}
+  <div
+    class="modal-overlay"
+    on:click={cancelBackupNote}
+    on:keydown={(e) => e.key === 'Escape' && cancelBackupNote()}
+    role="presentation"
+  >
+    <div
+      class="modal modal-small"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+    >
+      <div class="modal-header">
+        <h3>Add Backup Note</h3>
+        <button class="modal-close" on:click={cancelBackupNote}>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Optionally add a note to describe this backup:</p>
+        <input
+          type="text"
+          class="backup-note-input"
+          placeholder="e.g., Before updating categories..."
+          bind:value={backupNote}
+          on:keydown={(e) => e.key === 'Enter' && confirmBackupWithNote()}
+        />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" on:click={cancelBackupNote}>Cancel</button>
+        <button class="btn-primary" on:click={confirmBackupWithNote}> Create Backup </button>
       </div>
     </div>
   </div>
@@ -1909,5 +1987,39 @@
   .backup-type-badge.auto {
     background: var(--success-bg);
     color: var(--success);
+  }
+
+  /* Backup Note Styles */
+  .backup-note-input {
+    width: 100%;
+    height: var(--input-height);
+    padding: 0 var(--space-4);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+  }
+
+  .backup-note-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .backup-note-badge {
+    display: inline-flex;
+    align-items: center;
+    color: var(--warning);
+    cursor: help;
+  }
+
+  .backup-note-text {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-tertiary);
+    font-style: italic;
+    cursor: help;
   }
 </style>

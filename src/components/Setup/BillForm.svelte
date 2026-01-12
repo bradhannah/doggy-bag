@@ -46,6 +46,65 @@
   let error = '';
   let saving = false;
 
+  // ===== Dirty tracking for unsaved changes confirmation =====
+  // Store initial values to compare against
+  interface InitialValues {
+    name: string;
+    amountDollars: string;
+    billing_period: string;
+    start_date: string;
+    payment_source_id: string;
+    category_id: string;
+    monthly_type: MonthlyType;
+    day_of_month: number;
+    recurrence_week: number;
+    recurrence_day: number;
+    payment_method: 'auto' | 'manual';
+    bank_transaction_name: string;
+    account_number: string;
+    account_url: string;
+    notes: string;
+  }
+
+  let initialValues: InitialValues = {
+    name: editingItem?.name || '',
+    amountDollars: editingItem ? (editingItem.amount / 100).toFixed(2) : '',
+    billing_period: editingItem?.billing_period || 'monthly',
+    start_date: editingItem?.start_date || '',
+    payment_source_id: editingItem?.payment_source_id || '',
+    category_id: editingItem?.category_id || '',
+    monthly_type: editingItem?.recurrence_week !== undefined ? 'nth_weekday' : 'day_of_month',
+    day_of_month: editingItem?.day_of_month || 1,
+    recurrence_week: editingItem?.recurrence_week || 1,
+    recurrence_day: editingItem?.recurrence_day || 0,
+    payment_method: editingItem?.payment_method || 'manual',
+    bank_transaction_name: editingItem?.metadata?.bank_transaction_name || '',
+    account_number: editingItem?.metadata?.account_number || '',
+    account_url: editingItem?.metadata?.account_url || '',
+    notes: editingItem?.metadata?.notes || '',
+  };
+
+  // Exported function to check if form has unsaved changes
+  export function isDirty(): boolean {
+    return (
+      name !== initialValues.name ||
+      amountDollars !== initialValues.amountDollars ||
+      billing_period !== initialValues.billing_period ||
+      start_date !== initialValues.start_date ||
+      payment_source_id !== initialValues.payment_source_id ||
+      category_id !== initialValues.category_id ||
+      monthly_type !== initialValues.monthly_type ||
+      day_of_month !== initialValues.day_of_month ||
+      recurrence_week !== initialValues.recurrence_week ||
+      recurrence_day !== initialValues.recurrence_day ||
+      payment_method !== initialValues.payment_method ||
+      bank_transaction_name !== initialValues.bank_transaction_name ||
+      account_number !== initialValues.account_number ||
+      account_url !== initialValues.account_url ||
+      notes !== initialValues.notes
+    );
+  }
+
   // Load categories on mount
   onMount(() => {
     loadCategories();
@@ -73,6 +132,24 @@
     account_number = editingItem.metadata?.account_number || '';
     account_url = editingItem.metadata?.account_url || '';
     notes = editingItem.metadata?.notes || '';
+    // Update initial values for dirty tracking
+    initialValues = {
+      name: editingItem.name,
+      amountDollars: (editingItem.amount / 100).toFixed(2),
+      billing_period: editingItem.billing_period,
+      start_date: editingItem.start_date || '',
+      payment_source_id: editingItem.payment_source_id,
+      category_id: editingItem.category_id || '',
+      monthly_type: editingItem.recurrence_week !== undefined ? 'nth_weekday' : 'day_of_month',
+      day_of_month: editingItem.day_of_month || 1,
+      recurrence_week: editingItem.recurrence_week || 1,
+      recurrence_day: editingItem.recurrence_day || 0,
+      payment_method: editingItem.payment_method || 'manual',
+      bank_transaction_name: editingItem.metadata?.bank_transaction_name || '',
+      account_number: editingItem.metadata?.account_number || '',
+      account_url: editingItem.metadata?.account_url || '',
+      notes: editingItem.metadata?.notes || '',
+    };
   }
 
   // Convert dollars to cents
@@ -87,7 +164,8 @@
     return '$' + (cents / 100).toFixed(2);
   })();
 
-  async function handleSubmit() {
+  // Exported function to submit form (used by Drawer for save from unsaved changes dialog)
+  export async function handleSubmit() {
     // Validation
     if (!name.trim()) {
       error = 'Name is required';
@@ -95,8 +173,8 @@
     }
 
     const amountCents = dollarsToCents(amountDollars);
-    if (amountCents < 100) {
-      error = 'Amount must be at least $1.00';
+    if (amountCents < 0 || isNaN(amountCents)) {
+      error = 'Amount must be $0 or greater';
       return;
     }
 

@@ -148,7 +148,8 @@
 					"bank_account",
 					"credit_card",
 					"line_of_credit",
-					"cash"
+					"cash",
+					"investment"
 				]
 			},
 			"PaymentSource": {

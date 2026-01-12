@@ -30,11 +30,45 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
     try {
       const sources =
         (await this.storage.readJSON<PaymentSource[]>('data/entities/payment-sources.json')) || [];
-      return sources;
+      // Apply migrations
+      return sources.map((source) => this.migratePaymentSource(source));
     } catch (error) {
       console.error('[PaymentSourcesService] Failed to load payment sources:', error);
       return [];
     }
+  }
+
+  /**
+   * Apply migrations to a payment source
+   * TODO: Remove migration logic after next major version when all data is migrated
+   */
+  private migratePaymentSource(source: PaymentSource): PaymentSource {
+    let migrated = { ...source };
+
+    // Migration 1: Convert bank_account + is_investment=true to type=investment
+    // TODO: Remove after v0.4.0 when all users have migrated
+    if (migrated.type === 'bank_account' && migrated.is_investment === true) {
+      migrated = {
+        ...migrated,
+        type: 'investment',
+      };
+    }
+
+    // Migration 2: Clear interest_rate when is_variable_rate=true
+    // Variable rates change frequently, so storing a specific value is meaningless
+    // TODO: Remove after v0.4.0 when all users have migrated
+    if (
+      migrated.metadata?.is_variable_rate === true &&
+      migrated.metadata?.interest_rate !== undefined
+    ) {
+      const { interest_rate: _, ...restMetadata } = migrated.metadata;
+      migrated = {
+        ...migrated,
+        metadata: restMetadata,
+      };
+    }
+
+    return migrated;
   }
 
   public async getById(id: string): Promise<PaymentSource | null> {
@@ -55,11 +89,15 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
 
       const now = new Date().toISOString();
 
+      // Auto-set is_investment when type is 'investment'
+      const isInvestmentType = data.type === 'investment';
+
       // Auto-set exclude_from_leftover for savings/investment accounts
       const shouldExcludeFromLeftover =
         data.exclude_from_leftover === true ||
         data.is_savings === true ||
-        data.is_investment === true;
+        data.is_investment === true ||
+        isInvestmentType;
 
       const newSource: PaymentSource = {
         ...data,
@@ -67,6 +105,9 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
         created_at: now,
         updated_at: now,
         is_active: true,
+        // Auto-set is_investment for investment type (for backwards compatibility)
+        // TODO: Remove is_investment auto-set after v0.4.0
+        is_investment: isInvestmentType ? true : data.is_investment,
         exclude_from_leftover: shouldExcludeFromLeftover || undefined,
       };
 
@@ -97,16 +138,31 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       // Merge existing data with updates
       const merged = { ...sources[index], ...updates };
 
+      // Auto-set is_investment when type is 'investment'
+      const isInvestmentType = merged.type === 'investment';
+
       // Auto-set exclude_from_leftover for savings/investment accounts
       const shouldExcludeFromLeftover =
         merged.exclude_from_leftover === true ||
         merged.is_savings === true ||
-        merged.is_investment === true;
+        merged.is_investment === true ||
+        isInvestmentType;
+
+      // Clear interest_rate when is_variable_rate is true
+      let metadata = merged.metadata;
+      if (metadata?.is_variable_rate === true && metadata?.interest_rate !== undefined) {
+        const { interest_rate: _, ...restMetadata } = metadata;
+        metadata = restMetadata;
+      }
 
       const updatedSource: PaymentSource = {
         ...merged,
         updated_at: now,
+        // Auto-set is_investment for investment type (for backwards compatibility)
+        // TODO: Remove is_investment auto-set after v0.4.0
+        is_investment: isInvestmentType ? true : merged.is_investment,
         exclude_from_leftover: shouldExcludeFromLeftover || undefined,
+        metadata,
       };
 
       sources[index] = updatedSource;
@@ -142,9 +198,11 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
 
     if (
       !data.type ||
-      !['bank_account', 'credit_card', 'line_of_credit', 'cash'].includes(data.type)
+      !['bank_account', 'credit_card', 'line_of_credit', 'cash', 'investment'].includes(data.type)
     ) {
-      errors.push('Payment source type must be bank_account, credit_card, line_of_credit, or cash');
+      errors.push(
+        'Payment source type must be bank_account, credit_card, line_of_credit, cash, or investment'
+      );
     }
 
     // pay_off_monthly is only valid for debt accounts (credit_card, line_of_credit)
@@ -184,9 +242,14 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       errors.push('is_savings can only be enabled for bank accounts');
     }
 
-    // is_investment is only valid for bank_account type
-    if (data.is_investment === true && data.type && data.type !== 'bank_account') {
-      errors.push('is_investment can only be enabled for bank accounts');
+    // is_investment is only valid for bank_account type (investment type auto-sets this)
+    // TODO: Remove is_investment boolean validation after v0.4.0 - use type='investment' instead
+    if (
+      data.is_investment === true &&
+      data.type &&
+      !['bank_account', 'investment'].includes(data.type)
+    ) {
+      errors.push('is_investment can only be enabled for bank accounts or investment type');
     }
 
     return {

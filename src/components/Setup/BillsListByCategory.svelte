@@ -91,6 +91,15 @@
 
   // Total bill count (used for display but currently commented out)
   $: _totalBills = billsByCategory.reduce((sum, group) => sum + group.bills.length, 0);
+
+  // System categories that should be hidden from Manage view
+  const HIDDEN_CATEGORY_NAMES = ['Uncategorized', 'Credit Card Payoffs'];
+
+  // Filter out system categories
+  $: visibleGroups = billsByCategory.filter((group) => {
+    const categoryName = group.category?.name || 'Uncategorized';
+    return !HIDDEN_CATEGORY_NAMES.includes(categoryName);
+  });
 </script>
 
 <div class="bills-by-category">
@@ -105,7 +114,7 @@
     </div>
 
     <!-- Category Groups -->
-    {#each billsByCategory as group (group.category?.id || 'uncategorized')}
+    {#each visibleGroups as group (group.category?.id || 'uncategorized')}
       {@const catColor = getCategoryColor(group)}
       {@const headerBg = hexToRgba(catColor, 0.08)}
 
@@ -132,7 +141,14 @@
             on:click={() => onView(bill)}
           >
             <div class="col-name">
-              <span class="bill-name">{bill.name}</span>
+              <span class="bill-name">
+                {bill.name}
+                {#if bill.payment_method}
+                  <span class="payment-method-pill" class:auto={bill.payment_method === 'auto'}>
+                    {bill.payment_method === 'auto' ? 'Auto' : 'Manual'}
+                  </span>
+                {/if}
+              </span>
               {#if hasMetadata(bill)}
                 <div class="metadata-row">
                   {#if bill.metadata?.bank_transaction_name}
@@ -394,6 +410,29 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Payment Method Pill */
+  .payment-method-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--warning-muted);
+    color: var(--warning);
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+
+  .payment-method-pill.auto {
+    background: var(--success-muted);
+    color: var(--success);
   }
 
   /* Metadata Row */

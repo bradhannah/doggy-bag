@@ -30,6 +30,18 @@
     billCategories,
     incomeCategories,
   } from '../../stores/categories';
+  import {
+    insurancePlansStore,
+    loadInsurancePlans,
+    deleteInsurancePlan,
+    insurancePlans,
+  } from '../../stores/insurance-plans';
+  import {
+    insuranceCategoriesStore,
+    loadInsuranceCategories,
+    deleteInsuranceCategory,
+    insuranceCategories,
+  } from '../../stores/insurance-categories';
 
   import { success, error as showError, addToast } from '../../stores/toast';
 
@@ -49,12 +61,19 @@
   import LoadDefaultsButton from '../shared/LoadDefaultsButton.svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   import CategoryOrderer from './CategoryOrderer.svelte';
+  import InsurancePlanForm from './InsurancePlanForm.svelte';
+  import InsurancePlanView from './InsurancePlanView.svelte';
+  import InsurancePlansList from './InsurancePlansList.svelte';
+  import InsuranceCategoryForm from './InsuranceCategoryForm.svelte';
+  import InsuranceCategoryView from './InsuranceCategoryView.svelte';
+  import InsuranceCategoriesList from './InsuranceCategoriesList.svelte';
 
   // Types
   import type { PaymentSource } from '../../stores/payment-sources';
   import type { Bill } from '../../stores/bills';
   import type { Income } from '../../stores/incomes';
   import type { Category } from '../../stores/categories';
+  import type { InsurancePlan, InsuranceCategory } from '../../types/insurance';
 
   // ============ Months Tab Types ============
   interface MonthSummary {
@@ -75,7 +94,14 @@
   }
 
   // Tab state
-  type TabId = 'months' | 'payment-sources' | 'bills' | 'incomes' | 'categories';
+  type TabId =
+    | 'months'
+    | 'payment-sources'
+    | 'bills'
+    | 'incomes'
+    | 'categories'
+    | 'insurance-plans'
+    | 'insurance-categories';
   let activeTab: TabId = 'months';
 
   // ============ Months Tab State ============
@@ -96,10 +122,67 @@
   let viewingBill: Bill | null = null;
   let viewingIncome: Income | null = null;
   let viewingCategory: Category | null = null;
+  let viewingInsurancePlan: InsurancePlan | null = null;
+  let viewingInsuranceCategory: InsuranceCategory | null = null;
   let editingPaymentSource: PaymentSource | null = null;
   let editingBill: Bill | null = null;
   let editingIncome: Income | null = null;
   let editingCategory: Category | null = null;
+  let editingInsurancePlan: InsurancePlan | null = null;
+  let editingInsuranceCategory: InsuranceCategory | null = null;
+
+  // Form refs for dirty tracking
+  let billFormRef: BillForm | null = null;
+  let incomeFormRef: IncomeForm | null = null;
+  let paymentSourceFormRef: PaymentSourceForm | null = null;
+  let categoryFormRef: CategoryForm | null = null;
+  let insurancePlanFormRef: InsurancePlanForm | null = null;
+  let insuranceCategoryFormRef: InsuranceCategoryForm | null = null;
+
+  // Get current form's isDirty function based on active tab and mode
+  function getCurrentFormIsDirty(): (() => boolean) | null {
+    if (drawerMode === 'view') return null;
+    switch (activeTab) {
+      case 'bills':
+        return billFormRef?.isDirty ?? null;
+      case 'incomes':
+        return incomeFormRef?.isDirty ?? null;
+      case 'payment-sources':
+        return paymentSourceFormRef?.isDirty ?? null;
+      case 'categories':
+        return categoryFormRef?.isDirty ?? null;
+      case 'insurance-plans':
+        return insurancePlanFormRef?.isDirty ?? null;
+      case 'insurance-categories':
+        return insuranceCategoryFormRef?.isDirty ?? null;
+      default:
+        return null;
+    }
+  }
+
+  // Get current form's handleSubmit function for save from unsaved changes dialog
+  async function handleSaveFromDialog(): Promise<void> {
+    switch (activeTab) {
+      case 'bills':
+        await billFormRef?.handleSubmit();
+        break;
+      case 'incomes':
+        await incomeFormRef?.handleSubmit();
+        break;
+      case 'payment-sources':
+        await paymentSourceFormRef?.handleSubmit();
+        break;
+      case 'categories':
+        await categoryFormRef?.handleSubmit();
+        break;
+      case 'insurance-plans':
+        await insurancePlanFormRef?.handleSubmit();
+        break;
+      case 'insurance-categories':
+        await insuranceCategoryFormRef?.handleSubmit();
+        break;
+    }
+  }
 
   // Delete confirmation state
   let showDeleteConfirm = false;
@@ -112,6 +195,8 @@
     { id: 'bills', label: 'Bills' },
     { id: 'incomes', label: 'Incomes' },
     { id: 'categories', label: 'Categories' },
+    { id: 'insurance-plans', label: 'Insurance Plans' },
+    { id: 'insurance-categories', label: 'Insurance Categories' },
   ];
 
   // Load all data on mount
@@ -122,6 +207,8 @@
       loadBills(),
       loadIncomes(),
       loadCategories(),
+      loadInsurancePlans(),
+      loadInsuranceCategories(),
     ]);
   });
 
@@ -267,6 +354,10 @@
         return 'Income';
       case 'categories':
         return 'Category';
+      case 'insurance-plans':
+        return 'Insurance Plan';
+      case 'insurance-categories':
+        return 'Insurance Category';
     }
   }
 
@@ -276,7 +367,9 @@
     drawerOpen = true;
   }
 
-  function openViewDrawer(item: PaymentSource | Bill | Income | Category) {
+  function openViewDrawer(
+    item: PaymentSource | Bill | Income | Category | InsurancePlan | InsuranceCategory
+  ) {
     drawerMode = 'view';
     clearAllItems();
 
@@ -294,12 +387,20 @@
       case 'categories':
         viewingCategory = item as Category;
         break;
+      case 'insurance-plans':
+        viewingInsurancePlan = item as InsurancePlan;
+        break;
+      case 'insurance-categories':
+        viewingInsuranceCategory = item as InsuranceCategory;
+        break;
     }
 
     drawerOpen = true;
   }
 
-  function openEditDrawer(item: PaymentSource | Bill | Income | Category) {
+  function openEditDrawer(
+    item: PaymentSource | Bill | Income | Category | InsurancePlan | InsuranceCategory
+  ) {
     drawerMode = 'edit';
     clearAllItems();
 
@@ -317,6 +418,12 @@
       case 'categories':
         editingCategory = item as Category;
         break;
+      case 'insurance-plans':
+        editingInsurancePlan = item as InsurancePlan;
+        break;
+      case 'insurance-categories':
+        editingInsuranceCategory = item as InsuranceCategory;
+        break;
     }
 
     drawerOpen = true;
@@ -328,12 +435,16 @@
     if (viewingBill) editingBill = viewingBill;
     if (viewingIncome) editingIncome = viewingIncome;
     if (viewingCategory) editingCategory = viewingCategory;
+    if (viewingInsurancePlan) editingInsurancePlan = viewingInsurancePlan;
+    if (viewingInsuranceCategory) editingInsuranceCategory = viewingInsuranceCategory;
 
     // Clear viewing items
     viewingPaymentSource = null;
     viewingBill = null;
     viewingIncome = null;
     viewingCategory = null;
+    viewingInsurancePlan = null;
+    viewingInsuranceCategory = null;
 
     drawerMode = 'edit';
   }
@@ -343,10 +454,14 @@
     viewingBill = null;
     viewingIncome = null;
     viewingCategory = null;
+    viewingInsurancePlan = null;
+    viewingInsuranceCategory = null;
     editingPaymentSource = null;
     editingBill = null;
     editingIncome = null;
     editingCategory = null;
+    editingInsurancePlan = null;
+    editingInsuranceCategory = null;
   }
 
   function closeDrawer() {
@@ -376,6 +491,14 @@
         case 'categories':
           await deleteCategory(id);
           success('Category deleted');
+          break;
+        case 'insurance-plans':
+          await deleteInsurancePlan(id);
+          success('Insurance plan deleted');
+          break;
+        case 'insurance-categories':
+          await deleteInsuranceCategory(id);
+          success('Insurance category deleted');
           break;
       }
       showDeleteConfirm = false;
@@ -537,6 +660,10 @@
                 {$incomesStore.incomes.length}
               {:else if activeTab === 'categories'}
                 {$categoriesStore.categories.length}
+              {:else if activeTab === 'insurance-plans'}
+                {$insurancePlans.length}
+              {:else if activeTab === 'insurance-categories'}
+                {$insuranceCategories.length}
               {/if})
             </span>
           </h2>
@@ -605,6 +732,36 @@
                 on:edit={(e) => openEditDrawer(e.detail.category)}
               />
             </div>
+          {:else if activeTab === 'insurance-plans'}
+            {#if $insurancePlans.length === 0}
+              <div class="empty-state">
+                <p>No insurance plans yet.</p>
+                <p class="hint">Add your insurance plans to track claims and reimbursements.</p>
+              </div>
+            {:else}
+              <InsurancePlansList
+                plans={$insurancePlans}
+                onView={openViewDrawer}
+                onEdit={openEditDrawer}
+                onDelete={(plan) => confirmDelete({ id: plan.id, name: plan.name })}
+              />
+            {/if}
+          {:else if activeTab === 'insurance-categories'}
+            {#if $insuranceCategories.length === 0}
+              <div class="empty-state">
+                <p>No insurance categories yet.</p>
+                <p class="hint">
+                  Categories will be created automatically when you access insurance claims.
+                </p>
+              </div>
+            {:else}
+              <InsuranceCategoriesList
+                categories={$insuranceCategories}
+                onView={openViewDrawer}
+                onEdit={openEditDrawer}
+                onDelete={(cat) => confirmDelete({ id: cat.id, name: cat.name })}
+              />
+            {/if}
           {/if}
         </div>
       {/if}
@@ -612,7 +769,13 @@
   </div>
 
   <!-- Drawer -->
-  <Drawer isOpen={drawerOpen} title={drawerTitle} onClose={closeDrawer}>
+  <Drawer
+    isOpen={drawerOpen}
+    title={drawerTitle}
+    onClose={closeDrawer}
+    isDirty={getCurrentFormIsDirty()}
+    onSave={handleSaveFromDialog}
+  >
     {#if drawerMode === 'view'}
       {#if activeTab === 'payment-sources' && viewingPaymentSource}
         <PaymentSourceView
@@ -626,19 +789,61 @@
         <IncomeView item={viewingIncome} onEdit={switchToEdit} onClose={closeDrawer} />
       {:else if activeTab === 'categories' && viewingCategory}
         <CategoryView item={viewingCategory} onEdit={switchToEdit} onClose={closeDrawer} />
+      {:else if activeTab === 'insurance-plans' && viewingInsurancePlan}
+        <InsurancePlanView
+          item={viewingInsurancePlan}
+          onEdit={switchToEdit}
+          onClose={closeDrawer}
+        />
+      {:else if activeTab === 'insurance-categories' && viewingInsuranceCategory}
+        <InsuranceCategoryView
+          item={viewingInsuranceCategory}
+          onEdit={switchToEdit}
+          onClose={closeDrawer}
+        />
       {/if}
     {:else if activeTab === 'payment-sources'}
       <PaymentSourceForm
+        bind:this={paymentSourceFormRef}
         editingItem={editingPaymentSource}
         onSave={handleSave}
         onCancel={closeDrawer}
       />
     {:else if activeTab === 'bills'}
-      <BillForm editingItem={editingBill} onSave={handleSave} onCancel={closeDrawer} />
+      <BillForm
+        bind:this={billFormRef}
+        editingItem={editingBill}
+        onSave={handleSave}
+        onCancel={closeDrawer}
+      />
     {:else if activeTab === 'incomes'}
-      <IncomeForm editingItem={editingIncome} onSave={handleSave} onCancel={closeDrawer} />
+      <IncomeForm
+        bind:this={incomeFormRef}
+        editingItem={editingIncome}
+        onSave={handleSave}
+        onCancel={closeDrawer}
+      />
     {:else if activeTab === 'categories'}
-      <CategoryForm editingItem={editingCategory} onSave={handleSave} onCancel={closeDrawer} />
+      <CategoryForm
+        bind:this={categoryFormRef}
+        editingItem={editingCategory}
+        onSave={handleSave}
+        onCancel={closeDrawer}
+      />
+    {:else if activeTab === 'insurance-plans'}
+      <InsurancePlanForm
+        bind:this={insurancePlanFormRef}
+        editingItem={editingInsurancePlan}
+        onSave={handleSave}
+        onCancel={closeDrawer}
+      />
+    {:else if activeTab === 'insurance-categories'}
+      <InsuranceCategoryForm
+        bind:this={insuranceCategoryFormRef}
+        editingItem={editingInsuranceCategory}
+        onSave={handleSave}
+        onCancel={closeDrawer}
+      />
     {/if}
   </Drawer>
 

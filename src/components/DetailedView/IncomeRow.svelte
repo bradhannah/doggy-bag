@@ -210,8 +210,8 @@
       return;
     }
 
-    if (newAmount <= 0) {
-      showError('Amount must be greater than 0');
+    if (newAmount < 0 || isNaN(newAmount)) {
+      showError('Amount must be $0 or greater');
       return;
     }
 

@@ -138,8 +138,8 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('Name cannot exceed 100 characters');
     }
 
-    if (!income.amount || income.amount <= 0) {
-      errors.push('Amount must be a positive number in cents');
+    if (income.amount === undefined || income.amount === null || income.amount < 0) {
+      errors.push('Amount must be zero or a positive number in cents');
     }
 
     if (!income.billing_period) {
@@ -267,9 +267,13 @@ export class ValidationServiceImpl implements ValidationService {
       errors.push('is_savings can only be enabled for bank accounts');
     }
 
-    // is_investment is only valid for bank_account type
-    if (source.is_investment === true && source.type && source.type !== 'bank_account') {
-      errors.push('is_investment can only be enabled for bank accounts');
+    // is_investment is only valid for bank_account or investment type
+    if (
+      source.is_investment === true &&
+      source.type &&
+      !['bank_account', 'investment'].includes(source.type)
+    ) {
+      errors.push('is_investment can only be enabled for bank accounts or investment type');
     }
 
     return {
@@ -358,7 +362,7 @@ export class ValidationServiceImpl implements ValidationService {
     return (
       typeof amount === 'number' &&
       Number.isInteger(amount) &&
-      amount > 0 &&
+      amount >= 0 &&
       amount < Number.MAX_SAFE_INTEGER
     );
   }
@@ -368,7 +372,7 @@ export class ValidationServiceImpl implements ValidationService {
   }
 
   validatePaymentSourceType(type: string): boolean {
-    return ['bank_account', 'credit_card', 'line_of_credit', 'cash'].includes(type);
+    return ['bank_account', 'credit_card', 'line_of_credit', 'cash', 'investment'].includes(type);
   }
 
   /**

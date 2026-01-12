@@ -7,11 +7,14 @@
 
 type BillingPeriod = 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
 
-type PaymentSourceType = 'bank_account' | 'credit_card' | 'line_of_credit' | 'cash';
+type PaymentSourceType = 'bank_account' | 'credit_card' | 'line_of_credit' | 'cash' | 'investment';
 
 // Helper to determine if a payment source type is a debt account
 // Debt accounts have their balance displayed as negative (money owed)
 const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'];
+
+// Helper to determine if a payment source type is an investment account
+const INVESTMENT_ACCOUNT_TYPES: PaymentSourceType[] = ['investment'];
 
 type CategoryType = 'bill' | 'income' | 'variable';
 
@@ -90,6 +93,7 @@ interface Income {
   recurrence_day?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   category_id: string; // Required - reference to income category
+  payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment (default: 'auto')
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
   created_at: string;
@@ -234,6 +238,112 @@ interface Category {
   updated_at: string;
 }
 
+// ============================================================================
+// Insurance Entity Interfaces
+// ============================================================================
+
+type ClaimStatus = 'draft' | 'in_progress' | 'closed';
+type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'partial';
+type DocumentType = 'receipt' | 'eob' | 'other';
+
+interface InsurancePlan {
+  id: string;
+  name: string; // Display name (e.g., "Sun Life - Brad")
+  provider_name?: string; // Provider company name
+  policy_number?: string; // Policy/group number
+  member_id?: string; // User's member ID on this plan
+  owner?: string; // Who this plan belongs to (e.g., "Brad", "Partner")
+  priority: number; // Submission order (1 = primary, 2 = secondary)
+  portal_url?: string; // URL to submit claims online
+  notes?: string; // Freeform notes
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsuranceCategory {
+  id: string;
+  name: string; // Category name (e.g., "Dental")
+  icon: string; // Emoji icon
+  sort_order: number; // Display order
+  is_predefined: boolean; // True for built-in categories
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ClaimDocument {
+  id: string;
+  filename: string; // Stored filename (sortable format: {claim_number}_{date}_{category}_{type}.{ext})
+  original_filename: string; // Original uploaded filename
+  document_type: DocumentType; // Type: receipt / eob / other
+  related_plan_id?: string; // For EOBs, which plan issued it
+  mime_type: string; // File MIME type
+  size_bytes: number; // File size in bytes
+  uploaded_at: string; // Upload timestamp
+}
+
+interface PlanSnapshot {
+  name: string;
+  provider_name?: string;
+  policy_number?: string;
+  member_id?: string;
+  owner?: string;
+  priority: number;
+  portal_url?: string;
+}
+
+interface ClaimSubmission {
+  id: string;
+  plan_id: string; // Reference to InsurancePlan (for filtering)
+  plan_snapshot: PlanSnapshot; // Deep copy of plan details at submission time
+  status: SubmissionStatus; // Status: draft / pending / approved / denied / partial
+  amount_claimed: number; // Amount claimed in cents
+  amount_reimbursed?: number; // Amount received in cents (when resolved)
+  date_submitted?: string; // When submitted to insurer (ISO date)
+  date_resolved?: string; // When response received (ISO date)
+  documents_sent: string[]; // Array of document IDs sent with this submission
+  eob_document_id?: string; // Document ID of EOB received for this submission
+  notes?: string; // Freeform notes
+}
+
+interface InsuranceClaim {
+  id: string;
+  claim_number: number; // Human-readable ID (auto-increment: 1, 2, 3...)
+  category_id: string; // Reference to InsuranceCategory
+  category_name: string; // Denormalized category name for display
+  description?: string; // Optional notes (auto-generated if empty)
+  provider_name?: string; // Service provider (e.g., "Dr. Smith Dental")
+  service_date: string; // When the service occurred (ISO date)
+  total_amount: number; // Original invoice amount in cents
+  status: ClaimStatus; // Auto-calculated: draft / in_progress / closed
+  documents: ClaimDocument[]; // Array of attached documents
+  submissions: ClaimSubmission[]; // Array of plan submissions
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsuranceClaimsSummary {
+  pending_count: number;
+  pending_amount: number;
+  closed_count: number;
+  reimbursed_amount: number;
+}
+
+// ============================================================================
+// Backup Types
+// ============================================================================
+
+interface BackupMetadata {
+  filename: string;
+  fromVersion: string;
+  toVersion: string;
+  timestamp: string;
+  size: number;
+  backupType: 'manual' | 'auto' | 'migration';
+  note?: string; // User-provided note (max 100 chars)
+}
+
 interface MonthlyData {
   month: string;
   bill_instances: BillInstance[];
@@ -243,6 +353,7 @@ interface MonthlyData {
   bank_balances: Record<string, number>;
   savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
   savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
+  savings_contributions?: Record<string, number>; // Expected contribution per account (cents)
   is_read_only: boolean; // Lock month from edits
   created_at: string;
   updated_at: string;
@@ -426,6 +537,9 @@ export type {
   CategoryType,
   PaymentMethod,
   VariableExpenseFrequency,
+  ClaimStatus,
+  SubmissionStatus,
+  DocumentType,
   EntityMetadata,
   PaymentSourceMetadata,
   Bill,
@@ -439,6 +553,14 @@ export type {
   FreeFlowingExpense,
   PaymentSource,
   Category,
+  InsurancePlan,
+  InsuranceCategory,
+  ClaimDocument,
+  PlanSnapshot,
+  ClaimSubmission,
+  InsuranceClaim,
+  InsuranceClaimsSummary,
+  BackupMetadata,
   MonthlyData,
   BackupFileData,
   SectionTally,
@@ -456,4 +578,4 @@ export type {
   ValidationResult,
 };
 
-export { DEBT_ACCOUNT_TYPES };
+export { DEBT_ACCOUNT_TYPES, INVESTMENT_ACCOUNT_TYPES };

@@ -17,6 +17,7 @@ export interface Income {
   payment_source_id: string;
   category_id: string; // Required - reference to income category
   due_day?: number; // Day of month when expected (1-31, optional)
+  payment_method?: 'auto' | 'manual'; // 'auto' for autopay/direct deposit, 'manual' for manual entry
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
   created_at: string;
@@ -38,6 +39,7 @@ export interface IncomeData {
   payment_source_id: string;
   category_id: string; // Required - reference to income category
   due_day?: number; // Day of month when expected (1-31, optional)
+  payment_method?: 'auto' | 'manual'; // 'auto' for autopay/direct deposit, 'manual' for manual entry
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
 }
 

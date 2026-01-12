@@ -39,7 +39,11 @@ export class IncomesServiceImpl implements IncomesService {
   public async getAll(): Promise<Income[]> {
     try {
       const incomes = (await this.storage.readJSON<Income[]>('data/entities/incomes.json')) || [];
-      return incomes;
+      // Migration: Default payment_method to 'auto' for existing incomes
+      return incomes.map((income) => ({
+        ...income,
+        payment_method: income.payment_method ?? 'auto',
+      }));
     } catch (error) {
       console.error('[IncomesService] Failed to load incomes:', error);
       return [];

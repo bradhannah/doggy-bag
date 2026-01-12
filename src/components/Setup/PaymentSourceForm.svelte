@@ -50,22 +50,26 @@
   // Show savings/investment options only for bank accounts
   $: isBankAccount = type === 'bank_account';
 
+  // Investment type (explicit type, not bank_account with is_investment flag)
+  $: isInvestmentType = type === 'investment';
+
   // Conditional field visibility based on type
   // - last_four_digits: All types
   // - credit_limit: credit_card, line_of_credit
   // - interest_rate: All types
   // - interest_rate_cash_advance: credit_card only
-  // - is_variable_rate: line_of_credit, savings (bank_account with is_savings), investment (bank_account with is_investment)
+  // - is_variable_rate: line_of_credit, savings (bank_account with is_savings), investment (type or flag)
   // - statement_day: credit_card, line_of_credit
   // - account_url: All types
   // - notes: All types
   $: showCreditLimit = type === 'credit_card' || type === 'line_of_credit';
   $: showCashAdvanceRate = type === 'credit_card';
-  $: showVariableRate = type === 'line_of_credit' || (isBankAccount && (isSavings || isInvestment));
+  $: showVariableRate =
+    type === 'line_of_credit' || isInvestmentType || (isBankAccount && (isSavings || isInvestment));
   $: showStatementDay = type === 'credit_card' || type === 'line_of_credit';
 
   // Savings or investment mode disables pay_off_monthly
-  $: isSavingsOrInvestment = isSavings || isInvestment;
+  $: isSavingsOrInvestment = isSavings || isInvestment || isInvestmentType;
 
   // When type changes to non-debt, reset the debt-only options
   $: if (!isDebt) {
@@ -101,8 +105,73 @@
     excludeFromLeftover = true;
   }
 
+  // Investment type auto-excludes from leftover
+  $: if (isInvestmentType) {
+    excludeFromLeftover = true;
+  }
+
   let error = '';
   let saving = false;
+
+  // ===== Dirty tracking for unsaved changes confirmation =====
+  interface InitialValues {
+    name: string;
+    type: PaymentSourceType;
+    excludeFromLeftover: boolean;
+    payOffMonthly: boolean;
+    isSavings: boolean;
+    isInvestment: boolean;
+    lastFourDigits: string;
+    creditLimit: string;
+    interestRate: string;
+    interestRateCashAdvance: string;
+    isVariableRate: boolean;
+    statementDay: string;
+    accountUrl: string;
+    notes: string;
+  }
+
+  let initialValues: InitialValues = {
+    name: editingItem?.name || '',
+    type: editingItem?.type || 'bank_account',
+    excludeFromLeftover: editingItem?.exclude_from_leftover ?? false,
+    payOffMonthly: editingItem?.pay_off_monthly ?? false,
+    isSavings: editingItem?.is_savings ?? false,
+    isInvestment: editingItem?.is_investment ?? false,
+    lastFourDigits: editingItem?.metadata?.last_four_digits || '',
+    creditLimit: editingItem?.metadata?.credit_limit
+      ? (editingItem.metadata.credit_limit / 100).toString()
+      : '',
+    interestRate: editingItem?.metadata?.interest_rate
+      ? (editingItem.metadata.interest_rate * 100).toFixed(2)
+      : '',
+    interestRateCashAdvance: editingItem?.metadata?.interest_rate_cash_advance
+      ? (editingItem.metadata.interest_rate_cash_advance * 100).toFixed(2)
+      : '',
+    isVariableRate: editingItem?.metadata?.is_variable_rate ?? false,
+    statementDay: editingItem?.metadata?.statement_day?.toString() || '',
+    accountUrl: editingItem?.metadata?.account_url || '',
+    notes: editingItem?.metadata?.notes || '',
+  };
+
+  export function isDirty(): boolean {
+    return (
+      name !== initialValues.name ||
+      type !== initialValues.type ||
+      excludeFromLeftover !== initialValues.excludeFromLeftover ||
+      payOffMonthly !== initialValues.payOffMonthly ||
+      isSavings !== initialValues.isSavings ||
+      isInvestment !== initialValues.isInvestment ||
+      lastFourDigits !== initialValues.lastFourDigits ||
+      creditLimit !== initialValues.creditLimit ||
+      interestRate !== initialValues.interestRate ||
+      interestRateCashAdvance !== initialValues.interestRateCashAdvance ||
+      isVariableRate !== initialValues.isVariableRate ||
+      statementDay !== initialValues.statementDay ||
+      accountUrl !== initialValues.accountUrl ||
+      notes !== initialValues.notes
+    );
+  }
 
   // Reset form when editingItem changes
   $: if (editingItem) {
@@ -127,6 +196,29 @@
     statementDay = editingItem.metadata?.statement_day?.toString() || '';
     accountUrl = editingItem.metadata?.account_url || '';
     notes = editingItem.metadata?.notes || '';
+    // Update initial values for dirty tracking
+    initialValues = {
+      name: editingItem.name,
+      type: editingItem.type,
+      excludeFromLeftover: editingItem.exclude_from_leftover ?? false,
+      payOffMonthly: editingItem.pay_off_monthly ?? false,
+      isSavings: editingItem.is_savings ?? false,
+      isInvestment: editingItem.is_investment ?? false,
+      lastFourDigits: editingItem.metadata?.last_four_digits || '',
+      creditLimit: editingItem.metadata?.credit_limit
+        ? (editingItem.metadata.credit_limit / 100).toString()
+        : '',
+      interestRate: editingItem.metadata?.interest_rate
+        ? (editingItem.metadata.interest_rate * 100).toFixed(2)
+        : '',
+      interestRateCashAdvance: editingItem.metadata?.interest_rate_cash_advance
+        ? (editingItem.metadata.interest_rate_cash_advance * 100).toFixed(2)
+        : '',
+      isVariableRate: editingItem.metadata?.is_variable_rate ?? false,
+      statementDay: editingItem.metadata?.statement_day?.toString() || '',
+      accountUrl: editingItem.metadata?.account_url || '',
+      notes: editingItem.metadata?.notes || '',
+    };
   }
 
   // Build metadata object from form fields
@@ -142,7 +234,8 @@
         meta.credit_limit = cents;
       }
     }
-    if (interestRate.trim()) {
+    // Only include interest_rate if not a variable rate account
+    if (interestRate.trim() && !(showVariableRate && isVariableRate)) {
       const rate = parseFloat(interestRate) / 100;
       if (!isNaN(rate) && rate >= 0) {
         meta.interest_rate = rate;
@@ -174,7 +267,7 @@
     return Object.keys(meta).length > 0 ? meta : undefined;
   }
 
-  async function handleSubmit() {
+  export async function handleSubmit() {
     // Validation
     if (!name.trim()) {
       error = 'Name is required';
@@ -244,6 +337,7 @@
       <option value="bank_account">🏦 Bank Account</option>
       <option value="credit_card">💳 Credit Card</option>
       <option value="line_of_credit">🏧 Line of Credit</option>
+      <option value="investment">📈 Investment Account</option>
       <option value="cash">💵 Cash</option>
     </select>
   </div>
@@ -374,16 +468,19 @@
     <div class="form-row">
       <div class="form-group">
         <label for="ps-interest-rate">Interest Rate</label>
-        <div class="input-with-suffix">
+        <div class="input-with-suffix" class:disabled-field={isVariableRate && showVariableRate}>
           <input
             id="ps-interest-rate"
             type="text"
             bind:value={interestRate}
-            placeholder="19.99"
-            disabled={saving}
+            placeholder={isVariableRate && showVariableRate ? 'Variable' : '19.99'}
+            disabled={saving || (isVariableRate && showVariableRate)}
           />
           <span class="input-suffix">%</span>
         </div>
+        {#if isVariableRate && showVariableRate}
+          <span class="field-hint">Disabled when Variable Rate is checked</span>
+        {/if}
       </div>
 
       {#if showCashAdvanceRate}
@@ -691,5 +788,21 @@
   .input-with-suffix input:focus {
     outline: none;
     border: none;
+  }
+
+  .disabled-field {
+    opacity: 0.5;
+    background: var(--bg-surface);
+  }
+
+  .disabled-field input {
+    cursor: not-allowed;
+  }
+
+  .field-hint {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+    margin-top: 4px;
   }
 </style>

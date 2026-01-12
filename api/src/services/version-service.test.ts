@@ -124,14 +124,14 @@ describe('VersionService', () => {
   });
 
   describe('getAppVersion', () => {
-    test('returns a version string', () => {
-      const version = service.getAppVersion();
+    test('returns a version string', async () => {
+      const version = await service.getAppVersion();
       expect(typeof version).toBe('string');
       expect(version.length).toBeGreaterThan(0);
     });
 
-    test('version matches semver pattern', () => {
-      const version = service.getAppVersion();
+    test('version matches semver pattern', async () => {
+      const version = await service.getAppVersion();
       // Basic semver pattern check
       expect(version).toMatch(/^\d+\.\d+\.\d+/);
     });
@@ -140,7 +140,7 @@ describe('VersionService', () => {
   describe('getVersionInfo', () => {
     test('returns version info with current version', async () => {
       const info = await service.getVersionInfo();
-      expect(info.current).toBe(service.getAppVersion());
+      expect(info.current).toBe(await service.getAppVersion());
       expect(info.lastChecked).toBeDefined();
     });
 
@@ -162,7 +162,7 @@ describe('VersionService', () => {
 
       service = new VersionServiceImpl();
       const info = await service.getVersionInfo();
-      expect(info.current).toBe(service.getAppVersion());
+      expect(info.current).toBe(await service.getAppVersion());
     });
   });
 
@@ -172,12 +172,12 @@ describe('VersionService', () => {
 
       expect(result.versionChanged).toBe(false);
       expect(result.previousVersion).toBeNull();
-      expect(result.currentVersion).toBe(service.getAppVersion());
+      expect(result.currentVersion).toBe(await service.getAppVersion());
       expect(result.backupCreated).toBe(false);
     });
 
     test('same version - no backup created', async () => {
-      const currentVersion = service.getAppVersion();
+      const currentVersion = await service.getAppVersion();
 
       // Set version file to current version
       await writeFile(
@@ -264,7 +264,7 @@ describe('VersionService', () => {
       const backups = await service.listVersionBackups();
       expect(backups.length).toBe(1);
       expect(backups[0].fromVersion).toBe('0.0.1');
-      expect(backups[0].toVersion).toBe(service.getAppVersion());
+      expect(backups[0].toVersion).toBe(await service.getAppVersion());
       expect(backups[0].filename).toContain('.json');
       expect(backups[0].size).toBeGreaterThan(0);
     });

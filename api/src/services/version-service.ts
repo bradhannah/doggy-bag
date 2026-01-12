@@ -2,12 +2,48 @@
 
 import { StorageServiceImpl, type StorageService } from './storage';
 import { BackupServiceImpl, type BackupService } from './backup-service';
-import { mkdir, readdir, unlink, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readdir, unlink, stat, readFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// Read version from tauri.conf.json at build time (injected via environment or fallback)
-// In production, this would be set by the build process
-const APP_VERSION = process.env.APP_VERSION || '0.2.2';
+// Dynamically read version from tauri.conf.json (source of truth)
+// Falls back to package.json if tauri.conf.json is not accessible
+let cachedVersion: string | null = null;
+
+async function readVersionFromTauriConfig(): Promise<string> {
+  if (cachedVersion) return cachedVersion;
+
+  try {
+    // Try to find tauri.conf.json relative to the api directory
+    // In development: ../src-tauri/tauri.conf.json
+    // The API runs from /api/src, so we go up to project root
+    const apiDir = dirname(fileURLToPath(import.meta.url));
+    const projectRoot = join(apiDir, '..', '..', '..');
+    const tauriConfigPath = join(projectRoot, 'src-tauri', 'tauri.conf.json');
+
+    const content = await readFile(tauriConfigPath, 'utf-8');
+    const config = JSON.parse(content) as { version: string };
+    cachedVersion = config.version;
+    return cachedVersion;
+  } catch {
+    // Fallback: try to read from root package.json
+    try {
+      const apiDir = dirname(fileURLToPath(import.meta.url));
+      const projectRoot = join(apiDir, '..', '..', '..');
+      const packageJsonPath = join(projectRoot, 'package.json');
+
+      const content = await readFile(packageJsonPath, 'utf-8');
+      const pkg = JSON.parse(content) as { version: string };
+      cachedVersion = pkg.version;
+      return cachedVersion;
+    } catch {
+      // Last resort: return a default
+      console.warn('[VersionService] Could not read version from tauri.conf.json or package.json');
+      cachedVersion = '0.0.0';
+      return cachedVersion;
+    }
+  }
+}
 
 export interface VersionInfo {
   current: string;
@@ -22,6 +58,7 @@ export interface VersionBackup {
   timestamp: string;
   size: number;
   backupType: 'version_upgrade' | 'manual';
+  note?: string; // Optional note for manual backups
 }
 
 export interface VersionCheckResult {
@@ -34,10 +71,10 @@ export interface VersionCheckResult {
 }
 
 export interface VersionService {
-  getAppVersion(): string;
+  getAppVersion(): Promise<string>;
   getVersionInfo(): Promise<VersionInfo>;
   checkVersionAndBackup(): Promise<VersionCheckResult>;
-  createManualBackup(): Promise<string>;
+  createManualBackup(note?: string): Promise<string>;
   listVersionBackups(): Promise<VersionBackup[]>;
   restoreVersionBackup(filename: string): Promise<void>;
   deleteVersionBackup(filename: string): Promise<void>;
@@ -68,8 +105,8 @@ export class VersionServiceImpl implements VersionService {
   /**
    * Get the current app version.
    */
-  getAppVersion(): string {
-    return APP_VERSION;
+  async getAppVersion(): Promise<string> {
+    return await readVersionFromTauriConfig();
   }
 
   /**
@@ -92,12 +129,13 @@ export class VersionServiceImpl implements VersionService {
    * Get stored version info.
    */
   async getVersionInfo(): Promise<VersionInfo> {
+    const appVersion = await readVersionFromTauriConfig();
     try {
       const stored = await this.storage.readJSON<VersionInfo>(this.getVersionFilePath());
       if (stored) {
         return {
           ...stored,
-          current: APP_VERSION,
+          current: appVersion,
         };
       }
     } catch {
@@ -105,7 +143,7 @@ export class VersionServiceImpl implements VersionService {
     }
 
     return {
-      current: APP_VERSION,
+      current: appVersion,
       previous: null,
       lastChecked: new Date().toISOString(),
     };
@@ -116,10 +154,11 @@ export class VersionServiceImpl implements VersionService {
    * Call this on app startup.
    */
   async checkVersionAndBackup(): Promise<VersionCheckResult> {
+    const appVersion = await readVersionFromTauriConfig();
     const result: VersionCheckResult = {
       versionChanged: false,
       previousVersion: null,
-      currentVersion: APP_VERSION,
+      currentVersion: appVersion,
       backupCreated: false,
     };
 
@@ -138,15 +177,15 @@ export class VersionServiceImpl implements VersionService {
       result.previousVersion = storedVersion;
 
       // Check if version changed
-      if (storedVersion && storedVersion !== APP_VERSION) {
+      if (storedVersion && storedVersion !== appVersion) {
         result.versionChanged = true;
-        console.log(`[VersionService] Version changed: ${storedVersion} -> ${APP_VERSION}`);
+        console.log(`[VersionService] Version changed: ${storedVersion} -> ${appVersion}`);
 
         // Check if there's any data to backup
         const hasData = await this.hasExistingData();
         if (hasData) {
           // Create version backup
-          const backupFilename = await this.createVersionBackup(storedVersion, APP_VERSION);
+          const backupFilename = await this.createVersionBackup(storedVersion, appVersion);
           result.backupCreated = true;
           result.backupPath = backupFilename;
 
@@ -159,7 +198,7 @@ export class VersionServiceImpl implements VersionService {
 
       // Update stored version
       await this.storage.writeJSON(this.getVersionFilePath(), {
-        version: APP_VERSION,
+        version: appVersion,
         previous: storedVersion,
         lastChecked: new Date().toISOString(),
       });
@@ -229,9 +268,11 @@ export class VersionServiceImpl implements VersionService {
 
   /**
    * Create a manual backup triggered by user.
+   * @param note Optional note to include with the backup
    */
-  async createManualBackup(): Promise<string> {
+  async createManualBackup(note?: string): Promise<string> {
     const backupsDir = this.getBackupsDir();
+    const appVersion = await readVersionFromTauriConfig();
 
     // Ensure backups directory exists
     await mkdir(backupsDir, { recursive: true });
@@ -243,12 +284,17 @@ export class VersionServiceImpl implements VersionService {
     // Export backup data
     const backupData = await this.backup.exportBackup();
 
-    // Add manual backup metadata
-    const manualBackupData = {
+    // Add manual backup metadata (including optional note)
+    const manualBackupData: Record<string, unknown> = {
       ...backupData,
       backup_type: 'manual',
-      app_version: APP_VERSION,
+      app_version: appVersion,
     };
+
+    // Only include note if provided and non-empty
+    if (note && note.trim()) {
+      manualBackupData.note = note.trim();
+    }
 
     // Write backup file
     await this.storage.writeJSON(join(backupsDir, filename), manualBackupData);
@@ -308,6 +354,15 @@ export class VersionServiceImpl implements VersionService {
               'T$1:$2:$3.$4Z'
             );
 
+            // Try to read note from backup file
+            let note: string | undefined;
+            try {
+              const backupContent = await this.storage.readJSON<{ note?: string }>(filepath);
+              note = backupContent?.note;
+            } catch {
+              // Ignore errors reading note
+            }
+
             backups.push({
               filename: file,
               fromVersion: '', // Manual backups don't have version info in filename
@@ -315,6 +370,7 @@ export class VersionServiceImpl implements VersionService {
               timestamp: isoTimestamp,
               size: stats.size,
               backupType: 'manual',
+              note,
             });
           }
         } catch {

@@ -336,16 +336,16 @@ describe('ValidationService', () => {
       expect(result.errors).toContain('Name cannot exceed 100 characters');
     });
 
-    test('rejects zero amount for income', () => {
+    test('accepts zero amount for income', () => {
       const result = validation.validateIncome({
         name: 'Test',
         amount: 0,
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: '12345678901234567890',
+        category_id: 'cat-123',
       });
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Amount must be a positive number in cents');
+      expect(result.isValid).toBe(true);
     });
 
     test('rejects negative amount', () => {
@@ -355,9 +355,10 @@ describe('ValidationService', () => {
         billing_period: 'monthly',
         day_of_month: 15,
         payment_source_id: '12345678901234567890',
+        category_id: 'cat-123',
       });
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Amount must be a positive number in cents');
+      expect(result.errors).toContain('Amount must be zero or a positive number in cents');
     });
 
     test('rejects invalid billing period', () => {
@@ -762,13 +763,13 @@ describe('ValidationService', () => {
   });
 
   describe('validateAmount', () => {
-    test('accepts valid positive integers', () => {
+    test('accepts valid non-negative integers', () => {
+      expect(validation.validateAmount(0)).toBe(true);
       expect(validation.validateAmount(1)).toBe(true);
       expect(validation.validateAmount(10000)).toBe(true);
     });
 
     test('rejects invalid amounts', () => {
-      expect(validation.validateAmount(0)).toBe(false);
       expect(validation.validateAmount(-100)).toBe(false);
       expect(validation.validateAmount(99.99)).toBe(false);
       expect(validation.validateAmount(Number.MAX_SAFE_INTEGER)).toBe(false);
@@ -795,6 +796,7 @@ describe('ValidationService', () => {
       expect(validation.validatePaymentSourceType('credit_card')).toBe(true);
       expect(validation.validatePaymentSourceType('line_of_credit')).toBe(true);
       expect(validation.validatePaymentSourceType('cash')).toBe(true);
+      expect(validation.validatePaymentSourceType('investment')).toBe(true);
     });
 
     test('rejects invalid types', () => {

@@ -133,6 +133,34 @@ import {
   switchDirectory,
 } from './handlers/settings';
 
+import {
+  createInsurancePlansHandlerGET,
+  createInsurancePlansHandlerPOST,
+  createInsurancePlansHandlerPUT,
+  createInsurancePlansHandlerDELETE,
+} from './handlers/insurance-plans.handlers';
+
+import {
+  createInsuranceCategoriesHandlerGET,
+  createInsuranceCategoriesHandlerPOST,
+  createInsuranceCategoriesHandlerPUT,
+  createInsuranceCategoriesHandlerDELETE,
+} from './handlers/insurance-categories.handlers';
+
+import {
+  createInsuranceClaimsHandlerGET,
+  createInsuranceClaimsSummaryHandler,
+  createInsuranceClaimsHandlerPOST,
+  createInsuranceClaimsHandlerPUT,
+  createInsuranceClaimsHandlerDELETE,
+  createClaimDocumentUploadHandler,
+  createClaimDocumentDownloadHandler,
+  createClaimDocumentDeleteHandler,
+  createClaimSubmissionPOSTHandler,
+  createClaimSubmissionPUTHandler,
+  createClaimSubmissionDELETEHandler,
+} from './handlers/insurance-claims.handlers';
+
 // Route definition type
 interface RouteDefinition {
   method: string;
@@ -225,6 +253,119 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/categories/reorder',
     definition: { method: 'PUT', handler: createCategoriesReorderHandler() },
+  },
+
+  // Insurance Plans
+  {
+    path: '/api/insurance-plans',
+    definition: { method: 'GET', handler: createInsurancePlansHandlerGET() },
+  },
+  {
+    path: '/api/insurance-plans',
+    definition: { method: 'POST', handler: createInsurancePlansHandlerPOST() },
+  },
+  {
+    path: '/api/insurance-plans',
+    definition: { method: 'PUT', handler: createInsurancePlansHandlerPUT(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-plans',
+    definition: {
+      method: 'DELETE',
+      handler: createInsurancePlansHandlerDELETE(),
+      hasPathParam: true,
+    },
+  },
+
+  // Insurance Categories
+  {
+    path: '/api/insurance-categories',
+    definition: { method: 'GET', handler: createInsuranceCategoriesHandlerGET() },
+  },
+  {
+    path: '/api/insurance-categories',
+    definition: { method: 'POST', handler: createInsuranceCategoriesHandlerPOST() },
+  },
+  {
+    path: '/api/insurance-categories',
+    definition: {
+      method: 'PUT',
+      handler: createInsuranceCategoriesHandlerPUT(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/insurance-categories',
+    definition: {
+      method: 'DELETE',
+      handler: createInsuranceCategoriesHandlerDELETE(),
+      hasPathParam: true,
+    },
+  },
+
+  // Insurance Claims - summary route must come before generic claims route
+  {
+    path: '/api/insurance-claims/summary',
+    definition: { method: 'GET', handler: createInsuranceClaimsSummaryHandler() },
+  },
+  // Insurance Claims - document routes must come before generic claims routes
+  {
+    path: '/api/insurance-claims/documents',
+    definition: { method: 'POST', handler: createClaimDocumentUploadHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims/documents',
+    definition: {
+      method: 'GET',
+      handler: createClaimDocumentDownloadHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/insurance-claims/documents',
+    definition: {
+      method: 'DELETE',
+      handler: createClaimDocumentDeleteHandler(),
+      hasPathParam: true,
+    },
+  },
+  // Insurance Claims - submission routes
+  {
+    path: '/api/insurance-claims/submissions',
+    definition: { method: 'POST', handler: createClaimSubmissionPOSTHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims/submissions',
+    definition: { method: 'PUT', handler: createClaimSubmissionPUTHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims/submissions',
+    definition: {
+      method: 'DELETE',
+      handler: createClaimSubmissionDELETEHandler(),
+      hasPathParam: true,
+    },
+  },
+  // Insurance Claims - main CRUD
+  {
+    path: '/api/insurance-claims',
+    definition: { method: 'GET', handler: createInsuranceClaimsHandlerGET(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims',
+    definition: { method: 'POST', handler: createInsuranceClaimsHandlerPOST() },
+  },
+  {
+    path: '/api/insurance-claims',
+    definition: { method: 'PUT', handler: createInsuranceClaimsHandlerPUT(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims',
+    definition: {
+      method: 'DELETE',
+      handler: createInsuranceClaimsHandlerDELETE(),
+      hasPathParam: true,
+    },
   },
 
   // Payment Sources - savings endpoint must come before generic payment-sources routes

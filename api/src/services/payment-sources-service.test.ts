@@ -498,7 +498,9 @@ describe('PaymentSourcesService', () => {
         is_investment: true,
       });
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('is_investment can only be enabled for bank accounts');
+      expect(result.errors).toContain(
+        'is_investment can only be enabled for bank accounts or investment type'
+      );
     });
 
     test('returns valid for exclude_from_leftover on savings account', () => {
