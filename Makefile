@@ -185,9 +185,11 @@ build: ## Build Tauri application for current platform
 
 build-sidecar: ## Build the standalone compiled Bun sidecar (for production)
 	@echo "Building compiled sidecar binary..."
-	@echo "  Input: api/server.ts (+ all dependencies)"
-	@echo "  Output: src-tauri/binaries/bun-sidecar-aarch64-apple-darwin"
-	@cd api && $(BUN) build --compile --outfile ../src-tauri/binaries/bun-sidecar-aarch64-apple-darwin ./server.ts
+	@VERSION=$$(grep '"version"' src-tauri/tauri.conf.json | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'); \
+	echo "  Version: $$VERSION"; \
+	echo "  Input: api/server.ts (+ all dependencies)"; \
+	echo "  Output: src-tauri/binaries/bun-sidecar-aarch64-apple-darwin"; \
+	cd api && APP_VERSION=$$VERSION $(BUN) build --compile --env='APP_*' --outfile ../src-tauri/binaries/bun-sidecar-aarch64-apple-darwin ./server.ts
 	@chmod +x src-tauri/binaries/bun-sidecar-aarch64-apple-darwin
 	@echo ""
 	@echo "✓ Compiled sidecar ready"

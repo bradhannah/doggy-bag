@@ -6,15 +6,26 @@ import { mkdir, readdir, unlink, stat, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Dynamically read version from tauri.conf.json (source of truth)
-// Falls back to package.json if tauri.conf.json is not accessible
+// Version resolution priority:
+// 1. APP_VERSION env var (injected at compile time for production builds)
+// 2. tauri.conf.json (source of truth in development)
+// 3. package.json (fallback)
+// 4. '0.0.0' (last resort)
 let cachedVersion: string | null = null;
 
 async function readVersionFromTauriConfig(): Promise<string> {
   if (cachedVersion) return cachedVersion;
 
+  // Priority 1: Check for compile-time injected version (production builds)
+  // Bun inlines process.env values at compile time when using --compile
+  const envVersion = process.env.APP_VERSION;
+  if (envVersion && envVersion !== 'undefined') {
+    cachedVersion = envVersion;
+    return cachedVersion;
+  }
+
   try {
-    // Try to find tauri.conf.json relative to the api directory
+    // Priority 2: Try to find tauri.conf.json relative to the api directory
     // In development: ../src-tauri/tauri.conf.json
     // The API runs from /api/src, so we go up to project root
     const apiDir = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +37,7 @@ async function readVersionFromTauriConfig(): Promise<string> {
     cachedVersion = config.version;
     return cachedVersion;
   } catch {
-    // Fallback: try to read from root package.json
+    // Priority 3: Fallback to root package.json
     try {
       const apiDir = dirname(fileURLToPath(import.meta.url));
       const projectRoot = join(apiDir, '..', '..', '..');
@@ -37,8 +48,10 @@ async function readVersionFromTauriConfig(): Promise<string> {
       cachedVersion = pkg.version;
       return cachedVersion;
     } catch {
-      // Last resort: return a default
-      console.warn('[VersionService] Could not read version from tauri.conf.json or package.json');
+      // Priority 4: Last resort - return a default
+      console.warn(
+        '[VersionService] Could not read version from APP_VERSION, tauri.conf.json, or package.json'
+      );
       cachedVersion = '0.0.0';
       return cachedVersion;
     }
