@@ -22,13 +22,13 @@ export class SettingsService {
   /**
    * Get current application settings.
    */
-  getSettings(): SettingsResponse {
+  async getSettings(): Promise<SettingsResponse> {
     const config = StorageServiceImpl.getConfig();
     const versionService = getVersionService();
     return {
       dataDirectory: config.basePath,
       isDevelopment: config.isDevelopment,
-      version: versionService.getAppVersion(),
+      version: await versionService.getAppVersion(),
     };
   }
 

@@ -31,11 +31,28 @@ Before releasing, ensure:
 
 ## Key Files
 
-| File                               | Purpose                              |
-| ---------------------------------- | ------------------------------------ |
-| `src-tauri/tauri.conf.json`        | Contains the version number (line 4) |
-| `.github/workflows/release.yml`    | Release automation workflow          |
-| Homebrew tap: `Casks/doggy-bag.rb` | Cask definition (auto-updated)       |
+| File                               | Purpose                                            |
+| ---------------------------------- | -------------------------------------------------- |
+| `src-tauri/tauri.conf.json`        | **Source of truth** - version number (line 4)      |
+| `src-tauri/Cargo.toml`             | Rust package version (should match)                |
+| `package.json`                     | Root npm package version (should match)            |
+| `api/package.json`                 | API npm package version (should match)             |
+| `.github/workflows/release.yml`    | Release automation workflow                        |
+| Homebrew tap: `Casks/doggy-bag.rb` | Cask definition (auto-updated by release workflow) |
+
+### Version Sync
+
+When bumping versions, update all four version files to keep them in sync:
+
+```bash
+# Check current versions
+grep '"version"' src-tauri/tauri.conf.json package.json api/package.json
+grep '^version' src-tauri/Cargo.toml
+
+# After updating, verify they match
+```
+
+The `api/src/services/version-service.ts` reads version dynamically from `tauri.conf.json` at runtime (no hardcoded fallback).
 
 ## Release Process
 

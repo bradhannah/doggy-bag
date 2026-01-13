@@ -2,7 +2,12 @@ import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 
 // Payment source types
-export type PaymentSourceType = 'bank_account' | 'credit_card' | 'line_of_credit' | 'cash';
+export type PaymentSourceType =
+  | 'bank_account'
+  | 'credit_card'
+  | 'line_of_credit'
+  | 'cash'
+  | 'investment';
 
 // Debt account types - balances represent money owed (displayed as negative)
 export const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'];
@@ -33,6 +38,8 @@ export function getTypeDisplayName(type: PaymentSourceType): string {
       return 'Line of Credit';
     case 'cash':
       return 'Cash';
+    case 'investment':
+      return 'Investment Account';
     default:
       return type;
   }
@@ -49,6 +56,8 @@ export function getTypeIcon(type: PaymentSourceType): string {
       return '🏧';
     case 'cash':
       return '💵';
+    case 'investment':
+      return '📈';
     default:
       return '💰';
   }
@@ -146,10 +155,10 @@ export const savingsAccounts = derived(paymentSources, (ps) =>
   ps.filter((p) => p.is_savings === true)
 );
 export const investmentAccounts = derived(paymentSources, (ps) =>
-  ps.filter((p) => p.is_investment === true)
+  ps.filter((p) => p.is_investment === true || p.type === 'investment')
 );
 export const savingsAndInvestmentAccounts = derived(paymentSources, (ps) =>
-  ps.filter((p) => p.is_savings === true || p.is_investment === true)
+  ps.filter((p) => p.is_savings === true || p.is_investment === true || p.type === 'investment')
 );
 
 export async function loadPaymentSources() {

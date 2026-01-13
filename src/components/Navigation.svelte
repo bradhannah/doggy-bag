@@ -19,6 +19,8 @@
   $: isSettingsActive = currentPath.startsWith('/settings');
   // Check if we're on the savings page
   $: isSavingsActive = currentPath.startsWith('/savings');
+  // Check if we're on the insurance page
+  $: isInsuranceActive = currentPath.startsWith('/insurance');
 
   // Check if in Tauri environment (for zoom controls)
   const inTauri = isTauri();
@@ -116,6 +118,27 @@
           >
         </svg>
         <span>Savings</span>
+      </a>
+    </li>
+    <li>
+      <a href="/insurance" class="nav-item" class:active={isInsuranceActive} title="Insurance">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 2L4 6v6c0 5.5 3.5 10.6 8 12 4.5-1.4 8-6.5 8-12V6l-8-4z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M9 12l2 2 4-4"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span>Insurance</span>
       </a>
     </li>
   </ul>

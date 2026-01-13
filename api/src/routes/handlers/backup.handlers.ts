@@ -331,9 +331,18 @@ export function createVersionBackupDeleteHandler() {
  */
 export function createManualBackupHandler() {
   const versionService = getVersionService();
-  return async (_req: Request): Promise<Response> => {
+  return async (req: Request): Promise<Response> => {
     try {
-      const filename = await versionService.createManualBackup();
+      // Parse optional note from request body
+      let note: string | undefined;
+      try {
+        const body = (await req.json()) as { note?: string };
+        note = body?.note;
+      } catch {
+        // No body or invalid JSON - that's fine, note is optional
+      }
+
+      const filename = await versionService.createManualBackup(note);
 
       return new Response(
         JSON.stringify({

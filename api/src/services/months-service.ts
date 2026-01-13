@@ -66,7 +66,8 @@ export interface MonthsService {
   updateSavingsBalances(
     month: string,
     start?: Record<string, number>,
-    end?: Record<string, number>
+    end?: Record<string, number>,
+    contributions?: Record<string, number>
   ): Promise<MonthlyData>;
   saveMonthlyData(month: string, data: MonthlyData): Promise<void>;
 
@@ -758,7 +759,8 @@ export class MonthsServiceImpl implements MonthsService {
   public async updateSavingsBalances(
     month: string,
     start?: Record<string, number>,
-    end?: Record<string, number>
+    end?: Record<string, number>,
+    contributions?: Record<string, number>
   ): Promise<MonthlyData> {
     try {
       const data = await this.getMonthlyData(month);
@@ -780,6 +782,12 @@ export class MonthsServiceImpl implements MonthsService {
         data.savings_balances_end = {
           ...(data.savings_balances_end || {}),
           ...end,
+        };
+      }
+      if (contributions !== undefined) {
+        data.savings_contributions = {
+          ...(data.savings_contributions || {}),
+          ...contributions,
         };
       }
       data.updated_at = now;
@@ -1286,6 +1294,15 @@ export class MonthsServiceImpl implements MonthsService {
     }
   }
 
+  /**
+   * Calculate the previous month string from a given month (YYYY-MM format)
+   */
+  private getPreviousMonth(month: string): string {
+    const [year, monthNum] = month.split('-').map(Number);
+    const prevDate = new Date(year, monthNum - 2); // monthNum - 1 for 0-based, -1 more for previous
+    return `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+  }
+
   public async createMonth(month: string): Promise<MonthlyData> {
     console.log(`[MonthsService] Creating month ${month}`);
 
@@ -1319,6 +1336,11 @@ export class MonthsServiceImpl implements MonthsService {
       const incomes = await this.incomesService.getAll();
 
       const nowIso = new Date().toISOString();
+
+      // Try to get previous month's end balances to use as this month's start
+      const prevMonth = this.getPreviousMonth(month);
+      const prevMonthData = await this.getMonthlyData(prevMonth);
+      const savingsBalancesStart = prevMonthData?.savings_balances_end || {};
 
       // Generate bill instances from active bills
       const billInstances: BillInstance[] = [];
@@ -1431,6 +1453,7 @@ export class MonthsServiceImpl implements MonthsService {
         variable_expenses: variableExpenses,
         free_flowing_expenses: [],
         bank_balances: {},
+        savings_balances_start: savingsBalancesStart,
         is_read_only: false,
         created_at: nowIso,
         updated_at: nowIso,

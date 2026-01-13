@@ -51,3 +51,12 @@ make build        # Build production app
 make lint         # Run linters
 make format       # Format code
 ```
+
+## Active Technologies
+
+- TypeScript 5.x (strict mode), Rust 2021 edition (Tauri) + Svelte 5.x, Bun 1.x, Tauri 2.x, Vite (012-misc-fixes)
+- JSON files in user-configurable directory + new documents/ folder for uploads (012-misc-fixes)
+
+## Recent Changes
+
+- 012-misc-fixes: Added TypeScript 5.x (strict mode), Rust 2021 edition (Tauri) + Svelte 5.x, Bun 1.x, Tauri 2.x, Vite

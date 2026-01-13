@@ -12,7 +12,7 @@ const settingsService = getSettingsService();
  */
 export async function getSettings(_req: Request): Promise<Response> {
   try {
-    const settings = settingsService.getSettings();
+    const settings = await settingsService.getSettings();
     return new Response(JSON.stringify(settings), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

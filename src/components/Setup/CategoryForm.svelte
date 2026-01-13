@@ -62,20 +62,26 @@
   let error = '';
   let saving = false;
 
-  // Check if this is a predefined category (can't edit predefined categories)
-  $: isPredefined = editingItem?.is_predefined || false;
-
-  // Check if this is the Variable Expenses category (special system category)
-  $: isVariableCategory = (editingItem as { type?: string })?.type === 'variable';
-
-  // Reset form when editingItem changes
-  $: if (editingItem) {
-    name = editingItem.name;
-    type = editingItem.type;
-    color = editingItem.color || '#24c8db';
+  // ===== Dirty tracking for unsaved changes confirmation =====
+  interface InitialValues {
+    name: string;
+    type: CategoryType;
+    color: string;
   }
 
-  async function handleSubmit() {
+  let initialValues: InitialValues = {
+    name: editingItem?.name || '',
+    type: editingItem?.type || defaultType,
+    color: editingItem?.color || getUniqueColor($categories),
+  };
+
+  export function isDirty(): boolean {
+    return (
+      name !== initialValues.name || type !== initialValues.type || color !== initialValues.color
+    );
+  }
+
+  export async function handleSubmit() {
     // Validation
     if (!name.trim()) {
       error = 'Name is required';
@@ -107,6 +113,25 @@
     } finally {
       saving = false;
     }
+  }
+
+  // Check if this is a predefined category (can't edit predefined categories)
+  $: isPredefined = editingItem?.is_predefined || false;
+
+  // Check if this is the Variable Expenses category (special system category)
+  $: isVariableCategory = (editingItem as { type?: string })?.type === 'variable';
+
+  // Reset form when editingItem changes
+  $: if (editingItem) {
+    name = editingItem.name;
+    type = editingItem.type;
+    color = editingItem.color || '#24c8db';
+    // Update initial values for dirty tracking
+    initialValues = {
+      name: editingItem.name,
+      type: editingItem.type,
+      color: editingItem.color || '#24c8db',
+    };
   }
 </script>
 

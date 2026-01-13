@@ -14,6 +14,7 @@
   interface SavingsBalances {
     start: Record<string, number>;
     end: Record<string, number>;
+    contributions: Record<string, number>;
   }
 
   let loading = true;
@@ -21,10 +22,14 @@
   let creating = false;
   let error = '';
   let monthExists = true;
-  let balances: SavingsBalances = { start: {}, end: {} };
+  let balances: SavingsBalances = { start: {}, end: {}, contributions: {} };
 
   // Editing state - store values in dollars for display
-  let editingValues: Record<string, { start: string; end: string }> = {};
+  // New structure: start, contribution, end (final)
+  let editingValues: Record<string, { start: string; contribution: string; end: string }> = {};
+
+  // Track which field is currently saving (for visual feedback)
+  let savingField: { accountId: string; field: string } | null = null;
 
   $: allAccounts = [...$savingsAccounts, ...$investmentAccounts];
   $: hasSavingsAccounts = $savingsAccounts.length > 0;
@@ -82,6 +87,9 @@
         const currentEnd =
           (monthData as { savings_balances_end?: Record<string, number> }).savings_balances_end ||
           {};
+        const currentContributions =
+          (monthData as { savings_contributions?: Record<string, number> }).savings_contributions ||
+          {};
 
         // Use previous month's end balances as defaults for start if current start is empty
         const startBalances: Record<string, number> = {};
@@ -96,6 +104,7 @@
         balances = {
           start: startBalances,
           end: currentEnd,
+          contributions: currentContributions,
         };
       }
       // Initialize editing values from current balances
@@ -107,7 +116,7 @@
       ) {
         // Month doesn't exist yet - show create prompt
         monthExists = false;
-        balances = { start: {}, end: {} };
+        balances = { start: {}, end: {}, contributions: {} };
         initEditingValues(previousMonthEndBalances);
       } else {
         error = e instanceof Error ? e.message : 'Failed to load data';
@@ -125,6 +134,7 @@
         balances.start[account.id] ?? previousMonthEndBalances[account.id] ?? account.balance;
       editingValues[account.id] = {
         start: centsToDollars(startValue),
+        contribution: centsToDollars(balances.contributions[account.id] ?? 0),
         end: centsToDollars(balances.end[account.id] ?? 0),
       };
     }
@@ -156,58 +166,112 @@
     return `${sign}${pct.toFixed(1)}%`;
   }
 
-  function getChange(accountId: string): number {
-    const startVal = dollarsToCents(editingValues[accountId]?.start || '0');
-    const endVal = dollarsToCents(editingValues[accountId]?.end || '0');
-    return endVal - startVal;
-  }
-
+  // Get values in cents for an account
   function getStartValue(accountId: string): number {
     return dollarsToCents(editingValues[accountId]?.start || '0');
   }
 
+  function getContributionValue(accountId: string): number {
+    return dollarsToCents(editingValues[accountId]?.contribution || '0');
+  }
+
+  // Check if the Final (end) value is auto-calculated (empty or zero with no user input)
+  function isEndAutoCalculated(accountId: string): boolean {
+    const endStr = editingValues[accountId]?.end || '';
+    // Auto-calculated if empty, or "0.00" (initial default), or "0"
+    return endStr === '' || endStr === '0.00' || endStr === '0';
+  }
+
+  // Get the effective end value - uses Est. EOM when auto-calculated
   function getEndValue(accountId: string): number {
+    if (isEndAutoCalculated(accountId)) {
+      // Auto-calculate as Start + Contribution
+      return getStartValue(accountId) + getContributionValue(accountId);
+    }
     return dollarsToCents(editingValues[accountId]?.end || '0');
   }
 
-  async function handleSave() {
-    saving = true;
-    try {
-      const startBalances: Record<string, number> = {};
-      const endBalances: Record<string, number> = {};
+  // Est. EOM = Start + Contribution
+  function getEstEomValue(accountId: string): number {
+    return getStartValue(accountId) + getContributionValue(accountId);
+  }
 
-      for (const account of allAccounts) {
-        if (editingValues[account.id]) {
-          startBalances[account.id] = dollarsToCents(editingValues[account.id].start);
-          endBalances[account.id] = dollarsToCents(editingValues[account.id].end);
-        }
+  // Change = Final (End) - Start
+  function getChange(accountId: string): number {
+    return getEndValue(accountId) - getStartValue(accountId);
+  }
+
+  // Handle input changes - force Svelte reactivity by reassigning the object
+  function handleInput(accountId: string, field: 'start' | 'contribution' | 'end', value: string) {
+    editingValues[accountId][field] = value;
+    editingValues = editingValues; // Trigger reactivity for computed totals
+  }
+
+  // Auto-save on blur for a specific field
+  async function handleBlur(accountId: string, field: 'start' | 'contribution' | 'end') {
+    savingField = { accountId, field };
+    try {
+      const payload: {
+        start?: Record<string, number>;
+        end?: Record<string, number>;
+        contributions?: Record<string, number>;
+      } = {};
+
+      if (field === 'start') {
+        payload.start = { [accountId]: dollarsToCents(editingValues[accountId].start) };
+      } else if (field === 'contribution') {
+        payload.contributions = {
+          [accountId]: dollarsToCents(editingValues[accountId].contribution),
+        };
+      } else if (field === 'end') {
+        payload.end = { [accountId]: dollarsToCents(editingValues[accountId].end) };
       }
 
-      await apiClient.put(`/api/months/${$currentMonth}/savings-balances`, '', {
-        start: startBalances,
-        end: endBalances,
-      });
+      await apiClient.put(`/api/months/${$currentMonth}/savings-balances`, '', payload);
 
-      success('Savings balances saved');
-      await loadData();
+      // Update local balances state
+      if (field === 'start') {
+        balances.start[accountId] = dollarsToCents(editingValues[accountId].start);
+      } else if (field === 'contribution') {
+        balances.contributions[accountId] = dollarsToCents(editingValues[accountId].contribution);
+      } else if (field === 'end') {
+        balances.end[accountId] = dollarsToCents(editingValues[accountId].end);
+      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to save balances';
+      const msg = e instanceof Error ? e.message : 'Failed to save';
       showError(msg);
     } finally {
-      saving = false;
+      savingField = null;
     }
   }
 
-  // Calculate totals
-  $: totalSavingsStart = $savingsAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
-  $: totalSavingsEnd = $savingsAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
+  // Calculate totals for savings accounts
+  // Note: We include editingValues in the expression to ensure Svelte tracks it as a dependency
+  $: totalSavingsStart =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
+  $: totalSavingsContribution =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getContributionValue(a.id), 0);
+  $: totalSavingsEstEom =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
+  $: totalSavingsEnd =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
   $: totalSavingsChange = totalSavingsEnd - totalSavingsStart;
 
-  $: totalInvestmentStart = $investmentAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
-  $: totalInvestmentEnd = $investmentAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
+  // Calculate totals for investment accounts
+  $: totalInvestmentStart =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
+  $: totalInvestmentContribution =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getContributionValue(a.id), 0);
+  $: totalInvestmentEstEom =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
+  $: totalInvestmentEnd =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
   $: totalInvestmentChange = totalInvestmentEnd - totalInvestmentStart;
 
+  // Grand totals
   $: grandTotalStart = totalSavingsStart + totalInvestmentStart;
+  $: grandTotalContribution = totalSavingsContribution + totalInvestmentContribution;
+  $: grandTotalEstEom = totalSavingsEstEom + totalInvestmentEstEom;
   $: grandTotalEnd = totalSavingsEnd + totalInvestmentEnd;
   $: grandTotalChange = grandTotalEnd - grandTotalStart;
 
@@ -253,7 +317,7 @@
       <h2>No Savings or Investment Accounts</h2>
       <p>
         To track savings and investments, go to <a href="/setup">Budget Config</a> and create a bank account
-        with the "Savings Account" or "Investment Account" option enabled.
+        with the "Savings Account" option, or select the "Investment Account" type.
       </p>
     </div>
   {:else}
@@ -264,34 +328,77 @@
           <div class="accounts-table">
             <div class="table-header">
               <span class="col-name">Account</span>
-              <span class="col-value">Start of Month</span>
-              <span class="col-value">End of Month</span>
+              <span class="col-value">Start</span>
+              <span class="col-value">Contribution</span>
+              <span class="col-value col-readonly">Est. EOM</span>
+              <span class="col-value">Final</span>
               <span class="col-change">Change</span>
             </div>
             {#each $savingsAccounts as account (account.id)}
-              {@const change = getChange(account.id)}
-              {@const startVal = getStartValue(account.id)}
+              {@const contribution = editingValues && getContributionValue(account.id)}
+              {@const estEom = editingValues && getEstEomValue(account.id)}
+              {@const isAutoCalc = editingValues && isEndAutoCalculated(account.id)}
+              {@const endVal = editingValues && getEndValue(account.id)}
+              {@const startVal = editingValues && getStartValue(account.id)}
+              {@const change = endVal - startVal}
               <div class="table-row">
                 <span class="col-name">{account.name}</span>
                 <div class="col-value">
-                  <div class="input-wrapper">
+                  <div
+                    class="input-wrapper"
+                    class:saving={savingField?.accountId === account.id &&
+                      savingField?.field === 'start'}
+                  >
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].start}
+                      value={editingValues[account.id].start}
+                      on:input={(e) => handleInput(account.id, 'start', e.currentTarget.value)}
+                      on:blur={() => handleBlur(account.id, 'start')}
                       disabled={saving}
                       class="balance-input"
                     />
                   </div>
                 </div>
                 <div class="col-value">
-                  <div class="input-wrapper">
+                  <div
+                    class="input-wrapper contribution-input"
+                    class:saving={savingField?.accountId === account.id &&
+                      savingField?.field === 'contribution'}
+                    class:positive={contribution > 0}
+                    class:negative={contribution < 0}
+                  >
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].end}
+                      value={editingValues[account.id].contribution}
+                      on:input={(e) =>
+                        handleInput(account.id, 'contribution', e.currentTarget.value)}
+                      on:blur={() => handleBlur(account.id, 'contribution')}
                       disabled={saving}
                       class="balance-input"
+                    />
+                  </div>
+                </div>
+                <div class="col-value col-readonly">
+                  <span class="est-eom-value">{formatCurrency(estEom)}</span>
+                </div>
+                <div class="col-value">
+                  <div
+                    class="input-wrapper"
+                    class:saving={savingField?.accountId === account.id &&
+                      savingField?.field === 'end'}
+                    class:auto-calculated={isAutoCalc}
+                  >
+                    <span class="prefix">$</span>
+                    <input
+                      type="text"
+                      value={isAutoCalc ? '' : editingValues[account.id].end}
+                      on:input={(e) => handleInput(account.id, 'end', e.currentTarget.value)}
+                      on:blur={() => handleBlur(account.id, 'end')}
+                      disabled={saving}
+                      class="balance-input"
+                      placeholder={(estEom / 100).toFixed(2)}
                     />
                   </div>
                 </div>
@@ -304,6 +411,13 @@
             <div class="table-footer">
               <span class="col-name">Total Savings</span>
               <span class="col-value">{formatCurrency(totalSavingsStart)}</span>
+              <span
+                class="col-value"
+                class:positive={totalSavingsContribution > 0}
+                class:negative={totalSavingsContribution < 0}
+                >{formatCurrency(totalSavingsContribution)}</span
+              >
+              <span class="col-value col-readonly">{formatCurrency(totalSavingsEstEom)}</span>
               <span class="col-value">{formatCurrency(totalSavingsEnd)}</span>
               <span
                 class="col-change"
@@ -324,34 +438,77 @@
           <div class="accounts-table">
             <div class="table-header">
               <span class="col-name">Account</span>
-              <span class="col-value">Start of Month</span>
-              <span class="col-value">End of Month</span>
+              <span class="col-value">Start</span>
+              <span class="col-value">Contribution</span>
+              <span class="col-value col-readonly">Est. EOM</span>
+              <span class="col-value">Final</span>
               <span class="col-change">Change</span>
             </div>
             {#each $investmentAccounts as account (account.id)}
-              {@const change = getChange(account.id)}
-              {@const startVal = getStartValue(account.id)}
+              {@const contribution = editingValues && getContributionValue(account.id)}
+              {@const estEom = editingValues && getEstEomValue(account.id)}
+              {@const isAutoCalc = editingValues && isEndAutoCalculated(account.id)}
+              {@const endVal = editingValues && getEndValue(account.id)}
+              {@const startVal = editingValues && getStartValue(account.id)}
+              {@const change = endVal - startVal}
               <div class="table-row">
                 <span class="col-name">{account.name}</span>
                 <div class="col-value">
-                  <div class="input-wrapper">
+                  <div
+                    class="input-wrapper"
+                    class:saving={savingField?.accountId === account.id &&
+                      savingField?.field === 'start'}
+                  >
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].start}
+                      value={editingValues[account.id].start}
+                      on:input={(e) => handleInput(account.id, 'start', e.currentTarget.value)}
+                      on:blur={() => handleBlur(account.id, 'start')}
                       disabled={saving}
                       class="balance-input"
                     />
                   </div>
                 </div>
                 <div class="col-value">
-                  <div class="input-wrapper">
+                  <div
+                    class="input-wrapper contribution-input"
+                    class:saving={savingField?.accountId === account.id &&
+                      savingField?.field === 'contribution'}
+                    class:positive={contribution > 0}
+                    class:negative={contribution < 0}
+                  >
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].end}
+                      value={editingValues[account.id].contribution}
+                      on:input={(e) =>
+                        handleInput(account.id, 'contribution', e.currentTarget.value)}
+                      on:blur={() => handleBlur(account.id, 'contribution')}
                       disabled={saving}
                       class="balance-input"
+                    />
+                  </div>
+                </div>
+                <div class="col-value col-readonly">
+                  <span class="est-eom-value">{formatCurrency(estEom)}</span>
+                </div>
+                <div class="col-value">
+                  <div
+                    class="input-wrapper"
+                    class:saving={savingField?.accountId === account.id &&
+                      savingField?.field === 'end'}
+                    class:auto-calculated={isAutoCalc}
+                  >
+                    <span class="prefix">$</span>
+                    <input
+                      type="text"
+                      value={isAutoCalc ? '' : editingValues[account.id].end}
+                      on:input={(e) => handleInput(account.id, 'end', e.currentTarget.value)}
+                      on:blur={() => handleBlur(account.id, 'end')}
+                      disabled={saving}
+                      class="balance-input"
+                      placeholder={(estEom / 100).toFixed(2)}
                     />
                   </div>
                 </div>
@@ -364,6 +521,13 @@
             <div class="table-footer">
               <span class="col-name">Total Investments</span>
               <span class="col-value">{formatCurrency(totalInvestmentStart)}</span>
+              <span
+                class="col-value"
+                class:positive={totalInvestmentContribution > 0}
+                class:negative={totalInvestmentContribution < 0}
+                >{formatCurrency(totalInvestmentContribution)}</span
+              >
+              <span class="col-value col-readonly">{formatCurrency(totalInvestmentEstEom)}</span>
               <span class="col-value">{formatCurrency(totalInvestmentEnd)}</span>
               <span
                 class="col-change"
@@ -382,37 +546,37 @@
 
       {#if hasSavingsAccounts && hasInvestmentAccounts}
         <section class="grand-total-section">
-          <div class="grand-total">
-            <span class="label">Grand Total</span>
-            <div class="values">
-              <span class="value">{formatCurrency(grandTotalStart)}</span>
-              <span class="arrow">-></span>
-              <span class="value">{formatCurrency(grandTotalEnd)}</span>
-              <span
-                class="change"
-                class:positive={grandTotalChange > 0}
-                class:negative={grandTotalChange < 0}
-              >
-                {formatCurrency(grandTotalChange)}
-                <span class="percent">{formatPercent(grandTotalChange, grandTotalStart)}</span>
-              </span>
-            </div>
+          <div class="grand-total-row">
+            <span class="col-name">Grand Total</span>
+            <span class="col-value">{formatCurrency(grandTotalStart)}</span>
+            <span
+              class="col-value"
+              class:positive={grandTotalContribution > 0}
+              class:negative={grandTotalContribution < 0}
+              >{formatCurrency(grandTotalContribution)}</span
+            >
+            <span class="col-value col-readonly">{formatCurrency(grandTotalEstEom)}</span>
+            <span class="col-value">{formatCurrency(grandTotalEnd)}</span>
+            <span
+              class="col-change"
+              class:positive={grandTotalChange > 0}
+              class:negative={grandTotalChange < 0}
+            >
+              {formatCurrency(grandTotalChange)}
+              <span class="percent">{formatPercent(grandTotalChange, grandTotalStart)}</span>
+            </span>
           </div>
         </section>
       {/if}
 
-      <div class="actions">
-        <button class="btn btn-primary" on:click={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Balances'}
-        </button>
-      </div>
+      <p class="auto-save-hint">Changes are saved automatically when you leave a field.</p>
     </div>
   {/if}
 </div>
 
 <style>
   .savings-page {
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: var(--space-4) var(--content-padding) var(--content-padding) var(--content-padding);
   }
@@ -495,7 +659,7 @@
   .table-row,
   .table-footer {
     display: grid;
-    grid-template-columns: 1fr 140px 140px 140px;
+    grid-template-columns: 1.5fr 130px 130px 130px 130px 150px;
     gap: var(--space-3);
     align-items: center;
     padding: var(--space-2) 0;
@@ -529,6 +693,10 @@
     color: var(--text-secondary);
   }
 
+  .col-value.col-readonly {
+    color: var(--text-tertiary);
+  }
+
   .col-change {
     text-align: right;
     display: flex;
@@ -537,11 +705,13 @@
     gap: 2px;
   }
 
-  .col-change.positive {
+  .col-change.positive,
+  .positive {
     color: var(--success);
   }
 
-  .col-change.negative {
+  .col-change.negative,
+  .negative {
     color: var(--error);
   }
 
@@ -557,10 +727,37 @@
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     padding: 0 var(--space-2);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .input-wrapper:focus-within {
     border-color: var(--accent);
+  }
+
+  .input-wrapper.saving {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-muted);
+  }
+
+  .input-wrapper.auto-calculated .balance-input {
+    font-style: italic;
+  }
+
+  .input-wrapper.auto-calculated .balance-input::placeholder {
+    font-style: italic;
+    color: var(--text-secondary);
+  }
+
+  .input-wrapper.contribution-input.positive {
+    border-color: var(--success-border);
+    background: var(--success-muted);
+  }
+
+  .input-wrapper.contribution-input.negative {
+    border-color: var(--error-border);
+    background: var(--error-muted);
   }
 
   .prefix {
@@ -586,6 +783,19 @@
     opacity: 0.6;
   }
 
+  .contribution-input.positive .balance-input {
+    color: var(--success);
+  }
+
+  .contribution-input.negative .balance-input {
+    color: var(--error);
+  }
+
+  .est-eom-value {
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
   .grand-total-section {
     background: var(--bg-surface);
     border-radius: var(--radius-lg);
@@ -593,75 +803,22 @@
     padding: var(--space-4);
   }
 
-  .grand-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .grand-total .label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .grand-total .values {
-    display: flex;
-    align-items: center;
+  .grand-total-row {
+    display: grid;
+    grid-template-columns: 1.5fr 130px 130px 130px 130px 150px;
     gap: var(--space-3);
+    align-items: center;
+    font-weight: 600;
   }
 
-  .grand-total .value {
+  .grand-total-row .col-name {
     font-size: 1rem;
-    color: var(--text-secondary);
   }
 
-  .grand-total .arrow {
+  .auto-save-hint {
+    text-align: center;
     color: var(--text-tertiary);
-  }
-
-  .grand-total .change {
-    font-weight: 600;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  .grand-total .change.positive {
-    color: var(--success);
-  }
-
-  .grand-total .change.negative {
-    color: var(--error);
-  }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-3);
-  }
-
-  .btn {
-    padding: var(--space-3) var(--space-6);
-    border-radius: var(--radius-md);
-    border: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
+    font-size: 0.85rem;
+    margin: 0;
   }
 </style>

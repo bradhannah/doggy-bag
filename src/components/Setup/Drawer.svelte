@@ -5,21 +5,63 @@
    * @prop isOpen - Whether the drawer is visible
    * @prop title - Title displayed in the drawer header
    * @prop onClose - Callback when drawer should close (backdrop click or X button)
+   * @prop isDirty - Optional callback to check if form has unsaved changes
+   * @prop onSave - Optional callback to save changes (used with dirty check)
    */
+  import UnsavedChangesDialog from '../shared/UnsavedChangesDialog.svelte';
+
   export let isOpen = false;
   export let title = '';
   export let onClose: () => void = () => {};
+  export let isDirty: (() => boolean) | null = null;
+  export let onSave: (() => Promise<void> | void) | null = null;
+
+  // State for unsaved changes confirmation dialog
+  let showUnsavedDialog = false;
 
   // Handle keyboard escape to close
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape' && isOpen) {
-      onClose();
+      attemptClose();
     }
   }
 
   // Handle backdrop click
   function handleBackdropClick() {
+    attemptClose();
+  }
+
+  // Attempt to close - checks for dirty state first
+  function attemptClose() {
+    if (isDirty && isDirty()) {
+      showUnsavedDialog = true;
+    } else {
+      onClose();
+    }
+  }
+
+  // Handle save from dialog
+  async function handleDialogSave() {
+    showUnsavedDialog = false;
+    if (onSave) {
+      try {
+        await onSave();
+        // onSave should call onClose if successful
+      } catch {
+        // Save failed - keep drawer open, error should be shown by form
+      }
+    }
+  }
+
+  // Handle discard from dialog
+  function handleDialogDiscard() {
+    showUnsavedDialog = false;
     onClose();
+  }
+
+  // Handle cancel from dialog
+  function handleDialogCancel() {
+    showUnsavedDialog = false;
   }
 
   // Prevent clicks inside drawer from closing it
@@ -43,7 +85,9 @@
     >
       <div class="drawer-header">
         <h2 id="drawer-title">{title}</h2>
-        <button class="close-btn" on:click={onClose} aria-label="Close drawer"> &times; </button>
+        <button class="close-btn" on:click={attemptClose} aria-label="Close drawer">
+          &times;
+        </button>
       </div>
       <div class="drawer-content">
         <slot />
@@ -51,6 +95,13 @@
     </div>
   </div>
 {/if}
+
+<UnsavedChangesDialog
+  open={showUnsavedDialog}
+  on:save={handleDialogSave}
+  on:discard={handleDialogDiscard}
+  on:cancel={handleDialogCancel}
+/>
 
 <style>
   .drawer-backdrop {

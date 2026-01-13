@@ -234,8 +234,8 @@
         }
 
         const amountCents = parseDollarsToCents(amount);
-        if (amountCents <= 0) {
-          error = 'Please enter a valid amount';
+        if (amountCents < 0 || isNaN(amountCents)) {
+          error = 'Amount must be $0 or greater';
           saving = false;
           return;
         }
@@ -398,7 +398,7 @@
                         bind:value={amount}
                         placeholder="0.00"
                         disabled={saving}
-                        class:error={!!error && parseDollarsToCents(amount) <= 0}
+                        class:error={!!error && parseDollarsToCents(amount) < 0}
                       />
                     </div>
                   </div>

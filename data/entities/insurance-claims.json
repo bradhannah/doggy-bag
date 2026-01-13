@@ -1,0 +1,40 @@
+[
+  {
+    "id": "d21fc78c-4383-415c-86c8-a858fb1166df",
+    "claim_number": 1,
+    "family_member_id": "b91e3129-8035-4d88-b854-aa3987807d83",
+    "family_member_name": "John Doe",
+    "category_id": "0cb6ff07-75df-4508-8e34-c65034cb0226",
+    "category_name": "Dental",
+    "service_date": "2025-06-15",
+    "total_amount": 15000,
+    "status": "draft",
+    "documents": [],
+    "submissions": [
+      {
+        "id": "4fd957f4-927a-49c9-81d2-7f076c55dcac",
+        "plan_id": "b23e9a7e-7481-4dda-9435-4ed504fe8de6",
+        "plan_snapshot": {
+          "name": "Blue Cross",
+          "priority": 1
+        },
+        "status": "draft",
+        "amount_claimed": 15000,
+        "documents_sent": []
+      },
+      {
+        "id": "8a8e9812-0299-4452-96a8-7b85c9d353cf",
+        "plan_id": "b23e9a7e-7481-4dda-9435-4ed504fe8de6",
+        "plan_snapshot": {
+          "name": "Blue Cross",
+          "priority": 1
+        },
+        "status": "draft",
+        "amount_claimed": 5000,
+        "documents_sent": []
+      }
+    ],
+    "created_at": "2026-01-12T17:39:33.603Z",
+    "updated_at": "2026-01-12T17:53:25.481Z"
+  }
+]
