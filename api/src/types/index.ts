@@ -239,11 +239,23 @@ interface Category {
 }
 
 // ============================================================================
+// Family Member Interface
+// ============================================================================
+
+interface FamilyMember {
+  id: string;
+  name: string; // Full name of the family member
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
 // Insurance Entity Interfaces
 // ============================================================================
 
 type ClaimStatus = 'draft' | 'in_progress' | 'closed';
-type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'partial';
+type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied';
 type DocumentType = 'receipt' | 'eob' | 'other';
 
 interface InsurancePlan {
@@ -281,6 +293,7 @@ interface ClaimDocument {
   mime_type: string; // File MIME type
   size_bytes: number; // File size in bytes
   uploaded_at: string; // Upload timestamp
+  notes?: string; // Optional notes about this document
 }
 
 interface PlanSnapshot {
@@ -297,7 +310,7 @@ interface ClaimSubmission {
   id: string;
   plan_id: string; // Reference to InsurancePlan (for filtering)
   plan_snapshot: PlanSnapshot; // Deep copy of plan details at submission time
-  status: SubmissionStatus; // Status: draft / pending / approved / denied / partial
+  status: SubmissionStatus; // Status: draft / pending / approved / denied
   amount_claimed: number; // Amount claimed in cents
   amount_reimbursed?: number; // Amount received in cents (when resolved)
   date_submitted?: string; // When submitted to insurer (ISO date)
@@ -310,6 +323,8 @@ interface ClaimSubmission {
 interface InsuranceClaim {
   id: string;
   claim_number: number; // Human-readable ID (auto-increment: 1, 2, 3...)
+  family_member_id: string; // Reference to FamilyMember - who this claim is for
+  family_member_name: string; // Denormalized family member name for display
   category_id: string; // Reference to InsuranceCategory
   category_name: string; // Denormalized category name for display
   description?: string; // Optional notes (auto-generated if empty)
@@ -553,6 +568,7 @@ export type {
   FreeFlowingExpense,
   PaymentSource,
   Category,
+  FamilyMember,
   InsurancePlan,
   InsuranceCategory,
   ClaimDocument,

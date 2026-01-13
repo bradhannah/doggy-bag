@@ -2,7 +2,7 @@
   /**
    * ClaimsList - Filterable list of insurance claims
    */
-  import type { InsuranceClaim, ClaimStatus } from '../../types/insurance';
+  import type { InsuranceClaim, SubmissionStatus } from '../../types/insurance';
   import {
     insuranceClaims,
     insuranceClaimsLoading,
@@ -15,36 +15,48 @@
 
   const dispatch = createEventDispatcher<{ select: InsuranceClaim; create: void }>();
 
-  // Filter state
-  let filterStatus: ClaimStatus | '' = '';
+  // Filter state - status uses display values, not internal ClaimStatus
+  type StatusFilter = 'all' | 'in_progress' | 'closed';
+  let filterStatus: StatusFilter = 'all';
   let filterCategory = '';
   let filterYear = '';
 
   // Get available years from claims
   $: availableYears = [
-    ...new Set($insuranceClaims.map((c) => new Date(c.service_date).getFullYear())),
+    ...new Set($insuranceClaims.map((c) => new Date(c.service_date + 'T00:00:00').getFullYear())),
   ].sort((a, b) => b - a);
 
   // Apply filters
   async function applyFilters() {
-    const filters: { status?: ClaimStatus; category_id?: string; year?: number } = {};
-    if (filterStatus) filters.status = filterStatus;
+    const filters: {
+      status?: 'draft' | 'in_progress' | 'closed';
+      category_id?: string;
+      year?: number;
+    } = {};
+    // Map filter status to backend status values
+    // 'in_progress' filter shows both draft and in_progress claims (handled by backend or client-side)
+    // For now, we filter client-side since backend may not support this mapping
     if (filterCategory) filters.category_id = filterCategory;
     if (filterYear) filters.year = parseInt(filterYear);
     await loadInsuranceClaims(filters);
   }
 
+  // Set status filter and apply
+  function setStatusFilter(status: StatusFilter) {
+    filterStatus = status;
+    applyFilters();
+  }
+
   function clearFilters() {
-    filterStatus = '';
+    filterStatus = 'all';
     filterCategory = '';
     filterYear = '';
     loadInsuranceClaims();
   }
 
-  function getStatusColor(status: ClaimStatus): string {
+  function getStatusColor(status: 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
       case 'draft':
-        return 'var(--text-secondary)';
       case 'in_progress':
         return 'var(--warning)';
       case 'closed':
@@ -54,10 +66,9 @@
     }
   }
 
-  function getStatusLabel(status: ClaimStatus): string {
+  function getStatusLabel(status: 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
       case 'draft':
-        return 'Draft';
       case 'in_progress':
         return 'In Progress';
       case 'closed':
@@ -75,11 +86,47 @@
   }
 
   function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Append T00:00:00 to prevent UTC interpretation that shifts dates
+    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
+  }
+
+  function getCategoryIcon(categoryId: string): string {
+    const category = $activeCategories.find((c) => c.id === categoryId);
+    return category?.icon || '📋';
+  }
+
+  function getSubmissionStatusColor(status: SubmissionStatus): string {
+    switch (status) {
+      case 'draft':
+        return 'var(--text-secondary)';
+      case 'pending':
+        return 'var(--warning)';
+      case 'approved':
+        return 'var(--success)';
+      case 'denied':
+        return 'var(--error)';
+      default:
+        return 'var(--text-primary)';
+    }
+  }
+
+  function getSubmissionStatusLabel(status: SubmissionStatus): string {
+    switch (status) {
+      case 'draft':
+        return 'Draft';
+      case 'pending':
+        return 'Pending';
+      case 'approved':
+        return 'Approved';
+      case 'denied':
+        return 'Denied';
+      default:
+        return status;
+    }
   }
 
   function selectClaim(claim: InsuranceClaim) {
@@ -90,7 +137,16 @@
     dispatch('create');
   }
 
-  $: hasFilters = filterStatus || filterCategory || filterYear;
+  $: hasFilters = filterStatus !== 'all' || filterCategory || filterYear;
+
+  // Client-side status filtering (since backend doesn't support 'in_progress' = draft + in_progress)
+  $: filteredClaims = $insuranceClaims.filter((claim) => {
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'in_progress') {
+      return claim.status === 'draft' || claim.status === 'in_progress';
+    }
+    return claim.status === filterStatus;
+  });
 </script>
 
 <div class="claims-list-container">
@@ -107,12 +163,20 @@
 
   <!-- Filters -->
   <div class="filters">
-    <select bind:value={filterStatus} on:change={applyFilters}>
-      <option value="">All Statuses</option>
-      <option value="draft">Draft</option>
-      <option value="in_progress">In Progress</option>
-      <option value="closed">Closed</option>
-    </select>
+    <div class="status-filter">
+      <button class:active={filterStatus === 'all'} on:click={() => setStatusFilter('all')}>
+        All
+      </button>
+      <button
+        class:active={filterStatus === 'in_progress'}
+        on:click={() => setStatusFilter('in_progress')}
+      >
+        In Progress
+      </button>
+      <button class:active={filterStatus === 'closed'} on:click={() => setStatusFilter('closed')}>
+        Closed
+      </button>
+    </div>
 
     <select bind:value={filterCategory} on:change={applyFilters}>
       <option value="">All Categories</option>
@@ -129,7 +193,7 @@
     </select>
 
     {#if hasFilters}
-      <button class="btn-link" on:click={clearFilters}>Clear filters</button>
+      <button class="btn-link" on:click={clearFilters}>Clear</button>
     {/if}
   </div>
 
@@ -137,7 +201,7 @@
   <div class="claims-list">
     {#if $insuranceClaimsLoading}
       <div class="loading-state">Loading claims...</div>
-    {:else if $insuranceClaims.length === 0}
+    {:else if filteredClaims.length === 0}
       <div class="empty-state">
         {#if hasFilters}
           <p>No claims match your filters.</p>
@@ -148,37 +212,49 @@
         {/if}
       </div>
     {:else}
-      {#each $insuranceClaims as claim (claim.id)}
+      {#each filteredClaims as claim (claim.id)}
         <button
           class="claim-card"
           class:selected={selectedClaim?.id === claim.id}
           on:click={() => selectClaim(claim)}
         >
           <div class="claim-header">
-            <span class="claim-number">#{claim.claim_number}</span>
+            <span class="claim-title">
+              <span class="title-number">#{claim.claim_number}</span>
+              <span class="title-name">{claim.family_member_name}</span>
+              <span class="title-connector">for</span>
+              <span class="title-category"
+                >{getCategoryIcon(claim.category_id)} {claim.category_name}</span
+              >
+              <span class="title-connector">on</span>
+              <span class="title-date">{formatDate(claim.service_date)}</span>
+            </span>
             <span class="claim-status" style="color: {getStatusColor(claim.status)}">
               {getStatusLabel(claim.status)}
             </span>
           </div>
-          <div class="claim-body">
-            <span class="claim-category">{claim.category_name}</span>
-            {#if claim.description}
+          {#if claim.description}
+            <div class="claim-body">
               <span class="claim-description">{claim.description}</span>
-            {/if}
-          </div>
-          <div class="claim-footer">
-            <span class="claim-date">{formatDate(claim.service_date)}</span>
-            <span class="claim-amount">{formatCurrency(claim.total_amount)}</span>
-          </div>
-          {#if claim.submissions.length > 0}
-            <div class="claim-submissions">
-              <span class="submission-count"
-                >{claim.submissions.length} submission{claim.submissions.length > 1
-                  ? 's'
-                  : ''}</span
-              >
             </div>
           {/if}
+          <div class="claim-footer">
+            {#if claim.submissions.length > 0}
+              <div class="submission-badges">
+                {#each claim.submissions as sub (sub.id)}
+                  <span
+                    class="submission-badge"
+                    style="color: {getSubmissionStatusColor(
+                      sub.status
+                    )}; border-color: {getSubmissionStatusColor(sub.status)}"
+                  >
+                    {getSubmissionStatusLabel(sub.status)}
+                  </span>
+                {/each}
+              </div>
+            {/if}
+            <span class="claim-amount">{formatCurrency(claim.total_amount)}</span>
+          </div>
         </button>
       {/each}
     {/if}
@@ -228,6 +304,37 @@
   .filters select:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  .status-filter {
+    display: flex;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .status-filter button {
+    padding: var(--space-1) var(--space-3);
+    background: var(--bg-surface);
+    border: none;
+    border-right: 1px solid var(--border-default);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .status-filter button:last-child {
+    border-right: none;
+  }
+
+  .status-filter button:hover:not(.active) {
+    background: var(--bg-hover);
+  }
+
+  .status-filter button.active {
+    background: var(--accent);
+    color: var(--text-inverse);
   }
 
   .btn-link {
@@ -293,13 +400,42 @@
   .claim-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: var(--space-2);
   }
 
-  .claim-number {
+  .claim-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25em;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .title-number {
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .title-name {
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 0.875rem;
+  }
+
+  .title-connector {
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+
+  .title-category {
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .title-date {
+    font-weight: 600;
+    color: var(--text-primary);
   }
 
   .claim-status {
@@ -317,11 +453,6 @@
     gap: 2px;
   }
 
-  .claim-category {
-    font-size: 0.8125rem;
-    color: var(--text-secondary);
-  }
-
   .claim-description {
     font-size: 0.75rem;
     color: var(--text-tertiary);
@@ -336,22 +467,29 @@
     align-items: center;
     padding-top: var(--space-2);
     border-top: 1px solid var(--border-subtle);
+    gap: var(--space-2);
   }
 
-  .claim-date {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+  .submission-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .submission-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    background: var(--bg-elevated);
+    border: 1px solid;
+    border-radius: var(--radius-sm);
   }
 
   .claim-amount {
     font-weight: 600;
     color: var(--text-primary);
     font-size: 0.875rem;
-  }
-
-  .claim-submissions {
-    font-size: 0.6875rem;
-    color: var(--text-tertiary);
   }
 
   /* Button */

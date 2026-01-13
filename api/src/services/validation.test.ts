@@ -548,7 +548,7 @@ describe('ValidationService', () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        'Payment source type must be: bank_account, credit_card, line_of_credit, or cash'
+        'Payment source type must be: bank_account, credit_card, line_of_credit, cash, or investment'
       );
     });
 
@@ -590,6 +590,32 @@ describe('ValidationService', () => {
         name: 'Visa',
         type: 'credit_card',
         exclude_from_leftover: true,
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('allows exclude_from_leftover for investment type', () => {
+      const result = validation.validatePaymentSource({
+        name: 'Brokerage Account',
+        type: 'investment',
+        exclude_from_leftover: true,
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('validates investment type as valid', () => {
+      const result = validation.validatePaymentSource({
+        name: 'Brokerage Account',
+        type: 'investment',
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    test('allows is_investment on investment type', () => {
+      const result = validation.validatePaymentSource({
+        name: 'Brokerage Account',
+        type: 'investment',
+        is_investment: true,
       });
       expect(result.isValid).toBe(true);
     });

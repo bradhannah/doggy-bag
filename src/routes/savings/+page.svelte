@@ -175,7 +175,19 @@
     return dollarsToCents(editingValues[accountId]?.contribution || '0');
   }
 
+  // Check if the Final (end) value is auto-calculated (empty or zero with no user input)
+  function isEndAutoCalculated(accountId: string): boolean {
+    const endStr = editingValues[accountId]?.end || '';
+    // Auto-calculated if empty, or "0.00" (initial default), or "0"
+    return endStr === '' || endStr === '0.00' || endStr === '0';
+  }
+
+  // Get the effective end value - uses Est. EOM when auto-calculated
   function getEndValue(accountId: string): number {
+    if (isEndAutoCalculated(accountId)) {
+      // Auto-calculate as Start + Contribution
+      return getStartValue(accountId) + getContributionValue(accountId);
+    }
     return dollarsToCents(editingValues[accountId]?.end || '0');
   }
 
@@ -187,6 +199,12 @@
   // Change = Final (End) - Start
   function getChange(accountId: string): number {
     return getEndValue(accountId) - getStartValue(accountId);
+  }
+
+  // Handle input changes - force Svelte reactivity by reassigning the object
+  function handleInput(accountId: string, field: 'start' | 'contribution' | 'end', value: string) {
+    editingValues[accountId][field] = value;
+    editingValues = editingValues; // Trigger reactivity for computed totals
   }
 
   // Auto-save on blur for a specific field
@@ -228,23 +246,26 @@
   }
 
   // Calculate totals for savings accounts
-  $: totalSavingsStart = $savingsAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
-  $: totalSavingsContribution = $savingsAccounts.reduce(
-    (sum, a) => sum + getContributionValue(a.id),
-    0
-  );
-  $: totalSavingsEstEom = $savingsAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
-  $: totalSavingsEnd = $savingsAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
+  // Note: We include editingValues in the expression to ensure Svelte tracks it as a dependency
+  $: totalSavingsStart =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
+  $: totalSavingsContribution =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getContributionValue(a.id), 0);
+  $: totalSavingsEstEom =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
+  $: totalSavingsEnd =
+    editingValues && $savingsAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
   $: totalSavingsChange = totalSavingsEnd - totalSavingsStart;
 
   // Calculate totals for investment accounts
-  $: totalInvestmentStart = $investmentAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
-  $: totalInvestmentContribution = $investmentAccounts.reduce(
-    (sum, a) => sum + getContributionValue(a.id),
-    0
-  );
-  $: totalInvestmentEstEom = $investmentAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
-  $: totalInvestmentEnd = $investmentAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
+  $: totalInvestmentStart =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
+  $: totalInvestmentContribution =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getContributionValue(a.id), 0);
+  $: totalInvestmentEstEom =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
+  $: totalInvestmentEnd =
+    editingValues && $investmentAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
   $: totalInvestmentChange = totalInvestmentEnd - totalInvestmentStart;
 
   // Grand totals
@@ -296,7 +317,7 @@
       <h2>No Savings or Investment Accounts</h2>
       <p>
         To track savings and investments, go to <a href="/setup">Budget Config</a> and create a bank account
-        with the "Savings Account" or "Investment Account" option enabled.
+        with the "Savings Account" option, or select the "Investment Account" type.
       </p>
     </div>
   {:else}
@@ -314,10 +335,12 @@
               <span class="col-change">Change</span>
             </div>
             {#each $savingsAccounts as account (account.id)}
-              {@const change = getChange(account.id)}
-              {@const startVal = getStartValue(account.id)}
-              {@const contribution = getContributionValue(account.id)}
-              {@const estEom = getEstEomValue(account.id)}
+              {@const contribution = editingValues && getContributionValue(account.id)}
+              {@const estEom = editingValues && getEstEomValue(account.id)}
+              {@const isAutoCalc = editingValues && isEndAutoCalculated(account.id)}
+              {@const endVal = editingValues && getEndValue(account.id)}
+              {@const startVal = editingValues && getStartValue(account.id)}
+              {@const change = endVal - startVal}
               <div class="table-row">
                 <span class="col-name">{account.name}</span>
                 <div class="col-value">
@@ -329,7 +352,8 @@
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].start}
+                      value={editingValues[account.id].start}
+                      on:input={(e) => handleInput(account.id, 'start', e.currentTarget.value)}
                       on:blur={() => handleBlur(account.id, 'start')}
                       disabled={saving}
                       class="balance-input"
@@ -347,7 +371,9 @@
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].contribution}
+                      value={editingValues[account.id].contribution}
+                      on:input={(e) =>
+                        handleInput(account.id, 'contribution', e.currentTarget.value)}
                       on:blur={() => handleBlur(account.id, 'contribution')}
                       disabled={saving}
                       class="balance-input"
@@ -362,14 +388,17 @@
                     class="input-wrapper"
                     class:saving={savingField?.accountId === account.id &&
                       savingField?.field === 'end'}
+                    class:auto-calculated={isAutoCalc}
                   >
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].end}
+                      value={isAutoCalc ? '' : editingValues[account.id].end}
+                      on:input={(e) => handleInput(account.id, 'end', e.currentTarget.value)}
                       on:blur={() => handleBlur(account.id, 'end')}
                       disabled={saving}
                       class="balance-input"
+                      placeholder={(estEom / 100).toFixed(2)}
                     />
                   </div>
                 </div>
@@ -416,10 +445,12 @@
               <span class="col-change">Change</span>
             </div>
             {#each $investmentAccounts as account (account.id)}
-              {@const change = getChange(account.id)}
-              {@const startVal = getStartValue(account.id)}
-              {@const contribution = getContributionValue(account.id)}
-              {@const estEom = getEstEomValue(account.id)}
+              {@const contribution = editingValues && getContributionValue(account.id)}
+              {@const estEom = editingValues && getEstEomValue(account.id)}
+              {@const isAutoCalc = editingValues && isEndAutoCalculated(account.id)}
+              {@const endVal = editingValues && getEndValue(account.id)}
+              {@const startVal = editingValues && getStartValue(account.id)}
+              {@const change = endVal - startVal}
               <div class="table-row">
                 <span class="col-name">{account.name}</span>
                 <div class="col-value">
@@ -431,7 +462,8 @@
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].start}
+                      value={editingValues[account.id].start}
+                      on:input={(e) => handleInput(account.id, 'start', e.currentTarget.value)}
                       on:blur={() => handleBlur(account.id, 'start')}
                       disabled={saving}
                       class="balance-input"
@@ -449,7 +481,9 @@
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].contribution}
+                      value={editingValues[account.id].contribution}
+                      on:input={(e) =>
+                        handleInput(account.id, 'contribution', e.currentTarget.value)}
                       on:blur={() => handleBlur(account.id, 'contribution')}
                       disabled={saving}
                       class="balance-input"
@@ -464,14 +498,17 @@
                     class="input-wrapper"
                     class:saving={savingField?.accountId === account.id &&
                       savingField?.field === 'end'}
+                    class:auto-calculated={isAutoCalc}
                   >
                     <span class="prefix">$</span>
                     <input
                       type="text"
-                      bind:value={editingValues[account.id].end}
+                      value={isAutoCalc ? '' : editingValues[account.id].end}
+                      on:input={(e) => handleInput(account.id, 'end', e.currentTarget.value)}
                       on:blur={() => handleBlur(account.id, 'end')}
                       disabled={saving}
                       class="balance-input"
+                      placeholder={(estEom / 100).toFixed(2)}
                     />
                   </div>
                 </div>
@@ -509,27 +546,25 @@
 
       {#if hasSavingsAccounts && hasInvestmentAccounts}
         <section class="grand-total-section">
-          <div class="grand-total">
-            <span class="label">Grand Total</span>
-            <div class="values">
-              <span class="value">{formatCurrency(grandTotalStart)}</span>
-              <span
-                class="value contribution"
-                class:positive={grandTotalContribution > 0}
-                class:negative={grandTotalContribution < 0}
-                >{formatCurrency(grandTotalContribution)}</span
-              >
-              <span class="value muted">{formatCurrency(grandTotalEstEom)}</span>
-              <span class="value">{formatCurrency(grandTotalEnd)}</span>
-              <span
-                class="change"
-                class:positive={grandTotalChange > 0}
-                class:negative={grandTotalChange < 0}
-              >
-                {formatCurrency(grandTotalChange)}
-                <span class="percent">{formatPercent(grandTotalChange, grandTotalStart)}</span>
-              </span>
-            </div>
+          <div class="grand-total-row">
+            <span class="col-name">Grand Total</span>
+            <span class="col-value">{formatCurrency(grandTotalStart)}</span>
+            <span
+              class="col-value"
+              class:positive={grandTotalContribution > 0}
+              class:negative={grandTotalContribution < 0}
+              >{formatCurrency(grandTotalContribution)}</span
+            >
+            <span class="col-value col-readonly">{formatCurrency(grandTotalEstEom)}</span>
+            <span class="col-value">{formatCurrency(grandTotalEnd)}</span>
+            <span
+              class="col-change"
+              class:positive={grandTotalChange > 0}
+              class:negative={grandTotalChange < 0}
+            >
+              {formatCurrency(grandTotalChange)}
+              <span class="percent">{formatPercent(grandTotalChange, grandTotalStart)}</span>
+            </span>
           </div>
         </section>
       {/if}
@@ -624,7 +659,7 @@
   .table-row,
   .table-footer {
     display: grid;
-    grid-template-columns: 1.5fr 110px 110px 110px 110px 130px;
+    grid-template-columns: 1.5fr 130px 130px 130px 130px 150px;
     gap: var(--space-3);
     align-items: center;
     padding: var(--space-2) 0;
@@ -706,6 +741,15 @@
     box-shadow: 0 0 0 2px var(--accent-muted);
   }
 
+  .input-wrapper.auto-calculated .balance-input {
+    font-style: italic;
+  }
+
+  .input-wrapper.auto-calculated .balance-input::placeholder {
+    font-style: italic;
+    color: var(--text-secondary);
+  }
+
   .input-wrapper.contribution-input.positive {
     border-color: var(--success-border);
     background: var(--success-muted);
@@ -759,54 +803,16 @@
     padding: var(--space-4);
   }
 
-  .grand-total {
-    display: flex;
-    justify-content: space-between;
+  .grand-total-row {
+    display: grid;
+    grid-template-columns: 1.5fr 130px 130px 130px 130px 150px;
+    gap: var(--space-3);
     align-items: center;
+    font-weight: 600;
   }
 
-  .grand-total .label {
+  .grand-total-row .col-name {
     font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .grand-total .values {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-  }
-
-  .grand-total .value {
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-  }
-
-  .grand-total .value.muted {
-    color: var(--text-tertiary);
-  }
-
-  .grand-total .value.contribution.positive {
-    color: var(--success);
-  }
-
-  .grand-total .value.contribution.negative {
-    color: var(--error);
-  }
-
-  .grand-total .change {
-    font-weight: 600;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  .grand-total .change.positive {
-    color: var(--success);
-  }
-
-  .grand-total .change.negative {
-    color: var(--error);
   }
 
   .auto-save-hint {

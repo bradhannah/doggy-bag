@@ -35,8 +35,6 @@
         return 'var(--success)';
       case 'denied':
         return 'var(--error)';
-      case 'partial':
-        return 'var(--orange)';
       default:
         return 'var(--text-primary)';
     }
@@ -52,8 +50,6 @@
         return 'Approved';
       case 'denied':
         return 'Denied';
-      case 'partial':
-        return 'Partial';
       default:
         return status;
     }
@@ -79,6 +75,26 @@
     const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
     return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
+
+  function getTodayDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function setSubmittedToday() {
+    editDateSubmitted = getTodayDate();
+  }
+
+  function setResolvedToday() {
+    editDateResolved = getTodayDate();
+  }
+
+  // When status changes to denied, clear reimbursed amount
+  $: if (editStatus === 'denied') {
+    editAmountReimbursed = '';
+  }
+
+  // Check if reimbursed field should be disabled
+  $: reimbursedDisabled = saving || editStatus === 'denied';
 
   function startEdit() {
     editStatus = submission.status;
@@ -171,7 +187,6 @@
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="denied">Denied</option>
-            <option value="partial">Partial</option>
           </select>
         </div>
         <div class="form-group">
@@ -182,30 +197,55 @@
               id="edit-reimbursed-{submission.id}"
               type="text"
               bind:value={editAmountReimbursed}
-              placeholder="0.00"
-              disabled={saving}
+              placeholder={editStatus === 'denied' ? '0.00' : '0.00'}
+              disabled={reimbursedDisabled}
             />
           </div>
+          {#if editStatus === 'denied'}
+            <span class="field-hint">Denied claims have $0 reimbursement</span>
+          {/if}
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label for="edit-submitted-{submission.id}">Date Submitted</label>
-          <input
-            id="edit-submitted-{submission.id}"
-            type="date"
-            bind:value={editDateSubmitted}
-            disabled={saving}
-          />
+          <div class="date-input-wrapper">
+            <input
+              id="edit-submitted-{submission.id}"
+              type="date"
+              bind:value={editDateSubmitted}
+              disabled={saving}
+            />
+            <button
+              type="button"
+              class="btn-today"
+              on:click={setSubmittedToday}
+              disabled={saving}
+              title="Set to today"
+            >
+              Today
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label for="edit-resolved-{submission.id}">Date Resolved</label>
-          <input
-            id="edit-resolved-{submission.id}"
-            type="date"
-            bind:value={editDateResolved}
-            disabled={saving}
-          />
+          <div class="date-input-wrapper">
+            <input
+              id="edit-resolved-{submission.id}"
+              type="date"
+              bind:value={editDateResolved}
+              disabled={saving}
+            />
+            <button
+              type="button"
+              class="btn-today"
+              on:click={setResolvedToday}
+              disabled={saving}
+              title="Set to today"
+            >
+              Today
+            </button>
+          </div>
         </div>
       </div>
       <div class="form-group">
@@ -464,6 +504,45 @@
   .amount-input-wrapper input {
     padding-left: var(--space-5);
     width: 100%;
+  }
+
+  .field-hint {
+    font-size: 0.6875rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  .date-input-wrapper {
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+  }
+
+  .date-input-wrapper input {
+    flex: 1;
+  }
+
+  .btn-today {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-today:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .btn-today:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .edit-actions {

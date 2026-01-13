@@ -39,11 +39,19 @@ test.describe('Smoke Tests', () => {
 
   test('app does not show console errors', async ({ page }) => {
     const errors: string[] = [];
+    const failedRequests: string[] = [];
 
     // Collect console errors
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
         errors.push(msg.text());
+      }
+    });
+
+    // Capture failed network requests with their URLs for debugging
+    page.on('response', (response) => {
+      if (response.status() >= 500) {
+        failedRequests.push(`${response.status()} ${response.url()}`);
       }
     });
 
@@ -55,6 +63,10 @@ test.describe('Smoke Tests', () => {
     // Filter out known acceptable errors (e.g., favicon 404)
     const criticalErrors = errors.filter((e) => !e.includes('favicon') && !e.includes('404'));
 
-    expect(criticalErrors).toHaveLength(0);
+    // Include failed request URLs in error message for better debugging
+    expect(
+      criticalErrors,
+      failedRequests.length > 0 ? `Failed requests: ${failedRequests.join(', ')}` : undefined
+    ).toHaveLength(0);
   });
 });

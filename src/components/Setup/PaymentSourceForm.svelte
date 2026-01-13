@@ -26,7 +26,6 @@
   let excludeFromLeftover = editingItem?.exclude_from_leftover ?? false;
   let payOffMonthly = editingItem?.pay_off_monthly ?? false;
   let isSavings = editingItem?.is_savings ?? false;
-  let isInvestment = editingItem?.is_investment ?? false;
 
   // Metadata form state
   let lastFourDigits = editingItem?.metadata?.last_four_digits || '';
@@ -65,11 +64,11 @@
   $: showCreditLimit = type === 'credit_card' || type === 'line_of_credit';
   $: showCashAdvanceRate = type === 'credit_card';
   $: showVariableRate =
-    type === 'line_of_credit' || isInvestmentType || (isBankAccount && (isSavings || isInvestment));
+    type === 'line_of_credit' || isInvestmentType || (isBankAccount && isSavings);
   $: showStatementDay = type === 'credit_card' || type === 'line_of_credit';
 
   // Savings or investment mode disables pay_off_monthly
-  $: isSavingsOrInvestment = isSavings || isInvestment || isInvestmentType;
+  $: isSavingsOrInvestment = isSavings || isInvestmentType;
 
   // When type changes to non-debt, reset the debt-only options
   $: if (!isDebt) {
@@ -77,26 +76,16 @@
     payOffMonthly = false;
   }
 
-  // When type changes to non-bank account, reset savings/investment
+  // When type changes to non-bank account, reset savings
   $: if (!isBankAccount) {
     isSavings = false;
-    isInvestment = false;
   }
 
   // Savings and investment are mutually exclusive
   function handleSavingsChange(checked: boolean) {
     isSavings = checked;
     if (checked) {
-      isInvestment = false;
       excludeFromLeftover = true; // Savings accounts are excluded from leftover
-    }
-  }
-
-  function handleInvestmentChange(checked: boolean) {
-    isInvestment = checked;
-    if (checked) {
-      isSavings = false;
-      excludeFromLeftover = true; // Investment accounts are excluded from leftover
     }
   }
 
@@ -120,7 +109,6 @@
     excludeFromLeftover: boolean;
     payOffMonthly: boolean;
     isSavings: boolean;
-    isInvestment: boolean;
     lastFourDigits: string;
     creditLimit: string;
     interestRate: string;
@@ -137,7 +125,6 @@
     excludeFromLeftover: editingItem?.exclude_from_leftover ?? false,
     payOffMonthly: editingItem?.pay_off_monthly ?? false,
     isSavings: editingItem?.is_savings ?? false,
-    isInvestment: editingItem?.is_investment ?? false,
     lastFourDigits: editingItem?.metadata?.last_four_digits || '',
     creditLimit: editingItem?.metadata?.credit_limit
       ? (editingItem.metadata.credit_limit / 100).toString()
@@ -161,7 +148,6 @@
       excludeFromLeftover !== initialValues.excludeFromLeftover ||
       payOffMonthly !== initialValues.payOffMonthly ||
       isSavings !== initialValues.isSavings ||
-      isInvestment !== initialValues.isInvestment ||
       lastFourDigits !== initialValues.lastFourDigits ||
       creditLimit !== initialValues.creditLimit ||
       interestRate !== initialValues.interestRate ||
@@ -180,7 +166,6 @@
     excludeFromLeftover = editingItem.exclude_from_leftover ?? false;
     payOffMonthly = editingItem.pay_off_monthly ?? false;
     isSavings = editingItem.is_savings ?? false;
-    isInvestment = editingItem.is_investment ?? false;
     // Reset metadata fields
     lastFourDigits = editingItem.metadata?.last_four_digits || '';
     creditLimit = editingItem.metadata?.credit_limit
@@ -203,7 +188,6 @@
       excludeFromLeftover: editingItem.exclude_from_leftover ?? false,
       payOffMonthly: editingItem.pay_off_monthly ?? false,
       isSavings: editingItem.is_savings ?? false,
-      isInvestment: editingItem.is_investment ?? false,
       lastFourDigits: editingItem.metadata?.last_four_digits || '',
       creditLimit: editingItem.metadata?.credit_limit
         ? (editingItem.metadata.credit_limit / 100).toString()
@@ -287,7 +271,6 @@
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
-          is_investment: isBankAccount ? isInvestment : undefined,
           metadata,
         });
         success(`Payment source "${name}" updated`);
@@ -299,7 +282,6 @@
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
-          is_investment: isBankAccount ? isInvestment : undefined,
           metadata,
         });
         success(`Payment source "${name}" added`);
@@ -356,23 +338,6 @@
             <strong>Savings Account</strong>
             <span class="checkbox-description"
               >Track as a savings account (excluded from budget leftover)</span
-            >
-          </span>
-        </label>
-      </div>
-
-      <div class="checkbox-group">
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            checked={isInvestment}
-            on:change={(e) => handleInvestmentChange(e.currentTarget.checked)}
-            disabled={saving}
-          />
-          <span class="checkbox-text">
-            <strong>Investment Account</strong>
-            <span class="checkbox-description"
-              >Track as an investment account (excluded from budget leftover)</span
             >
           </span>
         </label>

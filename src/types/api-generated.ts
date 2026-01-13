@@ -653,7 +653,7 @@ export interface components {
             updated_at: string;
         };
         /** @enum {string} */
-        PaymentSourceType: "bank_account" | "credit_card" | "line_of_credit" | "cash";
+        PaymentSourceType: "bank_account" | "credit_card" | "line_of_credit" | "cash" | "investment";
         PaymentSource: {
             id: string;
             name: string;

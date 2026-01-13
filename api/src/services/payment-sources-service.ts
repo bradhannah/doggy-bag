@@ -216,7 +216,8 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
     // exclude_from_leftover is only valid for debt accounts (unless savings/investment)
     if (data.exclude_from_leftover === true) {
       const debtTypes = ['credit_card', 'line_of_credit'];
-      const isSavingsOrInvestment = data.is_savings === true || data.is_investment === true;
+      const isSavingsOrInvestment =
+        data.is_savings === true || data.is_investment === true || data.type === 'investment';
       if (data.type && !debtTypes.includes(data.type) && !isSavingsOrInvestment) {
         errors.push(
           'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'

@@ -2,8 +2,16 @@
 // These types mirror the backend types in api/src/types/index.ts
 
 export type ClaimStatus = 'draft' | 'in_progress' | 'closed';
-export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'partial';
+export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied';
 export type DocumentType = 'receipt' | 'eob' | 'other';
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface InsurancePlan {
   id: string;
@@ -40,6 +48,7 @@ export interface ClaimDocument {
   mime_type: string;
   size_bytes: number;
   uploaded_at: string;
+  notes?: string;
 }
 
 export interface PlanSnapshot {
@@ -69,6 +78,8 @@ export interface ClaimSubmission {
 export interface InsuranceClaim {
   id: string;
   claim_number: number;
+  family_member_id: string;
+  family_member_name: string;
   category_id: string;
   category_name: string;
   description?: string;

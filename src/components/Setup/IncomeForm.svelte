@@ -39,8 +39,7 @@
   let recurrence_week = editingItem?.recurrence_week || 1;
   let recurrence_day = editingItem?.recurrence_day || 0;
 
-  // Due date (optional)
-  let due_day: number | '' = editingItem?.due_day || '';
+  // Due date (optional) - REMOVED: due_day field is no longer used
 
   // Category (optional)
   let category_id = editingItem?.category_id || '';
@@ -68,7 +67,6 @@
     day_of_month: number;
     recurrence_week: number;
     recurrence_day: number;
-    due_day: number | '';
     category_id: string;
     payment_method: 'auto' | 'manual';
     bank_transaction_name: string;
@@ -87,7 +85,6 @@
     day_of_month: editingItem?.day_of_month || 1,
     recurrence_week: editingItem?.recurrence_week || 1,
     recurrence_day: editingItem?.recurrence_day || 0,
-    due_day: editingItem?.due_day || '',
     category_id: editingItem?.category_id || '',
     payment_method: editingItem?.payment_method || 'auto',
     bank_transaction_name: editingItem?.metadata?.bank_transaction_name || '',
@@ -107,7 +104,6 @@
       day_of_month !== initialValues.day_of_month ||
       recurrence_week !== initialValues.recurrence_week ||
       recurrence_day !== initialValues.recurrence_day ||
-      due_day !== initialValues.due_day ||
       category_id !== initialValues.category_id ||
       payment_method !== initialValues.payment_method ||
       bank_transaction_name !== initialValues.bank_transaction_name ||
@@ -132,7 +128,6 @@
     day_of_month = editingItem.day_of_month || 1;
     recurrence_week = editingItem.recurrence_week || 1;
     recurrence_day = editingItem.recurrence_day || 0;
-    due_day = editingItem.due_day || '';
     category_id = editingItem.category_id || '';
     payment_method = editingItem.payment_method || 'auto';
     // Metadata fields (from nested metadata object)
@@ -151,7 +146,6 @@
       day_of_month: editingItem.day_of_month || 1,
       recurrence_week: editingItem.recurrence_week || 1,
       recurrence_day: editingItem.recurrence_day || 0,
-      due_day: editingItem.due_day || '',
       category_id: editingItem.category_id || '',
       payment_method: editingItem.payment_method || 'auto',
       bank_transaction_name: editingItem.metadata?.bank_transaction_name || '',
@@ -221,11 +215,6 @@
           incomeData.recurrence_week = recurrence_week;
           incomeData.recurrence_day = recurrence_day;
         }
-      }
-
-      // Add due_day if specified
-      if (due_day !== '' && typeof due_day === 'number') {
-        incomeData.due_day = due_day;
       }
 
       // Build metadata object (only if any metadata field has a value)
@@ -303,7 +292,7 @@
         disabled={saving || !hasPaymentSources}
       />
     </div>
-    <div class="help-text">Minimum $1.00</div>
+    <div class="help-text">$0.00 or greater</div>
   </div>
 
   <div class="form-group">
@@ -449,17 +438,6 @@
       <option value="manual">Manual (Deposit check/cash)</option>
     </select>
     <div class="help-text">Is this income automatically deposited or manually?</div>
-  </div>
-
-  <div class="form-group">
-    <label for="income-due-day">Expected Day (Optional)</label>
-    <select id="income-due-day" bind:value={due_day} disabled={saving || !hasPaymentSources}>
-      <option value="">-- No expected date --</option>
-      {#each Array.from({ length: 31 }, (_, i) => i + 1) as day (day)}
-        <option value={day}>{day}{day === 31 ? ' (or last day)' : ''}</option>
-      {/each}
-    </select>
-    <div class="help-text">Used to track if income is late in the monthly view</div>
   </div>
 
   <!-- Metadata Section -->

@@ -16,7 +16,6 @@ export interface Income {
   recurrence_day?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
   payment_source_id: string;
   category_id: string; // Required - reference to income category
-  due_day?: number; // Day of month when expected (1-31, optional)
   payment_method?: 'auto' | 'manual'; // 'auto' for autopay/direct deposit, 'manual' for manual entry
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   is_active: boolean;
@@ -38,7 +37,6 @@ export interface IncomeData {
   recurrence_day?: number;
   payment_source_id: string;
   category_id: string; // Required - reference to income category
-  due_day?: number; // Day of month when expected (1-31, optional)
   payment_method?: 'auto' | 'manual'; // 'auto' for autopay/direct deposit, 'manual' for manual entry
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
 }

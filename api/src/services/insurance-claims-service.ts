@@ -4,9 +4,11 @@
 import { StorageServiceImpl } from './storage';
 import { InsuranceCategoriesServiceImpl } from './insurance-categories-service';
 import { InsurancePlansServiceImpl } from './insurance-plans-service';
+import { FamilyMembersServiceImpl } from './family-members-service';
 import type { StorageService } from './storage';
 import type { InsuranceCategoriesService } from './insurance-categories-service';
 import type { InsurancePlansService } from './insurance-plans-service';
+import type { FamilyMembersService } from './family-members-service';
 import type {
   InsuranceClaim,
   ClaimDocument,
@@ -36,7 +38,10 @@ export interface InsuranceClaimsService {
   getAll(filters?: ClaimFilters): Promise<InsuranceClaim[]>;
   getById(id: string): Promise<InsuranceClaim | null>;
   create(
-    data: Pick<InsuranceClaim, 'category_id' | 'service_date' | 'total_amount'> &
+    data: Pick<
+      InsuranceClaim,
+      'family_member_id' | 'category_id' | 'service_date' | 'total_amount'
+    > &
       Partial<Pick<InsuranceClaim, 'description' | 'provider_name'>>
   ): Promise<InsuranceClaim>;
   update(
@@ -44,7 +49,12 @@ export interface InsuranceClaimsService {
     updates: Partial<
       Pick<
         InsuranceClaim,
-        'category_id' | 'description' | 'provider_name' | 'service_date' | 'total_amount'
+        | 'family_member_id'
+        | 'category_id'
+        | 'description'
+        | 'provider_name'
+        | 'service_date'
+        | 'total_amount'
       >
     >
   ): Promise<InsuranceClaim | null>;
@@ -57,7 +67,8 @@ export interface InsuranceClaimsService {
     claimId: string,
     file: File,
     documentType: DocumentType,
-    relatedPlanId?: string
+    relatedPlanId?: string,
+    notes?: string
   ): Promise<ClaimDocument>;
   getDocument(
     claimId: string,
@@ -92,27 +103,24 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   private storage: StorageService;
   private categoriesService: InsuranceCategoriesService;
   private plansService: InsurancePlansService;
+  private familyMembersService: FamilyMembersService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
     this.categoriesService = new InsuranceCategoriesServiceImpl();
     this.plansService = new InsurancePlansServiceImpl();
+    this.familyMembersService = new FamilyMembersServiceImpl();
   }
 
   /**
-   * Calculate claim status based on submissions:
+   * Calculate the claim status based on submission statuses:
    * - draft: No submissions OR all submissions are draft
-   * - in_progress: At least one submission is pending
-   * - closed: All submissions have final answer (approved/denied/partial)
+   * - in_progress: At least one submission is pending OR has mix of draft and final
+   * - closed: ALL submissions have final answer (approved/denied) - no drafts allowed
    */
   private calculateClaimStatus(submissions: ClaimSubmission[]): ClaimStatus {
     if (submissions.length === 0) {
       return 'draft';
-    }
-
-    const hasAnyPending = submissions.some((s) => s.status === 'pending');
-    if (hasAnyPending) {
-      return 'in_progress';
     }
 
     const allDraft = submissions.every((s) => s.status === 'draft');
@@ -120,17 +128,16 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       return 'draft';
     }
 
-    // Check if all submissions have a final answer
-    const finalStatuses: SubmissionStatus[] = ['approved', 'denied', 'partial'];
-    const allFinal = submissions.every(
-      (s) => finalStatuses.includes(s.status) || s.status === 'draft'
-    );
-    const hasAnyFinal = submissions.some((s) => finalStatuses.includes(s.status));
+    // Final statuses are approved or denied (partial removed)
+    const finalStatuses: SubmissionStatus[] = ['approved', 'denied'];
 
-    if (allFinal && hasAnyFinal) {
+    // Check if ALL submissions have a final status (no drafts, no pending)
+    const allFinal = submissions.every((s) => finalStatuses.includes(s.status));
+    if (allFinal) {
       return 'closed';
     }
 
+    // Otherwise it's in progress (has pending, or mix of draft and final)
     return 'in_progress';
   }
 
@@ -207,7 +214,10 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   }
 
   public async create(
-    data: Pick<InsuranceClaim, 'category_id' | 'service_date' | 'total_amount'> &
+    data: Pick<
+      InsuranceClaim,
+      'family_member_id' | 'category_id' | 'service_date' | 'total_amount'
+    > &
       Partial<Pick<InsuranceClaim, 'description' | 'provider_name'>>
   ): Promise<InsuranceClaim> {
     try {
@@ -215,6 +225,12 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const validation = this.validate(data);
       if (!validation.isValid) {
         throw new Error('Validation failed: ' + validation.errors.join(', '));
+      }
+
+      // Get family member for denormalized name
+      const familyMember = await this.familyMembersService.getById(data.family_member_id);
+      if (!familyMember) {
+        throw new Error('Family member not found');
       }
 
       // Get category for denormalized name
@@ -230,6 +246,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const newClaim: InsuranceClaim = {
         id: crypto.randomUUID(),
         claim_number: claimNumber,
+        family_member_id: data.family_member_id,
+        family_member_name: familyMember.name,
         category_id: data.category_id,
         category_name: category.name,
         description: data.description,
@@ -259,7 +277,12 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
     updates: Partial<
       Pick<
         InsuranceClaim,
-        'category_id' | 'description' | 'provider_name' | 'service_date' | 'total_amount'
+        | 'family_member_id'
+        | 'category_id'
+        | 'description'
+        | 'provider_name'
+        | 'service_date'
+        | 'total_amount'
       >
     >
   ): Promise<InsuranceClaim | null> {
@@ -270,6 +293,16 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       if (index === -1) {
         console.warn(`[InsuranceClaimsService] Claim ${id} not found`);
         return null;
+      }
+
+      // If family member changed, update denormalized name
+      let familyMemberName = claims[index].family_member_name;
+      if (updates.family_member_id && updates.family_member_id !== claims[index].family_member_id) {
+        const familyMember = await this.familyMembersService.getById(updates.family_member_id);
+        if (!familyMember) {
+          throw new Error('Family member not found');
+        }
+        familyMemberName = familyMember.name;
       }
 
       // If category changed, update denormalized name
@@ -286,6 +319,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const updatedClaim: InsuranceClaim = {
         ...claims[index],
         ...updates,
+        family_member_name: familyMemberName,
         category_name: categoryName,
         updated_at: now,
       };
@@ -387,6 +421,11 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   public validate(data: Partial<InsuranceClaim>): ValidationResult {
     const errors: string[] = [];
 
+    // family_member_id is required
+    if (!data.family_member_id || typeof data.family_member_id !== 'string') {
+      errors.push('Family member is required');
+    }
+
     // category_id is required
     if (!data.category_id || typeof data.category_id !== 'string') {
       errors.push('Category is required');
@@ -440,7 +479,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
     claimId: string,
     file: File,
     documentType: DocumentType,
-    relatedPlanId?: string
+    relatedPlanId?: string,
+    notes?: string
   ): Promise<ClaimDocument> {
     try {
       const claims = await this.getAllRaw();
@@ -487,6 +527,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         mime_type: file.type || 'application/octet-stream',
         size_bytes: file.size,
         uploaded_at: now,
+        notes: notes?.trim() || undefined,
       };
 
       claim.documents.push(newDocument);

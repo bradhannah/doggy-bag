@@ -223,10 +223,10 @@ export class ValidationServiceImpl implements ValidationService {
 
     if (
       !source.type ||
-      !['bank_account', 'credit_card', 'line_of_credit', 'cash'].includes(source.type)
+      !['bank_account', 'credit_card', 'line_of_credit', 'cash', 'investment'].includes(source.type)
     ) {
       errors.push(
-        'Payment source type must be: bank_account, credit_card, line_of_credit, or cash'
+        'Payment source type must be: bank_account, credit_card, line_of_credit, cash, or investment'
       );
     }
 
@@ -241,7 +241,8 @@ export class ValidationServiceImpl implements ValidationService {
     // exclude_from_leftover is only valid for debt accounts (unless it's a savings/investment account)
     if (source.exclude_from_leftover === true) {
       const debtTypes = ['credit_card', 'line_of_credit'];
-      const isSavingsOrInvestment = source.is_savings === true || source.is_investment === true;
+      const isSavingsOrInvestment =
+        source.is_savings === true || source.is_investment === true || source.type === 'investment';
       if (source.type && !debtTypes.includes(source.type) && !isSavingsOrInvestment) {
         errors.push(
           'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'

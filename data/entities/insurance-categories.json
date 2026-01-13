@@ -1,1 +1,112 @@
-[]
+[
+  {
+    "name": "Dental",
+    "icon": "🦷",
+    "sort_order": 1,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "0cb6ff07-75df-4508-8e34-c65034cb0226",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Vision / Eye Care",
+    "icon": "👁️",
+    "sort_order": 2,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "1e559054-490f-4e8c-af92-aa69f31b6330",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Massage Therapy",
+    "icon": "💆",
+    "sort_order": 3,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "8303ad8a-8781-4df5-82bf-f260bc6aa0c3",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Physiotherapy",
+    "icon": "🏃",
+    "sort_order": 4,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "a18b486c-826f-4903-b3e8-3aa3aa34f4a7",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Chiropractic",
+    "icon": "🦴",
+    "sort_order": 5,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "5923c094-947e-4857-a19d-5ea6aa552d77",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Orthodontics",
+    "icon": "🦷",
+    "sort_order": 6,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "36999791-3edc-41b7-bc86-dd70e6a32401",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Mental Health",
+    "icon": "🧠",
+    "sort_order": 7,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "ed1f8089-5e4e-4a20-95bd-72b706945433",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Prescription Drugs",
+    "icon": "💊",
+    "sort_order": 8,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "c312bfd4-3980-4845-ba92-40ec7dc7931e",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Medical Equipment",
+    "icon": "🩼",
+    "sort_order": 9,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "a9d373a3-9db2-416f-b1d2-61cdc73a061d",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Hospital / Emergency",
+    "icon": "🏥",
+    "sort_order": 10,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "c1e7c9c4-037a-4bf9-a777-35faefbbde79",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  },
+  {
+    "name": "Other",
+    "icon": "📋",
+    "sort_order": 99,
+    "is_predefined": true,
+    "is_active": true,
+    "id": "4943f5f1-0680-4833-a6b2-28b52ca1d754",
+    "created_at": "2026-01-12T17:39:23.114Z",
+    "updated_at": "2026-01-12T17:39:23.114Z"
+  }
+]

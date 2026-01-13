@@ -4,8 +4,9 @@
    */
   import { createClaim, updateClaim, type ClaimData } from '../../stores/insurance-claims';
   import { activeCategories, loadInsuranceCategories } from '../../stores/insurance-categories';
+  import { activeMembers, loadFamilyMembers } from '../../stores/family-members';
   import { success, error as showError } from '../../stores/toast';
-  import type { InsuranceClaim, ClaimStatus } from '../../types/insurance';
+  import type { InsuranceClaim } from '../../types/insurance';
   import { onMount } from 'svelte';
 
   export let editingItem: InsuranceClaim | null = null;
@@ -13,67 +14,68 @@
   export let onCancel: () => void = () => {};
 
   // Form state
+  let family_member_id = editingItem?.family_member_id || '';
   let category_id = editingItem?.category_id || '';
   let description = editingItem?.description || '';
   let provider_name = editingItem?.provider_name || '';
   let service_date = editingItem?.service_date || '';
   let amountDollars = editingItem ? (editingItem.total_amount / 100).toFixed(2) : '';
-  let status: ClaimStatus = editingItem?.status || 'draft';
 
   let error = '';
   let saving = false;
 
   // Initial values for dirty tracking
   interface InitialValues {
+    family_member_id: string;
     category_id: string;
     description: string;
     provider_name: string;
     service_date: string;
     amountDollars: string;
-    status: ClaimStatus;
   }
 
   let initialValues: InitialValues = {
+    family_member_id: editingItem?.family_member_id || '',
     category_id: editingItem?.category_id || '',
     description: editingItem?.description || '',
     provider_name: editingItem?.provider_name || '',
     service_date: editingItem?.service_date || '',
     amountDollars: editingItem ? (editingItem.total_amount / 100).toFixed(2) : '',
-    status: editingItem?.status || 'draft',
   };
 
   // Exported function to check if form has unsaved changes
   export function isDirty(): boolean {
     return (
+      family_member_id !== initialValues.family_member_id ||
       category_id !== initialValues.category_id ||
       description !== initialValues.description ||
       provider_name !== initialValues.provider_name ||
       service_date !== initialValues.service_date ||
-      amountDollars !== initialValues.amountDollars ||
-      status !== initialValues.status
+      amountDollars !== initialValues.amountDollars
     );
   }
 
   onMount(() => {
     loadInsuranceCategories();
+    loadFamilyMembers();
   });
 
   // Reset form when editingItem changes
   $: if (editingItem) {
+    family_member_id = editingItem.family_member_id;
     category_id = editingItem.category_id;
     description = editingItem.description || '';
     provider_name = editingItem.provider_name || '';
     service_date = editingItem.service_date;
     amountDollars = (editingItem.total_amount / 100).toFixed(2);
-    status = editingItem.status;
     // Update initial values
     initialValues = {
+      family_member_id: editingItem.family_member_id,
       category_id: editingItem.category_id,
       description: editingItem.description || '',
       provider_name: editingItem.provider_name || '',
       service_date: editingItem.service_date,
       amountDollars: (editingItem.total_amount / 100).toFixed(2),
-      status: editingItem.status,
     };
   }
 
@@ -84,6 +86,11 @@
 
   export async function handleSubmit() {
     // Validation
+    if (!family_member_id) {
+      error = 'Family member is required';
+      return;
+    }
+
     if (!category_id) {
       error = 'Category is required';
       return;
@@ -105,6 +112,7 @@
 
     try {
       const claimData: ClaimData = {
+        family_member_id,
         category_id,
         service_date,
         total_amount: amountCents,
@@ -134,10 +142,17 @@
   }
 
   $: hasCategories = $activeCategories.length > 0;
+  $: hasFamilyMembers = $activeMembers.length > 0;
+  $: canSubmit = hasCategories && hasFamilyMembers;
 </script>
 
 <form class="entity-form" on:submit|preventDefault={handleSubmit}>
-  {#if !hasCategories}
+  {#if !hasFamilyMembers}
+    <div class="warning-message">
+      You need to set up family members first.
+      <a href="/setup">Go to Setup</a>
+    </div>
+  {:else if !hasCategories}
     <div class="warning-message">
       You need to set up insurance categories first.
       <a href="/setup">Go to Setup</a>
@@ -149,13 +164,24 @@
   {/if}
 
   <div class="form-group">
-    <label for="claim-category">Category</label>
+    <label for="claim-family-member">Family Member</label>
     <select
-      id="claim-category"
-      bind:value={category_id}
+      id="claim-family-member"
+      bind:value={family_member_id}
       required
-      disabled={saving || !hasCategories}
+      disabled={saving || !canSubmit}
     >
+      <option value="">-- Select Family Member --</option>
+      {#each $activeMembers as member (member.id)}
+        <option value={member.id}>{member.name}</option>
+      {/each}
+    </select>
+    <div class="help-text">Who is this claim for?</div>
+  </div>
+
+  <div class="form-group">
+    <label for="claim-category">Category</label>
+    <select id="claim-category" bind:value={category_id} required disabled={saving || !canSubmit}>
       <option value="">-- Select Category --</option>
       {#each $activeCategories as cat (cat.id)}
         <option value={cat.id}>{cat.icon} {cat.name}</option>
@@ -170,7 +196,7 @@
       type="date"
       bind:value={service_date}
       required
-      disabled={saving || !hasCategories}
+      disabled={saving || !canSubmit}
     />
     <div class="help-text">Date of the medical service or purchase</div>
   </div>
@@ -185,7 +211,7 @@
         bind:value={amountDollars}
         placeholder="0.00"
         required
-        disabled={saving || !hasCategories}
+        disabled={saving || !canSubmit}
       />
     </div>
     <div class="help-text">Total cost of the service/item</div>
@@ -198,7 +224,7 @@
       type="text"
       bind:value={provider_name}
       placeholder="e.g., Dr. Smith, ABC Pharmacy"
-      disabled={saving || !hasCategories}
+      disabled={saving || !canSubmit}
     />
     <div class="help-text">Optional: Name of the healthcare provider</div>
   </div>
@@ -210,27 +236,16 @@
       bind:value={description}
       placeholder="e.g., Annual checkup, Prescription refill..."
       rows="3"
-      disabled={saving || !hasCategories}
+      disabled={saving || !canSubmit}
     ></textarea>
     <div class="help-text">Optional: Additional details about the service</div>
   </div>
-
-  {#if editingItem}
-    <div class="form-group">
-      <label for="claim-status">Status</label>
-      <select id="claim-status" bind:value={status} disabled={saving}>
-        <option value="draft">Draft</option>
-        <option value="in_progress">In Progress</option>
-        <option value="closed">Closed</option>
-      </select>
-    </div>
-  {/if}
 
   <div class="form-actions">
     <button type="button" class="btn btn-secondary" on:click={onCancel} disabled={saving}>
       Cancel
     </button>
-    <button type="submit" class="btn btn-primary" disabled={saving || !hasCategories}>
+    <button type="submit" class="btn btn-primary" disabled={saving || !canSubmit}>
       {saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Claim'}
     </button>
   </div>

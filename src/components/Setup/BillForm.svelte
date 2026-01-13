@@ -298,7 +298,7 @@
         disabled={saving || !hasPaymentSources}
       />
     </div>
-    <div class="help-text">Minimum $1.00</div>
+    <div class="help-text">$0.00 or greater</div>
   </div>
 
   <div class="form-group">

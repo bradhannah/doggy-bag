@@ -275,6 +275,7 @@ export function createClaimDocumentUploadHandler() {
       const file = formData.get('file') as File | null;
       const documentType = formData.get('document_type') as DocumentType | null;
       const relatedPlanId = formData.get('related_plan_id') as string | null;
+      const notes = formData.get('notes') as string | null;
 
       if (!file) {
         return new Response(
@@ -341,7 +342,8 @@ export function createClaimDocumentUploadHandler() {
         claimId,
         file,
         documentType,
-        relatedPlanId || undefined
+        relatedPlanId || undefined,
+        notes || undefined
       );
 
       return new Response(JSON.stringify(document), {

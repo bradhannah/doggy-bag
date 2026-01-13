@@ -2,7 +2,7 @@
   /**
    * ClaimDetail - Detailed view of a single claim with submissions and documents
    */
-  import type { InsuranceClaim, ClaimStatus } from '../../types/insurance';
+  import type { InsuranceClaim } from '../../types/insurance';
   import {
     deleteClaim,
     createSubmission,
@@ -27,10 +27,9 @@
   let newSubmissionAmount = '';
   let submitting = false;
 
-  function getStatusColor(status: ClaimStatus): string {
+  function getStatusColor(status: 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
       case 'draft':
-        return 'var(--text-secondary)';
       case 'in_progress':
         return 'var(--warning)';
       case 'closed':
@@ -40,10 +39,9 @@
     }
   }
 
-  function getStatusLabel(status: ClaimStatus): string {
+  function getStatusLabel(status: 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
       case 'draft':
-        return 'Draft';
       case 'in_progress':
         return 'In Progress';
       case 'closed':
@@ -61,7 +59,8 @@
   }
 
   function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Append T00:00:00 to prevent UTC interpretation that shifts dates
+    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -86,9 +85,13 @@
     }
   }
 
+  // Calculate remaining uncovered amount for new submissions
+  $: remainingUncovered = Math.max(0, claim.total_amount - totalReimbursed);
+
   function startNewSubmission() {
     newSubmissionPlanId = '';
-    newSubmissionAmount = (claim.total_amount / 100).toFixed(2);
+    // Suggest the remaining uncovered amount
+    newSubmissionAmount = (remainingUncovered / 100).toFixed(2);
     showNewSubmissionForm = true;
   }
 
@@ -183,6 +186,10 @@
   <!-- Claim Info -->
   <div class="claim-info">
     <div class="info-row">
+      <span class="info-label">Family Member:</span>
+      <span class="info-value">{claim.family_member_name}</span>
+    </div>
+    <div class="info-row">
       <span class="info-label">Category:</span>
       <span class="info-value">{claim.category_name}</span>
     </div>
@@ -211,8 +218,8 @@
   <!-- Financial Summary -->
   <div class="financial-summary">
     <div class="summary-item">
-      <span class="summary-label">Total Claimed</span>
-      <span class="summary-value">{formatCurrency(totalClaimed)}</span>
+      <span class="summary-label">Total Amount</span>
+      <span class="summary-value">{formatCurrency(claim.total_amount)}</span>
     </div>
     <div class="summary-item">
       <span class="summary-label">Total Reimbursed</span>

@@ -2,7 +2,7 @@
 // Full claims lifecycle management with documents and submissions
 
 import { writable, derived } from 'svelte/store';
-import { apiClient } from '$lib/api/client';
+import { apiClient, apiUrl } from '$lib/api/client';
 import type {
   InsuranceClaim,
   ClaimDocument,
@@ -63,6 +63,7 @@ export const closedClaims = derived(insuranceClaims, (claims) =>
 // ============================================================================
 
 export interface ClaimData {
+  family_member_id: string;
   category_id: string;
   service_date: string;
   total_amount: number;
@@ -173,7 +174,8 @@ export async function uploadDocument(
   claimId: string,
   file: File,
   documentType: DocumentType,
-  relatedPlanId?: string
+  relatedPlanId?: string,
+  notes?: string
 ): Promise<ClaimDocument> {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
@@ -184,8 +186,11 @@ export async function uploadDocument(
     if (relatedPlanId) {
       formData.append('related_plan_id', relatedPlanId);
     }
+    if (notes?.trim()) {
+      formData.append('notes', notes.trim());
+    }
 
-    const response = await fetch(`/api/insurance-claims/${claimId}/documents`, {
+    const response = await fetch(apiUrl(`/api/insurance-claims/${claimId}/documents`), {
       method: 'POST',
       body: formData,
     });
@@ -206,16 +211,19 @@ export async function uploadDocument(
 }
 
 export function getDocumentUrl(claimId: string, documentId: string): string {
-  return `/api/insurance-claims/${claimId}/documents/${documentId}`;
+  return apiUrl(`/api/insurance-claims/${claimId}/documents/${documentId}`);
 }
 
 export async function deleteDocument(claimId: string, documentId: string) {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    const response = await fetch(`/api/insurance-claims/${claimId}/documents/${documentId}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      apiUrl(`/api/insurance-claims/${claimId}/documents/${documentId}`),
+      {
+        method: 'DELETE',
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -256,7 +264,7 @@ export async function createSubmission(
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    const response = await fetch(`/api/insurance-claims/${claimId}/submissions`, {
+    const response = await fetch(apiUrl(`/api/insurance-claims/${claimId}/submissions`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -286,11 +294,14 @@ export async function updateSubmission(
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    const response = await fetch(`/api/insurance-claims/${claimId}/submissions/${submissionId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
+    const response = await fetch(
+      apiUrl(`/api/insurance-claims/${claimId}/submissions/${submissionId}`),
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -312,9 +323,12 @@ export async function deleteSubmission(claimId: string, submissionId: string) {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    const response = await fetch(`/api/insurance-claims/${claimId}/submissions/${submissionId}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      apiUrl(`/api/insurance-claims/${claimId}/submissions/${submissionId}`),
+      {
+        method: 'DELETE',
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();

@@ -46,9 +46,9 @@
 **⚠️ CRITICAL**: Stories 4, 8, 9 depend on these migrations being complete
 
 - [ ] T011 Add migration logic for `payment_method` default to Income in `api/src/services/incomes-service.ts`
-- [ ] T012 Add migration for `type=investment` from `bank_account+is_investment` in `api/src/services/payment-sources-service.ts`
-- [ ] T013 Add migration to clear `interest_rate` when `is_variable_rate=true` in `api/src/services/payment-sources-service.ts`
-- [ ] T014 Add TODO comments for future cleanup of migrations in `api/src/services/payment-sources-service.ts`
+- [x] T012 Add migration for `type=investment` from `bank_account+is_investment` in `api/src/services/payment-sources-service.ts`
+- [x] T013 Add migration to clear `interest_rate` when `is_variable_rate=true` in `api/src/services/payment-sources-service.ts`
+- [x] T014 Add TODO comments for future cleanup of migrations in `api/src/services/payment-sources-service.ts`
 
 **Checkpoint**: Migrations ready - user story implementation can now begin
 

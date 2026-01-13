@@ -3,10 +3,11 @@
    * DocumentUpload - File upload component for claim documents
    */
   import type { ClaimDocument, DocumentType } from '../../types/insurance';
-  import { uploadDocument, deleteDocument, getDocumentUrl } from '../../stores/insurance-claims';
-  import { activePlans } from '../../stores/insurance-plans';
+  import { deleteDocument, getDocumentUrl } from '../../stores/insurance-claims';
   import { success, error as showError } from '../../stores/toast';
   import { createEventDispatcher } from 'svelte';
+  import DocumentUploadModal from './DocumentUploadModal.svelte';
+  import ConfirmDialog from '../shared/ConfirmDialog.svelte';
 
   export let claimId: string;
   export let documents: ClaimDocument[] = [];
@@ -14,10 +15,9 @@
 
   const dispatch = createEventDispatcher<{ uploaded: void; deleted: void }>();
 
-  let uploading = false;
-  let selectedDocType: DocumentType = 'receipt';
-  let selectedPlanId = '';
-  let fileInput: HTMLInputElement;
+  let showUploadModal = false;
+  let showDeleteConfirm = false;
+  let docToDelete: ClaimDocument | null = null;
 
   function getDocTypeLabel(type: DocumentType): string {
     switch (type) {
@@ -46,47 +46,49 @@
     });
   }
 
-  function triggerFileSelect() {
-    fileInput?.click();
+  function promptDelete(doc: ClaimDocument) {
+    docToDelete = doc;
+    showDeleteConfirm = true;
   }
 
-  async function handleFileChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    uploading = true;
-    try {
-      await uploadDocument(claimId, file, selectedDocType, selectedPlanId || undefined);
-      success(`Document "${file.name}" uploaded`);
-      dispatch('uploaded');
-
-      // Reset form
-      input.value = '';
-      selectedDocType = 'receipt';
-      selectedPlanId = '';
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to upload document');
-    } finally {
-      uploading = false;
-    }
-  }
-
-  async function handleDelete(doc: ClaimDocument) {
-    if (!confirm(`Delete document "${doc.original_filename}"?`)) return;
+  async function confirmDelete() {
+    if (!docToDelete) return;
 
     try {
-      await deleteDocument(claimId, doc.id);
+      await deleteDocument(claimId, docToDelete.id);
       success('Document deleted');
       dispatch('deleted');
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to delete document');
+    } finally {
+      showDeleteConfirm = false;
+      docToDelete = null;
     }
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
+    docToDelete = null;
   }
 
   function openDocument(doc: ClaimDocument) {
     const url = getDocumentUrl(claimId, doc.id);
     window.open(url, '_blank');
+  }
+
+  function downloadDocument(doc: ClaimDocument) {
+    const url = getDocumentUrl(claimId, doc.id);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.original_filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function handleUploadComplete() {
+    showUploadModal = false;
+    dispatch('uploaded');
   }
 </script>
 
@@ -99,64 +101,87 @@
     <div class="documents-list">
       {#each documents as doc (doc.id)}
         <div class="document-item">
-          <button class="doc-info" on:click={() => openDocument(doc)}>
-            <span class="doc-icon">
-              {#if doc.mime_type.startsWith('image/')}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
-                  <path
-                    d="M21 15l-5-5L5 21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              {:else}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" />
-                </svg>
-              {/if}
-            </span>
-            <span class="doc-name">{doc.original_filename}</span>
-          </button>
-          <div class="doc-meta">
-            <span class="doc-type">{getDocTypeLabel(doc.document_type)}</span>
-            <span class="doc-size">{formatFileSize(doc.size_bytes)}</span>
-            <span class="doc-date">{formatDate(doc.uploaded_at)}</span>
-          </div>
           {#if !readonly}
             <button
-              class="btn-icon danger"
-              on:click={() => handleDelete(doc)}
+              class="btn-icon danger delete-btn"
+              on:click={() => promptDelete(doc)}
               title="Delete document"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path
-                  d="M18 6L6 18M6 6l12 12"
+                  d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"
                   stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
+                  stroke-linejoin="round"
                 />
               </svg>
             </button>
           {/if}
+          <div class="doc-content">
+            <div class="doc-header">
+              <span class="doc-icon">
+                {#if doc.mime_type.startsWith('image/')}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                    <path
+                      d="M21 15l-5-5L5 21"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                {:else}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                {/if}
+              </span>
+              <button class="doc-name-btn" on:click={() => downloadDocument(doc)} title="Download">
+                {doc.original_filename}
+              </button>
+              <button
+                class="doc-open-btn"
+                on:click={() => openDocument(doc)}
+                title="Open in new tab"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div class="doc-meta">
+              <span class="doc-type">{getDocTypeLabel(doc.document_type)}</span>
+              <span class="doc-size">{formatFileSize(doc.size_bytes)}</span>
+              <span class="doc-date">{formatDate(doc.uploaded_at)}</span>
+            </div>
+            {#if doc.notes}
+              <div class="doc-notes">{doc.notes}</div>
+            {/if}
+          </div>
         </div>
       {/each}
     </div>
@@ -165,62 +190,53 @@
   {/if}
 
   {#if !readonly}
-    <div class="upload-form">
-      <div class="upload-options">
-        <select bind:value={selectedDocType} disabled={uploading}>
-          <option value="receipt">Receipt</option>
-          <option value="eob">EOB</option>
-          <option value="other">Other</option>
-        </select>
-        {#if selectedDocType === 'eob' && $activePlans.length > 0}
-          <select bind:value={selectedPlanId} disabled={uploading}>
-            <option value="">-- Select Plan --</option>
-            {#each $activePlans as plan (plan.id)}
-              <option value={plan.id}>{plan.name}</option>
-            {/each}
-          </select>
-        {/if}
-      </div>
-      <input
-        type="file"
-        bind:this={fileInput}
-        on:change={handleFileChange}
-        accept="image/*,.pdf,.doc,.docx"
-        class="hidden-input"
-      />
-      <button class="btn btn-secondary" on:click={triggerFileSelect} disabled={uploading}>
-        {#if uploading}
-          Uploading...
-        {:else}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <polyline
-              points="17,8 12,3 7,8"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <line
-              x1="12"
-              y1="3"
-              x2="12"
-              y2="15"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-          Upload Document
-        {/if}
-      </button>
-    </div>
+    <button class="btn btn-secondary" on:click={() => (showUploadModal = true)}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <polyline
+          points="17,8 12,3 7,8"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <line
+          x1="12"
+          y1="3"
+          x2="12"
+          y2="15"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+      Upload Document
+    </button>
+
+    <DocumentUploadModal
+      open={showUploadModal}
+      {claimId}
+      on:uploaded={handleUploadComplete}
+      on:close={() => (showUploadModal = false)}
+    />
+
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      title="Delete Document"
+      message={docToDelete
+        ? `Are you sure you want to delete "${docToDelete.original_filename}"?`
+        : ''}
+      confirmText="Delete"
+      confirmStyle="danger"
+      on:confirm={confirmDelete}
+      on:cancel={cancelDelete}
+    />
   {/if}
 </div>
 
@@ -250,19 +266,46 @@
   }
 
   .document-item {
+    position: relative;
     display: flex;
-    align-items: center;
     gap: var(--space-2);
     padding: var(--space-2);
+    padding-right: var(--space-8);
     background: var(--bg-base);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
   }
 
-  .doc-info {
+  .delete-btn {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+  }
+
+  .doc-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .doc-header {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .doc-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+
+  .doc-name-btn {
     flex: 1;
     min-width: 0;
     background: none;
@@ -270,26 +313,40 @@
     padding: 0;
     cursor: pointer;
     color: var(--text-primary);
-    text-align: left;
-  }
-
-  .doc-info:hover {
-    color: var(--accent);
-  }
-
-  .doc-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-  }
-
-  .doc-name {
-    flex: 1;
     font-size: 0.8125rem;
+    text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: all 0.15s;
+  }
+
+  .doc-name-btn:hover {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+  }
+
+  .doc-open-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .doc-open-btn:hover {
+    color: var(--accent);
+    background: var(--accent-muted);
   }
 
   .doc-meta {
@@ -314,29 +371,10 @@
     margin: 0 0 var(--space-3) 0;
   }
 
-  .upload-form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .upload-options {
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .upload-options select {
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--bg-surface);
-    color: var(--text-primary);
+  .doc-notes {
     font-size: 0.75rem;
-  }
-
-  .hidden-input {
-    display: none;
+    color: var(--text-tertiary);
+    font-style: italic;
   }
 
   .btn {

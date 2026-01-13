@@ -514,4 +514,76 @@ describe('PaymentSourcesService', () => {
       expect(result.isValid).toBe(true);
     });
   });
+
+  describe('investment type behavior', () => {
+    test('create with type investment auto-sets exclude_from_leftover', async () => {
+      const source = await service.create({
+        name: 'Brokerage',
+        type: 'investment',
+        balance: 100000,
+      });
+      expect(source.type).toBe('investment');
+      expect(source.exclude_from_leftover).toBe(true);
+    });
+
+    test('create with type investment auto-sets is_investment for backwards compatibility', async () => {
+      const source = await service.create({
+        name: 'Brokerage',
+        type: 'investment',
+        balance: 100000,
+      });
+      expect(source.is_investment).toBe(true);
+    });
+  });
+
+  describe('migration', () => {
+    test('migrates bank_account with is_investment to type investment on read', async () => {
+      // Write raw data with old pattern (bank_account + is_investment)
+      const legacySource = {
+        id: 'legacy-investment-1',
+        name: 'Legacy 401k',
+        type: 'bank_account',
+        balance: 500000,
+        is_investment: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await writeFile(
+        join(testDir, 'entities', 'payment-sources.json'),
+        JSON.stringify([legacySource], null, 2)
+      );
+
+      // Read via service - migration should convert to type: 'investment'
+      const sources = await service.getAll();
+      expect(sources[0].type).toBe('investment');
+      expect(sources[0].is_investment).toBe(true);
+    });
+
+    test('clears interest_rate when is_variable_rate is true on read', async () => {
+      // Write raw data with interest_rate and is_variable_rate
+      const sourceWithVariableRate = {
+        id: 'variable-rate-1',
+        name: 'Variable LOC',
+        type: 'line_of_credit',
+        balance: 10000,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        metadata: {
+          interest_rate: 0.0599,
+          is_variable_rate: true,
+        },
+      };
+      await writeFile(
+        join(testDir, 'entities', 'payment-sources.json'),
+        JSON.stringify([sourceWithVariableRate], null, 2)
+      );
+
+      // Read via service - migration should clear interest_rate
+      const sources = await service.getAll();
+      expect(sources[0].metadata?.is_variable_rate).toBe(true);
+      expect(sources[0].metadata?.interest_rate).toBeUndefined();
+    });
+  });
 });

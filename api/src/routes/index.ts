@@ -161,6 +161,15 @@ import {
   createClaimSubmissionDELETEHandler,
 } from './handlers/insurance-claims.handlers';
 
+import {
+  handleGetAllFamilyMembers,
+  handleGetActiveFamilyMembers,
+  handleGetFamilyMember,
+  handleCreateFamilyMember,
+  handleUpdateFamilyMember,
+  handleDeleteFamilyMember,
+} from './handlers/family-members.handlers';
+
 // Route definition type
 interface RouteDefinition {
   method: string;
@@ -299,6 +308,44 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     definition: {
       method: 'DELETE',
       handler: createInsuranceCategoriesHandlerDELETE(),
+      hasPathParam: true,
+    },
+  },
+
+  // Family Members - active endpoint must come before generic family-members routes
+  {
+    path: '/api/family-members/active',
+    definition: { method: 'GET', handler: async () => handleGetActiveFamilyMembers() },
+  },
+  {
+    path: '/api/family-members',
+    definition: { method: 'GET', handler: async () => handleGetAllFamilyMembers() },
+  },
+  {
+    path: '/api/family-members',
+    definition: { method: 'POST', handler: async (req: Request) => handleCreateFamilyMember(req) },
+  },
+  {
+    path: '/api/family-members',
+    definition: {
+      method: 'PUT',
+      handler: async (req: Request) => {
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop() || '';
+        return handleUpdateFamilyMember(id, req);
+      },
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/family-members',
+    definition: {
+      method: 'DELETE',
+      handler: async (req: Request) => {
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop() || '';
+        return handleDeleteFamilyMember(id);
+      },
       hasPathParam: true,
     },
   },

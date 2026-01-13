@@ -305,6 +305,8 @@
     color: var(--text-primary);
     font-size: 0.9375rem;
     box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
   }
 
   input {
@@ -337,10 +339,12 @@
   .form-row {
     display: flex;
     gap: 16px;
+    width: 100%;
   }
 
   .form-row .form-group {
     flex: 1;
+    min-width: 0;
   }
 
   .checkbox-group {
