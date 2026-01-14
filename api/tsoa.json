@@ -6,12 +6,12 @@
     "outputDirectory": "./openapi",
     "specVersion": 3,
     "specFileBaseName": "swagger",
-    "description": "BudgetForFun API - Personal budget tracking application",
-    "name": "BudgetForFun API",
+    "description": "doggy-bag API - Personal budget tracking application",
+    "name": "doggy-bag API",
     "version": "1.0.0",
     "license": "MIT",
     "contact": {
-      "name": "BudgetForFun Team"
+      "name": "Doggy Bag Team"
     },
     "tags": [
       { "name": "Health", "description": "Health check endpoints" },

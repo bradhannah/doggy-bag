@@ -1,4 +1,4 @@
-// Bun HTTP Server for BudgetForFun
+// Bun HTTP Server for doggy-bag
 // Handles backend API for IPC communication with Tauri frontend
 // In production: Uses OS-assigned port (port 0) and prints PORT=XXXX for Rust to capture
 // In development: Uses port 3000 for Vite proxy compatibility

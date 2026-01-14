@@ -5,10 +5,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/bradhannah/BudgetForFun/releases"><img src="https://img.shields.io/github/v/release/bradhannah/BudgetForFun" alt="Release"></a>
-  <a href="https://github.com/bradhannah/BudgetForFun/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/bradhannah/BudgetForFun/release.yml?label=build" alt="Build"></a>
-  <a href="https://github.com/bradhannah/BudgetForFun/releases"><img src="https://img.shields.io/github/downloads/bradhannah/BudgetForFun/total" alt="Downloads"></a>
-  <a href="https://github.com/bradhannah/BudgetForFun/stargazers"><img src="https://img.shields.io/github/stars/bradhannah/BudgetForFun" alt="Stars"></a>
+  <a href="https://github.com/bradhannah/doggy-bag/releases"><img src="https://img.shields.io/github/v/release/bradhannah/doggy-bag" alt="Release"></a>
+  <a href="https://github.com/bradhannah/doggy-bag/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/bradhannah/doggy-bag/release.yml?label=build" alt="Build"></a>
+  <a href="https://github.com/bradhannah/doggy-bag/releases"><img src="https://img.shields.io/github/downloads/bradhannah/doggy-bag/total" alt="Downloads"></a>
+  <a href="https://github.com/bradhannah/doggy-bag/stargazers"><img src="https://img.shields.io/github/stars/bradhannah/doggy-bag" alt="Stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
 </p>
 
@@ -40,6 +40,7 @@ It promotes active tracking of expenses and income, helping users stay on top of
 - Partial payment tracking for bills paid incrementally
 - Due dates with overdue indicators
 - Ad-hoc expenses for unexpected costs
+- Insurance claim tracking with document uploads and reimbursement status
 - Configurable data directory (great for cloud sync!)
 - Export/import for manual backup
 
@@ -61,7 +62,7 @@ brew install bradhannah/doggy-bag/doggy-bag
 
 **Download Binary (macOS ARM)**
 
-Grab the latest `.dmg` from [GitHub Releases](https://github.com/bradhannah/BudgetForFun/releases).
+Grab the latest `.dmg` from [GitHub Releases](https://github.com/bradhannah/doggy-bag/releases).
 
 Windows and Linux builds coming.
 

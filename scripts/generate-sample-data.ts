@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Generate Anonymized Sample Data for BudgetForFun
+ * Generate Anonymized Sample Data for doggy-bag
  *
  * Creates realistic but fake budget data for demos and testing.
  * Run with: bun run scripts/generate-sample-data.ts [output-dir]

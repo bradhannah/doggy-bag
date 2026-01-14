@@ -1,7 +1,7 @@
 {
   "name": "budgetforfun-api",
   "version": "0.4.1",
-  "description": "Bun HTTP backend for BudgetForFun",
+  "description": "Bun HTTP backend for doggy-bag",
   "type": "module",
   "scripts": {
     "server": "bun run server.ts",

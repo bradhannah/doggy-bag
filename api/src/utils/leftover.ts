@@ -1,4 +1,4 @@
-// Leftover Calculation Utility for BudgetForFun
+// Leftover Calculation Utility for doggy-bag
 // Unified leftover calculation: "What will we have at end of month?"
 //
 // Formula: Leftover = BankBalances + RemainingIncome - RemainingExpenses

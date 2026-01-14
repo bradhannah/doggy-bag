@@ -127,7 +127,7 @@ The Homebrew tap repository receives the dispatch and automatically:
 
 Track progress at:
 
-1. **Main release workflow:** `https://github.com/bradhannah/BudgetForFun/actions`
+1. **Main release workflow:** `https://github.com/bradhannah/doggy-bag/actions`
 2. **Homebrew tap update:** `https://github.com/bradhannah/homebrew-doggy-bag/actions`
 
 ## Verification
