@@ -79,6 +79,11 @@
   }
 
   function handleClose() {
+    // Clear any pending auto-save timeout to prevent refresh after closing
+    if (notesSaveTimeout) {
+      clearTimeout(notesSaveTimeout);
+      notesSaveTimeout = null;
+    }
     open = false;
     resetForm();
     dispatch('close');

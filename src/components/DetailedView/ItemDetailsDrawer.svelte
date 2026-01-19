@@ -56,8 +56,12 @@
 
   let savingNotes = false;
   let notesDrafts: Record<string, string> = {};
+  let initializedForItemId: string | null = null;
 
-  $: if (open) {
+  // Initialize notesDrafts only when drawer opens for a new item
+  // This prevents overwriting user's edits when data refreshes in the background
+  $: if (open && item && item.id !== initializedForItemId) {
+    initializedForItemId = item.id;
     notesDrafts = activeOccurrences.reduce(
       (acc, occ) => {
         acc[occ.id] = (occ as Occurrence & { notes?: string | null }).notes ?? '';
@@ -65,6 +69,11 @@
       },
       {} as Record<string, string>
     );
+  }
+
+  // Reset initialization tracker when drawer closes
+  $: if (!open) {
+    initializedForItemId = null;
   }
 
   function formatCurrency(cents: number): string {
