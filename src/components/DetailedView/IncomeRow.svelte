@@ -69,18 +69,27 @@
 
   // Type for income instance with extended properties
   interface IncomeInstanceExtended {
-    payments?: Array<{ id: string; amount: number; date: string }>;
     total_received?: number;
     remaining?: number;
     is_closed?: boolean;
     closed_date?: string | null;
-    occurrences?: Array<{ id: string; expected_date: string }>;
+    occurrences?: Array<{
+      id: string;
+      expected_date: string;
+      payments?: Array<{ id: string; amount: number; date: string }>;
+    }>;
   }
 
+  // Single-occurrence detection for "on Xth" display
+  $: occurrences = (income as unknown as IncomeInstanceExtended).occurrences ?? [];
+  $: isSingleOccurrence = occurrences.length <= 1;
+  $: firstOccurrenceDate = occurrences[0]?.expected_date || income.due_date;
+  $: primaryOccurrenceId = occurrences[0]?.id;
+
   // Computed values - use typed cast to work around potential TS cache issues
-  $: payments = (income as unknown as IncomeInstanceExtended).payments ?? [];
-  $: hasTransactions = (payments && payments.length > 0) || totalReceived > 0;
-  $: transactionCount = payments?.length ?? 0;
+  $: transactionList = occurrences.flatMap((occ) => occ.payments || []);
+  $: hasTransactions = transactionList.length > 0 || totalReceived > 0;
+  $: transactionCount = transactionList.length;
   $: totalReceived = (income as unknown as IncomeInstanceExtended).total_received ?? 0;
   $: remaining = (income as unknown as IncomeInstanceExtended).remaining ?? income.expected_amount;
   $: isClosed = (income as unknown as IncomeInstanceExtended).is_closed ?? false;
@@ -88,11 +97,6 @@
   $: showAmber = totalReceived !== income.expected_amount && totalReceived > 0;
   $: isPartiallyReceived =
     hasTransactions && totalReceived > 0 && totalReceived < income.expected_amount && !isClosed;
-
-  // Single-occurrence detection for "on Xth" display
-  $: occurrences = (income as unknown as IncomeInstanceExtended).occurrences ?? [];
-  $: isSingleOccurrence = occurrences.length <= 1;
-  $: firstOccurrenceDate = occurrences[0]?.expected_date || income.due_date;
 
   function openDetailsDrawer() {
     showDetailsDrawer = true;
@@ -139,13 +143,31 @@
       const receiptAmount = remaining > 0 ? remaining : income.expected_amount;
       const today = new Date().toISOString().split('T')[0];
 
-      await apiClient.post(`/api/months/${month}/incomes/${income.id}/payments`, {
+      const paymentEndpoint = primaryOccurrenceId
+        ? `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/payments`
+        : `/api/months/${month}/incomes/${income.id}/payments`;
+
+      await apiClient.post(paymentEndpoint, {
         amount: receiptAmount,
         date: today,
       });
 
-      // Close the income
-      await apiClient.post(`/api/months/${month}/incomes/${income.id}/close`, {});
+      if (primaryOccurrenceId) {
+        await apiClient.post(
+          `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/close`,
+          {}
+        );
+      } else {
+        // Close the income
+        if (primaryOccurrenceId) {
+          await apiClient.post(
+            `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/close`,
+            {}
+          );
+        } else {
+          await apiClient.post(`/api/months/${month}/incomes/${income.id}/close`, {});
+        }
+      }
 
       success('Income received and closed');
       // Optimistic update - update totals and close status without re-sorting
@@ -183,7 +205,14 @@
     saving = true;
 
     try {
-      await apiClient.post(`/api/months/${month}/incomes/${income.id}/reopen`, {});
+      if (primaryOccurrenceId) {
+        await apiClient.post(
+          `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/reopen`,
+          {}
+        );
+      } else {
+        await apiClient.post(`/api/months/${month}/incomes/${income.id}/reopen`, {});
+      }
       success('Income reopened');
       // Optimistic update - reopen without re-sorting
       detailedMonth.updateIncomeClosedStatus(income.id, false);
@@ -569,9 +598,10 @@
   instanceId={income.id}
   instanceName={income.name}
   expectedAmount={income.expected_amount}
-  transactionList={payments || []}
+  {transactionList}
   {isClosed}
   type="income"
+  occurrenceId={primaryOccurrenceId}
   on:updated={handleTransactionsUpdated}
 />
 

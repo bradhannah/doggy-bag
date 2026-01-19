@@ -82,23 +82,30 @@
   interface BillInstanceExtended {
     is_closed?: boolean;
     closed_date?: string | null;
-    occurrences?: Array<{ id: string; expected_date: string }>;
+    occurrences?: Array<{
+      id: string;
+      expected_date: string;
+      payments?: Array<{ id: string; amount: number; date: string }>;
+    }>;
   }
-
-  // Computed values
-  $: hasTransactions = (bill.payments && bill.payments.length > 0) || bill.total_paid > 0;
-  $: transactionCount = bill.payments?.length ?? 0;
-  $: isClosed = (bill as unknown as BillInstanceExtended).is_closed ?? false;
-  $: closedDate = (bill as unknown as BillInstanceExtended).closed_date ?? null;
-  $: showAmber = bill.total_paid !== bill.expected_amount && bill.total_paid > 0;
-  $: isPartiallyPaid =
-    hasTransactions && bill.total_paid > 0 && bill.total_paid < bill.expected_amount && !isClosed;
-  $: isPayoffBill = bill.is_payoff_bill ?? false;
 
   // Single-occurrence detection for "on Xth" display
   $: occurrences = (bill as unknown as BillInstanceExtended).occurrences ?? [];
   $: isSingleOccurrence = occurrences.length <= 1;
   $: firstOccurrenceDate = occurrences[0]?.expected_date || bill.due_date;
+  $: primaryOccurrenceId = occurrences[0]?.id;
+
+  // Computed values
+  $: transactionList = occurrences.flatMap((occ) => occ.payments || []);
+  $: hasTransactions = transactionList.length > 0 || bill.total_paid > 0;
+  $: transactionCount = transactionList.length;
+  $: isClosed = (bill as unknown as BillInstanceExtended).is_closed ?? false;
+  $: closedDate = (bill as unknown as BillInstanceExtended).closed_date ?? null;
+  $: showAmber = bill.total_paid !== bill.expected_amount && bill.total_paid > 0;
+
+  $: isPartiallyPaid =
+    hasTransactions && bill.total_paid > 0 && bill.total_paid < bill.expected_amount && !isClosed;
+  $: isPayoffBill = bill.is_payoff_bill ?? false;
 
   // Check if bill has any metadata to display
   function hasMetadata(b: BillInstanceDetailed): boolean {
@@ -155,13 +162,31 @@
       const paymentAmount = bill.remaining > 0 ? bill.remaining : bill.expected_amount;
       const today = new Date().toISOString().split('T')[0];
 
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/payments`, {
+      const paymentEndpoint = primaryOccurrenceId
+        ? `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/payments`
+        : `/api/months/${month}/bills/${bill.id}/payments`;
+
+      await apiClient.post(paymentEndpoint, {
         amount: paymentAmount,
         date: today,
       });
 
-      // Close the bill
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
+      if (primaryOccurrenceId) {
+        await apiClient.post(
+          `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/close`,
+          {}
+        );
+      } else {
+        // Close the bill
+        if (primaryOccurrenceId) {
+          await apiClient.post(
+            `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/close`,
+            {}
+          );
+        } else {
+          await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
+        }
+      }
 
       success('Bill paid and closed');
       // Optimistic update - update totals and close status without re-sorting
@@ -206,7 +231,14 @@
     saving = true;
 
     try {
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/reopen`, {});
+      if (primaryOccurrenceId) {
+        await apiClient.post(
+          `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/reopen`,
+          {}
+        );
+      } else {
+        await apiClient.post(`/api/months/${month}/bills/${bill.id}/reopen`, {});
+      }
       success('Bill reopened');
       // Optimistic update - reopen without re-sorting
       detailedMonth.updateBillClosedStatus(bill.id, false);
@@ -614,9 +646,10 @@
   instanceId={bill.id}
   instanceName={bill.name}
   expectedAmount={bill.expected_amount}
-  transactionList={bill.payments || []}
+  {transactionList}
   {isClosed}
   type="bill"
+  occurrenceId={primaryOccurrenceId}
   {isPayoffBill}
   on:updated={handleTransactionsUpdated}
 />

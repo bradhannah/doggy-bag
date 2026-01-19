@@ -100,15 +100,7 @@
         endpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/payments`;
         closeEndpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/close`;
       } else {
-        // Instance-level endpoints (legacy/monthly)
-        endpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/payments`
-            : `/api/months/${month}/incomes/${instanceId}/payments`;
-        closeEndpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/close`
-            : `/api/months/${month}/incomes/${instanceId}/close`;
+        throw new Error('Missing occurrence for payment updates. Refresh and try again.');
       }
 
       await apiClient.post(endpoint, { amount: amountCents, date });
@@ -147,10 +139,7 @@
       if (occurrenceId) {
         closeEndpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/close`;
       } else {
-        closeEndpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/close`
-            : `/api/months/${month}/incomes/${instanceId}/close`;
+        throw new Error('Missing occurrence for close action. Refresh and try again.');
       }
 
       await apiClient.post(closeEndpoint, {});
@@ -174,11 +163,7 @@
         // Occurrence-level delete endpoint
         endpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/payments/${paymentId}`;
       } else {
-        // Instance-level endpoints (legacy/monthly)
-        endpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/payments/${paymentId}`
-            : `/api/months/${month}/incomes/${instanceId}/payments/${paymentId}`;
+        throw new Error('Missing occurrence for deletion. Refresh and try again.');
       }
 
       await apiClient.deletePath(endpoint);

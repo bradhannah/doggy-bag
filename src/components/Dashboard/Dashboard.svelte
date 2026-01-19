@@ -77,7 +77,7 @@
     }).format(dollars);
   }
 
-  // Types for items with occurrences and payments
+  // Types for items with occurrences
   interface Payment {
     amount: number;
   }
@@ -88,21 +88,15 @@
 
   interface ItemWithOccurrences {
     occurrences?: Occurrence[];
-    payments?: Payment[];
   }
 
   // Helper to sum payments from occurrences
   function sumOccurrencePayments(item: ItemWithOccurrences): number {
-    const occPayments = (item.occurrences || []).reduce(
+    return (item.occurrences || []).reduce(
       (oSum: number, occ: Occurrence) =>
         oSum + (occ.payments || []).reduce((pSum: number, p: Payment) => pSum + p.amount, 0),
       0
     );
-    const legacyPayments = (item.payments || []).reduce(
-      (pSum: number, p: Payment) => pSum + p.amount,
-      0
-    );
-    return occPayments + legacyPayments;
   }
 
   // Type for bill/income instances with expected_amount
@@ -110,7 +104,6 @@
     expected_amount?: number;
     amount?: number;
     occurrences?: Occurrence[];
-    payments?: Payment[];
     is_payoff_bill?: boolean;
     payoff_source_id?: string;
   }
@@ -326,7 +319,8 @@
     const _sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const billsDueSoon = $billInstances.filter((b) => {
-      if (b.is_paid) return false;
+      const isClosed = (b as { is_closed?: boolean }).is_closed ?? false;
+      if (isClosed) return false;
       // If bill has expected_date, check if it's within 7 days
       // For now, we don't have expected_date in the basic instance, so skip this
       return false;

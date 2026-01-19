@@ -39,22 +39,40 @@ export function getDefaultColor(name: string): string {
  */
 export function migrateBillInstance(instance: LegacyData): BillInstance {
   const now = new Date().toISOString();
+  const legacyPayments = Array.isArray(instance.payments) ? instance.payments : [];
 
   // Create a default occurrence if occurrences is missing
-  const occurrences = instance.occurrences ?? [
-    {
-      id: crypto.randomUUID(),
-      sequence: 1,
-      expected_date: instance.due_date || `${instance.month}-01`,
-      expected_amount: instance.expected_amount ?? instance.amount ?? 0,
-      is_closed: instance.is_closed ?? instance.is_paid ?? false,
-      closed_date: instance.closed_date,
-      payments: instance.payments ?? [],
-      is_adhoc: instance.is_adhoc ?? false,
-      created_at: instance.created_at ?? now,
-      updated_at: instance.updated_at ?? now,
-    },
-  ];
+  const fallbackOccurrence = {
+    id: crypto.randomUUID(),
+    sequence: 1,
+    expected_date: instance.due_date || `${instance.month}-01`,
+    expected_amount: instance.expected_amount ?? instance.amount ?? 0,
+    is_closed: instance.is_closed ?? false,
+    closed_date: instance.closed_date,
+    payments: [],
+    is_adhoc: instance.is_adhoc ?? false,
+    created_at: instance.created_at ?? now,
+    updated_at: instance.updated_at ?? now,
+  };
+
+  const occurrences = (instance.occurrences ?? [fallbackOccurrence]).map(
+    (occ: LegacyData, index: number) => ({
+      ...occ,
+      sequence: occ.sequence ?? index + 1,
+      expected_date: occ.expected_date ?? instance.due_date ?? `${instance.month}-01`,
+      expected_amount: occ.expected_amount ?? instance.expected_amount ?? instance.amount ?? 0,
+      is_closed: occ.is_closed ?? instance.is_closed ?? false,
+      closed_date: occ.closed_date ?? instance.closed_date,
+      payments: Array.isArray(occ.payments) ? occ.payments : [],
+      is_adhoc: occ.is_adhoc ?? instance.is_adhoc ?? false,
+      created_at: occ.created_at ?? instance.created_at ?? now,
+      updated_at: occ.updated_at ?? instance.updated_at ?? now,
+    })
+  );
+
+  if (legacyPayments.length > 0 && occurrences.length > 0) {
+    occurrences[0].payments = [...occurrences[0].payments, ...legacyPayments];
+  }
 
   return {
     id: instance.id,
@@ -64,7 +82,7 @@ export function migrateBillInstance(instance: LegacyData): BillInstance {
     expected_amount: instance.expected_amount ?? instance.amount ?? 0,
     occurrences,
     is_default: instance.is_default ?? false,
-    is_closed: instance.is_closed ?? instance.is_paid ?? false,
+    is_closed: instance.is_closed ?? false,
     is_adhoc: instance.is_adhoc ?? false,
     is_payoff_bill: instance.is_payoff_bill ?? undefined,
     payoff_source_id: instance.payoff_source_id ?? undefined,
@@ -84,22 +102,40 @@ export function migrateBillInstance(instance: LegacyData): BillInstance {
  */
 export function migrateIncomeInstance(instance: LegacyData): IncomeInstance {
   const now = new Date().toISOString();
+  const legacyPayments = Array.isArray(instance.payments) ? instance.payments : [];
 
   // Create a default occurrence if occurrences is missing
-  const occurrences = instance.occurrences ?? [
-    {
-      id: crypto.randomUUID(),
-      sequence: 1,
-      expected_date: instance.due_date || `${instance.month}-01`,
-      expected_amount: instance.expected_amount ?? instance.amount ?? 0,
-      is_closed: instance.is_closed ?? instance.is_paid ?? false,
-      closed_date: instance.closed_date,
-      payments: instance.payments ?? [],
-      is_adhoc: instance.is_adhoc ?? false,
-      created_at: instance.created_at ?? now,
-      updated_at: instance.updated_at ?? now,
-    },
-  ];
+  const fallbackOccurrence = {
+    id: crypto.randomUUID(),
+    sequence: 1,
+    expected_date: instance.due_date || `${instance.month}-01`,
+    expected_amount: instance.expected_amount ?? instance.amount ?? 0,
+    is_closed: instance.is_closed ?? false,
+    closed_date: instance.closed_date,
+    payments: [],
+    is_adhoc: instance.is_adhoc ?? false,
+    created_at: instance.created_at ?? now,
+    updated_at: instance.updated_at ?? now,
+  };
+
+  const occurrences = (instance.occurrences ?? [fallbackOccurrence]).map(
+    (occ: LegacyData, index: number) => ({
+      ...occ,
+      sequence: occ.sequence ?? index + 1,
+      expected_date: occ.expected_date ?? instance.due_date ?? `${instance.month}-01`,
+      expected_amount: occ.expected_amount ?? instance.expected_amount ?? instance.amount ?? 0,
+      is_closed: occ.is_closed ?? instance.is_closed ?? false,
+      closed_date: occ.closed_date ?? instance.closed_date,
+      payments: Array.isArray(occ.payments) ? occ.payments : [],
+      is_adhoc: occ.is_adhoc ?? instance.is_adhoc ?? false,
+      created_at: occ.created_at ?? instance.created_at ?? now,
+      updated_at: occ.updated_at ?? instance.updated_at ?? now,
+    })
+  );
+
+  if (legacyPayments.length > 0 && occurrences.length > 0) {
+    occurrences[0].payments = [...occurrences[0].payments, ...legacyPayments];
+  }
 
   return {
     id: instance.id,
@@ -109,7 +145,7 @@ export function migrateIncomeInstance(instance: LegacyData): IncomeInstance {
     expected_amount: instance.expected_amount ?? instance.amount ?? 0,
     occurrences,
     is_default: instance.is_default ?? false,
-    is_closed: instance.is_closed ?? instance.is_paid ?? false,
+    is_closed: instance.is_closed ?? false,
     is_adhoc: instance.is_adhoc ?? false,
     closed_date: instance.closed_date ?? undefined,
     name: instance.name ?? undefined,
@@ -144,7 +180,6 @@ export function migrateCategory(category: LegacyData, index: number): Category {
 export function needsBillInstanceMigration(instance: LegacyData): boolean {
   return (
     instance.expected_amount === undefined ||
-    instance.payments === undefined ||
     instance.is_adhoc === undefined ||
     instance.is_closed === undefined ||
     instance.billing_period === undefined ||
@@ -159,7 +194,6 @@ export function needsIncomeInstanceMigration(instance: LegacyData): boolean {
   return (
     instance.expected_amount === undefined ||
     instance.is_adhoc === undefined ||
-    instance.payments === undefined ||
     instance.is_closed === undefined ||
     instance.billing_period === undefined ||
     instance.occurrences === undefined

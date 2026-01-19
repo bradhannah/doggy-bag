@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { payments } from '../../stores/payments';
+  import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
 
   export let open = false;
@@ -9,6 +9,7 @@
   export let billName: string = '';
   export let expectedAmount: number = 0;
   export let totalPaid: number = 0;
+  export let occurrenceId: string | undefined = undefined;
 
   const dispatch = createEventDispatcher();
 
@@ -67,7 +68,17 @@
     error = '';
 
     try {
-      await payments.addPayment(month, billInstanceId, amountCents, date);
+      if (!occurrenceId) {
+        throw new Error('Missing occurrence for payment. Refresh and try again.');
+      }
+
+      await apiClient.post(
+        `/api/months/${month}/bills/${billInstanceId}/occurrences/${occurrenceId}/payments`,
+        {
+          amount: amountCents,
+          date,
+        }
+      );
       success('Payment added');
       dispatch('added');
       handleClose();

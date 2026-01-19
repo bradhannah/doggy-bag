@@ -12,8 +12,10 @@ export interface BillInstance {
   bill_id: string;
   month: string;
   amount: number;
+  expected_amount?: number;
+  occurrences?: Array<{ payments?: Array<{ amount: number }> }>;
   is_default: boolean;
-  is_paid?: boolean;
+  is_closed?: boolean;
   name: string;
   billing_period: string;
   created_at: string;
@@ -25,8 +27,10 @@ export interface IncomeInstance {
   income_id: string;
   month: string;
   amount: number;
+  expected_amount?: number;
+  occurrences?: Array<{ payments?: Array<{ amount: number }> }>;
   is_default: boolean;
-  is_paid?: boolean;
+  is_closed?: boolean;
   name: string;
   billing_period: string;
   created_at: string;

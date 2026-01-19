@@ -522,10 +522,8 @@ interface BillInstance {
   billing_period: BillingPeriod;
   amount: number;
   expected_amount: number;
-  payments: Payment[];
   occurrences: Occurrence[];
   is_default: boolean;
-  is_paid: boolean;
   is_closed: boolean;
   is_adhoc: boolean;
   created_at: string;
@@ -539,10 +537,8 @@ interface IncomeInstance {
   billing_period: BillingPeriod;
   amount: number;
   expected_amount: number;
-  payments: Payment[];
   occurrences: Occurrence[];
   is_default: boolean;
-  is_paid: boolean;
   is_closed: boolean;
   is_adhoc: boolean;
   created_at: string;
@@ -677,7 +673,7 @@ function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean
   }
 
   const totalAmount = occurrences.reduce((sum, o) => sum + o.expected_amount, 0);
-  const allPaid = occurrences.length > 0 && occurrences.every((o) => o.is_closed);
+  const allClosed = occurrences.length > 0 && occurrences.every((o) => o.is_closed);
 
   return {
     id: randomUUID(),
@@ -686,11 +682,9 @@ function generateBillInstance(bill: Bill, monthStr: string, isPastMonth: boolean
     billing_period: bill.billing_period,
     amount: totalAmount,
     expected_amount: totalAmount,
-    payments: [],
     occurrences,
     is_default: true,
-    is_paid: allPaid,
-    is_closed: allPaid,
+    is_closed: allClosed,
     is_adhoc: false,
     created_at: now,
     updated_at: now,
@@ -768,7 +762,7 @@ function generateIncomeInstance(
   }
 
   const totalAmount = occurrences.reduce((sum, o) => sum + o.expected_amount, 0);
-  const allPaid = occurrences.length > 0 && occurrences.every((o) => o.is_closed);
+  const allClosed = occurrences.length > 0 && occurrences.every((o) => o.is_closed);
 
   return {
     id: randomUUID(),
@@ -777,11 +771,9 @@ function generateIncomeInstance(
     billing_period: income.billing_period,
     amount: totalAmount,
     expected_amount: totalAmount,
-    payments: [],
     occurrences,
     is_default: true,
-    is_paid: allPaid,
-    is_closed: allPaid,
+    is_closed: allClosed,
     is_adhoc: false,
     created_at: now,
     updated_at: now,

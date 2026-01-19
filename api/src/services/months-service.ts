@@ -98,14 +98,6 @@ export interface MonthsService {
   resetBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
   resetIncomeInstance(month: string, instanceId: string): Promise<IncomeInstance | null>;
 
-  // Mark as paid methods (DEPRECATED - use close/reopen instead)
-  toggleBillInstancePaid(month: string, instanceId: string): Promise<BillInstance | null>;
-  toggleIncomeInstancePaid(
-    month: string,
-    instanceId: string,
-    actualAmount?: number
-  ): Promise<IncomeInstance | null>;
-
   // Close/Reopen methods (new transaction-based flow)
   closeBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
   reopenBillInstance(month: string, instanceId: string): Promise<BillInstance | null>;
@@ -994,73 +986,6 @@ export class MonthsServiceImpl implements MonthsService {
       return data.income_instances[index];
     } catch (error) {
       console.error('[MonthsService] Failed to reset income instance:', error);
-      throw error;
-    }
-  }
-
-  public async toggleBillInstancePaid(
-    month: string,
-    instanceId: string
-  ): Promise<BillInstance | null> {
-    try {
-      const data = await this.getMonthlyData(month);
-      if (!data) {
-        throw new Error(`Monthly data for ${month} not found`);
-      }
-
-      const index = data.bill_instances.findIndex((bi) => bi.id === instanceId);
-      if (index === -1) {
-        return null;
-      }
-
-      const now = new Date().toISOString();
-      const currentClosed = data.bill_instances[index].is_closed ?? false;
-      data.bill_instances[index] = {
-        ...data.bill_instances[index],
-        is_closed: !currentClosed,
-        updated_at: now,
-      };
-      data.updated_at = now;
-
-      await this.saveMonthlyData(month, data);
-      return data.bill_instances[index];
-    } catch (error) {
-      console.error('[MonthsService] Failed to toggle bill instance paid:', error);
-      throw error;
-    }
-  }
-
-  public async toggleIncomeInstancePaid(
-    month: string,
-    instanceId: string,
-    _actualAmount?: number
-  ): Promise<IncomeInstance | null> {
-    try {
-      const data = await this.getMonthlyData(month);
-      if (!data) {
-        throw new Error(`Monthly data for ${month} not found`);
-      }
-
-      const index = data.income_instances.findIndex((ii) => ii.id === instanceId);
-      if (index === -1) {
-        return null;
-      }
-
-      const now = new Date().toISOString();
-      const currentClosed = data.income_instances[index].is_closed ?? false;
-
-      data.income_instances[index] = {
-        ...data.income_instances[index],
-        is_closed: !currentClosed,
-        is_default: !currentClosed ? false : data.income_instances[index].is_default,
-        updated_at: now,
-      };
-      data.updated_at = now;
-
-      await this.saveMonthlyData(month, data);
-      return data.income_instances[index];
-    } catch (error) {
-      console.error('[MonthsService] Failed to toggle income instance paid:', error);
       throw error;
     }
   }

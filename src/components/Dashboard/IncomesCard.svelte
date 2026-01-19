@@ -101,23 +101,26 @@
     }
   }
 
-  async function togglePaid(id: string, currentPaid: boolean) {
+  async function toggleClosed(id: string, isClosed: boolean) {
     saving = true;
     error = '';
 
     try {
-      const response = await fetch(apiUrl(`/api/months/${month}/incomes/${id}/paid`), {
+      const endpoint = isClosed
+        ? `/api/months/${month}/incomes/${id}/reopen`
+        : `/api/months/${month}/incomes/${id}/close`;
+      const response = await fetch(apiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to toggle paid');
+        throw new Error(data.error || 'Failed to update status');
       }
 
       dispatch('refresh');
-      success(currentPaid ? 'Income marked as unpaid' : 'Income marked as received');
+      success(isClosed ? 'Income reopened' : 'Income closed');
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unknown error';
       showError(error);
@@ -150,11 +153,13 @@
   {:else}
     <ul class="incomes-list">
       {#each incomes as income (income.id)}
+        {@const incomeIsClosed =
+          (income as IncomeInstance & { is_closed?: boolean }).is_closed ?? false}
         <li
           class="income-item"
           class:editing={editingId === income.id}
           class:modified={!income.is_default}
-          class:paid={income.is_paid}
+          class:paid={incomeIsClosed}
         >
           {#if editingId === income.id}
             <div class="edit-row">
@@ -185,12 +190,12 @@
               <div class="income-details">
                 <button
                   class="paid-checkbox"
-                  class:checked={income.is_paid}
-                  on:click={() => togglePaid(income.id, income.is_paid ?? false)}
+                  class:checked={incomeIsClosed}
+                  on:click={() => toggleClosed(income.id, incomeIsClosed)}
                   disabled={saving}
-                  title={income.is_paid ? 'Mark as not received' : 'Mark as received'}
+                  title={incomeIsClosed ? 'Reopen income' : 'Close income'}
                 >
-                  {#if income.is_paid}
+                  {#if incomeIsClosed}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <path
                         d="M5 12L10 17L20 7"
@@ -202,15 +207,15 @@
                     </svg>
                   {/if}
                 </button>
-                <span class="income-name" class:paid-text={income.is_paid}>{income.name}</span>
+                <span class="income-name" class:paid-text={incomeIsClosed}>{income.name}</span>
                 {#if !income.is_default}
                   <span class="modified-badge">modified</span>
                 {/if}
-                {#if income.is_paid}
-                  <span class="paid-badge">received</span>
+                {#if incomeIsClosed}
+                  <span class="paid-badge">closed</span>
                 {/if}
               </div>
-              <span class="income-amount" class:paid-text={income.is_paid}
+              <span class="income-amount" class:paid-text={incomeIsClosed}
                 >{formatCurrency(income.amount)}</span
               >
             </div>
