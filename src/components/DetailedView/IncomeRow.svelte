@@ -649,6 +649,10 @@
       </div>
     </div>
   </div>
+
+  {#if primaryOccurrenceNotes}
+    <p class="inline-note">{primaryOccurrenceNotes}</p>
+  {/if}
 </div>
 
 <!-- Transactions Drawer -->
@@ -706,7 +710,15 @@
 {/if}
 
 <!-- Item Details Drawer -->
-<ItemDetailsDrawer bind:open={showDetailsDrawer} type="income" item={income} {categoryName} />
+<ItemDetailsDrawer
+  bind:open={showDetailsDrawer}
+  type="income"
+  item={income}
+  {categoryName}
+  {month}
+  occurrenceId={primaryOccurrenceId ?? null}
+  on:updated={() => dispatch('refresh')}
+/>
 
 <CloseTransactionModal
   open={showCloseModal}
@@ -734,6 +746,18 @@
 <style>
   .income-row-container {
     margin-bottom: 4px;
+    background: var(--bg-surface);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .income-row-container:hover {
+    background: var(--bg-elevated);
+  }
+
+  .income-row-container:has(.income-row.closed) {
+    background: var(--success-bg);
   }
 
   .income-row {
@@ -741,18 +765,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: var(--bg-surface);
-    border-radius: 8px;
-    border: 1px solid transparent;
-    transition: all 0.15s ease;
-  }
-
-  .income-row:hover {
-    background: var(--bg-elevated);
-  }
-
-  .income-row.closed {
-    background: var(--success-bg);
+    padding-bottom: 8px;
   }
 
   .income-main {
@@ -771,12 +784,22 @@
   }
 
   .income-name {
-    font-weight: 500;
-    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .inline-note {
+    margin: 0;
+    padding: 0 16px 12px 16px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-style: italic;
   }
 
   .closed-text {

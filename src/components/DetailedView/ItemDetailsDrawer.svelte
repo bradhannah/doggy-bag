@@ -8,12 +8,20 @@
    * @prop categoryName - The category name for this item
    */
   import { createEventDispatcher } from 'svelte';
-  import type { BillInstanceDetailed, IncomeInstanceDetailed } from '../../stores/detailed-month';
+  import type {
+    BillInstanceDetailed,
+    IncomeInstanceDetailed,
+    Occurrence,
+  } from '../../stores/detailed-month';
+  import { apiClient } from '../../lib/api/client';
+  import { success, error as showError } from '../../stores/toast';
 
   export let open = false;
   export let type: 'bill' | 'income' = 'bill';
   export let item: BillInstanceDetailed | IncomeInstanceDetailed | null = null;
   export let categoryName: string = '';
+  export let month = '';
+  export let occurrenceId: string | null = null;
 
   const dispatch = createEventDispatcher();
 
@@ -40,6 +48,24 @@
     metadata?.account_url ||
     metadata?.notes
   );
+
+  $: occurrences = item?.occurrences ?? [];
+  $: activeOccurrences = occurrenceId
+    ? occurrences.filter((occ) => occ.id === occurrenceId)
+    : occurrences;
+
+  let savingNotes = false;
+  let notesDrafts: Record<string, string> = {};
+
+  $: if (open) {
+    notesDrafts = activeOccurrences.reduce(
+      (acc, occ) => {
+        acc[occ.id] = (occ as Occurrence & { notes?: string | null }).notes ?? '';
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+  }
 
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -84,6 +110,25 @@
   function handleClose() {
     open = false;
     dispatch('close');
+  }
+
+  async function saveOccurrenceNotes(occurrence: Occurrence) {
+    if (!item || savingNotes) return;
+    const notes = (notesDrafts[occurrence.id] ?? '').trim();
+    const apiBase = `/api/months/${month}/${type}s/${item.id}/occurrences/${occurrence.id}`;
+
+    savingNotes = true;
+    try {
+      await apiClient.putPath(apiBase, {
+        notes: notes.length > 0 ? notes : null,
+      });
+      success('Notes saved');
+      dispatch('updated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to save notes');
+    } finally {
+      savingNotes = false;
+    }
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -197,6 +242,41 @@
             </div>
           </div>
         </section>
+
+        <!-- Occurrence Notes Section -->
+        {#if activeOccurrences.length > 0}
+          <section class="section">
+            <h4 class="section-title">Notes</h4>
+            <div class="occurrence-notes">
+              {#each activeOccurrences as occurrence (occurrence.id)}
+                <div class="occurrence-note-card">
+                  <div class="note-header">
+                    <div class="note-title">
+                      <span class="note-date">{formatDate(occurrence.expected_date)}</span>
+                      {#if occurrence.is_closed}
+                        <span class="note-status">Closed</span>
+                      {:else}
+                        <span class="note-status open">Open</span>
+                      {/if}
+                    </div>
+                    <button
+                      class="note-save"
+                      on:click={() => saveOccurrenceNotes(occurrence)}
+                      disabled={savingNotes}
+                    >
+                      {savingNotes ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                  <textarea
+                    rows="4"
+                    placeholder="Add a note for this occurrence"
+                    bind:value={notesDrafts[occurrence.id]}
+                  ></textarea>
+                </div>
+              {/each}
+            </div>
+          </section>
+        {/if}
 
         <!-- Metadata Section (only if metadata exists) -->
         {#if hasMetadata}
@@ -400,12 +480,94 @@
 
   /* Metadata styles */
   .metadata-content {
-    background: var(--bg-elevated);
-    border-radius: 8px;
-    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+  }
+
+  .occurrence-notes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .occurrence-note-card {
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    padding: var(--space-3);
+  }
+
+  .note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+
+  .note-title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .note-date {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .note-status {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .note-status.open {
+    color: var(--warning);
+  }
+
+  .note-save {
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .note-save:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+
+  .occurrence-note-card textarea::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .note-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .occurrence-note-card textarea {
+    width: 100%;
+    min-height: calc(var(--input-height) * 2.5);
+    border: 1px solid var(--border-default);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    line-height: 1.4;
+    resize: vertical;
+  }
+
+  .occurrence-note-card textarea:focus {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
   }
 
   .metadata-field {

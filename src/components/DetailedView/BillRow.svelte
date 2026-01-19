@@ -692,6 +692,10 @@
       </div>
     </div>
   </div>
+
+  {#if primaryOccurrenceNotes}
+    <p class="inline-note">{primaryOccurrenceNotes}</p>
+  {/if}
 </div>
 
 <!-- Transactions Drawer -->
@@ -764,7 +768,15 @@
 {/if}
 
 <!-- Item Details Drawer -->
-<ItemDetailsDrawer bind:open={showDetailsDrawer} type="bill" item={bill} {categoryName} />
+<ItemDetailsDrawer
+  bind:open={showDetailsDrawer}
+  type="bill"
+  item={bill}
+  {categoryName}
+  {month}
+  occurrenceId={primaryOccurrenceId ?? null}
+  on:updated={() => dispatch('refresh')}
+/>
 
 <CloseTransactionModal
   open={showCloseModal}
@@ -792,6 +804,18 @@
 <style>
   .bill-row-container {
     margin-bottom: 4px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .bill-row-container:hover {
+    background: var(--bg-hover);
+  }
+
+  .bill-row-container:has(.bill-row.closed) {
+    background: var(--success-bg);
   }
 
   .bill-row {
@@ -799,18 +823,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: var(--bg-elevated);
-    border-radius: 8px;
-    border: 1px solid transparent;
-    transition: all 0.15s ease;
-  }
-
-  .bill-row:hover {
-    background: var(--bg-hover);
-  }
-
-  .bill-row.closed {
-    background: var(--success-bg);
+    padding-bottom: 8px;
   }
 
   .bill-main {
@@ -829,12 +842,22 @@
   }
 
   .bill-name {
-    font-weight: 500;
-    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .inline-note {
+    margin: 0;
+    padding: 0 16px 12px 16px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-style: italic;
   }
 
   .name-link {

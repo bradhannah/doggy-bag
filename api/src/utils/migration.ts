@@ -197,6 +197,12 @@ export function needsBillInstanceMigration(instance: LegacyData): boolean {
     return true;
   }
 
+  // Check for legacy payments field that should be migrated to occurrences
+  // The BillInstance type no longer has a payments field - all payments should be in occurrences
+  if (Array.isArray(instance.payments) && instance.payments.length > 0) {
+    return true;
+  }
+
   // Check for state mismatch: Parent is closed/paid but has open occurrences
   // This triggers a re-migration to fix the state
   const isParentClosed = instance.is_closed === true || instance.is_paid === true;
@@ -222,6 +228,12 @@ export function needsIncomeInstanceMigration(instance: LegacyData): boolean {
     instance.billing_period === undefined ||
     instance.occurrences === undefined
   ) {
+    return true;
+  }
+
+  // Check for legacy payments field that should be migrated to occurrences
+  // The IncomeInstance type no longer has a payments field - all payments should be in occurrences
+  if (Array.isArray(instance.payments) && instance.payments.length > 0) {
     return true;
   }
 
