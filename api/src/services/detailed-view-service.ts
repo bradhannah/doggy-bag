@@ -25,6 +25,7 @@ import type {
   SectionTally,
   PayoffSummary,
 } from '../types';
+import { getOverdueBills } from '../utils/overdue-bills';
 import { calculateDueDate, isOverdue, getDaysOverdue } from '../utils/due-date';
 import {
   calculateRegularBillsTally,
@@ -133,6 +134,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const leftoverResult = calculateUnifiedLeftover(monthlyData, paymentSources);
     const hasActuals = hasActualsEntered(monthlyData);
 
+    const overdueBills = getOverdueBills(detailedBillInstances, month);
+
     // Build payoff summaries
     const payoffSummaries: PayoffSummary[] = payoffBills.map((bi) => {
       const paymentSource = bi.payoff_source_id ? paymentSourcesMap.get(bi.payoff_source_id) : null;
@@ -173,6 +176,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
           leftoverResult.missingBalances.length > 0 ? leftoverResult.missingBalances : undefined,
         errorMessage: leftoverResult.errorMessage,
       },
+      overdue_bills: overdueBills,
       payoffSummaries,
       bankBalances: monthlyData.bank_balances,
       lastUpdated: monthlyData.updated_at,

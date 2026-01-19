@@ -7,9 +7,10 @@
   } from '../../stores/projections';
   import type { ProjectionResponse } from '../../types/projections';
   import HistogramChart from './HistogramChart.svelte';
+  import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
 
-  let currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  let dailyRunRate = 0;
+  const today = new Date();
+  let currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
   let selectedDate: string | null = null;
 
   // Load data when month changes
@@ -18,10 +19,11 @@
   }
 
   function changeMonth(offset: number) {
-    const currentDate = new Date(currentMonth + '-01');
-    const offsetDate = new Date(currentDate);
-    offsetDate.setMonth(offsetDate.getMonth() + offset);
-    currentMonth = offsetDate.toISOString().slice(0, 7);
+    const [year, month] = currentMonth.split('-').map(Number);
+    const monthIndex = month - 1 + offset;
+    const nextYear = year + Math.floor(monthIndex / 12);
+    const nextMonth = ((monthIndex % 12) + 12) % 12;
+    currentMonth = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
     selectedDate = null;
   }
 
@@ -49,45 +51,10 @@
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Reactive data with Run Rate application
-  const emptyChartData: ProjectionResponse = {
-    start_date: '',
-    end_date: '',
-    starting_balance: 0,
-    days: [],
-    overdue_bills: [],
-  };
-
   type ProjectionDay = ProjectionResponse['days'][number];
   type ProjectionEvent = ProjectionDay['events'][number];
 
-  function applyRunRate(data: ProjectionResponse, rate: number): ProjectionResponse {
-    // Clone data to avoid mutating store
-    const days = data.days.map((day) => ({ ...day })) as ProjectionDay[];
-    const rateCents = Math.round(rate * 100);
-
-    // Apply run rate cumulatively
-    let cumulative = 0;
-    for (const day of days) {
-      if (!(day as ProjectionDay & { has_balance: boolean }).has_balance || day.balance === null) {
-        continue;
-      }
-      cumulative += rateCents;
-      day.balance -= cumulative;
-      day.expense += rateCents; // Visual bar
-      // Add fake event for tooltip
-      if (rateCents > 0) {
-        day.events = [
-          ...day.events,
-          { name: 'Daily Run Rate', amount: rateCents, type: 'expense' },
-        ];
-      }
-      day.is_deficit = day.balance < 0;
-    }
-    return { ...data, days };
-  }
-
-  $: chartData = $projectionData ? applyRunRate($projectionData, dailyRunRate) : null;
+  $: chartData = $projectionData || null;
 
   $: if (chartData) {
     if (!selectedDate || !selectedDate.startsWith(currentMonth)) {
@@ -136,20 +103,7 @@
     <div class="error">{$projectionError}</div>
   {:else if chartData}
     <div class="content">
-      {#if chartData.overdue_bills.length > 0}
-        <div class="warning-banner">
-          <h3>Overdue Bills</h3>
-          <p>These items are past due and deducted from today's starting balance:</p>
-          <ul>
-            {#each chartData.overdue_bills as bill}
-              <li>
-                <strong>{bill.name}</strong>: {formatCurrency(bill.amount)}
-                (Due: {bill.due_date})
-              </li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
+      <OverdueBillsBanner overdueBills={chartData.overdue_bills} />
 
       <div class="chart-section">
         <HistogramChart
@@ -186,7 +140,7 @@
           </header>
           {#if selectedEvents.length > 0}
             <ul>
-              {#each selectedEvents as event}
+              {#each selectedEvents as event (event.name + String(event.amount) + event.type)}
                 <li>
                   <span>{event.name}</span>
                   <span class={event.type}>{formatCurrency(event.amount)}</span>
@@ -198,17 +152,6 @@
           {/if}
         </section>
       {/if}
-
-      <div class="simulator">
-        <label>
-          Daily Run Rate Simulator (Not Saved)
-          <div class="input-group">
-            <span class="currency-symbol">$</span>
-            <input type="number" min="0" step="5" bind:value={dailyRunRate} placeholder="0.00" />
-          </div>
-          <span class="help-text">Estimate daily spending (food, gas) to see impact.</span>
-        </label>
-      </div>
     </div>
   {/if}
 </div>
@@ -291,29 +234,6 @@
     font-weight: 600;
     text-align: center;
     padding: 0 var(--space-4);
-  }
-
-  .warning-banner {
-    background: var(--warning-muted);
-    color: var(--warning);
-    padding: var(--space-4);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-5);
-    border: 1px solid var(--warning-border);
-  }
-
-  .warning-banner h3 {
-    margin: 0 0 var(--space-2) 0;
-  }
-
-  .warning-banner p {
-    margin: 0 0 var(--space-3) 0;
-    color: var(--text-secondary);
-  }
-
-  .warning-banner ul {
-    margin: 0;
-    padding-left: var(--space-4);
   }
 
   .chart-section {
@@ -400,35 +320,5 @@
   .day-details .empty {
     margin: 0;
     color: var(--text-secondary);
-  }
-
-  .simulator {
-    background: var(--bg-surface);
-    padding: var(--space-5);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-default);
-    max-width: var(--content-max-sm);
-  }
-
-  .input-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
-  }
-
-  input {
-    padding: var(--space-2);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-default);
-    background: var(--bg-base);
-    color: var(--text-primary);
-  }
-
-  .help-text {
-    display: inline-block;
-    margin-top: var(--space-2);
-    color: var(--text-secondary);
-    font-size: 0.875rem;
   }
 </style>

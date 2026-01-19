@@ -8,6 +8,7 @@
   } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
+  import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
   import SectionStatsHeader from './SectionStatsHeader.svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
@@ -313,6 +314,11 @@
 
         <!-- Right: Main Content -->
         <div class="main-content">
+          <OverdueBillsBanner
+            overdueBills={$detailedMonthData.overdue_bills}
+            description="These bills are past due and still unpaid."
+          />
+
           <div class="sections-container" class:single-column={$columnMode === '1-col'}>
             <!-- Bills Section -->
             <section class="section bills-section">

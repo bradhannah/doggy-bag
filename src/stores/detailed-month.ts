@@ -138,6 +138,7 @@ export interface DetailedMonthData {
   };
   leftover: number;
   leftoverBreakdown: LeftoverBreakdown;
+  overdue_bills: { name: string; amount: number; due_date: string }[];
   payoffSummaries: PayoffSummary[]; // Summary of each CC payoff status
   bankBalances: Record<string, number>;
   lastUpdated: string;

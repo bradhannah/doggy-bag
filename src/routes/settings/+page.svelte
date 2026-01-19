@@ -23,7 +23,7 @@
     type MigrationMode,
   } from '../../stores/settings';
   import { themeMode } from '../../stores/theme';
-  import type { ThemeMode } from '$lib/theme';
+  import type { ThemeMode as _ThemeMode } from '$lib/theme';
 
   // Store Tauri check result (reactive won't help since isTauri() doesn't depend on reactive values)
   const inTauri = isTauri();
@@ -588,7 +588,7 @@
           <p class="setting-hint">No backups available.</p>
         {:else}
           <div class="backup-list">
-            {#each versionBackups as backup}
+            {#each versionBackups as backup (backup.filename)}
               <div class="backup-item">
                 <div class="backup-info">
                   <div class="backup-version">
@@ -627,22 +627,35 @@
                     {/if}
                   </div>
                   <div class="backup-meta">
-                    <span>{formatDate(backup.timestamp)}</span>
-                    <span class="separator">|</span>
-                    <span>{formatBytes(backup.size)}</span>
-                    {#if backup.note}
-                      <span class="separator">|</span>
-                      <span class="backup-note-text" title={backup.note}>{backup.note}</span>
+                    <span class="backup-date">{formatDate(backup.timestamp)}</span>
+                    {#if backup.note && backup.backupType === 'version_upgrade'}
+                      <span class="backup-note-badge" title={backup.note}>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                      </span>
                     {/if}
                   </div>
                 </div>
-                <button
-                  class="restore-button"
-                  on:click={() => initiateRestore(backup)}
-                  title="Restore this backup"
-                >
-                  Restore
-                </button>
+                <div class="backup-actions">
+                  <button
+                    class="button-secondary"
+                    on:click={() => initiateRestore(backup)}
+                    disabled={restoreInProgress}
+                  >
+                    Restore
+                  </button>
+                </div>
               </div>
             {/each}
           </div>

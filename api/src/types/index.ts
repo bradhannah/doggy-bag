@@ -515,6 +515,7 @@ interface DetailedMonthResponse {
   month: string;
   billSections: CategorySection[];
   incomeSections: CategorySection[];
+  overdue_bills: { name: string; amount: number; due_date: string }[];
   tallies: {
     bills: SectionTally; // Regular bills (with expected amounts)
     adhocBills: SectionTally; // Ad-hoc bills (actual only)

@@ -13,11 +13,11 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type {
-  InsuranceClaim,
+  InsuranceClaim as _InsuranceClaim,
   InsuranceCategory,
   InsurancePlan,
   FamilyMember,
-  ClaimSubmission,
+  ClaimSubmission as _ClaimSubmission,
 } from '../types';
 
 describe('InsuranceClaimsService', () => {
@@ -30,6 +30,7 @@ describe('InsuranceClaimsService', () => {
       id: 'fm-john-001',
       name: 'John Doe',
       is_active: true,
+      plans: [],
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
     },
@@ -37,6 +38,7 @@ describe('InsuranceClaimsService', () => {
       id: 'fm-jane-002',
       name: 'Jane Doe',
       is_active: true,
+      plans: [],
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
     },
@@ -47,6 +49,9 @@ describe('InsuranceClaimsService', () => {
     {
       id: 'ic-dental-001',
       name: 'Dental',
+      icon: '🦷',
+      sort_order: 1,
+      is_predefined: false,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -54,6 +59,9 @@ describe('InsuranceClaimsService', () => {
     {
       id: 'ic-vision-002',
       name: 'Vision',
+      icon: '👓',
+      sort_order: 2,
+      is_predefined: false,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -61,6 +69,9 @@ describe('InsuranceClaimsService', () => {
     {
       id: 'ic-medical-003',
       name: 'Medical',
+      icon: '🩺',
+      sort_order: 3,
+      is_predefined: false,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -76,7 +87,6 @@ describe('InsuranceClaimsService', () => {
       policy_number: 'POL-12345',
       member_id: 'MEM-98765',
       owner: 'John Doe',
-      priority: 1,
       portal_url: 'https://portal.bluecross.example.com',
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
@@ -89,7 +99,6 @@ describe('InsuranceClaimsService', () => {
       policy_number: 'POL-67890',
       member_id: 'MEM-54321',
       owner: 'Jane Doe',
-      priority: 2,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',

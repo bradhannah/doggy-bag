@@ -196,7 +196,7 @@
   }
 
   // Change = Final (End) - Start
-  function getChange(accountId: string): number {
+  function _getChange(accountId: string): number {
     return getEndValue(accountId) - getStartValue(accountId);
   }
 

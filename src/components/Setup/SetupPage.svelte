@@ -31,13 +31,13 @@
     incomeCategories,
   } from '../../stores/categories';
   import {
-    insurancePlansStore,
+    insurancePlansStore as _insurancePlansStore,
     loadInsurancePlans,
     deleteInsurancePlan,
     insurancePlans,
   } from '../../stores/insurance-plans';
   import {
-    insuranceCategoriesStore,
+    insuranceCategoriesStore as _insuranceCategoriesStore,
     loadInsuranceCategories,
     deleteInsuranceCategory,
     insuranceCategories,

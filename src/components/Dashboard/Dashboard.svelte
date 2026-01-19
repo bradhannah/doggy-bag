@@ -157,8 +157,8 @@
   });
 
   $: totalCCPayoffs = ccPayoffs.reduce((sum, cc) => sum + cc.balance, 0);
-  $: totalCCPaid = ccPayoffs.reduce((sum, cc) => sum + cc.paid, 0);
-  $: totalCCRemaining = ccPayoffs.reduce((sum, cc) => sum + cc.remaining, 0);
+  $: _totalCCPaid = ccPayoffs.reduce((sum, cc) => sum + cc.paid, 0);
+  $: _totalCCRemaining = ccPayoffs.reduce((sum, cc) => sum + cc.remaining, 0);
 
   // Adjacent month data
   interface MonthSummary {
@@ -432,7 +432,7 @@
   $: apiBankBalances = $leftoverSummary?.bankBalances ?? 0;
   $: apiRemainingIncome = $leftoverSummary?.remainingIncome ?? 0;
   $: apiRemainingExpenses = $leftoverSummary?.remainingExpenses ?? 0;
-  $: apiIsValid = $leftoverSummary?.isValid ?? false;
+  $: _apiIsValid = $leftoverSummary?.isValid ?? false;
   $: isPositive = apiLeftover >= 0;
 </script>
 

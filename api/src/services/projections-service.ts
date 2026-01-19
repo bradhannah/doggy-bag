@@ -9,6 +9,7 @@ import type {
   Payment,
 } from '../types';
 import { calculateUnifiedLeftover } from '../utils/leftover';
+import { getOverdueBills, sumOverdueBills } from '../utils/overdue-bills';
 
 export interface ProjectionsService {
   getProjection(month: string): Promise<ProjectionResponse>;
@@ -79,11 +80,10 @@ export class ProjectionsServiceImpl implements ProjectionsService {
     }
 
     // Process Bills
-    const overdueBills: { name: string; amount: number; due_date: string }[] = [];
-    let overdueTotal = 0;
-
     // Flatten all bill sections into a single list and cast to correct type
     const allBills = detailedData.billSections.flatMap((s) => s.items as BillInstanceDetailed[]);
+    const overdueBills = getOverdueBills(allBills, month, todayStr);
+    const overdueTotal = sumOverdueBills(overdueBills);
 
     for (const bill of allBills) {
       const occurrences = bill.occurrences || [];
@@ -118,13 +118,6 @@ export class ProjectionsServiceImpl implements ProjectionsService {
         if (remaining <= 0) continue;
 
         if (dueDate < balanceStartDate) {
-          // Overdue
-          overdueBills.push({
-            name: bill.name,
-            amount: remaining,
-            due_date: dueDate,
-          });
-          overdueTotal += remaining;
           pushEvent(balanceStartDate, {
             name: bill.name,
             amount: remaining,

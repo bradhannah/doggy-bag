@@ -186,26 +186,55 @@ export function migrateCategory(category: LegacyData, index: number): Category {
  * Check if a BillInstance needs migration
  */
 export function needsBillInstanceMigration(instance: LegacyData): boolean {
-  return (
+  // Check for missing fields
+  if (
     instance.expected_amount === undefined ||
     instance.is_adhoc === undefined ||
     instance.is_closed === undefined ||
     instance.billing_period === undefined ||
     instance.occurrences === undefined
-  );
+  ) {
+    return true;
+  }
+
+  // Check for state mismatch: Parent is closed/paid but has open occurrences
+  // This triggers a re-migration to fix the state
+  const isParentClosed = instance.is_closed === true || instance.is_paid === true;
+  if (isParentClosed && Array.isArray(instance.occurrences)) {
+    const hasOpenOccurrence = instance.occurrences.some((occ: LegacyData) => !occ.is_closed);
+    if (hasOpenOccurrence) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
  * Check if an IncomeInstance needs migration
  */
 export function needsIncomeInstanceMigration(instance: LegacyData): boolean {
-  return (
+  // Check for missing fields
+  if (
     instance.expected_amount === undefined ||
     instance.is_adhoc === undefined ||
     instance.is_closed === undefined ||
     instance.billing_period === undefined ||
     instance.occurrences === undefined
-  );
+  ) {
+    return true;
+  }
+
+  // Check for state mismatch: Parent is closed/paid but has open occurrences
+  const isParentClosed = instance.is_closed === true || instance.is_paid === true;
+  if (isParentClosed && Array.isArray(instance.occurrences)) {
+    const hasOpenOccurrence = instance.occurrences.some((occ: LegacyData) => !occ.is_closed);
+    if (hasOpenOccurrence) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**

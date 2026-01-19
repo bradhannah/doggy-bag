@@ -19,28 +19,33 @@
   const range = maxBalance - minBalance || 1;
 
   // Layout
-  const padding = { top: 20, right: 20, bottom: 30, left: 60 };
-  let width = 800; // Bind to container width
+  const padding = { top: 20, right: 30, bottom: 30, left: 60 };
+  let containerWidth = 800;
 
-  $: chartWidth = width - padding.left - padding.right;
-  $: chartHeight = height - padding.top - padding.bottom;
+  // Use viewBox for responsive scaling
+  const viewBoxWidth = 800;
+  const viewBoxHeight = 400;
+  const chartWidth = viewBoxWidth - padding.left - padding.right;
+  const chartHeight = viewBoxHeight - padding.top - padding.bottom;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Use local time to match user's system clock
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('en-CA'); // YYYY-MM-DD
+
   const isCurrentMonth = data.start_date.slice(0, 7) === todayStr.slice(0, 7);
   const isPastMonth = data.start_date.slice(0, 7) < todayStr.slice(0, 7);
-  const lastDay = new Date(
-    Number(data.end_date.slice(0, 4)),
-    Number(data.end_date.slice(5, 7)),
-    0
-  ).getDate();
 
-  const calendarSlots = 31;
+  // Dynamic day count based on the actual month data
+  const daysInMonth = data.days.length;
 
   function getDayOfMonth(dateStr: string) {
     return Number(dateStr.slice(8, 10));
   }
 
-  const todaySlot = Number(todayStr.slice(8, 10)) - 1;
+  const todayDay = Number(todayStr.slice(8, 10));
+  // Today slot is 0-based index
+  const todaySlot = isCurrentMonth ? todayDay - 1 : isPastMonth ? daysInMonth : -1;
+
   const monthStartWeekday = new Date(`${data.start_date}T00:00:00`).getDay();
 
   function isPastDay(dateStr: string) {
@@ -50,15 +55,16 @@
   }
 
   function xScale(slotIndex: number) {
-    return (slotIndex / (calendarSlots - 1)) * chartWidth;
+    // Distribute slots evenly across chart width
+    return (slotIndex / (daysInMonth - 1)) * chartWidth;
   }
 
   function yScale(value: number) {
     return chartHeight - ((value - minBalance) / range) * chartHeight;
   }
 
-  $: zeroY = yScale(0);
-  $: barWidth = Math.max(6, (chartWidth / calendarSlots) * 0.8);
+  const zeroY = yScale(0);
+  const barWidth = Math.max(6, (chartWidth / daysInMonth) * 0.8);
 
   // Line path generator (future only)
   type ProjectionDayWithBalance = ProjectionDay & { has_balance: boolean; balance: number | null };
@@ -85,11 +91,10 @@
     );
   }
 
-  $: linePath = getLinePath();
+  const linePath = getLinePath();
 
   // Tooltip state
   let hoveredIndex: number | null = null;
-  let mouseX = 0;
   let tooltipX = 0;
   let tooltipY = 0;
   let tooltipPlacement: 'above' | 'below' = 'above';
@@ -97,15 +102,23 @@
 
   function handleMouseMove(e: MouseEvent) {
     const rect = (e.currentTarget as Element).getBoundingClientRect();
-    mouseX = e.clientX - rect.left - padding.left;
-    const currentMouseY = e.clientY - rect.top - padding.top;
+    // Correct coordinate transformation:
+    // 1. Get X relative to container (in screen pixels)
+    const rawX = e.clientX - rect.left;
 
-    // Find closest day index
-    const slotWidth = chartWidth / (calendarSlots - 1);
-    const slotIndex = Math.round(mouseX / slotWidth);
+    // 2. Scale to SVG coordinate space
+    const scaleX = viewBoxWidth / rect.width;
+    const svgX = rawX * scaleX;
+
+    // 3. Subtract padding to get plot-area X (in SVG units)
+    const plotX = svgX - padding.left;
+
+    const slotWidth = chartWidth / (daysInMonth - 1);
+    const slotIndex = Math.round(plotX / slotWidth);
+
     const dayIndex = data.days.findIndex((day) => getDayOfMonth(day.date) - 1 === slotIndex);
 
-    if (dayIndex >= 0 && slotIndex >= 0 && slotIndex < calendarSlots) {
+    if (dayIndex >= 0 && slotIndex >= 0 && slotIndex < daysInMonth) {
       hoveredIndex = dayIndex;
       const balanceValue = data.days[dayIndex].balance ?? 0;
       const targetY = yScale(balanceValue);
@@ -142,7 +155,7 @@
 
 <div
   class="chart-container"
-  bind:clientWidth={width}
+  bind:clientWidth={containerWidth}
   role="button"
   tabindex="0"
   aria-label="Monthly Projection Histogram"
@@ -150,40 +163,51 @@
   on:mouseleave={() => (hoveredIndex = null)}
   on:click={handleChartClick}
 >
-  <svg {width} {height} role="img" aria-hidden="true">
+  <svg
+    viewBox="0 0 {viewBoxWidth} {viewBoxHeight}"
+    preserveAspectRatio="xMidYMid meet"
+    role="img"
+    aria-hidden="true"
+  >
     <g transform="translate({padding.left}, {padding.top})">
       {#if isPastMonth || isCurrentMonth}
-        {@const pastSlots = isPastMonth ? calendarSlots : todaySlot}
-        {#if pastSlots > 0}
-          <rect x="0" y="0" width={xScale(pastSlots)} height={chartHeight} class="past-region" />
+        <!-- Draw past region up to start of today's slot (midpoint between yesterday and today) -->
+        <!-- Logic: Bar is centered on slot. We want the background to end exactly between slots to look clean -->
+        {@const pastBoundaryX = isPastMonth
+          ? chartWidth
+          : todaySlot >= 0
+            ? xScale(todaySlot) - barWidth * 0.6
+            : 0}
+
+        {#if pastBoundaryX > 0}
+          <rect x="0" y="0" width={pastBoundaryX} height={chartHeight} class="past-region" />
         {/if}
       {/if}
 
-      <!-- Grid lines -->
+      <!-- Zero Line (Thicker) -->
       <line
         x1="0"
         y1={zeroY}
         x2={chartWidth}
         y2={zeroY}
-        stroke="var(--border-subtle)"
-        stroke-width="1"
+        stroke="var(--border-focus)"
+        stroke-width="2"
+        opacity="0.8"
       />
 
       <!-- Day splits -->
-      {#each Array(calendarSlots) as _, slotIndex (slotIndex)}
+      {#each Array(daysInMonth) as _, slotIndex (slotIndex)}
         {@const dayNumber = slotIndex + 1}
         {@const weekday = (monthStartWeekday + dayNumber - 1) % 7}
-        {#if dayNumber <= lastDay}
-          <line
-            x1={xScale(slotIndex)}
-            y1="0"
-            x2={xScale(slotIndex)}
-            y2={chartHeight}
-            stroke={weekday === 1 ? 'var(--border-hover)' : 'var(--border-subtle)'}
-            stroke-width={weekday === 1 ? 2 : 1}
-            opacity={weekday === 1 ? 0.8 : 0.45}
-          />
-        {/if}
+        <line
+          x1={xScale(slotIndex)}
+          y1="0"
+          x2={xScale(slotIndex)}
+          y2={chartHeight}
+          stroke={weekday === 1 ? 'var(--border-hover)' : 'var(--border-subtle)'}
+          stroke-width={weekday === 1 ? 2 : 1}
+          opacity={weekday === 1 ? 0.8 : 0.45}
+        />
       {/each}
 
       <!-- Bars -->
@@ -243,10 +267,16 @@
         >
 
         <!-- X Axis -->
-        {#each Array(calendarSlots) as _, slotIndex (slotIndex)}
+        {#each Array(daysInMonth) as _, slotIndex (slotIndex)}
           {@const dayNumber = slotIndex + 1}
-          {#if dayNumber <= lastDay && (dayNumber === 1 || (dayNumber - 1) % 7 === 0)}
-            <text x={xScale(slotIndex)} y={chartHeight + 15} text-anchor="middle" font-size="10">
+          {#if dayNumber === 1 || (dayNumber - 1) % 7 === 0 || dayNumber === daysInMonth}
+            <text
+              x={xScale(slotIndex)}
+              y={chartHeight + 20}
+              text-anchor="middle"
+              font-size="12"
+              font-weight="500"
+            >
               {dayNumber}
             </text>
           {/if}
@@ -360,8 +390,9 @@
   }
 
   .selected-marker {
-    stroke: var(--accent);
+    stroke: var(--text-primary);
     stroke-width: 2;
+    stroke-dasharray: 4;
     opacity: 0.8;
   }
 </style>

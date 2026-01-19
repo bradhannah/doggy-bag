@@ -181,7 +181,7 @@
     </div>
     {#if !isPredefined}
       <div class="icon-grid">
-        {#each commonIcons as iconOption}
+        {#each commonIcons as iconOption (iconOption)}
           <button
             type="button"
             class="icon-option"

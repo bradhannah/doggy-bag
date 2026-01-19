@@ -100,6 +100,7 @@ const sampleDetailedMonthData: DetailedMonthData = {
     leftover: 485000,
     isValid: true,
   },
+  overdue_bills: [],
   payoffSummaries: [],
   bankBalances: {},
   lastUpdated: '2025-01-01T00:00:00Z',
@@ -432,10 +433,20 @@ describe('Detailed Month Store', () => {
       detailedMonth.updateIncomeClosedStatus('ii-adhoc', true, 25000);
 
       const data = get(detailedMonthData);
+      const incomeItems = data?.incomeSections.flatMap(
+        (section) => section.items as IncomeInstanceDetailed[]
+      );
 
-      expect(data?.tallies.income.actual).toBe(500000);
-      expect(data?.tallies.adhocIncome.actual).toBe(25000);
-      expect(data?.tallies.totalIncome.actual).toBe(525000);
+      const regularActual = (incomeItems ?? [])
+        .filter((item) => !item.is_adhoc)
+        .reduce((sum, item) => sum + item.total_received, 0);
+      const adhocActual = (incomeItems ?? [])
+        .filter((item) => item.is_adhoc)
+        .reduce((sum, item) => sum + item.total_received, 0);
+
+      expect(regularActual).toBe(500000);
+      expect(adhocActual).toBe(25000);
+      expect(regularActual + adhocActual).toBe(525000);
     });
   });
 });

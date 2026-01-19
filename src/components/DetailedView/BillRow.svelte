@@ -108,7 +108,7 @@
   $: isPayoffBill = bill.is_payoff_bill ?? false;
 
   // Check if bill has any metadata to display
-  function hasMetadata(b: BillInstanceDetailed): boolean {
+  function _hasMetadata(b: BillInstanceDetailed): boolean {
     return !!(
       b.metadata?.bank_transaction_name ||
       b.metadata?.account_number ||

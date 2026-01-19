@@ -28,7 +28,7 @@
   $: statusText =
     type === 'bills' ? `${openItems}/${totalItems} left` : `${closedItems}/${totalItems} received`;
 
-  function formatCurrency(cents: number): string {
+  function _formatCurrency(cents: number): string {
     const dollars = cents / 100;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

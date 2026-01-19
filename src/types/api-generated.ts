@@ -1106,6 +1106,12 @@ export interface components {
             month: string;
             billSections: components["schemas"]["CategorySection"][];
             incomeSections: components["schemas"]["CategorySection"][];
+            overdue_bills: {
+                name: string;
+                /** Format: double */
+                amount: number;
+                due_date: string;
+            }[];
             tallies: {
                 totalIncome: components["schemas"]["SectionTally"];
                 adhocIncome: components["schemas"]["SectionTally"];
