@@ -1,0 +1,737 @@
+bun test v1.3.5 (1e86cebd)
+
+api/src/services/payment-sources-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/payment-sources-test-1768787941914
+[StorageService] Mode: development
+[PaymentSourcesService] Payment source non-existent-id not found
+
+api/src/services/insurance-claims-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/insurance-claims-test-1768787941924
+[StorageService] Mode: development
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Created claim # 2
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Updated claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Updated claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Deleted claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Created claim # 2
+[InsuranceClaimsService] Added submission to claim # 2
+[InsuranceClaimsService] Updated submission on claim # 2
+[InsuranceClaimsService] Failed to create claim: 222 |   ): Promise<InsuranceClaim> {
+223 |     try {
+224 |       // Validate
+225 |       const validation = this.validate(data);
+226 |       if (!validation.isValid) {
+227 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                        ^
+error: Validation failed: Family member is required
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:227:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:217:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:303:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:301:45)
+
+[InsuranceClaimsService] Failed to create claim: 222 |   ): Promise<InsuranceClaim> {
+223 |     try {
+224 |       // Validate
+225 |       const validation = this.validate(data);
+226 |       if (!validation.isValid) {
+227 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                        ^
+error: Validation failed: Category is required
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:227:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:217:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:314:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:312:40)
+
+[InsuranceClaimsService] Failed to create claim: 222 |   ): Promise<InsuranceClaim> {
+223 |     try {
+224 |       // Validate
+225 |       const validation = this.validate(data);
+226 |       if (!validation.isValid) {
+227 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                        ^
+error: Validation failed: Service date is required
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:227:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:217:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:325:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:323:47)
+
+[InsuranceClaimsService] Failed to create claim: 222 |   ): Promise<InsuranceClaim> {
+223 |     try {
+224 |       // Validate
+225 |       const validation = this.validate(data);
+226 |       if (!validation.isValid) {
+227 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                        ^
+error: Validation failed: Total amount must be a non-negative number
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:227:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:217:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:336:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:334:54)
+
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceClaimsService] Failed to create claim: 228 |       }
+229 | 
+230 |       // Get family member for denormalized name
+231 |       const familyMember = await this.familyMembersService.getById(data.family_member_id);
+232 |       if (!familyMember) {
+233 |         throw new Error('Family member not found');
+                        ^
+error: Family member not found
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:233:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:353:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:345:51)
+
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Failed to create claim: 234 |       }
+235 | 
+236 |       // Get category for denormalized name
+237 |       const category = await this.categoriesService.getById(data.category_id);
+238 |       if (!category) {
+239 |         throw new Error('Category not found');
+                        ^
+error: Category not found
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:239:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:364:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:356:46)
+
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Failed to add submission: 635 |       }
+636 | 
+637 |       // Get plan for snapshot
+638 |       const plan = await this.plansService.getById(data.plan_id);
+639 |       if (!plan) {
+640 |         throw new Error('Insurance plan not found');
+                        ^
+error: Insurance plan not found
+      at addSubmission (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:640:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:411:17)
+
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Failed to add submission: 653 | 
+654 |       const claim = claims[index];
+655 | 
+656 |       // Validate amount_claimed
+657 |       if (typeof data.amount_claimed !== 'number' || data.amount_claimed < 0) {
+658 |         throw new Error('Amount claimed must be a non-negative number');
+                        ^
+error: Amount claimed must be a non-negative number
+      at addSubmission (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:658:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:428:17)
+
+[InsuranceClaimsService] Failed to add submission: 629 |     try {
+630 |       const claims = await this.getAllRaw();
+631 |       const index = claims.findIndex((c) => c.id === claimId);
+632 | 
+633 |       if (index === -1) {
+634 |         throw new Error('Claim not found');
+                        ^
+error: Claim not found
+      at addSubmission (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.ts:634:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:438:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/insurance-claims-service.test.ts:431:60)
+
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Deleted submission from claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[FamilyMembersService] Migrating members to include plans array...
+[InsuranceCategoriesService] Seeded category: Vision / Eye Care
+[InsuranceCategoriesService] Seeded category: Massage Therapy
+[InsuranceCategoriesService] Seeded category: Physiotherapy
+[InsuranceCategoriesService] Seeded category: Chiropractic
+[InsuranceCategoriesService] Seeded category: Orthodontics
+[InsuranceCategoriesService] Seeded category: Mental Health
+[InsuranceCategoriesService] Seeded category: Prescription Drugs
+[InsuranceCategoriesService] Seeded category: Medical Equipment
+[InsuranceCategoriesService] Seeded category: Hospital / Emergency
+[InsuranceCategoriesService] Seeded category: Other
+[InsuranceClaimsService] Created claim # 1
+[InsuranceClaimsService] Added submission to claim # 1
+[InsuranceClaimsService] Updated submission on claim # 1
+[InsuranceClaimsService] Created claim # 2
+[InsuranceClaimsService] Added submission to claim # 2
+[InsuranceClaimsService] Updated submission on claim # 2
+[InsuranceClaimsService] Created claim # 3
+
+api/src/services/version-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954
+[StorageService] Mode: development
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/version.json: ENOENT: no such file or directory, open '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/version.json'
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/version.json: ENOENT: no such file or directory, open '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/version.json'
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/version.json: ENOENT: no such file or directory, open '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/version.json'
+[VersionService] Version changed: 0.0.1 -> 0.4.1
+[BackupService] Exporting backup...
+[BackupService] Export completed
+[VersionService] Created backup: v0.0.1_to_v0.4.1_2026-01-19T01-59-01-959Z.json
+[VersionService] Version changed: 0.0.1 -> 0.4.1
+[VersionService] No existing data to backup
+[VersionService] Version changed: 0.0.1 -> 0.4.1
+[BackupService] Exporting backup...
+[BackupService] Export completed
+[VersionService] Created backup: v0.0.1_to_v0.4.1_2026-01-19T01-59-01-962Z.json
+[VersionService] Deleted backup: v0.0.1_to_v0.0.2_2025-01-01T10-00-00-000Z.json
+[BackupService] Importing backup...
+[BackupService] Import completed - restored all entities
+[VersionService] Restored from backup: v0.0.1_to_v0.0.2_2025-01-01T10-00-00-000Z.json
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/backups/non-existent.json: ENOENT: no such file or directory, open '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/version-test-1768787941954/backups/non-existent.json'
+[VersionService] Deleted backup: v0.0.4_to_v0.0.5_2025-01-04T10-00-00-000Z.json
+[VersionService] Deleted backup: v0.0.3_to_v0.0.4_2025-01-03T10-00-00-000Z.json
+[VersionService] Deleted backup: v0.0.2_to_v0.0.3_2025-01-02T10-00-00-000Z.json
+[VersionService] Deleted backup: v0.0.1_to_v0.0.2_2025-01-01T10-00-00-000Z.json
+[VersionService] Deleted backup: v0.0.3_to_v0.0.4_2025-01-03T10-00-00-000Z.json
+[VersionService] Deleted backup: v0.0.2_to_v0.0.3_2025-01-02T10-00-00-000Z.json
+[VersionService] Deleted backup: v0.0.1_to_v0.0.2_2025-01-01T10-00-00-000Z.json
+
+api/src/services/storage.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970
+[StorageService] Mode: development
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/custom-test
+[StorageService] Mode: development
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970
+[StorageService] Mode: development
+[StorageService] Initialized with base path: data
+[StorageService] Mode: development
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970
+[StorageService] Mode: development
+[StorageService] Switching data directory to: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/switched-test
+[StorageService] Data directory switched successfully
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970
+[StorageService] Mode: development
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/non-existent.json: ENOENT: no such file or directory, open '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/non-existent.json'
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/invalid.json: JSON Parse error: Unexpected identifier "not"
+[StorageService] Failed to delete file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/does-not-exist.json: ENOENT: no such file or directory, unlink '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/does-not-exist.json'
+[StorageService] Failed to list files in /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/non-existent-dir: ENOENT: no such file or directory, scandir '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/storage-test-1768787941970/non-existent-dir'
+
+api/src/services/incomes-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/incomes-test-1768787941977
+[StorageService] Mode: development
+[IncomesService] Failed to create income: 64 |     data: Omit<Income, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+65 |   ): Promise<Income> {
+66 |     try {
+67 |       const validation = this.validation.validateIncome(data);
+68 |       if (!validation.isValid) {
+69 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Name cannot be blank or whitespace only
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:69:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:64:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:214:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:212:58)
+
+[IncomesService] Failed to create income: 64 |     data: Omit<Income, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+65 |   ): Promise<Income> {
+66 |     try {
+67 |       const validation = this.validation.validateIncome(data);
+68 |       if (!validation.isValid) {
+69 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Amount must be zero or a positive number in cents
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:69:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:64:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:227:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:225:61)
+
+[IncomesService] Failed to create income: 64 |     data: Omit<Income, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+65 |   ): Promise<Income> {
+66 |     try {
+67 |       const validation = this.validation.validateIncome(data);
+68 |       if (!validation.isValid) {
+69 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Billing period must be: monthly, bi_weekly, weekly, or semi_annually, Start date is required for bi-weekly, weekly, and semi-annual billing periods
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:69:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:64:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:240:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:238:53)
+
+[IncomesService] Failed to create income: 64 |     data: Omit<Income, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+65 |   ): Promise<Income> {
+66 |     try {
+67 |       const validation = this.validation.validateIncome(data);
+68 |       if (!validation.isValid) {
+69 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Category ID is required
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:69:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.ts:64:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:253:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/incomes-service.test.ts:251:50)
+
+[IncomesService] Income non-existent-id not found
+
+api/src/services/bills-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/bills-test-1768787941986
+[StorageService] Mode: development
+[BillsService] Failed to create bill: 52 |     data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+53 |   ): Promise<Bill> {
+54 |     try {
+55 |       const validation = this.validation.validateBill(data);
+56 |       if (!validation.isValid) {
+57 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Name cannot be blank or whitespace only
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:57:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:52:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:211:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:209:58)
+
+[BillsService] Failed to create bill: 52 |     data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+53 |   ): Promise<Bill> {
+54 |     try {
+55 |       const validation = this.validation.validateBill(data);
+56 |       if (!validation.isValid) {
+57 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Amount must be zero or a positive number in cents
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:57:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:52:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:224:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:222:61)
+
+[BillsService] Failed to create bill: 52 |     data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+53 |   ): Promise<Bill> {
+54 |     try {
+55 |       const validation = this.validation.validateBill(data);
+56 |       if (!validation.isValid) {
+57 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Billing period must be: monthly, bi_weekly, weekly, or semi_annually, Start date is required for bi-weekly, weekly, and semi-annual billing periods
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:57:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:52:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:237:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:235:53)
+
+[BillsService] Failed to create bill: 52 |     data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>
+53 |   ): Promise<Bill> {
+54 |     try {
+55 |       const validation = this.validation.validateBill(data);
+56 |       if (!validation.isValid) {
+57 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                       ^
+error: Validation failed: Category ID is required
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:57:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.ts:52:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:250:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/bills-service.test.ts:248:50)
+
+[BillsService] Bill non-existent-id not found
+
+api/src/services/months-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/months-sync-test-1768787941996
+[StorageService] Mode: development
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] No metadata changes for 2025-03
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Migrated instances for 2025-03 to new schema
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+[MonthsService] Syncing metadata for 2099-12
+[StorageService] Failed to read file /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/months-sync-test-1768787941996/months/2099-12.json: ENOENT: no such file or directory, open '/var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/months-sync-test-1768787941996/months/2099-12.json'
+[MonthsService] Failed to sync metadata: 546 | 
+547 |     try {
+548 |       const data = await this.getMonthlyData(month);
+549 | 
+550 |       if (!data) {
+551 |         throw new Error(`Monthly data for ${month} not found`);
+                        ^
+error: Monthly data for 2099-12 not found
+      at syncMetadata (/Users/bradhannah/GitHub/doggy-bag/api/src/services/months-service.ts:551:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/months-service.test.ts:364:61)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/months-service.test.ts:363:49)
+
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+[MonthsService] Syncing metadata for 2025-03
+[MonthsService] Saved monthly data for 2025-03
+[MonthsService] Metadata synced for 2025-03
+
+api/src/services/categories-service.test.ts:
+[StorageService] Initialized with base path: /var/folders/f9/jdg1pkq104q0ccw3mr2fzrm40000gn/T/categories-test-1768787942014
+[StorageService] Mode: development
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Failed to create category: 115 | 
+116 |   public async create(data: Omit<Category, 'created_at' | 'updated_at' | 'id'>): Promise<Category> {
+117 |     try {
+118 |       const validation = this.validation.validateCategory(data);
+119 |       if (!validation.isValid) {
+120 |         throw new Error('Validation failed: ' + validation.errors.join(', '));
+                        ^
+error: Validation failed: Name cannot be blank or whitespace only
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:120:19)
+      at create (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:116:23)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:187:17)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:185:43)
+
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Category non-existent-id not found
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Failed to update category: 151 |     updates: Partial<Omit<Category, 'created_at' | 'updated_at' | 'id'>>
+152 |   ): Promise<Category | null> {
+153 |     try {
+154 |       // Prevent modification of Variable Expenses category
+155 |       if (id === VARIABLE_EXPENSES_CATEGORY_ID) {
+156 |         throw new Error('Cannot modify the Variable Expenses category');
+                        ^
+error: Cannot modify the Variable Expenses category
+      at update (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:156:19)
+      at update (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:150:5)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:221:17)
+
+[CategoriesService] Failed to update category: 164 |         return null;
+165 |       }
+166 | 
+167 |       // Also check by type (in case ID doesn't match but it's a variable category)
+168 |       if (categories[index].type === 'variable') {
+169 |         throw new Error('Cannot modify the Variable Expenses category');
+                        ^
+error: Cannot modify the Variable Expenses category
+      at update (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:169:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:245:90)
+
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Failed to delete category: 199 |       if (category?.type === 'variable') {
+200 |         throw new Error('Cannot delete the Variable Expenses category');
+201 |       }
+202 | 
+203 |       if (category?.is_predefined) {
+204 |         throw new Error('Cannot delete predefined category');
+                        ^
+error: Cannot delete predefined category
+      at delete (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:204:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:259:63)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:258:54)
+
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Failed to delete category: 187 | 
+188 |   public async delete(id: string): Promise<void> {
+189 |     try {
+190 |       // Prevent deletion of Variable Expenses category
+191 |       if (id === VARIABLE_EXPENSES_CATEGORY_ID) {
+192 |         throw new Error('Cannot delete the Variable Expenses category');
+                        ^
+error: Cannot delete the Variable Expenses category
+      at delete (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:192:19)
+      at delete (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:188:23)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:267:28)
+
+[CategoriesService] Failed to delete category: 195 |       const categories = await this.getAll();
+196 |       const category = categories.find((c) => c.id === id);
+197 | 
+198 |       // Also check by type (in case ID doesn't match but it's a variable category)
+199 |       if (category?.type === 'variable') {
+200 |         throw new Error('Cannot delete the Variable Expenses category');
+                        ^
+error: Cannot delete the Variable Expenses category
+      at delete (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.ts:200:19)
+      at <anonymous> (/Users/bradhannah/GitHub/doggy-bag/api/src/services/categories-service.test.ts:291:67)
+
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Credit Card Payoffs category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Credit Card Payoffs category
+[CategoriesService] Created Variable Expenses category
+[CategoriesService] Created Variable Expenses category
+
+ 550 pass
+ 0 fail
+ 922 expect() calls
+Ran 550 tests across 16 files. [165.00ms]
