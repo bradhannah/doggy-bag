@@ -55,13 +55,17 @@ export function migrateBillInstance(instance: LegacyData): BillInstance {
     updated_at: instance.updated_at ?? now,
   };
 
+  const isInstanceClosed = instance.is_closed ?? instance.is_paid ?? false;
+
   const occurrences = (instance.occurrences ?? [fallbackOccurrence]).map(
     (occ: LegacyData, index: number) => ({
       ...occ,
       sequence: occ.sequence ?? index + 1,
       expected_date: occ.expected_date ?? instance.due_date ?? `${instance.month}-01`,
       expected_amount: occ.expected_amount ?? instance.expected_amount ?? instance.amount ?? 0,
-      is_closed: occ.is_closed ?? instance.is_closed ?? false,
+      is_closed: isInstanceClosed
+        ? true
+        : (occ.is_closed ?? instance.is_closed ?? instance.is_paid ?? false),
       closed_date: occ.closed_date ?? instance.closed_date,
       payments: Array.isArray(occ.payments) ? occ.payments : [],
       is_adhoc: occ.is_adhoc ?? instance.is_adhoc ?? false,
@@ -118,13 +122,17 @@ export function migrateIncomeInstance(instance: LegacyData): IncomeInstance {
     updated_at: instance.updated_at ?? now,
   };
 
+  const isInstanceClosed = instance.is_closed ?? instance.is_paid ?? false;
+
   const occurrences = (instance.occurrences ?? [fallbackOccurrence]).map(
     (occ: LegacyData, index: number) => ({
       ...occ,
       sequence: occ.sequence ?? index + 1,
       expected_date: occ.expected_date ?? instance.due_date ?? `${instance.month}-01`,
       expected_amount: occ.expected_amount ?? instance.expected_amount ?? instance.amount ?? 0,
-      is_closed: occ.is_closed ?? instance.is_closed ?? false,
+      is_closed: isInstanceClosed
+        ? true
+        : (occ.is_closed ?? instance.is_closed ?? instance.is_paid ?? false),
       closed_date: occ.closed_date ?? instance.closed_date,
       payments: Array.isArray(occ.payments) ? occ.payments : [],
       is_adhoc: occ.is_adhoc ?? instance.is_adhoc ?? false,
