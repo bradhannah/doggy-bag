@@ -11,6 +11,7 @@ vite.config.ts.timestamp-*
 
 # Development logs
 /logs/
+*.log
 
 # Legacy API data location (now consolidated to ./data/)
 api/data/
@@ -23,3 +24,8 @@ playwright-report/
 test-results/
 
 # OpenCode local config
+.opencode/
+
+# Tauri build artifacts
+src-tauri/target/
+dist/

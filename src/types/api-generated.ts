@@ -658,14 +658,13 @@ export interface components {
             id: string;
             name: string;
             type: components["schemas"]["PaymentSourceType"];
-            /** Format: double */
-            balance: number;
             is_active: boolean;
             exclude_from_leftover?: boolean;
             pay_off_monthly?: boolean;
             created_at: string;
             updated_at: string;
         };
+
         /** @enum {string} */
         CategoryType: "bill" | "income" | "variable";
         Category: {
@@ -946,8 +945,6 @@ export interface components {
         CreatePaymentSourceRequest: {
             name: string;
             type: components["schemas"]["PaymentSourceType"];
-            /** Format: double */
-            balance: number;
             is_active?: boolean;
             exclude_from_leftover?: boolean;
             pay_off_monthly?: boolean;
@@ -955,8 +952,6 @@ export interface components {
         UpdatePaymentSourceRequest: {
             name?: string;
             type?: components["schemas"]["PaymentSourceType"];
-            /** Format: double */
-            balance?: number;
             is_active?: boolean;
             exclude_from_leftover?: boolean;
             pay_off_monthly?: boolean;

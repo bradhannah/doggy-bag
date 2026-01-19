@@ -2,12 +2,13 @@
 // These types mirror the backend types in api/src/types/index.ts
 
 export type ClaimStatus = 'draft' | 'in_progress' | 'closed';
-export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied';
+export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
 export type DocumentType = 'receipt' | 'eob' | 'other';
 
 export interface FamilyMember {
   id: string;
   name: string;
+  plans: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;

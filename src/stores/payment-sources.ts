@@ -90,7 +90,6 @@ export interface PaymentSource {
   id: string;
   name: string;
   type: PaymentSourceType;
-  balance: number;
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
@@ -104,7 +103,6 @@ export interface PaymentSource {
 export interface PaymentSourceData {
   name: string;
   type: PaymentSourceType;
-  balance: number;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
   is_savings?: boolean;
@@ -175,7 +173,15 @@ export async function loadPaymentSources() {
   }
 }
 
-export async function createPaymentSource(data: PaymentSourceData) {
+export async function createPaymentSource(data: {
+  name: string;
+  type: PaymentSourceType;
+  exclude_from_leftover?: boolean;
+  pay_off_monthly?: boolean;
+  is_savings?: boolean;
+  is_investment?: boolean;
+  metadata?: PaymentSourceMetadata;
+}) {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
@@ -188,7 +194,18 @@ export async function createPaymentSource(data: PaymentSourceData) {
   }
 }
 
-export async function updatePaymentSource(id: string, updates: Partial<PaymentSourceData>) {
+export async function updatePaymentSource(
+  id: string,
+  updates: Partial<{
+    name: string;
+    type: PaymentSourceType;
+    exclude_from_leftover?: boolean;
+    pay_off_monthly?: boolean;
+    is_savings?: boolean;
+    is_investment?: boolean;
+    metadata?: PaymentSourceMetadata;
+  }>
+) {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {

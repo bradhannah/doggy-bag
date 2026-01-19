@@ -21,6 +21,8 @@
   $: isSavingsActive = currentPath.startsWith('/savings');
   // Check if we're on the insurance page
   $: isInsuranceActive = currentPath.startsWith('/insurance');
+  // Check if we're on the projections page
+  $: isProjectionsActive = currentPath.startsWith('/projections');
 
   // Check if in Tauri environment (for zoom controls)
   const inTauri = isTauri();
@@ -139,6 +141,31 @@
           />
         </svg>
         <span>Insurance</span>
+      </a>
+    </li>
+    <li>
+      <a
+        href="/projections"
+        class="nav-item"
+        class:active={isProjectionsActive}
+        title="Projections"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M4 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <path d="M4 19H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <path
+            d="M7 15L11 11L14 14L19 9"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <circle cx="7" cy="15" r="1" fill="currentColor" />
+          <circle cx="11" cy="11" r="1" fill="currentColor" />
+          <circle cx="14" cy="14" r="1" fill="currentColor" />
+          <circle cx="19" cy="9" r="1" fill="currentColor" />
+        </svg>
+        <span>Projections</span>
       </a>
     </li>
   </ul>

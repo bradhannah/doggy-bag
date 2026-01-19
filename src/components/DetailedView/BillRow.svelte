@@ -35,7 +35,7 @@
   $: payoffSource = $paymentSources.find((ps) => ps.id === payoffSourceId);
   $: payoffSourceName = payoffSource?.name || bill.payment_source?.name || 'Credit Card';
   $: payoffSourceType = (payoffSource?.type || 'credit_card') as PaymentSourceType;
-  $: payoffSourceBalance = payoffSource?.balance ?? 0;
+  const payoffSourceBalance = 0;
 
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;

@@ -3,7 +3,6 @@
     "id": "a1b2c3d4-1111-4000-8000-000000000001",
     "name": "Primary Checking",
     "type": "bank_account",
-    "balance": 453218,
     "is_active": true,
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
@@ -12,7 +11,6 @@
     "id": "a1b2c3d4-2222-4000-8000-000000000002",
     "name": "Savings Account",
     "type": "bank_account",
-    "balance": 1250000,
     "is_active": true,
     "exclude_from_leftover": true,
     "created_at": "2025-01-01T00:00:00.000Z",
@@ -22,7 +20,6 @@
     "id": "a1b2c3d4-3333-4000-8000-000000000003",
     "name": "Rewards Credit Card",
     "type": "credit_card",
-    "balance": 184723,
     "is_active": true,
     "pay_off_monthly": true,
     "created_at": "2025-01-01T00:00:00.000Z",
@@ -32,7 +29,6 @@
     "id": "a1b2c3d4-4444-4000-8000-000000000004",
     "name": "Travel Card",
     "type": "credit_card",
-    "balance": 52345,
     "is_active": true,
     "pay_off_monthly": true,
     "created_at": "2025-01-01T00:00:00.000Z",
@@ -42,7 +38,6 @@
     "id": "a1b2c3d4-5555-4000-8000-000000000005",
     "name": "Cash",
     "type": "cash",
-    "balance": 15000,
     "is_active": true,
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
@@ -50,7 +45,6 @@
   {
     "name": "General Big Savings",
     "type": "bank_account",
-    "balance": 111100,
     "exclude_from_leftover": true,
     "is_savings": true,
     "is_investment": false,

@@ -15,15 +15,12 @@
     loadPaymentSources,
     paymentSources,
     isDebtAccount,
-    formatBalanceForDisplay,
     type PaymentSource,
   } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount } from 'svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
-
-  const dispatch = createEventDispatcher<{ refresh: void }>();
 
   // Refresh function that can be called externally
   export function refresh() {
@@ -428,13 +425,13 @@
   // Only asset accounts for Starting Cash (no debt)
   $: assetAccounts = regularAccounts.filter((ps: PaymentSource) => !isDebtAccount(ps.type));
 
-  // Get balance for a payment source (use month-specific balance or fall back to default)
-  function getBalance(source: PaymentSource): number {
-    return $bankBalances[source.id] ?? source.balance;
+  // Get balance for a payment source (month-specific only)
+  function getBalance(source: PaymentSource): number | null {
+    return $bankBalances[source.id] ?? null;
   }
 
   // Calculate starting cash total
-  $: totalStartingCash = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
+  $: totalStartingCash = assetAccounts.reduce((sum, ps) => sum + (getBalance(ps) ?? 0), 0);
 
   // API-driven leftover values (guaranteed to match Details sidebar)
   $: apiLeftover = $leftoverSummary?.leftover ?? 0;
@@ -515,7 +512,7 @@
             <div class="item-row">
               <span class="item-name">{account.name}</span>
               <span class="item-dots"></span>
-              <span class="item-amount">{formatCurrency(getBalance(account))}</span>
+              <span class="item-amount">{formatCurrency(getBalance(account) ?? 0)}</span>
             </div>
           {/each}
           {#if assetAccounts.length === 0}

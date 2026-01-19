@@ -36,7 +36,6 @@ export class PaymentSourcesController extends Controller {
       id: 'ps-001',
       name: 'Checking Account',
       type: 'bank_account',
-      balance: 250000,
       is_active: true,
       exclude_from_leftover: false,
       pay_off_monthly: false,

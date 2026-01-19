@@ -71,14 +71,13 @@
   }
 
   // Get balance for a payment source (with display formatting for debt)
-  function getBalance(source: PaymentSource): number {
-    const raw = bankBalances[source.id] ?? source.balance;
-    return raw;
+  function getBalance(source: PaymentSource): number | null {
+    return bankBalances[source.id] ?? null;
   }
 
-  function getDisplayBalance(source: PaymentSource): number {
-    const raw = bankBalances[source.id] ?? source.balance;
-    return formatBalanceForDisplay(raw, source.type);
+  function getDisplayBalance(source: PaymentSource): number | null {
+    const raw = bankBalances[source.id];
+    return raw == null ? null : formatBalanceForDisplay(raw, source.type);
   }
 
   // Helper to check if account is a savings or investment account
@@ -107,7 +106,7 @@
     if (readOnly || !month) return;
     editingBalanceId = source.id;
     // For display, get the absolute value in dollars
-    const displayBalance = getDisplayBalance(source);
+    const displayBalance = getDisplayBalance(source) ?? 0;
     editingBalanceValue = (Math.abs(displayBalance) / 100).toFixed(2);
     // Store whether we're editing a debt account
     editingIsDebtAccount = isDebtAccount(source.type);
@@ -175,8 +174,8 @@
   }
 
   // Calculate totals
-  $: totalAssets = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
-  $: totalDebt = debtAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
+  $: totalAssets = assetAccounts.reduce((sum, ps) => sum + (getBalance(ps) ?? 0), 0);
+  $: totalDebt = debtAccounts.reduce((sum, ps) => sum + (getBalance(ps) ?? 0), 0);
   $: netWorth = totalAssets + totalDebt; // totalDebt is already negative
 
   // Calculate liquid total (sum of all bank balances - for display, uses display balance)
@@ -203,6 +202,7 @@
         {#each assetAccounts as source (source.id)}
           {@const isEditing = editingBalanceId === source.id}
           {@const canEdit = !readOnly && month}
+          {@const displayBalance = getDisplayBalance(source) ?? 0}
           <div class="balance-row">
             <span class="balance-name">{source.name}</span>
             {#if isEditing}
@@ -270,7 +270,7 @@
                 title={canEdit ? 'Click to edit balance' : ''}
                 disabled={!canEdit}
               >
-                {formatCurrency(getDisplayBalance(source))}
+                {formatCurrency(displayBalance)}
               </button>
             {/if}
           </div>
@@ -299,6 +299,7 @@
             {@const payoff = getPayoffSummary(source.id)}
             {@const isEditing = editingBalanceId === source.id}
             {@const canEdit = !readOnly && month}
+            {@const displayBalance = getDisplayBalance(source) ?? 0}
             <div class="balance-row" class:payoff-mode={isPayOffMonthly(source)}>
               <div class="balance-info">
                 <span class="balance-name">
@@ -378,7 +379,7 @@
                   title={canEdit ? 'Click to edit balance' : ''}
                   disabled={!canEdit}
                 >
-                  {formatCurrency(getDisplayBalance(source))}
+                  {formatCurrency(displayBalance)}
                 </button>
               {/if}
             </div>

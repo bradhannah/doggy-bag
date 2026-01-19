@@ -216,7 +216,6 @@ interface PaymentSource {
   id: string;
   name: string;
   type: PaymentSourceType;
-  balance: number;
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
@@ -239,12 +238,31 @@ interface Category {
 }
 
 // ============================================================================
+// Savings Goal Interface
+// ============================================================================
+
+interface SavingsGoal {
+  id: string;
+  name: string;
+  target_amount: number; // Cents
+  current_amount: number; // Cents (Virtual balance)
+  target_date: string; // YYYY-MM-DD
+  linked_account_id: string; // Reference to PaymentSource (informational)
+  linked_bill_ids: string[]; // IDs of Bills created for this goal
+  status: 'active' | 'completed' | 'archived';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
 // Family Member Interface
 // ============================================================================
 
 interface FamilyMember {
   id: string;
   name: string; // Full name of the family member
+  plans: string[]; // Ordered list of Insurance Plan IDs
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -255,7 +273,7 @@ interface FamilyMember {
 // ============================================================================
 
 type ClaimStatus = 'draft' | 'in_progress' | 'closed';
-type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied';
+type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
 type DocumentType = 'receipt' | 'eob' | 'other';
 
 interface InsurancePlan {
@@ -265,7 +283,7 @@ interface InsurancePlan {
   policy_number?: string; // Policy/group number
   member_id?: string; // User's member ID on this plan
   owner?: string; // Who this plan belongs to (e.g., "Brad", "Partner")
-  priority: number; // Submission order (1 = primary, 2 = secondary)
+  // priority: number; // REMOVED - replaced by per-member ordering
   portal_url?: string; // URL to submit claims online
   notes?: string; // Freeform notes
   is_active: boolean;
@@ -302,7 +320,7 @@ interface PlanSnapshot {
   policy_number?: string;
   member_id?: string;
   owner?: string;
-  priority: number;
+  // priority: number; // REMOVED
   portal_url?: string;
 }
 
@@ -543,6 +561,31 @@ interface ValidationResult {
 }
 
 // ============================================================================
+// Projections
+// ============================================================================
+
+interface ProjectionResponse {
+  start_date: string; // YYYY-MM-DD (Today or 1st of month)
+  end_date: string; // YYYY-MM-DD
+  starting_balance: number;
+  days: {
+    date: string;
+    balance: number | null;
+    has_balance: boolean;
+    income: number;
+    expense: number;
+    events: {
+      name: string;
+      amount: number;
+      type: 'income' | 'expense';
+      kind?: 'actual' | 'scheduled';
+    }[];
+    is_deficit: boolean;
+  }[];
+  overdue_bills: { name: string; amount: number; due_date: string }[];
+}
+
+// ============================================================================
 // Exports
 // ============================================================================
 
@@ -568,6 +611,7 @@ export type {
   FreeFlowingExpense,
   PaymentSource,
   Category,
+  SavingsGoal,
   FamilyMember,
   InsurancePlan,
   InsuranceCategory,
@@ -592,6 +636,7 @@ export type {
   DefaultEntity,
   InstanceEntity,
   ValidationResult,
+  ProjectionResponse,
 };
 
 export { DEBT_ACCOUNT_TYPES, INVESTMENT_ACCOUNT_TYPES };

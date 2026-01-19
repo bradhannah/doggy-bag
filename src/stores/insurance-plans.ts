@@ -24,9 +24,9 @@ export const insurancePlans = derived(store, (s) => s.plans);
 export const insurancePlansLoading = derived(store, (s) => s.loading);
 export const insurancePlansError = derived(store, (s) => s.error);
 
-// Active plans only (sorted by priority)
+// Active plans only (sorted by name)
 export const activePlans = derived(insurancePlans, (plans) =>
-  plans.filter((p) => p.is_active).sort((a, b) => a.priority - b.priority)
+  plans.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name))
 );
 
 // Inactive plans

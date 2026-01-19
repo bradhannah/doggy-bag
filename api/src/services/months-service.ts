@@ -370,52 +370,15 @@ export class MonthsServiceImpl implements MonthsService {
         });
       }
 
-      // Generate payoff bills for pay_off_monthly payment sources
+      // Generate payoff bills when balances are provided (see updateBankBalances)
       const paymentSources = await this.paymentSourcesService.getAll();
       const payOffMonthlySources = paymentSources.filter(
         (ps) => ps.pay_off_monthly === true && ps.is_active
       );
 
       if (payOffMonthlySources.length > 0) {
-        // Ensure the "Credit Card Payoffs" category exists
-        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
-
-        for (const source of payOffMonthlySources) {
-          // Create a single occurrence for the payoff with the current balance as expected_amount
-          const payoffOccurrence: Occurrence = {
-            id: crypto.randomUUID(),
-            sequence: 1,
-            expected_date: `${month}-28`, // Default to 28th of the month
-            expected_amount: Math.abs(source.balance), // Use absolute value (balance is negative for debts)
-            is_closed: false,
-            payments: [],
-            is_adhoc: false,
-            created_at: now,
-            updated_at: now,
-          };
-
-          billInstances.push({
-            id: crypto.randomUUID(),
-            bill_id: null, // No associated bill template
-            month,
-            billing_period: 'monthly',
-            expected_amount: Math.abs(source.balance),
-            occurrences: [payoffOccurrence],
-            is_default: true,
-            is_closed: false,
-            is_adhoc: false,
-            is_payoff_bill: true, // Mark as auto-generated payoff
-            payoff_source_id: source.id, // Reference to the payment source
-            name: `${source.name} Payoff`, // Ad-hoc name since bill_id is null
-            category_id: payoffCategory.id, // Assign to payoff category
-            payment_source_id: source.id, // Payment comes from this source
-            created_at: now,
-            updated_at: now,
-          });
-        }
-
         console.log(
-          `[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`
+          `[MonthsService] Skipping payoff bill generation for ${month} until balances are entered`
         );
       }
 
@@ -529,43 +492,8 @@ export class MonthsServiceImpl implements MonthsService {
       );
 
       if (newPayoffSources.length > 0) {
-        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
-
-        for (const source of newPayoffSources) {
-          const payoffOccurrence: Occurrence = {
-            id: crypto.randomUUID(),
-            sequence: 1,
-            expected_date: `${month}-28`,
-            expected_amount: Math.abs(source.balance),
-            is_closed: false,
-            payments: [],
-            is_adhoc: false,
-            created_at: now,
-            updated_at: now,
-          };
-
-          newBillInstances.push({
-            id: crypto.randomUUID(),
-            bill_id: null,
-            month,
-            billing_period: 'monthly',
-            expected_amount: Math.abs(source.balance),
-            occurrences: [payoffOccurrence],
-            is_default: true,
-            is_closed: false,
-            is_adhoc: false,
-            is_payoff_bill: true,
-            payoff_source_id: source.id,
-            name: `${source.name} Payoff`,
-            category_id: payoffCategory.id,
-            payment_source_id: source.id,
-            created_at: now,
-            updated_at: now,
-          });
-        }
-
         console.log(
-          `[MonthsService] Synced ${newPayoffSources.length} new payoff bills for ${month}`
+          `[MonthsService] Skipping payoff bill sync for ${month} until balances are entered`
         );
       }
 
@@ -716,7 +644,15 @@ export class MonthsServiceImpl implements MonthsService {
       data.updated_at = now;
 
       // Also update payoff bills' expected_amount when their source's balance changes
-      // Find all payoff bills and update their expected_amount to match the new balance
+      // Create payoff bills for pay_off_monthly sources when balances are provided
+      const paymentSources = await this.paymentSourcesService.getAll();
+      const payoffSources = paymentSources.filter(
+        (ps) => ps.pay_off_monthly === true && ps.is_active
+      );
+      const payoffCategory = payoffSources.length
+        ? await this.categoriesService.ensurePayoffCategory()
+        : null;
+
       for (let i = 0; i < data.bill_instances.length; i++) {
         const bi = data.bill_instances[i];
         if (bi.is_payoff_bill && bi.payoff_source_id) {
@@ -745,6 +681,56 @@ export class MonthsServiceImpl implements MonthsService {
               `[MonthsService] Updated payoff bill ${bi.id} expected_amount to ${expectedAmount} for source ${bi.payoff_source_id}`
             );
           }
+        }
+      }
+
+      if (payoffSources.length > 0 && payoffCategory) {
+        const existingPayoffSourceIds = new Set(
+          data.bill_instances
+            .filter((bi) => bi.is_payoff_bill === true && bi.payoff_source_id)
+            .map((bi) => bi.payoff_source_id)
+        );
+
+        for (const source of payoffSources) {
+          const newBalance = balances[source.id];
+          if (newBalance === undefined) continue;
+          if (existingPayoffSourceIds.has(source.id)) continue;
+
+          const expectedAmount = Math.abs(newBalance);
+          const payoffOccurrence: Occurrence = {
+            id: crypto.randomUUID(),
+            sequence: 1,
+            expected_date: `${month}-28`,
+            expected_amount: expectedAmount,
+            is_closed: false,
+            payments: [],
+            is_adhoc: false,
+            created_at: now,
+            updated_at: now,
+          };
+
+          data.bill_instances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: expectedAmount,
+            occurrences: [payoffOccurrence],
+            is_default: true,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,
+            payoff_source_id: source.id,
+            name: `${source.name} Payoff`,
+            category_id: payoffCategory.id,
+            payment_source_id: source.id,
+            created_at: now,
+            updated_at: now,
+          });
+
+          console.log(
+            `[MonthsService] Created payoff bill for ${source.name} in ${month} with ${expectedAmount}`
+          );
         }
       }
 
@@ -1375,45 +1361,8 @@ export class MonthsServiceImpl implements MonthsService {
       );
 
       if (payOffMonthlySources.length > 0) {
-        // Ensure the "Credit Card Payoffs" category exists
-        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
-
-        for (const source of payOffMonthlySources) {
-          // Create a single occurrence for the payoff with the current balance as expected_amount
-          const payoffOccurrence: Occurrence = {
-            id: crypto.randomUUID(),
-            sequence: 1,
-            expected_date: `${month}-28`, // Default to 28th of the month
-            expected_amount: Math.abs(source.balance), // Use absolute value (balance is negative for debts)
-            is_closed: false,
-            payments: [],
-            is_adhoc: false,
-            created_at: nowIso,
-            updated_at: nowIso,
-          };
-
-          billInstances.push({
-            id: crypto.randomUUID(),
-            bill_id: null, // No associated bill template
-            month,
-            billing_period: 'monthly',
-            expected_amount: Math.abs(source.balance),
-            occurrences: [payoffOccurrence],
-            is_default: true,
-            is_closed: false,
-            is_adhoc: false,
-            is_payoff_bill: true, // Mark as auto-generated payoff
-            payoff_source_id: source.id, // Reference to the payment source
-            name: `${source.name} Payoff`, // Ad-hoc name since bill_id is null
-            category_id: payoffCategory.id, // Assign to payoff category
-            payment_source_id: source.id, // Payment comes from this source
-            created_at: nowIso,
-            updated_at: nowIso,
-          });
-        }
-
         console.log(
-          `[MonthsService] Generated ${payOffMonthlySources.length} payoff bills for ${month}`
+          `[MonthsService] Skipping payoff bill generation for ${month} until balances are entered`
         );
       }
 

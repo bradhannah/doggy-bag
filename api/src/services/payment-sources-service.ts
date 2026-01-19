@@ -45,6 +45,11 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
   private migratePaymentSource(source: PaymentSource): PaymentSource {
     let migrated = { ...source };
 
+    if ('balance' in migrated) {
+      const { balance: _balance, ...rest } = migrated as PaymentSource & { balance?: number };
+      migrated = rest;
+    }
+
     // Migration 1: Convert bank_account + is_investment=true to type=investment
     // TODO: Remove after v0.4.0 when all users have migrated
     if (migrated.type === 'bank_account' && migrated.is_investment === true) {

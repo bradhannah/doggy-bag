@@ -21,7 +21,7 @@ import type {
   ValidationResult,
 } from '../types';
 import { join } from 'path';
-import { mkdir, unlink, readdir, stat } from 'fs/promises';
+import { mkdir, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 
 const STORAGE_PATH = 'data/entities/insurance-claims.json';
@@ -647,7 +647,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         policy_number: plan.policy_number,
         member_id: plan.member_id,
         owner: plan.owner,
-        priority: plan.priority,
+        // priority: plan.priority, // REMOVED
         portal_url: plan.portal_url,
       };
 

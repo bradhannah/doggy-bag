@@ -1,10 +1,17 @@
 // Family Members Service - CRUD operations for family members
 
 import { StorageServiceImpl } from './storage';
+import { InsurancePlansServiceImpl } from './insurance-plans-service';
 import type { StorageService } from './storage';
-import type { FamilyMember, ValidationResult } from '../types';
+import type { InsurancePlansService } from './insurance-plans-service';
+import type { FamilyMember, ValidationResult, InsurancePlan } from '../types';
 
 const STORAGE_PATH = 'data/entities/family-members.json';
+
+// Legacy interface for migration
+interface LegacyInsurancePlan extends InsurancePlan {
+  priority?: number;
+}
 
 export interface FamilyMembersService {
   getAll(): Promise<FamilyMember[]>;
@@ -23,14 +30,48 @@ export interface FamilyMembersService {
 
 export class FamilyMembersServiceImpl implements FamilyMembersService {
   private storage: StorageService;
+  private plansService: InsurancePlansService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
+    this.plansService = new InsurancePlansServiceImpl();
   }
 
   public async getAll(): Promise<FamilyMember[]> {
     try {
       const members = (await this.storage.readJSON<FamilyMember[]>(STORAGE_PATH)) || [];
+
+      // Migration: Ensure all members have 'plans' array
+      let migrationNeeded = false;
+      const allPlans = await this.plansService.getAll();
+      const activePlans = allPlans.filter((p) => p.is_active);
+
+      // Sort plans by legacy priority (if available) or name
+      const sortedPlans = activePlans.sort((a, b) => {
+        const p1 = (a as LegacyInsurancePlan).priority ?? 999;
+        const p2 = (b as LegacyInsurancePlan).priority ?? 999;
+        if (p1 !== p2) return p1 - p2;
+        return a.name.localeCompare(b.name);
+      });
+      const defaultPlanIds = sortedPlans.map((p) => p.id);
+
+      const migratedMembers = members.map((member) => {
+        if (!member.plans) {
+          migrationNeeded = true;
+          return {
+            ...member,
+            plans: [...defaultPlanIds], // Assign all active plans by default
+          };
+        }
+        return member;
+      });
+
+      if (migrationNeeded) {
+        console.log('[FamilyMembersService] Migrating members to include plans array...');
+        await this.storage.writeJSON(STORAGE_PATH, migratedMembers);
+        return migratedMembers.sort((a, b) => a.name.localeCompare(b.name));
+      }
+
       // Sort alphabetically by name
       return members.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
@@ -78,6 +119,7 @@ export class FamilyMembersServiceImpl implements FamilyMembersService {
         ...data,
         name: data.name.trim(),
         id: crypto.randomUUID(),
+        plans: [], // Default to empty plans for new members
         is_active: true,
         created_at: now,
         updated_at: now,

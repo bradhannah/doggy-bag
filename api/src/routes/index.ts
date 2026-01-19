@@ -164,11 +164,18 @@ import {
 import {
   handleGetAllFamilyMembers,
   handleGetActiveFamilyMembers,
-  handleGetFamilyMember,
   handleCreateFamilyMember,
   handleUpdateFamilyMember,
   handleDeleteFamilyMember,
 } from './handlers/family-members.handlers';
+
+import {
+  createSavingsGoalsHandlerGET,
+  createSavingsGoalsHandlerPOST,
+  createSavingsGoalsHandlerDELETE,
+} from './handlers/savings-goals.handlers';
+
+import { createProjectionsHandlerGET } from './handlers/projections.handlers';
 
 // Route definition type
 interface RouteDefinition {
@@ -413,6 +420,30 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
       handler: createInsuranceClaimsHandlerDELETE(),
       hasPathParam: true,
     },
+  },
+
+  // Savings Goals
+  {
+    path: '/api/savings-goals',
+    definition: { method: 'GET', handler: createSavingsGoalsHandlerGET() },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: { method: 'POST', handler: createSavingsGoalsHandlerPOST() },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: {
+      method: 'DELETE',
+      handler: createSavingsGoalsHandlerDELETE(),
+      hasPathParam: true,
+    },
+  },
+
+  // Projections
+  {
+    path: '/api/projections',
+    definition: { method: 'GET', handler: createProjectionsHandlerGET(), hasPathParam: true },
   },
 
   // Payment Sources - savings endpoint must come before generic payment-sources routes

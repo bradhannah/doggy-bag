@@ -129,9 +129,8 @@
   function initEditingValues(previousMonthEndBalances: Record<string, number> = {}) {
     editingValues = {};
     for (const account of allAccounts) {
-      // Priority: current start balance > previous month end balance > account balance
-      const startValue =
-        balances.start[account.id] ?? previousMonthEndBalances[account.id] ?? account.balance;
+      // Priority: current start balance > previous month end balance
+      const startValue = balances.start[account.id] ?? previousMonthEndBalances[account.id] ?? 0;
       editingValues[account.id] = {
         start: centsToDollars(startValue),
         contribution: centsToDollars(balances.contributions[account.id] ?? 0),

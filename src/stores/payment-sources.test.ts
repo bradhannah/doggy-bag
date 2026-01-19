@@ -48,7 +48,6 @@ const samplePaymentSources: PaymentSource[] = [
     id: 'ps-1',
     name: 'Checking',
     type: 'bank_account',
-    balance: 5000,
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -57,7 +56,6 @@ const samplePaymentSources: PaymentSource[] = [
     id: 'ps-2',
     name: 'Savings',
     type: 'bank_account',
-    balance: 10000,
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -66,7 +64,6 @@ const samplePaymentSources: PaymentSource[] = [
     id: 'ps-3',
     name: 'Visa',
     type: 'credit_card',
-    balance: 1500,
     is_active: true,
     pay_off_monthly: true,
     created_at: '2025-01-01T00:00:00Z',
@@ -76,7 +73,6 @@ const samplePaymentSources: PaymentSource[] = [
     id: 'ps-4',
     name: 'Home Equity',
     type: 'line_of_credit',
-    balance: 5000,
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -85,7 +81,6 @@ const samplePaymentSources: PaymentSource[] = [
     id: 'ps-5',
     name: 'Wallet',
     type: 'cash',
-    balance: 200,
     is_active: true,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -221,7 +216,6 @@ describe('Payment Sources Store', () => {
       const newSource = {
         name: 'New Account',
         type: 'bank_account' as const,
-        balance: 1000,
       };
 
       mockPost.mockResolvedValue({ id: 'ps-new', ...newSource });
@@ -236,28 +230,30 @@ describe('Payment Sources Store', () => {
     it('sets error on API failure', async () => {
       mockPost.mockRejectedValue(new Error('Validation failed'));
 
-      await expect(
-        createPaymentSource({ name: '', type: 'bank_account', balance: 0 })
-      ).rejects.toThrow('Validation failed');
+      await expect(createPaymentSource({ name: '', type: 'bank_account' })).rejects.toThrow(
+        'Validation failed'
+      );
       expect(get(error)).toBe('Validation failed');
     });
   });
 
   describe('updatePaymentSource', () => {
     it('calls API with ID and updates, then reloads', async () => {
-      mockPut.mockResolvedValue({ id: 'ps-1', balance: 6000 });
+      mockPut.mockResolvedValue({ id: 'ps-1' });
       mockGet.mockResolvedValue(samplePaymentSources);
 
-      await updatePaymentSource('ps-1', { balance: 6000 });
+      await updatePaymentSource('ps-1', { name: 'Updated Account' });
 
-      expect(mockPut).toHaveBeenCalledWith('/api/payment-sources', 'ps-1', { balance: 6000 });
+      expect(mockPut).toHaveBeenCalledWith('/api/payment-sources', 'ps-1', {
+        name: 'Updated Account',
+      });
       expect(mockGet).toHaveBeenCalled();
     });
 
     it('sets error on API failure', async () => {
       mockPut.mockRejectedValue(new Error('Not found'));
 
-      await expect(updatePaymentSource('ps-999', { balance: 1000 })).rejects.toThrow('Not found');
+      await expect(updatePaymentSource('ps-999', { name: 'Missing' })).rejects.toThrow('Not found');
       expect(get(error)).toBe('Not found');
     });
   });
