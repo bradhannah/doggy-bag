@@ -124,6 +124,7 @@ describe('MonthsService - syncMetadata', () => {
             is_closed: false,
             payments: [],
             closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -154,6 +155,7 @@ describe('MonthsService - syncMetadata', () => {
             is_closed: false,
             payments: [],
             closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -186,6 +188,7 @@ describe('MonthsService - syncMetadata', () => {
             is_closed: false,
             payments: [],
             closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -198,6 +201,7 @@ describe('MonthsService - syncMetadata', () => {
             is_closed: false,
             payments: [],
             closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -356,6 +360,7 @@ describe('MonthsService - syncMetadata', () => {
       const adhocInstance = result.bill_instances.find((bi) => bi.id === 'bi-adhoc-001');
       expect(adhocInstance).toBeDefined();
       expect(adhocInstance?.is_adhoc).toBe(true);
+      expect(adhocInstance?.occurrences.length).toBe(1);
       // Should have no metadata (source doesn't exist)
       expect(adhocInstance?.metadata).toBeUndefined();
     });

@@ -21,6 +21,7 @@ export interface Occurrence {
   expected_amount: number; // Cents - can be edited independently per occurrence
   is_closed: boolean; // Close/Open status for this occurrence
   closed_date?: string; // When closed (YYYY-MM-DD)
+  notes?: string; // Optional close notes
   payments: Payment[]; // Payments toward this specific occurrence
   is_adhoc: boolean; // True if manually added by user
   created_at: string;
@@ -198,11 +199,17 @@ function createDetailedMonthStore() {
 
     // Optimistic update for bill close/reopen
     // When totalPaid is provided (e.g., from Pay Full), also update payment totals
-    updateBillClosedStatus(instanceId: string, isClosed: boolean, totalPaid?: number): void {
+    updateBillClosedStatus(
+      instanceId: string,
+      isClosed: boolean,
+      totalPaid?: number,
+      closedDate?: string
+    ): void {
       update((state) => {
         if (!state.data) return state;
 
         const today = new Date().toISOString().split('T')[0];
+        const resolvedCloseDate = closedDate ?? today;
 
         const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
           const billItems = section.items as BillInstanceDetailed[];
@@ -212,7 +219,7 @@ function createDetailedMonthStore() {
               return {
                 ...item,
                 is_closed: isClosed,
-                closed_date: isClosed ? today : null,
+                closed_date: isClosed ? resolvedCloseDate : null,
                 total_paid: newTotalPaid,
                 remaining: Math.max(0, item.expected_amount - newTotalPaid),
               };
@@ -243,11 +250,17 @@ function createDetailedMonthStore() {
 
     // Optimistic update for income close/reopen
     // When totalReceived is provided (e.g., from Receive Full), also update payment totals
-    updateIncomeClosedStatus(instanceId: string, isClosed: boolean, totalReceived?: number): void {
+    updateIncomeClosedStatus(
+      instanceId: string,
+      isClosed: boolean,
+      totalReceived?: number,
+      closedDate?: string
+    ): void {
       update((state) => {
         if (!state.data) return state;
 
         const today = new Date().toISOString().split('T')[0];
+        const resolvedCloseDate = closedDate ?? today;
 
         const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
           const incomeItems = section.items as IncomeInstanceDetailed[];
@@ -258,7 +271,7 @@ function createDetailedMonthStore() {
               return {
                 ...item,
                 is_closed: isClosed,
-                closed_date: isClosed ? today : null,
+                closed_date: isClosed ? resolvedCloseDate : null,
                 total_received: newTotalReceived,
                 remaining: Math.max(0, item.expected_amount - newTotalReceived),
               };

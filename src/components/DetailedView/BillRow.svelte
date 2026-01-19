@@ -6,6 +6,8 @@
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
   import CCBalanceSyncModal from './CCBalanceSyncModal.svelte';
   import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
+  import CloseTransactionModal from './CloseTransactionModal.svelte';
+  import PayFullShortcutModal from './PayFullShortcutModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import { paymentSources, type PaymentSourceType } from '../../stores/payment-sources';
@@ -23,6 +25,9 @@
   let showDeleteConfirm = false;
   let showCCBalanceSyncModal = false;
   let showDetailsDrawer = false;
+  let showCloseModal = false;
+  let showPayFullModal = false;
+  let closeDate = '';
   let ccSyncPaymentAmount = 0;
   let isEditingExpected = false;
   let expectedEditValue = '';
@@ -85,6 +90,7 @@
     occurrences?: Array<{
       id: string;
       expected_date: string;
+      notes?: string | null;
       payments?: Array<{ id: string; amount: number; date: string }>;
     }>;
   }
@@ -95,10 +101,71 @@
   $: firstOccurrenceDate = occurrences[0]?.expected_date || bill.due_date;
   $: primaryOccurrenceId = occurrences[0]?.id;
 
+  $: if (!closeDate) {
+    closeDate = new Date().toISOString().split('T')[0];
+  }
+
+  function getCloseOccurrenceId(): string | undefined {
+    return primaryOccurrenceId;
+  }
+
+  function clampDayToMonth(monthStr: string, day: number): string {
+    const [year, monthNum] = monthStr.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    return String(Math.min(Math.max(day, 1), lastDay)).padStart(2, '0');
+  }
+
+  function resolveMonthDay(monthStr: string, day: string): string {
+    const clamped = clampDayToMonth(monthStr, parseInt(day, 10) || 1);
+    return `${monthStr}-${clamped}`;
+  }
+
+  async function handlePayFullConfirm(
+    event: CustomEvent<{ amount: number; day: string; notes: string }>
+  ) {
+    if (saving) return;
+    const occurrenceId = getCloseOccurrenceId();
+    if (!occurrenceId) {
+      showError('Missing occurrence for payment');
+      return;
+    }
+
+    saving = true;
+    try {
+      const paymentDate = resolveMonthDay(month, event.detail.day);
+      await apiClient.post(
+        `/api/months/${month}/bills/${bill.id}/occurrences/${occurrenceId}/payments`,
+        {
+          amount: event.detail.amount,
+          date: paymentDate,
+        }
+      );
+
+      await apiClient.post(
+        `/api/months/${month}/bills/${bill.id}/occurrences/${occurrenceId}/close`,
+        {
+          closed_date: paymentDate,
+          notes: event.detail.notes,
+        }
+      );
+
+      dispatch('closed', { id: bill.id, type: 'bill' });
+      success('Bill paid and closed');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to pay bill');
+    } finally {
+      saving = false;
+      showPayFullModal = false;
+    }
+  }
+
   // Computed values
   $: transactionList = occurrences.flatMap((occ) => occ.payments || []);
   $: hasTransactions = transactionList.length > 0 || bill.total_paid > 0;
   $: transactionCount = transactionList.length;
+  $: primaryOccurrenceNotes =
+    (occurrences[0] as unknown as { notes?: string | null } | undefined)?.notes ?? '';
+
   $: isClosed = (bill as unknown as BillInstanceExtended).is_closed ?? false;
   $: closedDate = (bill as unknown as BillInstanceExtended).closed_date ?? null;
   $: showAmber = bill.total_paid !== bill.expected_amount && bill.total_paid > 0;
@@ -154,75 +221,40 @@
   }
 
   async function handlePayFull() {
-    if (saving) return;
-    saving = true;
-
-    try {
-      // Add payment for remaining amount
-      const paymentAmount = bill.remaining > 0 ? bill.remaining : bill.expected_amount;
-      const today = new Date().toISOString().split('T')[0];
-
-      const paymentEndpoint = primaryOccurrenceId
-        ? `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/payments`
-        : `/api/months/${month}/bills/${bill.id}/payments`;
-
-      await apiClient.post(paymentEndpoint, {
-        amount: paymentAmount,
-        date: today,
-      });
-
-      if (primaryOccurrenceId) {
-        await apiClient.post(
-          `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/close`,
-          {}
-        );
-      } else {
-        // Close the bill
-        if (primaryOccurrenceId) {
-          await apiClient.post(
-            `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/close`,
-            {}
-          );
-        } else {
-          await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
-        }
-      }
-
-      success('Bill paid and closed');
-      // Optimistic update - update totals and close status without re-sorting
-      const newTotalPaid = bill.total_paid + paymentAmount;
-      detailedMonth.updateBillClosedStatus(bill.id, true, newTotalPaid);
-
-      // Dispatch closed event so parent can scroll to the item's new location
-      dispatch('closed', { id: bill.id, type: 'bill' });
-
-      // If this is a payoff bill, show the CC balance sync modal
-      if (isPayoffBill && payoffSourceId) {
-        ccSyncPaymentAmount = paymentAmount;
-        showCCBalanceSyncModal = true;
-      }
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to pay bill');
-    } finally {
-      saving = false;
-    }
+    if (saving || readOnly) return;
+    showPayFullModal = true;
   }
 
-  async function handleClose() {
-    if (saving) return;
-    saving = true;
+  function openCloseModal() {
+    if (saving || readOnly) return;
+    closeDate = new Date().toISOString().split('T')[0];
+    showCloseModal = true;
+  }
 
+  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
+    if (saving) return;
+    const occurrenceId = getCloseOccurrenceId();
+    if (!occurrenceId) {
+      showError('Missing occurrence to close');
+      return;
+    }
+
+    saving = true;
     try {
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
+      await apiClient.post(
+        `/api/months/${month}/bills/${bill.id}/occurrences/${occurrenceId}/close`,
+        {
+          closed_date: event.detail.closedDate,
+          notes: event.detail.notes,
+        }
+      );
       success('Bill closed');
-      // Optimistic update - close without re-sorting
-      detailedMonth.updateBillClosedStatus(bill.id, true);
-      // Dispatch closed event so parent can scroll to the item's new location
       dispatch('closed', { id: bill.id, type: 'bill' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close bill');
     } finally {
       saving = false;
+      showCloseModal = false;
     }
   }
 
@@ -379,6 +411,10 @@
       ccSyncPaymentAmount = event.detail.paymentAmount;
       showCCBalanceSyncModal = true;
     }
+  }
+
+  function handleNotesUpdated() {
+    dispatch('refresh');
   }
 
   function handleCCSyncUpdated() {
@@ -559,11 +595,10 @@
           <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
             Reopen
           </button>
-        {:else if hasTransactions}
-          <button class="action-btn close" on:click={handleClose} disabled={saving || readOnly}>
+        {:else if month}
+          <button class="action-btn close" on:click={openCloseModal} disabled={saving || readOnly}>
             Close
           </button>
-        {:else if month}
           <button
             class="action-btn pay-full"
             on:click={handlePayFull}
@@ -572,6 +607,26 @@
             Pay Full
           </button>
         {/if}
+
+        <!-- Edit button to open transactions drawer -->
+        <button
+          class="action-btn-icon edit"
+          on:click={openTransactionsDrawer}
+          title="Edit transactions"
+          disabled={readOnly}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        </button>
 
         <!-- Add occurrence button (not for payoff bills, not when closed) -->
         {#if !readOnly && !isPayoffBill && !isClosed && month}
@@ -650,8 +705,10 @@
   {isClosed}
   type="bill"
   occurrenceId={primaryOccurrenceId}
+  occurrenceNotes={primaryOccurrenceNotes}
   {isPayoffBill}
   on:updated={handleTransactionsUpdated}
+  on:notesUpdated={handleNotesUpdated}
 />
 
 <!-- Make Regular Drawer (for ad-hoc items) -->
@@ -708,6 +765,29 @@
 
 <!-- Item Details Drawer -->
 <ItemDetailsDrawer bind:open={showDetailsDrawer} type="bill" item={bill} {categoryName} />
+
+<CloseTransactionModal
+  open={showCloseModal}
+  type="bill"
+  itemName={bill.name}
+  initialDate={closeDate}
+  initialNotes={primaryOccurrenceNotes}
+  {month}
+  on:close={() => (showCloseModal = false)}
+  on:confirm={handleCloseConfirm}
+/>
+
+<PayFullShortcutModal
+  open={showPayFullModal}
+  type="bill"
+  itemName={bill.name}
+  amount={bill.remaining > 0 ? bill.remaining : bill.expected_amount}
+  initialDay={firstOccurrenceDate ? firstOccurrenceDate.split('-')[2] : ''}
+  initialNotes={primaryOccurrenceNotes}
+  {month}
+  on:close={() => (showPayFullModal = false)}
+  on:confirm={handlePayFullConfirm}
+/>
 
 <style>
   .bill-row-container {
@@ -1192,6 +1272,11 @@
   }
 
   .action-btn-icon.info:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .action-btn-icon.edit:hover:not(:disabled) {
     background: var(--accent-muted);
     color: var(--accent);
   }

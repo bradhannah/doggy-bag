@@ -5,6 +5,8 @@
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
   import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
+  import CloseTransactionModal from './CloseTransactionModal.svelte';
+  import PayFullShortcutModal from './PayFullShortcutModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
 
@@ -20,6 +22,9 @@
   let showMakeRegularDrawer = false;
   let showDeleteConfirm = false;
   let showDetailsDrawer = false;
+  let showCloseModal = false;
+  let showReceiveFullModal = false;
+  let closeDate = '';
   let isEditingExpected = false;
   let expectedEditValue = '';
   let isEditingDueDay = false;
@@ -76,6 +81,7 @@
     occurrences?: Array<{
       id: string;
       expected_date: string;
+      notes?: string | null;
       payments?: Array<{ id: string; amount: number; date: string }>;
     }>;
   }
@@ -86,9 +92,68 @@
   $: firstOccurrenceDate = occurrences[0]?.expected_date || income.due_date;
   $: primaryOccurrenceId = occurrences[0]?.id;
 
+  $: if (!closeDate) {
+    closeDate = new Date().toISOString().split('T')[0];
+  }
+
+  function getCloseOccurrenceId(): string | undefined {
+    return primaryOccurrenceId;
+  }
+
+  function clampDayToMonth(monthStr: string, day: number): string {
+    const [year, monthNum] = monthStr.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    return String(Math.min(Math.max(day, 1), lastDay)).padStart(2, '0');
+  }
+
+  function resolveMonthDay(monthStr: string, day: string): string {
+    const clamped = clampDayToMonth(monthStr, parseInt(day, 10) || 1);
+    return `${monthStr}-${clamped}`;
+  }
+
+  async function handleReceiveFullConfirm(
+    event: CustomEvent<{ amount: number; day: string; notes: string }>
+  ) {
+    if (saving) return;
+    const occurrenceId = getCloseOccurrenceId();
+    if (!occurrenceId) {
+      showError('Missing occurrence for receipt');
+      return;
+    }
+
+    saving = true;
+    try {
+      const receiptDate = resolveMonthDay(month, event.detail.day);
+      await apiClient.post(
+        `/api/months/${month}/incomes/${income.id}/occurrences/${occurrenceId}/payments`,
+        {
+          amount: event.detail.amount,
+          date: receiptDate,
+        }
+      );
+
+      await apiClient.post(
+        `/api/months/${month}/incomes/${income.id}/occurrences/${occurrenceId}/close`,
+        {
+          closed_date: receiptDate,
+          notes: event.detail.notes,
+        }
+      );
+
+      dispatch('closed', { id: income.id, type: 'income' });
+      success('Income received and closed');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to receive income');
+    } finally {
+      saving = false;
+      showReceiveFullModal = false;
+    }
+  }
+
   // Computed values - use typed cast to work around potential TS cache issues
   $: transactionList = occurrences.flatMap((occ) => occ.payments || []);
   $: hasTransactions = transactionList.length > 0 || totalReceived > 0;
+  $: primaryOccurrenceNotes = occurrences[0]?.notes ?? '';
   $: transactionCount = transactionList.length;
   $: totalReceived = (income as unknown as IncomeInstanceExtended).total_received ?? 0;
   $: remaining = (income as unknown as IncomeInstanceExtended).remaining ?? income.expected_amount;
@@ -135,68 +200,40 @@
   }
 
   async function handleReceiveFull() {
-    if (saving) return;
-    saving = true;
-
-    try {
-      // Add receipt for remaining amount
-      const receiptAmount = remaining > 0 ? remaining : income.expected_amount;
-      const today = new Date().toISOString().split('T')[0];
-
-      const paymentEndpoint = primaryOccurrenceId
-        ? `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/payments`
-        : `/api/months/${month}/incomes/${income.id}/payments`;
-
-      await apiClient.post(paymentEndpoint, {
-        amount: receiptAmount,
-        date: today,
-      });
-
-      if (primaryOccurrenceId) {
-        await apiClient.post(
-          `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/close`,
-          {}
-        );
-      } else {
-        // Close the income
-        if (primaryOccurrenceId) {
-          await apiClient.post(
-            `/api/months/${month}/incomes/${income.id}/occurrences/${primaryOccurrenceId}/close`,
-            {}
-          );
-        } else {
-          await apiClient.post(`/api/months/${month}/incomes/${income.id}/close`, {});
-        }
-      }
-
-      success('Income received and closed');
-      // Optimistic update - update totals and close status without re-sorting
-      const newTotalReceived = totalReceived + receiptAmount;
-      detailedMonth.updateIncomeClosedStatus(income.id, true, newTotalReceived);
-      // Dispatch closed event so parent can scroll to the item's new location
-      dispatch('closed', { id: income.id, type: 'income' });
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to receive income');
-    } finally {
-      saving = false;
-    }
+    if (saving || readOnly) return;
+    showReceiveFullModal = true;
   }
 
-  async function handleClose() {
-    if (saving) return;
-    saving = true;
+  function openCloseModal() {
+    if (saving || readOnly) return;
+    closeDate = new Date().toISOString().split('T')[0];
+    showCloseModal = true;
+  }
 
+  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
+    if (saving) return;
+    const occurrenceId = getCloseOccurrenceId();
+    if (!occurrenceId) {
+      showError('Missing occurrence to close');
+      return;
+    }
+
+    saving = true;
     try {
-      await apiClient.post(`/api/months/${month}/incomes/${income.id}/close`, {});
+      await apiClient.post(
+        `/api/months/${month}/incomes/${income.id}/occurrences/${occurrenceId}/close`,
+        {
+          closed_date: event.detail.closedDate,
+          notes: event.detail.notes,
+        }
+      );
       success('Income closed');
-      // Optimistic update - close without re-sorting
-      detailedMonth.updateIncomeClosedStatus(income.id, true);
-      // Dispatch closed event so parent can scroll to the item's new location
       dispatch('closed', { id: income.id, type: 'income' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close income');
     } finally {
       saving = false;
+      showCloseModal = false;
     }
   }
 
@@ -348,6 +385,10 @@
   }
 
   function handleTransactionsUpdated() {
+    dispatch('refresh');
+  }
+
+  function handleNotesUpdated() {
     dispatch('refresh');
   }
 
@@ -511,11 +552,10 @@
           <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
             Reopen
           </button>
-        {:else if hasTransactions}
-          <button class="action-btn close" on:click={handleClose} disabled={saving || readOnly}>
+        {:else if month}
+          <button class="action-btn close" on:click={openCloseModal} disabled={saving || readOnly}>
             Close
           </button>
-        {:else if month}
           <button
             class="action-btn receive-full"
             on:click={handleReceiveFull}
@@ -524,6 +564,26 @@
             Receive Full
           </button>
         {/if}
+
+        <!-- Edit button to open transactions drawer -->
+        <button
+          class="action-btn-icon edit"
+          on:click={openTransactionsDrawer}
+          title="Edit transactions"
+          disabled={readOnly}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        </button>
 
         <!-- Add occurrence button (not when closed) -->
         {#if !readOnly && !isClosed && month}
@@ -602,7 +662,9 @@
   {isClosed}
   type="income"
   occurrenceId={primaryOccurrenceId}
+  occurrenceNotes={primaryOccurrenceNotes}
   on:updated={handleTransactionsUpdated}
+  on:notesUpdated={handleNotesUpdated}
 />
 
 <!-- Make Regular Drawer (for ad-hoc items) -->
@@ -645,6 +707,29 @@
 
 <!-- Item Details Drawer -->
 <ItemDetailsDrawer bind:open={showDetailsDrawer} type="income" item={income} {categoryName} />
+
+<CloseTransactionModal
+  open={showCloseModal}
+  type="income"
+  itemName={income.name}
+  initialDate={closeDate}
+  initialNotes={primaryOccurrenceNotes}
+  {month}
+  on:close={() => (showCloseModal = false)}
+  on:confirm={handleCloseConfirm}
+/>
+
+<PayFullShortcutModal
+  open={showReceiveFullModal}
+  type="income"
+  itemName={income.name}
+  amount={remaining > 0 ? remaining : income.expected_amount}
+  initialDay={firstOccurrenceDate ? firstOccurrenceDate.split('-')[2] : ''}
+  initialNotes={primaryOccurrenceNotes}
+  {month}
+  on:close={() => (showReceiveFullModal = false)}
+  on:confirm={handleReceiveFullConfirm}
+/>
 
 <style>
   .income-row-container {
@@ -1109,6 +1194,11 @@
   }
 
   .action-btn-icon.info:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .action-btn-icon.edit:hover:not(:disabled) {
     background: var(--accent-muted);
     color: var(--accent);
   }

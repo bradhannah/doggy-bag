@@ -351,6 +351,18 @@ export function createAdhocOccurrence(expectedDate: string, expectedAmount: numb
   };
 }
 
+export function ensureOccurrenceFallback(
+  occurrences: Occurrence[] | undefined,
+  expectedDate: string,
+  expectedAmount = 0
+): Occurrence[] {
+  if (occurrences && occurrences.length > 0) {
+    return occurrences;
+  }
+
+  return resequenceOccurrences([createAdhocOccurrence(expectedDate, expectedAmount)]);
+}
+
 /**
  * Resequence occurrences after add/remove
  * Sorts by expected_date and assigns sequence numbers

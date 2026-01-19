@@ -71,6 +71,10 @@
     dispatch('refresh');
   }
 
+  function handleNotesUpdated() {
+    dispatch('refresh');
+  }
+
   function handleOccurrenceUpdated() {
     dispatch('refresh');
   }
@@ -184,8 +188,10 @@
     isClosed={selectedOccurrence.is_closed}
     type={type === 'bill' ? 'bill' : 'income'}
     occurrenceId={selectedOccurrence.id}
+    occurrenceNotes={(selectedOccurrence as Occurrence & { notes?: string | null }).notes ?? ''}
     {isPayoffBill}
     on:updated={handleTransactionsUpdated}
+    on:notesUpdated={handleNotesUpdated}
   />
 {/if}
 

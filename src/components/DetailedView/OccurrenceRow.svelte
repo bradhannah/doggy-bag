@@ -3,6 +3,8 @@
   import type { Occurrence } from '../../stores/detailed-month';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import CloseTransactionModal from './CloseTransactionModal.svelte';
+  import PayFullShortcutModal from './PayFullShortcutModal.svelte';
 
   export let occurrence: Occurrence;
   export let month: string;
@@ -66,22 +68,63 @@
   // API endpoint base
   $: apiBase = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrence.id}`;
 
-  async function handlePayFull() {
+  let showCloseModal = false;
+  let showPayFullModal = false;
+  let closeDate = new Date().toISOString().split('T')[0];
+
+  function clampDayToMonth(monthStr: string, day: number): string {
+    const [year, monthNum] = monthStr.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    return String(Math.min(Math.max(day, 1), lastDay)).padStart(2, '0');
+  }
+
+  function resolveMonthDay(monthStr: string, day: string): string {
+    const clamped = clampDayToMonth(monthStr, parseInt(day, 10) || 1);
+    return `${monthStr}-${clamped}`;
+  }
+
+  function openCloseModal() {
+    if (saving) return;
+    closeDate = new Date().toISOString().split('T')[0];
+    showCloseModal = true;
+  }
+
+  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
     if (saving) return;
     saving = true;
 
     try {
-      // Add payment for remaining amount
-      const paymentAmount = remaining > 0 ? remaining : occurrence.expected_amount;
-      const today = new Date().toISOString().split('T')[0];
+      await apiClient.post(`${apiBase}/close`, {
+        closed_date: event.detail.closedDate,
+        notes: event.detail.notes,
+      });
+      success('Closed');
+      dispatch('updated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to close');
+    } finally {
+      saving = false;
+      showCloseModal = false;
+    }
+  }
 
+  async function handlePayFullConfirm(
+    event: CustomEvent<{ amount: number; day: string; notes: string }>
+  ) {
+    if (saving) return;
+    saving = true;
+
+    try {
+      const paymentDate = resolveMonthDay(month, event.detail.day);
       await apiClient.post(`${apiBase}/payments`, {
-        amount: paymentAmount,
-        date: today,
+        amount: event.detail.amount,
+        date: paymentDate,
       });
 
-      // Close the occurrence
-      await apiClient.post(`${apiBase}/close`, {});
+      await apiClient.post(`${apiBase}/close`, {
+        closed_date: paymentDate,
+        notes: event.detail.notes,
+      });
 
       success(type === 'bill' ? 'Payment added and closed' : 'Receipt added and closed');
       dispatch('updated');
@@ -89,22 +132,13 @@
       showError(err instanceof Error ? err.message : 'Failed to process');
     } finally {
       saving = false;
+      showPayFullModal = false;
     }
   }
 
-  async function handleClose() {
+  function openPayFullModal() {
     if (saving) return;
-    saving = true;
-
-    try {
-      await apiClient.post(`${apiBase}/close`, {});
-      success('Closed');
-      dispatch('updated');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to close');
-    } finally {
-      saving = false;
-    }
+    showPayFullModal = true;
   }
 
   async function handleReopen() {
@@ -372,17 +406,41 @@
       <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
         Reopen
       </button>
-    {:else if hasPayments}
-      <button class="action-btn close" on:click={handleClose} disabled={saving || readOnly}>
+    {:else}
+      <button class="action-btn close" on:click={openCloseModal} disabled={saving || readOnly}>
         Close
       </button>
-    {:else}
-      <button class="action-btn pay-full" on:click={handlePayFull} disabled={saving || readOnly}>
-        {type === 'bill' ? 'Pay Full' : 'Receive'}
-      </button>
+      {#if !isPayoffBill}
+        <button
+          class="action-btn pay-full"
+          on:click={openPayFullModal}
+          disabled={saving || readOnly}
+        >
+          {type === 'bill' ? 'Pay Full' : 'Receive Full'}
+        </button>
+      {/if}
     {/if}
 
     <!-- Delete button for all occurrences (except payoff bills) -->
+    <button
+      class="action-btn-icon edit"
+      on:click={openPaymentDrawer}
+      disabled={saving || readOnly}
+      title="Edit transactions"
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      </svg>
+    </button>
+
     {#if !readOnly && !isPayoffBill}
       <button
         class="action-btn-icon delete"
@@ -414,6 +472,29 @@
     {/if}
   </div>
 </div>
+
+<CloseTransactionModal
+  open={showCloseModal}
+  {type}
+  itemName={occurrence.expected_date}
+  initialDate={closeDate}
+  initialNotes={(occurrence as Occurrence & { notes?: string | null }).notes ?? ''}
+  {month}
+  on:close={() => (showCloseModal = false)}
+  on:confirm={handleCloseConfirm}
+/>
+
+<PayFullShortcutModal
+  open={showPayFullModal}
+  {type}
+  itemName={occurrence.expected_date}
+  amount={remaining > 0 ? remaining : occurrence.expected_amount}
+  initialDay={occurrence.expected_date?.split('-')[2] ?? ''}
+  initialNotes={(occurrence as Occurrence & { notes?: string | null }).notes ?? ''}
+  {month}
+  on:close={() => (showPayFullModal = false)}
+  on:confirm={handlePayFullConfirm}
+/>
 
 <!-- Delete Confirmation Dialog -->
 {#if showDeleteConfirm}
@@ -768,6 +849,11 @@
   .action-btn-icon:hover:not(:disabled) {
     background: var(--error-bg);
     color: var(--error);
+  }
+
+  .action-btn-icon.edit:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {

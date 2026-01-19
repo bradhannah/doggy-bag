@@ -32,6 +32,7 @@ import {
   sumOccurrenceExpectedAmounts,
   areAllOccurrencesClosed,
   createAdhocOccurrence,
+  ensureOccurrenceFallback,
   resequenceOccurrences,
 } from '../utils/occurrences';
 import { calculateUnifiedLeftover } from '../utils/leftover';
@@ -125,20 +126,21 @@ export interface MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    updates: { expected_date?: string; expected_amount?: number }
+    updates: { expected_date?: string; expected_amount?: number; notes?: string | null }
   ): Promise<BillInstance | null>;
   updateIncomeOccurrence(
     month: string,
     instanceId: string,
     occurrenceId: string,
-    updates: { expected_date?: string; expected_amount?: number }
+    updates: { expected_date?: string; expected_amount?: number; notes?: string | null }
   ): Promise<IncomeInstance | null>;
 
   // Close/Reopen occurrence
   closeBillOccurrence(
     month: string,
     instanceId: string,
-    occurrenceId: string
+    occurrenceId: string,
+    details?: { closed_date?: string; notes?: string }
   ): Promise<BillInstance | null>;
   reopenBillOccurrence(
     month: string,
@@ -148,7 +150,8 @@ export interface MonthsService {
   closeIncomeOccurrence(
     month: string,
     instanceId: string,
-    occurrenceId: string
+    occurrenceId: string,
+    details?: { closed_date?: string; notes?: string }
   ): Promise<IncomeInstance | null>;
   reopenIncomeOccurrence(
     month: string,
@@ -253,9 +256,46 @@ export class MonthsServiceImpl implements MonthsService {
         return ii as IncomeInstance;
       });
 
+      // Ensure occurrences are never empty
+      const fallbackDate = `${month}-01`;
+      const normalizedBillInstances = migratedBillInstances.map((instance) => {
+        const ensured = ensureOccurrenceFallback(instance.occurrences, fallbackDate, 0);
+        if (ensured !== instance.occurrences) {
+          needsSave = true;
+          return {
+            ...instance,
+            occurrences: ensured,
+            occurrence_count: ensured.length,
+            expected_amount:
+              instance.expected_amount === 0 && ensured.length === 1
+                ? ensured[0].expected_amount
+                : instance.expected_amount,
+            is_closed: instance.is_closed && areAllOccurrencesClosed(ensured),
+          };
+        }
+        return instance;
+      });
+      const normalizedIncomeInstances = migratedIncomeInstances.map((instance) => {
+        const ensured = ensureOccurrenceFallback(instance.occurrences, fallbackDate, 0);
+        if (ensured !== instance.occurrences) {
+          needsSave = true;
+          return {
+            ...instance,
+            occurrences: ensured,
+            occurrence_count: ensured.length,
+            expected_amount:
+              instance.expected_amount === 0 && ensured.length === 1
+                ? ensured[0].expected_amount
+                : instance.expected_amount,
+            is_closed: instance.is_closed && areAllOccurrencesClosed(ensured),
+          };
+        }
+        return instance;
+      });
+
       // Update data with migrated instances
-      data.bill_instances = migratedBillInstances;
-      data.income_instances = migratedIncomeInstances;
+      data.bill_instances = normalizedBillInstances;
+      data.income_instances = normalizedIncomeInstances;
 
       // Persist migrated data if changes were made
       if (needsSave) {
@@ -1518,7 +1558,7 @@ export class MonthsServiceImpl implements MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    updates: { expected_date?: string; expected_amount?: number }
+    updates: { expected_date?: string; expected_amount?: number; notes?: string | null }
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1538,6 +1578,10 @@ export class MonthsServiceImpl implements MonthsService {
         ...instance.occurrences[occIndex],
         expected_date: updates.expected_date ?? instance.occurrences[occIndex].expected_date,
         expected_amount: updates.expected_amount ?? instance.occurrences[occIndex].expected_amount,
+        notes:
+          updates.notes === null
+            ? undefined
+            : (updates.notes ?? instance.occurrences[occIndex].notes),
         updated_at: now,
       };
 
@@ -1564,7 +1608,7 @@ export class MonthsServiceImpl implements MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    updates: { expected_date?: string; expected_amount?: number }
+    updates: { expected_date?: string; expected_amount?: number; notes?: string | null }
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1584,6 +1628,10 @@ export class MonthsServiceImpl implements MonthsService {
         ...instance.occurrences[occIndex],
         expected_date: updates.expected_date ?? instance.occurrences[occIndex].expected_date,
         expected_amount: updates.expected_amount ?? instance.occurrences[occIndex].expected_amount,
+        notes:
+          updates.notes === null
+            ? undefined
+            : (updates.notes ?? instance.occurrences[occIndex].notes),
         updated_at: now,
       };
 
@@ -1609,7 +1657,8 @@ export class MonthsServiceImpl implements MonthsService {
   public async closeBillOccurrence(
     month: string,
     instanceId: string,
-    occurrenceId: string
+    occurrenceId: string,
+    details?: { closed_date?: string; notes?: string }
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1624,18 +1673,21 @@ export class MonthsServiceImpl implements MonthsService {
 
       const now = new Date().toISOString();
       const today = now.split('T')[0];
+      const closedDate = details?.closed_date ?? today;
+      const notes = details?.notes?.trim() || undefined;
 
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: true,
-        closed_date: today,
+        closed_date: closedDate,
+        notes,
         updated_at: now,
       };
 
       // Update instance-level is_closed if all occurrences are closed
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       if (instance.is_closed) {
-        instance.closed_date = today;
+        instance.closed_date = closedDate;
       }
       instance.updated_at = now;
 
@@ -1694,7 +1746,8 @@ export class MonthsServiceImpl implements MonthsService {
   public async closeIncomeOccurrence(
     month: string,
     instanceId: string,
-    occurrenceId: string
+    occurrenceId: string,
+    details?: { closed_date?: string; notes?: string }
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1709,18 +1762,21 @@ export class MonthsServiceImpl implements MonthsService {
 
       const now = new Date().toISOString();
       const today = now.split('T')[0];
+      const closedDate = details?.closed_date ?? today;
+      const notes = details?.notes?.trim() || undefined;
 
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: true,
-        closed_date: today,
+        closed_date: closedDate,
+        notes,
         updated_at: now,
       };
 
       // Update instance-level is_closed if all occurrences are closed
       instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
       if (instance.is_closed) {
-        instance.closed_date = today;
+        instance.closed_date = closedDate;
       }
       instance.updated_at = now;
 

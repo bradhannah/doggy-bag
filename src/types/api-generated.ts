@@ -695,6 +695,7 @@ export interface components {
             expected_amount: number;
             is_closed: boolean;
             closed_date?: string;
+            notes?: string;
             payments: components["schemas"]["Payment"][];
             is_adhoc: boolean;
             created_at: string;

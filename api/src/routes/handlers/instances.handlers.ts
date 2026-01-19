@@ -911,10 +911,13 @@ export function createBillOccurrenceHandlerPUT() {
       if (readOnlyResponse) return readOnlyResponse;
 
       const body = await request.json();
-      const updates: { expected_date?: string; expected_amount?: number } = {};
+      const updates: { expected_date?: string; expected_amount?: number; notes?: string | null } =
+        {};
 
       if (body.expected_date) updates.expected_date = body.expected_date;
       if (typeof body.expected_amount === 'number') updates.expected_amount = body.expected_amount;
+      if (typeof body.notes === 'string') updates.notes = body.notes;
+      if (body.notes === null) updates.notes = null;
 
       const instance = await monthsService.updateBillOccurrence(
         month,
@@ -994,10 +997,13 @@ export function createIncomeOccurrenceHandlerPUT() {
       if (readOnlyResponse) return readOnlyResponse;
 
       const body = await request.json();
-      const updates: { expected_date?: string; expected_amount?: number } = {};
+      const updates: { expected_date?: string; expected_amount?: number; notes?: string | null } =
+        {};
 
       if (body.expected_date) updates.expected_date = body.expected_date;
       if (typeof body.expected_amount === 'number') updates.expected_amount = body.expected_amount;
+      if (typeof body.notes === 'string') updates.notes = body.notes;
+      if (body.notes === null) updates.notes = null;
 
       const instance = await monthsService.updateIncomeOccurrence(
         month,
@@ -1081,7 +1087,14 @@ export function createBillOccurrenceHandlerClose() {
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
 
-      const instance = await monthsService.closeBillOccurrence(month, instanceId, occurrenceId);
+      const payload = await request.json().catch(() => ({}));
+      const closedDate = typeof payload?.closed_date === 'string' ? payload.closed_date : undefined;
+      const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
+
+      const instance = await monthsService.closeBillOccurrence(month, instanceId, occurrenceId, {
+        closed_date: closedDate,
+        notes,
+      });
 
       if (!instance) {
         return new Response(
@@ -1235,7 +1248,14 @@ export function createIncomeOccurrenceHandlerClose() {
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
 
-      const instance = await monthsService.closeIncomeOccurrence(month, instanceId, occurrenceId);
+      const payload = await request.json().catch(() => ({}));
+      const closedDate = typeof payload?.closed_date === 'string' ? payload.closed_date : undefined;
+      const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
+
+      const instance = await monthsService.closeIncomeOccurrence(month, instanceId, occurrenceId, {
+        closed_date: closedDate,
+        notes,
+      });
 
       if (!instance) {
         return new Response(

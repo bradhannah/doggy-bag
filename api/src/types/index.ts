@@ -123,6 +123,7 @@ interface Occurrence {
   expected_amount: number; // Cents - can be edited independently per occurrence
   is_closed: boolean; // Close/Open status for this occurrence
   closed_date?: string; // When closed (YYYY-MM-DD)
+  notes?: string; // Optional close notes
   payments: Payment[]; // Payments toward this specific occurrence
   is_adhoc: boolean; // True if manually added by user
   created_at: string;

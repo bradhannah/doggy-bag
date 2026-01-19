@@ -13,6 +13,9 @@
   export let isClosed: boolean = false;
   export let type: 'bill' | 'income' = 'bill';
   export let occurrenceId: string | undefined = undefined; // NEW: For occurrence-level payments
+  export let occurrenceNotes: string | null = null;
+  export let refreshNotes = 0;
+
   export let isPayoffBill: boolean = false; // NEW: Disable close actions for payoff bills
 
   const dispatch = createEventDispatcher();
@@ -22,6 +25,31 @@
   let date = new Date().toISOString().split('T')[0];
   let saving = false;
   let error = '';
+  let notes = '';
+  let savingNotes = false;
+  let notesDirty = false;
+  let notesSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+  let closeDate = new Date().toISOString().split('T')[0];
+  let closeDateTouched = false;
+
+  $: if (open) {
+    notes = occurrenceNotes ?? '';
+    notesDirty = false;
+    closeDate = date;
+    closeDateTouched = false;
+  }
+
+  $: if (open && !notesDirty) {
+    notes = occurrenceNotes ?? '';
+  }
+
+  $: if (!closeDateTouched && date) {
+    closeDate = date;
+  }
+
+  $: if (open && !notesDirty && refreshNotes !== undefined) {
+    notes = occurrenceNotes ?? '';
+  }
 
   // Computed values
   $: totalTransactions = transactionList.reduce((sum, p) => sum + p.amount, 0);
@@ -67,6 +95,8 @@
   }
 
   async function addTransactionAndClose() {
+    closeDateTouched = true;
+    closeDate = date;
     await addTransaction(true);
   }
 
@@ -107,7 +137,14 @@
 
       // Close the instance/occurrence if requested
       if (closeAfter) {
-        await apiClient.post(closeEndpoint, {});
+        if (!closeDate) {
+          error = 'Please select a close date';
+          return;
+        }
+        await apiClient.post(closeEndpoint, {
+          closed_date: closeDate,
+          notes,
+        });
         success(`${typeLabel} added and closed`);
       } else {
         success(`${typeLabel} added`);
@@ -142,7 +179,15 @@
         throw new Error('Missing occurrence for close action. Refresh and try again.');
       }
 
-      await apiClient.post(closeEndpoint, {});
+      if (!closeDate) {
+        error = 'Please select a close date';
+        return;
+      }
+
+      await apiClient.post(closeEndpoint, {
+        closed_date: closeDate,
+        notes,
+      });
       success(`${occurrenceId ? 'Occurrence' : type === 'bill' ? 'Bill' : 'Income'} closed`);
       dispatch('updated');
       handleClose();
@@ -171,6 +216,48 @@
       dispatch('updated');
     } catch (err) {
       showError(err instanceof Error ? err.message : `Failed to delete ${typeLabel.toLowerCase()}`);
+    }
+  }
+
+  async function saveNotes() {
+    if (!occurrenceId) {
+      showError('Missing occurrence for notes');
+      return;
+    }
+
+    savingNotes = true;
+    try {
+      await apiClient.putPath(
+        `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}`,
+        {
+          notes,
+        }
+      );
+      notesDirty = false;
+      success('Notes saved');
+      dispatch('notesUpdated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to save notes');
+    } finally {
+      savingNotes = false;
+    }
+  }
+
+  function scheduleNotesSave() {
+    notesDirty = true;
+    if (notesSaveTimeout) {
+      clearTimeout(notesSaveTimeout);
+    }
+    notesSaveTimeout = setTimeout(() => {
+      if (notesDirty) {
+        saveNotes();
+      }
+    }, 600);
+  }
+
+  function handleNotesBlur() {
+    if (notesDirty) {
+      saveNotes();
     }
   }
 
@@ -267,8 +354,24 @@
           <p class="no-transactions">No {typeLabelPlural.toLowerCase()} yet</p>
         {/if}
 
-        <!-- Add form (only if not closed) -->
         {#if !isClosed}
+          <div class="add-section">
+            <h4>Occurrence Notes</h4>
+            <div class="form-group">
+              <label for="notes">Notes</label>
+              <textarea
+                id="notes"
+                rows="6"
+                placeholder="Add a note for this occurrence"
+                bind:value={notes}
+                disabled={savingNotes || saving}
+                on:input={scheduleNotesSave}
+                on:blur={handleNotesBlur}
+              ></textarea>
+              <p class="notes-hint">Auto-saves as you type.</p>
+            </div>
+          </div>
+
           <div class="add-section">
             <h4>Add {typeLabel}</h4>
 
@@ -293,8 +396,19 @@
             </div>
 
             <div class="form-group">
-              <label for="date">Date</label>
+              <label for="date">Payment date</label>
               <input id="date" type="date" bind:value={date} disabled={saving} />
+            </div>
+
+            <div class="form-group">
+              <label for="close-date">Close date</label>
+              <input
+                id="close-date"
+                type="date"
+                bind:value={closeDate}
+                on:input={() => (closeDateTouched = true)}
+                disabled={saving}
+              />
             </div>
 
             {#if error}
@@ -438,6 +552,12 @@
     color: var(--success);
   }
 
+  .notes-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+
   .transactions-section {
     margin-bottom: var(--space-6);
   }
@@ -571,6 +691,24 @@
     border-color: var(--warning);
   }
 
+  textarea {
+    width: 100%;
+    min-height: calc(var(--input-height) * 4);
+    padding: var(--space-3);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    resize: vertical;
+  }
+
+  textarea:focus {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
+  }
+
   input[type='date'] {
     width: 100%;
     height: var(--input-height);
@@ -585,6 +723,10 @@
   input[type='date']:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  textarea::placeholder {
+    color: var(--text-tertiary);
   }
 
   .error-message {
