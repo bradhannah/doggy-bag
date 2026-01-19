@@ -1009,10 +1009,19 @@ export class MonthsServiceImpl implements MonthsService {
       const now = new Date().toISOString();
       const today = now.split('T')[0]; // YYYY-MM-DD
 
+      // Close instance and all occurrences
+      const updatedOccurrences = (data.bill_instances[index].occurrences || []).map((occ) => ({
+        ...occ,
+        is_closed: true,
+        closed_date: today,
+        updated_at: now,
+      }));
+
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: true,
         closed_date: today,
+        occurrences: updatedOccurrences,
         updated_at: now,
       };
       data.updated_at = now;
@@ -1039,10 +1048,19 @@ export class MonthsServiceImpl implements MonthsService {
 
       const now = new Date().toISOString();
 
+      // Reopen instance and all occurrences
+      const updatedOccurrences = (data.bill_instances[index].occurrences || []).map((occ) => ({
+        ...occ,
+        is_closed: false,
+        closed_date: undefined,
+        updated_at: now,
+      }));
+
       data.bill_instances[index] = {
         ...data.bill_instances[index],
         is_closed: false,
         closed_date: undefined,
+        occurrences: updatedOccurrences,
         updated_at: now,
       };
       data.updated_at = now;
@@ -1073,10 +1091,19 @@ export class MonthsServiceImpl implements MonthsService {
       const now = new Date().toISOString();
       const today = now.split('T')[0]; // YYYY-MM-DD
 
+      // Close instance and all occurrences
+      const updatedOccurrences = (data.income_instances[index].occurrences || []).map((occ) => ({
+        ...occ,
+        is_closed: true,
+        closed_date: today,
+        updated_at: now,
+      }));
+
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: true,
         closed_date: today,
+        occurrences: updatedOccurrences,
         updated_at: now,
       };
       data.updated_at = now;
@@ -1106,10 +1133,19 @@ export class MonthsServiceImpl implements MonthsService {
 
       const now = new Date().toISOString();
 
+      // Reopen instance and all occurrences
+      const updatedOccurrences = (data.income_instances[index].occurrences || []).map((occ) => ({
+        ...occ,
+        is_closed: false,
+        closed_date: undefined,
+        updated_at: now,
+      }));
+
       data.income_instances[index] = {
         ...data.income_instances[index],
         is_closed: false,
         closed_date: undefined,
+        occurrences: updatedOccurrences,
         updated_at: now,
       };
       data.updated_at = now;
