@@ -7,6 +7,7 @@
   } from '../../stores/detailed-month';
   import OccurrenceRow from './OccurrenceRow.svelte';
   import TransactionsDrawer from './TransactionsDrawer.svelte';
+  import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
 
@@ -21,8 +22,13 @@
   $: isPayoffBill = type === 'bill' && (item as BillInstanceDetailed).is_payoff_bill === true;
 
   let showTransactionsDrawer = false;
+  let showDetailsDrawer = false;
   let selectedOccurrence: Occurrence | null = null;
   let addingOccurrence = false;
+
+  function openDetailsDrawer() {
+    showDetailsDrawer = true;
+  }
 
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -110,7 +116,9 @@
   <div class="card-header">
     <div class="header-info">
       <span class="item-name" class:closed-text={isClosed}>
-        {item.name}
+        <button class="name-link" on:click={openDetailsDrawer} title="View details">
+          {item.name}
+        </button>
         <span class="billing-badge">{formatBillingPeriod(item.billing_period)}</span>
       </span>
       <span class="occurrence-summary">
@@ -195,6 +203,9 @@
   />
 {/if}
 
+<!-- Item Details Drawer -->
+<ItemDetailsDrawer bind:open={showDetailsDrawer} {item} {type} />
+
 <style>
   .occurrence-card {
     background: var(--bg-elevated);
@@ -230,6 +241,32 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .name-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .name-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .closed-text .name-link {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .closed-text .name-link:hover {
+    text-decoration: underline line-through;
   }
 
   .closed-text {

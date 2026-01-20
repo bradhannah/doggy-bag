@@ -446,6 +446,79 @@ function createDetailedMonthStore() {
       });
     },
 
+    // Optimistic update for occurrence notes (doesn't trigger full refresh)
+    updateOccurrenceNotes(
+      instanceId: string,
+      occurrenceId: string,
+      notes: string | null,
+      type: 'bill' | 'income' = 'bill'
+    ): void {
+      // Convert null to undefined to match Occurrence.notes type
+      const normalizedNotes = notes ?? undefined;
+
+      update((state) => {
+        if (!state.data) return state;
+
+        if (type === 'bill') {
+          const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
+            const billItems = section.items as BillInstanceDetailed[];
+            const newItems = billItems.map((item) => {
+              if (item.id === instanceId) {
+                return {
+                  ...item,
+                  occurrences: item.occurrences.map((occ) =>
+                    occ.id === occurrenceId ? { ...occ, notes: normalizedNotes } : occ
+                  ),
+                };
+              }
+              return item;
+            });
+
+            return {
+              ...section,
+              items: newItems,
+            };
+          });
+
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              billSections: newBillSections,
+            },
+          };
+        } else {
+          const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
+            const incomeItems = section.items as IncomeInstanceDetailed[];
+            const newItems = incomeItems.map((item) => {
+              if (item.id === instanceId) {
+                return {
+                  ...item,
+                  occurrences: item.occurrences.map((occ) =>
+                    occ.id === occurrenceId ? { ...occ, notes: normalizedNotes } : occ
+                  ),
+                };
+              }
+              return item;
+            });
+
+            return {
+              ...section,
+              items: newItems,
+            };
+          });
+
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              incomeSections: newIncomeSections,
+            },
+          };
+        }
+      });
+    },
+
     clear(): void {
       set({
         data: null,

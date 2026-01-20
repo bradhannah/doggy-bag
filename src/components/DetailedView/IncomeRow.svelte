@@ -388,10 +388,6 @@
     dispatch('refresh');
   }
 
-  function handleNotesUpdated() {
-    dispatch('refresh');
-  }
-
   function confirmDeleteIncome() {
     showDeleteConfirm = true;
   }
@@ -668,7 +664,6 @@
   occurrenceId={primaryOccurrenceId}
   occurrenceNotes={primaryOccurrenceNotes}
   on:updated={handleTransactionsUpdated}
-  on:notesUpdated={handleNotesUpdated}
 />
 
 <!-- Make Regular Drawer (for ad-hoc items) -->

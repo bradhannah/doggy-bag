@@ -413,10 +413,6 @@
     }
   }
 
-  function handleNotesUpdated() {
-    dispatch('refresh');
-  }
-
   function handleCCSyncUpdated() {
     // Refresh to get the updated balance data
     dispatch('refresh');
@@ -712,7 +708,6 @@
   occurrenceNotes={primaryOccurrenceNotes}
   {isPayoffBill}
   on:updated={handleTransactionsUpdated}
-  on:notesUpdated={handleNotesUpdated}
 />
 
 <!-- Make Regular Drawer (for ad-hoc items) -->
