@@ -346,7 +346,7 @@ export class ValidationServiceImpl implements ValidationService {
    * @returns true if valid
    */
   validateCategoryType(type: string): boolean {
-    return ['bill', 'income', 'variable'].includes(type);
+    return ['bill', 'income', 'variable', 'savings_goal'].includes(type);
   }
 
   validateID(id: string): boolean {

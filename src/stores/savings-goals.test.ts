@@ -25,6 +25,7 @@ import {
   pausedGoals,
   completedGoals,
   abandonedGoals,
+  archivedGoals,
   openGoals,
   closedGoals,
   totalSavedAmount,
@@ -39,6 +40,8 @@ import {
   resumeGoal,
   completeGoal,
   abandonGoal,
+  archiveGoal,
+  unarchiveGoal,
   getGoalBills,
   clearSavingsGoalsError,
   resetSavingsGoalsStore,
@@ -142,6 +145,25 @@ const sampleGoals: SavingsGoal[] = [
     created_at: '2024-05-01T00:00:00Z',
     updated_at: '2024-10-01T00:00:00Z',
   },
+  {
+    id: 'goal-6',
+    name: 'Old TV',
+    target_amount: 80000, // $800
+    current_amount: 80000,
+    saved_amount: 80000,
+    target_date: '2024-06-01',
+    linked_account_id: 'acc-1',
+    linked_bill_ids: [],
+    status: 'archived',
+    previous_status: 'bought',
+    completed_at: '2024-05-15T00:00:00Z',
+    archived_at: '2024-07-01T00:00:00Z',
+    temperature: 'green',
+    expected_amount: 80000,
+    progress_percentage: 100,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-07-01T00:00:00Z',
+  },
 ];
 
 describe('Savings Goals Store', () => {
@@ -193,6 +215,10 @@ describe('Savings Goals Store', () => {
 
       it('returns "Abandoned" for abandoned status', () => {
         expect(getStatusLabel('abandoned')).toBe('Abandoned');
+      });
+
+      it('returns "Archived" for archived status', () => {
+        expect(getStatusLabel('archived')).toBe('Archived');
       });
 
       it('returns raw status for unknown status', () => {
@@ -631,6 +657,122 @@ describe('Savings Goals Store', () => {
     });
   });
 
+  describe('archiveGoal', () => {
+    it('archives a bought goal successfully', async () => {
+      const archivedGoal = {
+        ...sampleGoals[3], // bought goal
+        status: 'archived',
+        previous_status: 'bought',
+        archived_at: '2025-01-20T00:00:00Z',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(archivedGoal),
+      });
+      mockGet.mockResolvedValue(sampleGoals);
+
+      const result = await archiveGoal('goal-4');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/savings-goals/goal-4/archive',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      expect(result.status).toBe('archived');
+      expect(result.previous_status).toBe('bought');
+    });
+
+    it('throws error when archiving saving goal', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Cannot archive goal with status saving' }),
+      });
+
+      await expect(archiveGoal('goal-1')).rejects.toThrow('Cannot archive goal with status saving');
+      expect(get(savingsGoalsError)).toBe('Cannot archive goal with status saving');
+    });
+
+    it('handles non-Error exceptions', async () => {
+      mockFetch.mockRejectedValue('Network failure');
+
+      await expect(archiveGoal('goal-4')).rejects.toThrow('Failed to archive goal');
+    });
+  });
+
+  describe('unarchiveGoal', () => {
+    it('unarchives a goal to bought status successfully', async () => {
+      const unarchivedGoal = {
+        ...sampleGoals[5], // archived goal
+        status: 'bought',
+        previous_status: undefined,
+        archived_at: undefined,
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(unarchivedGoal),
+      });
+      mockGet.mockResolvedValue(sampleGoals);
+
+      const result = await unarchiveGoal('goal-6', 'bought');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/savings-goals/goal-6/unarchive',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restore_to_status: 'bought' }),
+        }
+      );
+      expect(result.status).toBe('bought');
+    });
+
+    it('unarchives a goal to abandoned status successfully', async () => {
+      const unarchivedGoal = {
+        ...sampleGoals[5],
+        status: 'abandoned',
+        previous_status: undefined,
+        archived_at: undefined,
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(unarchivedGoal),
+      });
+      mockGet.mockResolvedValue(sampleGoals);
+
+      const result = await unarchiveGoal('goal-6', 'abandoned');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/savings-goals/goal-6/unarchive',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restore_to_status: 'abandoned' }),
+        }
+      );
+      expect(result.status).toBe('abandoned');
+    });
+
+    it('throws error when unarchiving non-archived goal', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Cannot unarchive goal with status saving' }),
+      });
+
+      await expect(unarchiveGoal('goal-1', 'bought')).rejects.toThrow(
+        'Cannot unarchive goal with status saving'
+      );
+      expect(get(savingsGoalsError)).toBe('Cannot unarchive goal with status saving');
+    });
+
+    it('handles non-Error exceptions', async () => {
+      mockFetch.mockRejectedValue('Network failure');
+
+      await expect(unarchiveGoal('goal-6', 'bought')).rejects.toThrow('Failed to unarchive goal');
+    });
+  });
+
   // ============================================================================
   // Helper Actions Tests
   // ============================================================================
@@ -715,6 +857,15 @@ describe('Savings Goals Store', () => {
         const abandoned = get(abandonedGoals);
         expect(abandoned).toHaveLength(1);
         expect(abandoned[0].name).toBe('Gaming Console');
+      });
+    });
+
+    describe('archivedGoals', () => {
+      it('filters to only archived goals', () => {
+        const archived = get(archivedGoals);
+        expect(archived).toHaveLength(1);
+        expect(archived[0].name).toBe('Old TV');
+        expect(archived[0].previous_status).toBe('bought');
       });
     });
 

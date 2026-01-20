@@ -8,7 +8,7 @@ import { apiClient } from '$lib/api/client';
 // Types
 // ============================================================================
 
-export type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned';
+export type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned' | 'archived';
 export type GoalTemperature = 'green' | 'yellow' | 'red';
 
 export interface SavingsGoal {
@@ -23,6 +23,8 @@ export interface SavingsGoal {
   status: SavingsGoalStatus;
   paused_at?: string; // ISO timestamp when goal was paused
   completed_at?: string; // ISO timestamp when goal was bought/abandoned
+  previous_status?: 'bought' | 'abandoned'; // Status before archiving
+  archived_at?: string; // ISO timestamp when goal was archived
   notes?: string;
   temperature: GoalTemperature; // Calculated: green/yellow/red
   expected_amount: number; // Calculated: expected based on linear progress
@@ -106,6 +108,11 @@ export const openGoals = derived(savingsGoals, (goals) =>
 /** All closed goals (bought or abandoned) */
 export const closedGoals = derived(savingsGoals, (goals) =>
   goals.filter((g) => g.status === 'bought' || g.status === 'abandoned')
+);
+
+/** All archived goals */
+export const archivedGoals = derived(savingsGoals, (goals) =>
+  goals.filter((g) => g.status === 'archived')
 );
 
 // ============================================================================
@@ -331,6 +338,68 @@ export async function abandonGoal(id: string): Promise<SavingsGoal> {
   }
 }
 
+/**
+ * Archive a goal (move to archived status)
+ * @throws Error if goal is not in 'bought' or 'abandoned' status
+ */
+export async function archiveGoal(id: string): Promise<SavingsGoal> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(`${apiClient.getBaseUrl()}/api/savings-goals/${id}/archive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to archive goal');
+    }
+
+    const goal = await response.json();
+    await loadSavingsGoals();
+    return goal as SavingsGoal;
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to archive goal');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
+/**
+ * Unarchive a goal (restore from archived status)
+ * @param id - Goal ID
+ * @param restoreToStatus - Status to restore the goal to ('bought' or 'abandoned')
+ * @throws Error if goal is not in 'archived' status
+ */
+export async function unarchiveGoal(
+  id: string,
+  restoreToStatus: 'bought' | 'abandoned'
+): Promise<SavingsGoal> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(`${apiClient.getBaseUrl()}/api/savings-goals/${id}/unarchive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restore_to_status: restoreToStatus }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to unarchive goal');
+    }
+
+    const goal = await response.json();
+    await loadSavingsGoals();
+    return goal as SavingsGoal;
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to unarchive goal');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
 // ============================================================================
 // Helper Actions
 // ============================================================================
@@ -390,6 +459,8 @@ export function getStatusLabel(status: SavingsGoalStatus): string {
       return 'Completed';
     case 'abandoned':
       return 'Abandoned';
+    case 'archived':
+      return 'Archived';
     default:
       return status;
   }

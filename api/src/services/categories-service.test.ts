@@ -375,8 +375,8 @@ describe('CategoriesService', () => {
   describe('ensureGoalsCategoryExists', () => {
     test('creates goals category if not exists', async () => {
       const goals = await service.ensureGoalsCategoryExists();
-      expect(goals.name).toBe('Goals');
-      expect(goals.type).toBe('bill');
+      expect(goals.name).toBe('Savings Goals');
+      expect(goals.type).toBe('savings_goal');
       expect(goals.is_predefined).toBe(true);
       expect(goals.color).toBe('#10b981'); // Emerald green
     });
@@ -388,7 +388,7 @@ describe('CategoriesService', () => {
     });
 
     test('goals category appears after other bill categories', async () => {
-      // Get all bill categories before creating Goals
+      // Get all bill categories before creating Savings Goals
       const beforeBills = await service.getByType('bill');
       const maxSortOrder = Math.max(...beforeBills.map((c) => c.sort_order));
 

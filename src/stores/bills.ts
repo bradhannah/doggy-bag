@@ -24,6 +24,7 @@ export interface Bill {
   category_id: string; // Required
   payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
+  goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -45,6 +46,7 @@ export interface BillData {
   category_id: string; // Required
   payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
+  goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
 }
 
 // Billing period multipliers (average instances per month)

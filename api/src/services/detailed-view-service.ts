@@ -76,8 +76,10 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const billsMap = new Map(bills.map((b) => [b.id, b]));
     const incomesMap = new Map(incomes.map((i) => [i.id, i]));
     const paymentSourcesMap = new Map(paymentSources.map((ps) => [ps.id, ps]));
-    // Include both 'bill' and 'variable' category types for expenses
-    const billCategories = categories.filter((c) => c.type === 'bill' || c.type === 'variable');
+    // Include 'bill', 'variable', and 'savings_goal' category types for expenses
+    const billCategories = categories.filter(
+      (c) => c.type === 'bill' || c.type === 'variable' || c.type === 'savings_goal'
+    );
     const incomeCategories = categories.filter((c) => c.type === 'income');
 
     // Build detailed bill instances

@@ -220,7 +220,7 @@ clean: ## Remove build artifacts and temporary files
 	@rm -rf src-tauri/target
 	@rm -rf dist
 	@rm -rf node_modules/.vite
-	@find . -type d -name ".svelte-kit" -exec rm -rf {} \;
+	@find . -type d -name ".svelte-kit" -exec rm -rf {} \; 2>/dev/null || true
 	@echo "Clean complete"
 
 # Type generation

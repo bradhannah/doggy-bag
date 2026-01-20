@@ -35,6 +35,15 @@ export interface CreateAdhocIncomeRequest {
   date?: string;
 }
 
+export interface CreateGoalContributionRequest {
+  goal_id: string;
+  goal_name: string;
+  amount: number;
+  category_id: string;
+  payment_source_id: string;
+  date: string; // YYYY-MM-DD - today or earlier within current month
+}
+
 export interface UpdateAdhocRequest {
   name?: string;
   expected_amount?: number; // Changed from actual_amount
@@ -66,6 +75,9 @@ export interface AdhocService {
     instanceId: string,
     data: MakeRegularRequest
   ): Promise<{ bill: Bill; billInstance: BillInstance }>;
+
+  // Goal Contributions (one-time savings payments)
+  createGoalContribution(month: string, data: CreateGoalContributionRequest): Promise<BillInstance>;
 
   // Incomes
   createAdhocIncome(month: string, data: CreateAdhocIncomeRequest): Promise<IncomeInstance>;
@@ -343,6 +355,102 @@ export class AdhocServiceImpl implements AdhocService {
       `[AdhocService] Converted ad-hoc bill "${instance.name}" to regular bill "${newBill.name}"`
     );
     return { bill: newBill, billInstance: updatedInstance };
+  }
+
+  // ========================================================================
+  // Goal Contributions (one-time savings payments)
+  // ========================================================================
+
+  public async createGoalContribution(
+    month: string,
+    data: CreateGoalContributionRequest
+  ): Promise<BillInstance> {
+    // Validate
+    if (!data.goal_id) {
+      throw new Error('Goal ID is required');
+    }
+    if (!data.goal_name) {
+      throw new Error('Goal name is required');
+    }
+    if (!data.amount || data.amount <= 0) {
+      throw new Error('Amount must be positive');
+    }
+    if (!data.category_id) {
+      throw new Error('Category ID is required');
+    }
+    if (!data.payment_source_id) {
+      throw new Error('Payment source ID is required');
+    }
+    if (!data.date) {
+      throw new Error('Date is required');
+    }
+
+    // Validate date is not in the future and is within the specified month
+    const today = new Date().toISOString().split('T')[0];
+    if (data.date > today) {
+      throw new Error('Payment date cannot be in the future');
+    }
+    const dateMonth = data.date.substring(0, 7); // YYYY-MM
+    if (dateMonth !== month) {
+      throw new Error('Payment date must be within the specified month');
+    }
+
+    // Get or create month data
+    let monthData = await this.monthsService.getMonthlyData(month);
+    if (!monthData) {
+      monthData = await this.monthsService.generateMonthlyData(month);
+    }
+
+    const now = new Date().toISOString();
+
+    // Create a single occurrence that's already closed and paid
+    const occurrence: Occurrence = {
+      id: crypto.randomUUID(),
+      sequence: 1,
+      expected_date: data.date,
+      expected_amount: data.amount,
+      is_closed: true,
+      closed_date: data.date,
+      payments: [
+        {
+          id: crypto.randomUUID(),
+          amount: data.amount,
+          date: data.date,
+          payment_source_id: data.payment_source_id,
+          created_at: now,
+        },
+      ],
+      is_adhoc: true,
+      created_at: now,
+      updated_at: now,
+    };
+
+    const newInstance: BillInstance = {
+      id: crypto.randomUUID(),
+      bill_id: null, // Ad-hoc - no parent bill
+      month,
+      billing_period: 'monthly',
+      expected_amount: data.amount,
+      occurrences: [occurrence],
+      is_default: false,
+      is_closed: true, // Immediately closed since it's a payment
+      is_adhoc: true,
+      goal_id: data.goal_id, // Link to the savings goal
+      name: `Payment: ${data.goal_name}`,
+      category_id: data.category_id,
+      payment_source_id: data.payment_source_id,
+      closed_date: data.date,
+      created_at: now,
+      updated_at: now,
+    };
+
+    monthData.bill_instances.push(newInstance);
+    await this.monthsService.saveMonthlyData(month, monthData);
+
+    console.log(
+      `[AdhocService] Created goal contribution for "${data.goal_name}" ($${data.amount / 100}) in ${month}`
+    );
+    return newInstance;
   }
 
   // ========================================================================

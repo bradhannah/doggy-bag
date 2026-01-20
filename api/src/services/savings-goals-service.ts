@@ -25,6 +25,8 @@ export interface SavingsGoalsService {
   resume(id: string): Promise<SavingsGoal | null>;
   complete(id: string, completedAt?: string): Promise<SavingsGoal | null>;
   abandon(id: string): Promise<SavingsGoal | null>;
+  archive(id: string): Promise<SavingsGoal | null>;
+  unarchive(id: string, restoreToStatus: 'bought' | 'abandoned'): Promise<SavingsGoal | null>;
 
   // Calculation methods
   calculateTemperature(goal: SavingsGoal, savedAmount: number): GoalTemperature;
@@ -157,7 +159,13 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
 
     // Validate status if provided
     if (data.status) {
-      const validStatuses: SavingsGoalStatus[] = ['saving', 'paused', 'bought', 'abandoned'];
+      const validStatuses: SavingsGoalStatus[] = [
+        'saving',
+        'paused',
+        'bought',
+        'abandoned',
+        'archived',
+      ];
       if (!validStatuses.includes(data.status)) {
         errors.push('Invalid status');
       }
@@ -255,7 +263,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         return null;
       }
 
-      if (goal.status === 'bought' || goal.status === 'abandoned') {
+      if (goal.status === 'bought' || goal.status === 'abandoned' || goal.status === 'archived') {
         throw new Error(
           `Cannot complete goal with status '${goal.status}'. Goal is already closed.`
         );
@@ -285,7 +293,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         return null;
       }
 
-      if (goal.status === 'bought' || goal.status === 'abandoned') {
+      if (goal.status === 'bought' || goal.status === 'abandoned' || goal.status === 'archived') {
         throw new Error(
           `Cannot abandon goal with status '${goal.status}'. Goal is already closed.`
         );
@@ -298,6 +306,70 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
       });
     } catch (error) {
       console.error('[SavingsGoalsService] Failed to abandon goal:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Archive a goal - hides from default list view
+   * Can only archive goals in 'bought' or 'abandoned' status
+   * @param id - Goal ID
+   */
+  public async archive(id: string): Promise<SavingsGoal | null> {
+    try {
+      const goal = await this.getById(id);
+      if (!goal) {
+        console.warn(`[SavingsGoalsService] Goal ${id} not found`);
+        return null;
+      }
+
+      if (goal.status !== 'bought' && goal.status !== 'abandoned') {
+        throw new Error(
+          `Cannot archive goal with status '${goal.status}'. Only 'bought' or 'abandoned' goals can be archived.`
+        );
+      }
+
+      return await this.update(id, {
+        status: 'archived',
+        previous_status: goal.status, // Store original status for unarchive
+        archived_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('[SavingsGoalsService] Failed to archive goal:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unarchive a goal - restores to specified status
+   * Can only unarchive goals in 'archived' status
+   * @param id - Goal ID
+   * @param restoreToStatus - Status to restore to ('bought' or 'abandoned')
+   */
+  public async unarchive(
+    id: string,
+    restoreToStatus: 'bought' | 'abandoned'
+  ): Promise<SavingsGoal | null> {
+    try {
+      const goal = await this.getById(id);
+      if (!goal) {
+        console.warn(`[SavingsGoalsService] Goal ${id} not found`);
+        return null;
+      }
+
+      if (goal.status !== 'archived') {
+        throw new Error(
+          `Cannot unarchive goal with status '${goal.status}'. Only 'archived' goals can be unarchived.`
+        );
+      }
+
+      return await this.update(id, {
+        status: restoreToStatus,
+        previous_status: undefined, // Clear previous status
+        archived_at: undefined, // Clear archived timestamp
+      });
+    } catch (error) {
+      console.error('[SavingsGoalsService] Failed to unarchive goal:', error);
       throw error;
     }
   }

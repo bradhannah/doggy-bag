@@ -1,7 +1,7 @@
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 
-export type CategoryType = 'bill' | 'income' | 'variable';
+export type CategoryType = 'bill' | 'income' | 'variable' | 'savings_goal';
 
 export interface Category {
   id: string;

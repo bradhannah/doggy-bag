@@ -46,6 +46,7 @@ export interface BillInstanceDetailed {
   is_adhoc: boolean;
   is_payoff_bill: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
+  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   due_date: string | null; // DEPRECATED: use occurrence expected_date
   closed_date: string | null;
   is_overdue: boolean;

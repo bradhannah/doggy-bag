@@ -16,7 +16,7 @@ const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'
 // Helper to determine if a payment source type is an investment account
 const INVESTMENT_ACCOUNT_TYPES: PaymentSourceType[] = ['investment'];
 
-type CategoryType = 'bill' | 'income' | 'variable';
+type CategoryType = 'bill' | 'income' | 'variable' | 'savings_goal';
 
 type PaymentMethod = 'auto' | 'manual';
 
@@ -148,6 +148,7 @@ interface BillInstance {
   is_adhoc: boolean; // True for one-time ad-hoc items
   is_payoff_bill?: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
+  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   closed_date?: string; // ISO date when fully closed (YYYY-MM-DD)
   name?: string; // For ad-hoc items (bill_id is null)
   category_id?: string; // For ad-hoc items (no bill reference)
@@ -244,7 +245,7 @@ interface Category {
 // Savings Goal Interface
 // ============================================================================
 
-type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned';
+type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned' | 'archived';
 
 // Temperature indicator for goal progress tracking
 type GoalTemperature = 'green' | 'yellow' | 'red';
@@ -258,8 +259,10 @@ interface SavingsGoal {
   linked_account_id: string; // Reference to PaymentSource (savings account)
   linked_bill_ids: string[]; // DEPRECATED: Keep for migration, bills now link via goal_id
   status: SavingsGoalStatus;
+  previous_status?: 'bought' | 'abandoned'; // Status before archiving (for unarchive)
   paused_at?: string; // ISO timestamp when goal was paused
   completed_at?: string; // ISO timestamp when goal was bought/abandoned
+  archived_at?: string; // ISO timestamp when goal was archived
   notes?: string;
   created_at: string;
   updated_at: string;

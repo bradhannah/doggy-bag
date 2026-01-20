@@ -422,6 +422,86 @@ describe('SavingsGoalsService', () => {
   // Validation Tests
   // ============================================================================
 
+  // ============================================================================
+  // Archive/Unarchive Tests
+  // ============================================================================
+
+  describe('archive', () => {
+    test('should archive a bought goal', async () => {
+      const archived = await service.archive('goal-bought-003');
+      expect(archived?.status).toBe('archived');
+      expect(archived?.archived_at).toBeDefined();
+      expect(archived?.previous_status).toBe('bought');
+    });
+
+    test('should archive an abandoned goal', async () => {
+      // First abandon a goal
+      await service.abandon('goal-winter-tires-001');
+      const archived = await service.archive('goal-winter-tires-001');
+      expect(archived?.status).toBe('archived');
+      expect(archived?.archived_at).toBeDefined();
+      expect(archived?.previous_status).toBe('abandoned');
+    });
+
+    test('should throw error when archiving saving goal', async () => {
+      await expect(service.archive('goal-winter-tires-001')).rejects.toThrow(
+        "Cannot archive goal with status 'saving'"
+      );
+    });
+
+    test('should throw error when archiving paused goal', async () => {
+      await expect(service.archive('goal-vacation-002')).rejects.toThrow(
+        "Cannot archive goal with status 'paused'"
+      );
+    });
+
+    test('should return null for non-existent goal', async () => {
+      const result = await service.archive('non-existent');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('unarchive', () => {
+    test('should unarchive a goal to bought status', async () => {
+      // First archive a bought goal
+      await service.archive('goal-bought-003');
+      const unarchived = await service.unarchive('goal-bought-003', 'bought');
+      expect(unarchived?.status).toBe('bought');
+      expect(unarchived?.archived_at).toBeUndefined();
+      expect(unarchived?.previous_status).toBeUndefined();
+    });
+
+    test('should unarchive a goal to abandoned status', async () => {
+      // First abandon then archive
+      await service.abandon('goal-winter-tires-001');
+      await service.archive('goal-winter-tires-001');
+      const unarchived = await service.unarchive('goal-winter-tires-001', 'abandoned');
+      expect(unarchived?.status).toBe('abandoned');
+      expect(unarchived?.archived_at).toBeUndefined();
+    });
+
+    test('should throw error when unarchiving non-archived goal', async () => {
+      await expect(service.unarchive('goal-winter-tires-001', 'bought')).rejects.toThrow(
+        "Cannot unarchive goal with status 'saving'"
+      );
+    });
+
+    test('should throw error when unarchiving bought goal', async () => {
+      await expect(service.unarchive('goal-bought-003', 'bought')).rejects.toThrow(
+        "Cannot unarchive goal with status 'bought'"
+      );
+    });
+
+    test('should return null for non-existent goal', async () => {
+      const result = await service.unarchive('non-existent', 'bought');
+      expect(result).toBeNull();
+    });
+  });
+
+  // ============================================================================
+  // Validation Tests
+  // ============================================================================
+
   describe('validate', () => {
     test('should pass validation for valid goal', () => {
       const result = service.validate({

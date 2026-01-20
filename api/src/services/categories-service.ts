@@ -337,23 +337,31 @@ export class CategoriesServiceImpl implements CategoriesService {
   }
 
   /**
-   * Ensure the "Goals" category exists for bill categories.
+   * Ensure the "Savings Goals" category exists for bill categories.
    * Creates it if not found. This is a system category for savings goal contributions.
-   * @returns The goals category
+   * @returns The savings goals category
    */
   public async ensureGoalsCategoryExists(): Promise<Category> {
-    const GOALS_CATEGORY_NAME = 'Goals';
+    const GOALS_CATEGORY_NAME = 'Savings Goals';
     const GOALS_CATEGORY_COLOR = '#10b981'; // Emerald green
 
     try {
       const categories = await this.getAll();
 
-      // Look for existing goals category
+      // Look for existing savings goals category by type or name (for migration)
       const goalsCategory = categories.find(
-        (c) => c.name === GOALS_CATEGORY_NAME && c.type === 'bill'
+        (c) => c.type === 'savings_goal' || (c.name === 'Goals' && c.type === 'bill')
       );
 
       if (goalsCategory) {
+        // Migrate old "Goals" category to new type if needed
+        if (goalsCategory.type !== 'savings_goal' || goalsCategory.name !== GOALS_CATEGORY_NAME) {
+          const updatedCategory = await this.update(goalsCategory.id, {
+            name: GOALS_CATEGORY_NAME,
+            type: 'savings_goal',
+          });
+          return updatedCategory || goalsCategory;
+        }
         return goalsCategory;
       }
 
@@ -366,7 +374,7 @@ export class CategoriesServiceImpl implements CategoriesService {
       const newCategory: Category = {
         id: crypto.randomUUID(),
         name: GOALS_CATEGORY_NAME,
-        type: 'bill',
+        type: 'savings_goal',
         color: GOALS_CATEGORY_COLOR,
         sort_order: maxSortOrder + 1,
         is_predefined: true, // Cannot be deleted
@@ -377,10 +385,10 @@ export class CategoriesServiceImpl implements CategoriesService {
       categories.push(newCategory);
       await this.storage.writeJSON('data/entities/categories.json', categories);
 
-      console.log('[CategoriesService] Created Goals category');
+      console.log('[CategoriesService] Created Savings Goals category');
       return newCategory;
     } catch (error) {
-      console.error('[CategoriesService] Failed to ensure goals category:', error);
+      console.error('[CategoriesService] Failed to ensure savings goals category:', error);
       throw error;
     }
   }

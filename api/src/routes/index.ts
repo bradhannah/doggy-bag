@@ -83,6 +83,7 @@ import {
   createCategoriesHandlerPUT,
   createCategoriesHandlerDELETE,
   createCategoriesReorderHandler,
+  createCategoriesEnsureGoalsHandler,
 } from './handlers/categories.handlers';
 
 import { createSeedDefaultsHandler } from './handlers/seed.handlers';
@@ -166,6 +167,11 @@ import {
   createSavingsGoalsCompleteHandler,
   createSavingsGoalsAbandonHandler,
   createSavingsGoalsBillsHandler,
+  createSavingsGoalsArchiveHandler,
+  createSavingsGoalsUnarchiveHandler,
+  createSavingsGoalsContributeHandler,
+  createSavingsGoalsPaymentsHandler,
+  createSavingsGoalsRemoveScheduleHandler,
 } from './handlers/savings-goals.handlers';
 
 import { createProjectionsHandlerGET } from './handlers/projections.handlers';
@@ -262,6 +268,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/categories/reorder',
     definition: { method: 'PUT', handler: createCategoriesReorderHandler() },
+  },
+  {
+    path: '/api/categories/ensure-goals',
+    definition: { method: 'POST', handler: createCategoriesEnsureGoalsHandler() },
   },
 
   // Insurance Plans
@@ -437,8 +447,44 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     definition: { method: 'POST', handler: createSavingsGoalsAbandonHandler(), hasPathParam: true },
   },
   {
+    path: '/api/savings-goals/archive',
+    definition: { method: 'POST', handler: createSavingsGoalsArchiveHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/unarchive',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsUnarchiveHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
     path: '/api/savings-goals/bills',
     definition: { method: 'GET', handler: createSavingsGoalsBillsHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/contribute',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsContributeHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/payments',
+    definition: {
+      method: 'GET',
+      handler: createSavingsGoalsPaymentsHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/remove-schedule',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsRemoveScheduleHandler(),
+      hasPathParam: true,
+    },
   },
   {
     path: '/api/savings-goals',

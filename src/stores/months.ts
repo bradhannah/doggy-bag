@@ -16,6 +16,8 @@ export interface BillInstance {
   occurrences?: Array<{ payments?: Array<{ amount: number }> }>;
   is_default: boolean;
   is_closed?: boolean;
+  is_adhoc?: boolean;
+  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   name: string;
   billing_period: string;
   created_at: string;

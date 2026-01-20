@@ -755,6 +755,7 @@ describe('ValidationService', () => {
       expect(validation.validateCategoryType('bill')).toBe(true);
       expect(validation.validateCategoryType('income')).toBe(true);
       expect(validation.validateCategoryType('variable')).toBe(true);
+      expect(validation.validateCategoryType('savings_goal')).toBe(true);
     });
 
     test('rejects invalid types', () => {
