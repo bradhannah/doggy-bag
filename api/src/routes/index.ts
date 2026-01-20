@@ -159,7 +159,13 @@ import {
 import {
   createSavingsGoalsHandlerGET,
   createSavingsGoalsHandlerPOST,
+  createSavingsGoalsHandlerPUT,
   createSavingsGoalsHandlerDELETE,
+  createSavingsGoalsPauseHandler,
+  createSavingsGoalsResumeHandler,
+  createSavingsGoalsCompleteHandler,
+  createSavingsGoalsAbandonHandler,
+  createSavingsGoalsBillsHandler,
 } from './handlers/savings-goals.handlers';
 
 import { createProjectionsHandlerGET } from './handlers/projections.handlers';
@@ -409,14 +415,42 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     },
   },
 
-  // Savings Goals
+  // Savings Goals - action routes must come before generic routes
+  {
+    path: '/api/savings-goals/pause',
+    definition: { method: 'POST', handler: createSavingsGoalsPauseHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/resume',
+    definition: { method: 'POST', handler: createSavingsGoalsResumeHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/complete',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsCompleteHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/abandon',
+    definition: { method: 'POST', handler: createSavingsGoalsAbandonHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/bills',
+    definition: { method: 'GET', handler: createSavingsGoalsBillsHandler(), hasPathParam: true },
+  },
   {
     path: '/api/savings-goals',
-    definition: { method: 'GET', handler: createSavingsGoalsHandlerGET() },
+    definition: { method: 'GET', handler: createSavingsGoalsHandlerGET(), hasPathParam: true },
   },
   {
     path: '/api/savings-goals',
     definition: { method: 'POST', handler: createSavingsGoalsHandlerPOST() },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: { method: 'PUT', handler: createSavingsGoalsHandlerPUT(), hasPathParam: true },
   },
   {
     path: '/api/savings-goals',

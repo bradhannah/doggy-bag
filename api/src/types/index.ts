@@ -76,6 +76,7 @@ interface Bill {
   category_id: string; // Required - reference to bill category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
+  goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -95,6 +96,7 @@ interface Income {
   category_id: string; // Required - reference to income category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment (default: 'auto')
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
+  goal_id?: string; // Optional link to SavingsGoal (for goal completion incomes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -242,15 +244,22 @@ interface Category {
 // Savings Goal Interface
 // ============================================================================
 
+type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned';
+
+// Temperature indicator for goal progress tracking
+type GoalTemperature = 'green' | 'yellow' | 'red';
+
 interface SavingsGoal {
   id: string;
   name: string;
   target_amount: number; // Cents
-  current_amount: number; // Cents (Virtual balance)
+  current_amount: number; // Cents (calculated dynamically from closed occurrences)
   target_date: string; // YYYY-MM-DD
-  linked_account_id: string; // Reference to PaymentSource (informational)
-  linked_bill_ids: string[]; // IDs of Bills created for this goal
-  status: 'active' | 'completed' | 'archived';
+  linked_account_id: string; // Reference to PaymentSource (savings account)
+  linked_bill_ids: string[]; // DEPRECATED: Keep for migration, bills now link via goal_id
+  status: SavingsGoalStatus;
+  paused_at?: string; // ISO timestamp when goal was paused
+  completed_at?: string; // ISO timestamp when goal was bought/abandoned
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -600,6 +609,8 @@ export type {
   ClaimStatus,
   SubmissionStatus,
   DocumentType,
+  SavingsGoalStatus,
+  GoalTemperature,
   EntityMetadata,
   PaymentSourceMetadata,
   Bill,

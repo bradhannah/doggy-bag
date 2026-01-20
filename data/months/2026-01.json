@@ -420,7 +420,8 @@
           "payments": [],
           "is_adhoc": false,
           "created_at": "2026-01-07T20:35:22.050Z",
-          "updated_at": "2026-01-07T20:35:22.050Z"
+          "updated_at": "2026-01-19T23:58:13.667Z",
+          "notes": "a"
         }
       ],
       "is_default": true,
@@ -432,7 +433,7 @@
       "category_id": "cf328983-f478-4d18-b9e2-072f71674cb3",
       "payment_source_id": "a1b2c3d4-3333-4000-8000-000000000003",
       "created_at": "2026-01-07T20:35:22.050Z",
-      "updated_at": "2026-01-07T20:35:22.050Z"
+      "updated_at": "2026-01-19T23:58:13.667Z"
     },
     {
       "id": "2875789a-77ee-4c4b-bb38-f7beedadae26",
@@ -539,5 +540,5 @@
   "bank_balances": {},
   "is_read_only": false,
   "created_at": "2026-01-07T20:35:22.050Z",
-  "updated_at": "2026-01-07T20:47:32.335Z"
+  "updated_at": "2026-01-19T23:58:13.667Z"
 }

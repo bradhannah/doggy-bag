@@ -71,6 +71,32 @@ describe('BillsService', () => {
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
     },
+    {
+      id: 'bill-goal-contrib-004',
+      name: 'Winter Tires Contribution',
+      amount: 10000, // $100.00 monthly contribution
+      billing_period: 'monthly',
+      day_of_month: 1,
+      payment_source_id: 'ps-checking-001',
+      category_id: 'cat-housing-001',
+      goal_id: 'goal-winter-tires-001', // Linked to a savings goal
+      is_active: true,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z',
+    },
+    {
+      id: 'bill-goal-contrib-005',
+      name: 'Winter Tires Extra',
+      amount: 5000, // $50.00 extra contribution
+      billing_period: 'monthly',
+      day_of_month: 15,
+      payment_source_id: 'ps-checking-001',
+      category_id: 'cat-housing-001',
+      goal_id: 'goal-winter-tires-001', // Same goal
+      is_active: true,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z',
+    },
   ];
 
   beforeAll(async () => {
@@ -110,7 +136,7 @@ describe('BillsService', () => {
   describe('getAll', () => {
     test('returns all bills', async () => {
       const bills = await service.getAll();
-      expect(bills.length).toBe(3);
+      expect(bills.length).toBe(5);
     });
 
     test('returns empty array when no bills exist', async () => {
@@ -141,6 +167,26 @@ describe('BillsService', () => {
     test('returns null when not found', async () => {
       const bill = await service.getById('non-existent-id');
       expect(bill).toBeNull();
+    });
+  });
+
+  describe('getByGoalId', () => {
+    test('returns bills linked to a goal', async () => {
+      const bills = await service.getByGoalId('goal-winter-tires-001');
+      expect(bills).toHaveLength(2);
+      expect(bills.map((b) => b.name)).toContain('Winter Tires Contribution');
+      expect(bills.map((b) => b.name)).toContain('Winter Tires Extra');
+    });
+
+    test('returns empty array when no bills match goal', async () => {
+      const bills = await service.getByGoalId('non-existent-goal');
+      expect(bills).toHaveLength(0);
+    });
+
+    test('does not return bills without goal_id', async () => {
+      const bills = await service.getByGoalId('goal-winter-tires-001');
+      const rentBill = bills.find((b) => b.name === 'Rent');
+      expect(rentBill).toBeUndefined();
     });
   });
 

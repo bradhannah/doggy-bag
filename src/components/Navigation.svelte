@@ -23,6 +23,8 @@
   $: isInsuranceActive = currentPath.startsWith('/insurance');
   // Check if we're on the projections page
   $: isProjectionsActive = currentPath.startsWith('/projections');
+  // Check if we're on the goals page
+  $: isGoalsActive = currentPath.startsWith('/goals');
 
   // Check if in Tauri environment (for zoom controls)
   const inTauri = isTauri();
@@ -120,6 +122,16 @@
           >
         </svg>
         <span>Savings</span>
+      </a>
+    </li>
+    <li>
+      <a href="/goals" class="nav-item" class:active={isGoalsActive} title="Goals">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
+          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
+          <circle cx="12" cy="12" r="1" fill="currentColor" />
+        </svg>
+        <span>Goals</span>
       </a>
     </li>
     <li>
