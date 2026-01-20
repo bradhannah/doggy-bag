@@ -41,6 +41,18 @@ describe('SavingsGoalsHandlers', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     },
     {
+      id: 'goal-no-account',
+      name: 'Goal Without Account',
+      target_amount: 50000,
+      current_amount: 0,
+      target_date: '2026-12-01',
+      linked_account_id: '', // No linked account
+      linked_bill_ids: [],
+      status: 'saving',
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
       id: 'goal-bought-001',
       name: 'Bought Goal',
       target_amount: 50000,
@@ -313,6 +325,26 @@ describe('SavingsGoalsHandlers', () => {
       // This will actually try to find goal with empty ID
       expect(response.status).toBe(404);
     });
+
+    test('should return 400 for goal without linked account', async () => {
+      const handler = createSavingsGoalsContributeHandler();
+      const today = new Date().toISOString().split('T')[0];
+
+      const request = new Request('http://localhost/api/savings-goals/goal-no-account/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: 5000,
+          date: today,
+        }),
+      });
+
+      const response = await handler(request);
+      expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.error).toContain('savings account');
+    });
   });
 
   // ============================================================================
@@ -332,11 +364,18 @@ describe('SavingsGoalsHandlers', () => {
 
       const data = await response.json();
       expect(data.goal_id).toBe('goal-test-001');
-      expect(data.completed).toBeDefined();
-      expect(data.upcoming).toBeDefined();
+      expect(data.target_amount).toBeDefined();
+      expect(data.payments).toBeDefined();
       expect(data.summary).toBeDefined();
-      expect(Array.isArray(data.completed.payments)).toBe(true);
-      expect(Array.isArray(data.upcoming.payments)).toBe(true);
+      expect(Array.isArray(data.payments)).toBe(true);
+      // Each payment should have the new structure
+      if (data.payments.length > 0) {
+        expect(data.payments[0]).toHaveProperty('date');
+        expect(data.payments[0]).toHaveProperty('description');
+        expect(data.payments[0]).toHaveProperty('amount');
+        expect(data.payments[0]).toHaveProperty('balance');
+        expect(data.payments[0]).toHaveProperty('status');
+      }
     });
 
     test('should return 404 for non-existent goal', async () => {
@@ -361,8 +400,11 @@ describe('SavingsGoalsHandlers', () => {
       const data = await response.json();
 
       // Should have completed payments from 2025-11 and 2025-12
-      expect(data.completed.count).toBeGreaterThan(0);
-      expect(data.completed.total).toBeGreaterThan(0);
+      const completedPayments = data.payments.filter(
+        (p: { status: string }) => p.status === 'completed'
+      );
+      expect(completedPayments.length).toBeGreaterThan(0);
+      expect(data.summary.total_saved).toBeGreaterThan(0);
     });
 
     test('should return 400 for missing goal ID', async () => {
@@ -376,6 +418,46 @@ describe('SavingsGoalsHandlers', () => {
       const response = await handler(request);
       // Will try to find goal with empty ID, which doesn't exist
       expect(response.status).toBe(404);
+    });
+
+    test('should return payments sorted by date with running balance', async () => {
+      const handler = createSavingsGoalsPaymentsHandler();
+
+      const request = new Request('http://localhost/api/savings-goals/goal-test-001/payments', {
+        method: 'GET',
+      });
+
+      const response = await handler(request);
+      const data = await response.json();
+
+      // Verify payments are sorted by date (oldest first)
+      const dates = data.payments.map((p: { date: string }) => p.date);
+      const sortedDates = [...dates].sort();
+      expect(dates).toEqual(sortedDates);
+
+      // Verify running balance is monotonically increasing
+      let prevBalance = 0;
+      for (const payment of data.payments) {
+        expect(payment.balance).toBeGreaterThanOrEqual(prevBalance);
+        prevBalance = payment.balance;
+      }
+    });
+
+    test('should include projected completion date in summary', async () => {
+      const handler = createSavingsGoalsPaymentsHandler();
+
+      const request = new Request('http://localhost/api/savings-goals/goal-test-001/payments', {
+        method: 'GET',
+      });
+
+      const response = await handler(request);
+      const data = await response.json();
+
+      // Summary should have projected_completion_date field
+      expect(data.summary).toHaveProperty('projected_completion_date');
+      expect(data.summary).toHaveProperty('progress_percentage');
+      expect(data.summary).toHaveProperty('total_saved');
+      expect(data.summary).toHaveProperty('total_remaining');
     });
   });
 

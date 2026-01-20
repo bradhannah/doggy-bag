@@ -823,6 +823,20 @@ export function createSavingsGoalsContributeHandler() {
         );
       }
 
+      // Validate goal has a linked account for payment source
+      if (!goal.linked_account_id) {
+        return new Response(
+          JSON.stringify({
+            error:
+              'This goal does not have a savings account linked. Please edit the goal and select a savings account first.',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
       // Parse request body
       let amount: number;
       let date: string;
@@ -920,22 +934,45 @@ export function createSavingsGoalsContributeHandler() {
 }
 
 /**
- * Payment record for a savings goal
+ * Calculate the next payment date based on billing period
  */
-interface GoalPayment {
+function getNextPaymentDate(currentDate: string, billingPeriod: string): string {
+  const date = new Date(currentDate + 'T00:00:00');
+
+  switch (billingPeriod) {
+    case 'weekly':
+      date.setDate(date.getDate() + 7);
+      break;
+    case 'bi_weekly':
+      date.setDate(date.getDate() + 14);
+      break;
+    case 'semi_annually':
+      date.setMonth(date.getMonth() + 6);
+      break;
+    case 'monthly':
+    default:
+      date.setMonth(date.getMonth() + 1);
+      break;
+  }
+
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Payment record for a savings goal (unified format with running balance)
+ */
+interface PaymentHistoryItem {
   id: string;
   date: string;
-  amount: number;
-  type: 'scheduled' | 'contribution'; // scheduled = from bill, contribution = ad-hoc
-  source_name?: string; // Bill name or "One-time contribution"
-  payment_source_id?: string;
-  occurrence_id: string;
-  bill_instance_id: string;
+  description: string;
+  amount: number; // cents
+  balance: number; // running tally in cents
+  status: 'completed' | 'upcoming';
 }
 
 /**
  * Get all payments for a goal - GET /api/savings-goals/:id/payments
- * Returns completed payments and upcoming scheduled payments
+ * Returns a unified list of completed and projected payments with running balance
  */
 export function createSavingsGoalsPaymentsHandler() {
   return async (request: Request) => {
@@ -979,8 +1016,15 @@ export function createSavingsGoalsPaymentsHandler() {
       const allMonths = await monthsService.getAllMonths();
       const goalCreatedMonth = goal.created_at.substring(0, 7); // YYYY-MM
 
-      const completedPayments: GoalPayment[] = [];
-      const upcomingPayments: GoalPayment[] = [];
+      interface RawPayment {
+        id: string;
+        date: string;
+        description: string;
+        amount: number;
+        status: 'completed' | 'upcoming';
+      }
+
+      const rawPayments: RawPayment[] = [];
       const today = new Date().toISOString().split('T')[0];
 
       // Collect payments from all months
@@ -999,76 +1043,121 @@ export function createSavingsGoalsPaymentsHandler() {
 
           if (!isLinkedViaBill && !isLinkedDirectly) continue;
 
-          // Determine source name and type
+          // Determine source name
           const isScheduled = isLinkedViaBill && !isLinkedDirectly;
-          const sourceName = isScheduled
+          const description = isScheduled
             ? (billInstance.bill_id && billNameMap.get(billInstance.bill_id)) || 'Scheduled payment'
             : 'One-time contribution';
-          const paymentType: 'scheduled' | 'contribution' = isScheduled
-            ? 'scheduled'
-            : 'contribution';
 
           // Process each occurrence
           for (const occurrence of billInstance.occurrences || []) {
             // Collect actual payments made
             for (const payment of occurrence.payments || []) {
-              completedPayments.push({
+              rawPayments.push({
                 id: payment.id,
                 date: payment.date,
+                description,
                 amount: payment.amount,
-                type: paymentType,
-                source_name: sourceName,
-                payment_source_id: payment.payment_source_id,
-                occurrence_id: occurrence.id,
-                bill_instance_id: billInstance.id,
+                status: 'completed',
               });
             }
 
             // If occurrence is not closed and in the future, it's upcoming
             if (!occurrence.is_closed && occurrence.expected_date > today) {
-              upcomingPayments.push({
+              rawPayments.push({
                 id: `upcoming-${occurrence.id}`,
                 date: occurrence.expected_date,
+                description,
                 amount: occurrence.expected_amount,
-                type: paymentType,
-                source_name: sourceName,
-                payment_source_id: billInstance.payment_source_id,
-                occurrence_id: occurrence.id,
-                bill_instance_id: billInstance.id,
+                status: 'upcoming',
               });
             }
           }
         }
       }
 
-      // Sort by date (newest first for completed, oldest first for upcoming)
-      completedPayments.sort((a, b) => b.date.localeCompare(a.date));
-      upcomingPayments.sort((a, b) => a.date.localeCompare(b.date));
+      // Project future scheduled payments until goal is complete
+      // Find recurring bills linked to this goal and project their future payments
+      const totalSaved = rawPayments
+        .filter((p) => p.status === 'completed')
+        .reduce((sum, p) => sum + p.amount, 0);
+      const remaining = goal.target_amount - totalSaved;
 
-      // Calculate totals
-      const totalCompleted = completedPayments.reduce((sum, p) => sum + p.amount, 0);
-      const totalUpcoming = upcomingPayments.reduce((sum, p) => sum + p.amount, 0);
+      if (remaining > 0 && linkedBills.length > 0) {
+        // Get the primary linked bill for projections (use the first active one)
+        const activeBill = linkedBills.find((b) => b.is_active);
+        if (activeBill) {
+          // Find the last upcoming payment date, or use today
+          const upcomingPayments = rawPayments.filter((p) => p.status === 'upcoming');
+          let lastDate =
+            upcomingPayments.length > 0
+              ? upcomingPayments[upcomingPayments.length - 1].date
+              : today;
+
+          // Calculate how many more payments are needed
+          let projectedBalance =
+            totalSaved + upcomingPayments.reduce((sum, p) => sum + p.amount, 0);
+          const paymentAmount = activeBill.amount;
+
+          // Project payments until we reach the target (max 36 months out to prevent infinite loops)
+          let projectionCount = 0;
+          const maxProjections = 36;
+
+          while (projectedBalance < goal.target_amount && projectionCount < maxProjections) {
+            // Calculate next payment date based on billing period
+            const nextDate = getNextPaymentDate(lastDate, activeBill.billing_period);
+            projectedBalance += paymentAmount;
+            projectionCount++;
+
+            rawPayments.push({
+              id: `projected-${projectionCount}`,
+              date: nextDate,
+              description: activeBill.name,
+              amount: paymentAmount,
+              status: 'upcoming',
+            });
+
+            lastDate = nextDate;
+          }
+        }
+      }
+
+      // Sort all payments by date (oldest first for chronological display)
+      rawPayments.sort((a, b) => a.date.localeCompare(b.date));
+
+      // Calculate running balance
+      let runningBalance = 0;
+      const payments: PaymentHistoryItem[] = rawPayments.map((p) => {
+        runningBalance += p.amount;
+        return {
+          ...p,
+          balance: runningBalance,
+        };
+      });
+
+      // Calculate summary
+      const totalCompleted = payments
+        .filter((p) => p.status === 'completed')
+        .reduce((sum, p) => sum + p.amount, 0);
+      const progressPercentage =
+        goal.target_amount > 0
+          ? Math.min(100, Math.round((totalCompleted / goal.target_amount) * 100))
+          : 0;
+
+      // Find projected completion date (first payment where balance >= target)
+      const completionPayment = payments.find((p) => p.balance >= goal.target_amount);
+      const projectedCompletionDate = completionPayment?.date || null;
 
       return new Response(
         JSON.stringify({
           goal_id: id,
-          completed: {
-            payments: completedPayments,
-            total: totalCompleted,
-            count: completedPayments.length,
-          },
-          upcoming: {
-            payments: upcomingPayments,
-            total: totalUpcoming,
-            count: upcomingPayments.length,
-          },
+          target_amount: goal.target_amount,
+          payments,
           summary: {
             total_saved: totalCompleted,
             total_remaining: Math.max(0, goal.target_amount - totalCompleted),
-            progress_percentage:
-              goal.target_amount > 0
-                ? Math.min(100, Math.round((totalCompleted / goal.target_amount) * 100))
-                : 0,
+            progress_percentage: progressPercentage,
+            projected_completion_date: projectedCompletionDate,
           },
         }),
         {
