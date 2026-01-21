@@ -70,7 +70,6 @@ const sampleGoals: SavingsGoal[] = [
     saved_amount: 50000, // $500
     target_date: '2025-06-01',
     linked_account_id: 'acc-1',
-    linked_bill_ids: [],
     status: 'saving',
     temperature: 'green',
     expected_amount: 45000,
@@ -86,7 +85,6 @@ const sampleGoals: SavingsGoal[] = [
     saved_amount: 100000, // $1000
     target_date: '2025-12-01',
     linked_account_id: 'acc-1',
-    linked_bill_ids: [],
     status: 'saving',
     temperature: 'yellow',
     expected_amount: 120000,
@@ -102,7 +100,6 @@ const sampleGoals: SavingsGoal[] = [
     saved_amount: 200000, // $2000
     target_date: '2025-03-01',
     linked_account_id: 'acc-2',
-    linked_bill_ids: [],
     status: 'paused',
     paused_at: '2025-01-10T00:00:00Z',
     temperature: 'red',
@@ -119,7 +116,6 @@ const sampleGoals: SavingsGoal[] = [
     saved_amount: 100000, // $1000
     target_date: '2024-12-01',
     linked_account_id: 'acc-1',
-    linked_bill_ids: [],
     status: 'bought',
     completed_at: '2024-12-15T00:00:00Z',
     temperature: 'green',
@@ -136,7 +132,6 @@ const sampleGoals: SavingsGoal[] = [
     saved_amount: 15000, // $150
     target_date: '2024-11-01',
     linked_account_id: 'acc-1',
-    linked_bill_ids: [],
     status: 'abandoned',
     completed_at: '2024-10-01T00:00:00Z',
     temperature: 'red',
@@ -153,7 +148,6 @@ const sampleGoals: SavingsGoal[] = [
     saved_amount: 80000,
     target_date: '2024-06-01',
     linked_account_id: 'acc-1',
-    linked_bill_ids: [],
     status: 'archived',
     previous_status: 'bought',
     completed_at: '2024-05-15T00:00:00Z',

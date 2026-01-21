@@ -51,7 +51,7 @@
   import { success, error as showError, addToast } from '../../stores/toast';
 
   // Components
-  import Drawer from './Drawer.svelte';
+  import Drawer from '../shared/Drawer.svelte';
   import PaymentSourceForm from './PaymentSourceForm.svelte';
   import PaymentSourceView from './PaymentSourceView.svelte';
   import BillForm from './BillForm.svelte';

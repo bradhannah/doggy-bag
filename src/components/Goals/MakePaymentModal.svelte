@@ -3,9 +3,11 @@
   import { apiClient } from '$lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import type { SavingsGoal } from '../../stores/savings-goals';
+  import Modal from '../shared/Modal.svelte';
 
   export let goal: SavingsGoal;
   export let onClose: () => void;
+  export let open = true;
 
   const dispatch = createEventDispatcher();
 
@@ -54,111 +56,64 @@
       minimumFractionDigits: 2,
     }).format(cents / 100);
   }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }
 </script>
 
-<div class="modal-overlay" on:click={onClose} on:keydown={handleKeydown} role="button" tabindex="0">
-  <div
-    class="modal-content"
-    on:click|stopPropagation
-    on:keydown|stopPropagation
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-  >
-    <h2 id="modal-title">Make a Payment</h2>
-    <p class="modal-subtitle">Add a one-time contribution to "{goal.name}"</p>
-
-    <form on:submit={handleSubmit}>
-      <div class="form-field">
-        <label for="amount">Amount</label>
-        <div class="input-with-prefix">
-          <span class="prefix">$</span>
-          <input
-            type="number"
-            id="amount"
-            bind:value={amountDollars}
-            placeholder="0.00"
-            min="0.01"
-            step="0.01"
-            required
-            autofocus
-          />
-        </div>
-      </div>
-
-      <div class="form-field">
-        <label for="paymentDate">Payment Date</label>
+<Modal
+  {open}
+  title="Make a Payment"
+  subtitle={`Add a one-time contribution to "${goal.name}"`}
+  {onClose}
+>
+  <form on:submit={handleSubmit}>
+    <div class="form-field">
+      <label for="amount">Amount</label>
+      <div class="input-with-prefix">
+        <span class="prefix">$</span>
         <input
-          type="date"
-          id="paymentDate"
-          bind:value={paymentDate}
-          min={minDate}
-          max={maxDate}
+          type="number"
+          id="amount"
+          bind:value={amountDollars}
+          placeholder="0.00"
+          min="0.01"
+          step="0.01"
           required
+          autofocus
         />
-        <span class="field-hint">Payments can only be dated within the current month</span>
       </div>
+    </div>
 
-      <div class="progress-preview">
-        <span class="preview-label">After this payment:</span>
-        <span class="preview-value">
-          {formatCurrency(goal.saved_amount + amountCents)} of {formatCurrency(goal.target_amount)}
-        </span>
-      </div>
+    <div class="form-field">
+      <label for="paymentDate">Payment Date</label>
+      <input
+        type="date"
+        id="paymentDate"
+        bind:value={paymentDate}
+        min={minDate}
+        max={maxDate}
+        required
+      />
+      <span class="field-hint">Payments can only be dated within the current month</span>
+    </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" on:click={onClose} disabled={submitting}>
-          Cancel
-        </button>
-        <button type="submit" class="btn-primary" disabled={!isValid || submitting}>
-          {submitting ? 'Adding...' : 'Add Payment'}
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+    <div class="progress-preview">
+      <span class="preview-label">After this payment:</span>
+      <span class="preview-value">
+        {formatCurrency(goal.saved_amount + amountCents)} of {formatCurrency(goal.target_amount)}
+      </span>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" on:click={onClose} disabled={submitting}>
+        Cancel
+      </button>
+      <button type="submit" class="btn-primary" disabled={!isValid || submitting}>
+        {submitting ? 'Adding...' : 'Add Payment'}
+      </button>
+    </div>
+  </form>
+</Modal>
 
 <style>
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--overlay-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: var(--bg-surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-default);
-    padding: var(--section-gap);
-    max-width: var(--modal-width-sm);
-    width: 90%;
-  }
-
-  .modal-content h2 {
-    margin: 0 0 var(--space-1) 0;
-    font-size: 1.25rem;
-    color: var(--text-primary);
-  }
-
-  .modal-subtitle {
-    margin: 0 0 var(--space-4) 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-  }
-
   .form-field {
     margin-bottom: var(--space-4);
   }

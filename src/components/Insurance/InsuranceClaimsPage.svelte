@@ -17,7 +17,7 @@
   import ClaimsList from './ClaimsList.svelte';
   import ClaimDetail from './ClaimDetail.svelte';
   import ClaimForm from './ClaimForm.svelte';
-  import Drawer from '../Setup/Drawer.svelte';
+  import Drawer from '../shared/Drawer.svelte';
 
   // Page state
   let selectedClaim: InsuranceClaim | null = null;

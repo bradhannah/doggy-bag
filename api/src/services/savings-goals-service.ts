@@ -8,10 +8,7 @@ export interface SavingsGoalsService {
   getById(id: string): Promise<SavingsGoal | null>;
   getByStatus(status: SavingsGoalStatus): Promise<SavingsGoal[]>;
   create(
-    data: Omit<
-      SavingsGoal,
-      'id' | 'created_at' | 'updated_at' | 'current_amount' | 'linked_bill_ids'
-    >
+    data: Omit<SavingsGoal, 'id' | 'created_at' | 'updated_at' | 'current_amount'>
   ): Promise<SavingsGoal>;
   update(
     id: string,
@@ -62,10 +59,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
   }
 
   public async create(
-    data: Omit<
-      SavingsGoal,
-      'id' | 'created_at' | 'updated_at' | 'current_amount' | 'linked_bill_ids'
-    >
+    data: Omit<SavingsGoal, 'id' | 'created_at' | 'updated_at' | 'current_amount'>
   ): Promise<SavingsGoal> {
     try {
       const goals = await this.getAll();
@@ -75,7 +69,6 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         ...data,
         id: crypto.randomUUID(),
         current_amount: 0,
-        linked_bill_ids: [],
         created_at: now,
         updated_at: now,
       };

@@ -44,7 +44,6 @@ describe('AdhocService', () => {
       current_amount: 20000,
       target_date: '2026-10-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'saving',
       notes: 'For the SUV',
       created_at: '2026-01-01T00:00:00.000Z',

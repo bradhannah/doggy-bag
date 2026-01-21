@@ -2,6 +2,16 @@
 // All entity interfaces, enums, and union types for the application
 
 // ============================================================================
+// Common Type Aliases
+// ============================================================================
+
+/** ISO date string in YYYY-MM-DD format */
+type DateString = string;
+
+/** ISO datetime string in full ISO 8601 format (e.g., 2024-01-15T10:30:00.000Z) */
+type ISODateTimeString = string;
+
+// ============================================================================
 // Enums
 // ============================================================================
 
@@ -257,7 +267,6 @@ interface SavingsGoal {
   current_amount: number; // Cents (calculated dynamically from closed occurrences)
   target_date: string; // YYYY-MM-DD
   linked_account_id: string; // Reference to PaymentSource (savings account)
-  linked_bill_ids: string[]; // DEPRECATED: Keep for migration, bills now link via goal_id
   status: SavingsGoalStatus;
   previous_status?: 'bought' | 'abandoned'; // Status before archiving (for unarchive)
   paused_at?: string; // ISO timestamp when goal was paused
@@ -604,6 +613,10 @@ interface ProjectionResponse {
 // ============================================================================
 
 export type {
+  // Common Type Aliases
+  DateString,
+  ISODateTimeString,
+  // Enums
   BillingPeriod,
   PaymentSourceType,
   CategoryType,

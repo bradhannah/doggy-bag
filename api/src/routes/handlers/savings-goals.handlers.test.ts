@@ -35,7 +35,6 @@ describe('SavingsGoalsHandlers', () => {
       current_amount: 20000,
       target_date: '2026-12-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'saving',
       created_at: '2025-01-01T00:00:00.000Z', // Created before test payment months
       updated_at: '2026-01-01T00:00:00.000Z',
@@ -47,7 +46,6 @@ describe('SavingsGoalsHandlers', () => {
       current_amount: 0,
       target_date: '2026-12-01',
       linked_account_id: '', // No linked account
-      linked_bill_ids: [],
       status: 'saving',
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
@@ -59,7 +57,6 @@ describe('SavingsGoalsHandlers', () => {
       current_amount: 50000,
       target_date: '2025-12-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'bought',
       completed_at: '2025-11-15T00:00:00.000Z',
       created_at: '2025-06-01T00:00:00.000Z',
@@ -72,7 +69,6 @@ describe('SavingsGoalsHandlers', () => {
       current_amount: 30000,
       target_date: '2025-06-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'archived',
       previous_status: 'bought',
       completed_at: '2025-05-15T00:00:00.000Z',

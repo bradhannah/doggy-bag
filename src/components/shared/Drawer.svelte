@@ -8,7 +8,7 @@
    * @prop isDirty - Optional callback to check if form has unsaved changes
    * @prop onSave - Optional callback to save changes (used with dirty check)
    */
-  import UnsavedChangesDialog from '../shared/UnsavedChangesDialog.svelte';
+  import UnsavedChangesDialog from './UnsavedChangesDialog.svelte';
 
   export let isOpen = false;
   export let title = '';

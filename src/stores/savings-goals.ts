@@ -19,7 +19,6 @@ export interface SavingsGoal {
   saved_amount: number; // Cents - calculated from closed bill occurrences
   target_date: string; // YYYY-MM-DD
   linked_account_id: string; // Reference to PaymentSource
-  linked_bill_ids: string[]; // DEPRECATED - bills now link via goal_id
   status: SavingsGoalStatus;
   paused_at?: string; // ISO timestamp when goal was paused
   completed_at?: string; // ISO timestamp when goal was bought/abandoned

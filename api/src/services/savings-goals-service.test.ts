@@ -20,7 +20,6 @@ describe('SavingsGoalsService', () => {
       current_amount: 20000, // $200.00 saved so far
       target_date: '2026-10-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'saving',
       notes: 'For the SUV',
       created_at: '2026-01-01T00:00:00.000Z',
@@ -33,7 +32,6 @@ describe('SavingsGoalsService', () => {
       current_amount: 100000, // $1,000.00
       target_date: '2026-07-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'paused',
       paused_at: '2026-01-15T00:00:00.000Z',
       created_at: '2026-01-01T00:00:00.000Z',
@@ -46,7 +44,6 @@ describe('SavingsGoalsService', () => {
       current_amount: 150000,
       target_date: '2025-12-01',
       linked_account_id: 'ps-savings-001',
-      linked_bill_ids: [],
       status: 'bought',
       completed_at: '2025-11-15T00:00:00.000Z',
       created_at: '2025-06-01T00:00:00.000Z',
@@ -146,7 +143,6 @@ describe('SavingsGoalsService', () => {
       expect(newGoal.id).toBeDefined();
       expect(newGoal.name).toBe('Emergency Fund');
       expect(newGoal.current_amount).toBe(0);
-      expect(newGoal.linked_bill_ids).toEqual([]);
       expect(newGoal.status).toBe('saving');
     });
 

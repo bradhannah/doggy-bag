@@ -24,7 +24,6 @@ interface SavingsGoalWithCalculations {
   saved_amount: number; // Calculated from closed bill occurrences
   target_date: string;
   linked_account_id: string;
-  linked_bill_ids: string[];
   status: SavingsGoalStatus;
   previous_status?: 'bought' | 'abandoned'; // Status before archiving
   paused_at?: string;
