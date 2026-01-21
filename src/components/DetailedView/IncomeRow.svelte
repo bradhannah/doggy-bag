@@ -140,6 +140,10 @@
         }
       );
 
+      // Optimistic update - mark as closed with the new total received
+      const newTotalReceived = totalReceived + event.detail.amount;
+      detailedMonth.updateIncomeClosedStatus(income.id, true, newTotalReceived, receiptDate);
+
       dispatch('closed', { id: income.id, type: 'income' });
       success('Income received and closed');
     } catch (err) {
@@ -227,6 +231,10 @@
           notes: event.detail.notes,
         }
       );
+
+      // Optimistic update - mark as closed
+      detailedMonth.updateIncomeClosedStatus(income.id, true, undefined, event.detail.closedDate);
+
       success('Income closed');
       dispatch('closed', { id: income.id, type: 'income' });
     } catch (err) {
@@ -386,6 +394,14 @@
 
   function handleTransactionsUpdated() {
     dispatch('refresh');
+  }
+
+  function handleTransactionsRequestClose(
+    event: CustomEvent<{ paymentDate: string; notes: string }>
+  ) {
+    // Open CloseTransactionModal when user clicks "Add & Close" or "Close Without Adding"
+    closeDate = event.detail.paymentDate || new Date().toISOString().split('T')[0];
+    showCloseModal = true;
   }
 
   function confirmDeleteIncome() {
@@ -664,6 +680,7 @@
   occurrenceId={primaryOccurrenceId}
   occurrenceNotes={primaryOccurrenceNotes}
   on:updated={handleTransactionsUpdated}
+  on:requestClose={handleTransactionsRequestClose}
 />
 
 <!-- Make Regular Drawer (for ad-hoc items) -->

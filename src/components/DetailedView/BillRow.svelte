@@ -149,6 +149,10 @@
         }
       );
 
+      // Optimistic update - mark as closed with the new total paid
+      const newTotalPaid = bill.total_paid + event.detail.amount;
+      detailedMonth.updateBillClosedStatus(bill.id, true, newTotalPaid, paymentDate);
+
       dispatch('closed', { id: bill.id, type: 'bill' });
       success('Bill paid and closed');
     } catch (err) {
@@ -248,6 +252,10 @@
           notes: event.detail.notes,
         }
       );
+
+      // Optimistic update - mark as closed
+      detailedMonth.updateBillClosedStatus(bill.id, true, undefined, event.detail.closedDate);
+
       success('Bill closed');
       dispatch('closed', { id: bill.id, type: 'bill' });
     } catch (err) {
@@ -411,6 +419,14 @@
       ccSyncPaymentAmount = event.detail.paymentAmount;
       showCCBalanceSyncModal = true;
     }
+  }
+
+  function handleTransactionsRequestClose(
+    event: CustomEvent<{ paymentDate: string; notes: string }>
+  ) {
+    // Open CloseTransactionModal when user clicks "Add & Close" or "Close Without Adding"
+    closeDate = event.detail.paymentDate || new Date().toISOString().split('T')[0];
+    showCloseModal = true;
   }
 
   function handleCCSyncUpdated() {
@@ -708,6 +724,7 @@
   occurrenceNotes={primaryOccurrenceNotes}
   {isPayoffBill}
   on:updated={handleTransactionsUpdated}
+  on:requestClose={handleTransactionsRequestClose}
 />
 
 <!-- Make Regular Drawer (for ad-hoc items) -->
