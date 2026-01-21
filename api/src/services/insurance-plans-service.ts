@@ -31,8 +31,8 @@ export class InsurancePlansServiceImpl implements InsurancePlansService {
   public async getAll(): Promise<InsurancePlan[]> {
     try {
       const plans = (await this.storage.readJSON<InsurancePlan[]>(STORAGE_PATH)) || [];
-      // Sort by priority (lower number = higher priority)
-      return plans.sort((a, b) => a.priority - b.priority);
+      // Sort by name alphabetically
+      return plans.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
       console.error('[InsurancePlansService] Failed to load plans:', error);
       return [];
@@ -65,14 +65,6 @@ export class InsurancePlansServiceImpl implements InsurancePlansService {
 
       const plans = await this.getAll();
 
-      // Check for duplicate priority among active plans
-      const activePlansWithSamePriority = plans.filter(
-        (p) => p.is_active && p.priority === data.priority
-      );
-      if (activePlansWithSamePriority.length > 0) {
-        throw new Error(`Priority ${data.priority} is already in use by another active plan`);
-      }
-
       const now = new Date().toISOString();
       const newPlan: InsurancePlan = {
         ...data,
@@ -104,21 +96,6 @@ export class InsurancePlansServiceImpl implements InsurancePlansService {
       if (index === -1) {
         console.warn(`[InsurancePlansService] Plan ${id} not found`);
         return null;
-      }
-
-      // Check for duplicate priority among other active plans
-      if (updates.priority !== undefined) {
-        const wouldBeActive = updates.is_active ?? plans[index].is_active;
-        if (wouldBeActive) {
-          const conflictingPlan = plans.find(
-            (p) => p.id !== id && p.is_active && p.priority === updates.priority
-          );
-          if (conflictingPlan) {
-            throw new Error(
-              `Priority ${updates.priority} is already in use by another active plan`
-            );
-          }
-        }
       }
 
       const now = new Date().toISOString();
@@ -171,20 +148,6 @@ export class InsurancePlansServiceImpl implements InsurancePlansService {
     // Name is required and must be non-empty
     if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
       errors.push('Name is required and must be non-empty');
-    }
-
-    // Priority must be a positive integer
-    if (data.priority !== undefined) {
-      if (
-        typeof data.priority !== 'number' ||
-        data.priority < 1 ||
-        !Number.isInteger(data.priority)
-      ) {
-        errors.push('Priority must be a positive integer (1, 2, 3, ...)');
-      }
-    } else if (!('id' in data)) {
-      // Priority is required for new plans
-      errors.push('Priority is required');
     }
 
     // Validate portal_url if provided

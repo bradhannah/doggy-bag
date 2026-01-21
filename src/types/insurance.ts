@@ -21,7 +21,6 @@ export interface InsurancePlan {
   policy_number?: string;
   member_id?: string;
   owner?: string;
-  priority: number;
   portal_url?: string;
   notes?: string;
   is_active: boolean;
@@ -58,7 +57,6 @@ export interface PlanSnapshot {
   policy_number?: string;
   member_id?: string;
   owner?: string;
-  priority: number;
   portal_url?: string;
 }
 

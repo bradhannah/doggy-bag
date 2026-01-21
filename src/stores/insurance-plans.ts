@@ -39,7 +39,6 @@ export interface InsurancePlanData {
   policy_number?: string;
   member_id?: string;
   owner?: string;
-  priority: number;
   portal_url?: string;
   notes?: string;
 }

@@ -5,7 +5,9 @@
   import type { ClaimSubmission, SubmissionStatus } from '../../types/insurance';
   import { updateSubmission, deleteSubmission } from '../../stores/insurance-claims';
   import { success, error as showError } from '../../stores/toast';
+  import { isTauri } from '../../stores/settings';
   import { createEventDispatcher } from 'svelte';
+  import ConfirmDialog from '../shared/ConfirmDialog.svelte';
 
   export let submission: ClaimSubmission;
   export let claimId: string;
@@ -13,8 +15,17 @@
 
   const dispatch = createEventDispatcher<{ updated: void; deleted: void }>();
 
+  // Awaiting previous submissions should be read-only
+  $: isAwaitingPrevious = submission.status === 'awaiting_previous';
+  $: effectiveReadonly = readonly || isAwaitingPrevious;
+
+  // Check if portal URL is available
+  $: hasPortalUrl = !!submission.plan_snapshot.portal_url;
+
   let editing = false;
   let saving = false;
+  let showDeleteConfirm = false;
+  let deleting = false;
 
   // Edit form state
   let editStatus: SubmissionStatus = submission.status;
@@ -35,6 +46,8 @@
         return 'var(--success)';
       case 'denied':
         return 'var(--error)';
+      case 'awaiting_previous':
+        return 'var(--text-tertiary)';
       default:
         return 'var(--text-primary)';
     }
@@ -50,6 +63,8 @@
         return 'Approved';
       case 'denied':
         return 'Denied';
+      case 'awaiting_previous':
+        return 'Awaiting Previous';
       default:
         return status;
     }
@@ -148,10 +163,12 @@
     }
   }
 
-  async function handleDelete() {
-    if (!confirm('Delete this submission?')) return;
+  function handleDelete() {
+    showDeleteConfirm = true;
+  }
 
-    saving = true;
+  async function confirmDelete() {
+    deleting = true;
     try {
       await deleteSubmission(claimId, submission.id);
       success('Submission deleted');
@@ -159,12 +176,34 @@
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to delete submission');
     } finally {
-      saving = false;
+      deleting = false;
+      showDeleteConfirm = false;
+    }
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
+  }
+
+  async function openPortal() {
+    const url = submission.plan_snapshot.portal_url;
+    if (!url) return;
+
+    try {
+      if (isTauri()) {
+        const { openUrl } = await import('@tauri-apps/plugin-opener');
+        await openUrl(url);
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch (e) {
+      showError('Failed to open portal');
+      console.error('Failed to open portal URL:', e);
     }
   }
 </script>
 
-<div class="submission-card">
+<div class="submission-card" class:awaiting={submission.status === 'awaiting_previous'}>
   <div class="submission-header">
     <div class="plan-info">
       <span class="plan-name">{submission.plan_snapshot.name}</span>
@@ -292,10 +331,44 @@
             <span class="detail-value">{submission.notes}</span>
           </div>
         {/if}
+        {#if submission.status === 'awaiting_previous'}
+          <p class="awaiting-message">Waiting for previous plan to be resolved</p>
+        {/if}
       </div>
 
-      {#if !readonly}
-        <div class="submission-actions">
+      <div class="submission-actions">
+        {#if hasPortalUrl}
+          <button class="btn-portal" on:click={openPortal} title="Open insurance portal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <polyline
+                points="15 3 21 3 21 9"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <line
+                x1="10"
+                y1="14"
+                x2="21"
+                y2="3"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            Portal
+          </button>
+        {/if}
+        {#if !effectiveReadonly}
           <button class="btn-icon" on:click={startEdit} title="Edit submission">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
@@ -314,7 +387,12 @@
               />
             </svg>
           </button>
-          <button class="btn-icon danger" on:click={handleDelete} title="Delete submission">
+          <button
+            class="btn-icon danger"
+            on:click={handleDelete}
+            disabled={deleting}
+            title="Delete submission"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" />
               <path
@@ -326,11 +404,21 @@
               />
             </svg>
           </button>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
   {/if}
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<ConfirmDialog
+  open={showDeleteConfirm}
+  title="Delete Submission"
+  message="Delete this submission? This action cannot be undone."
+  confirmText={deleting ? 'Deleting...' : 'Delete'}
+  on:confirm={confirmDelete}
+  on:cancel={cancelDelete}
+/>
 
 <style>
   .submission-card {
@@ -440,6 +528,27 @@
   .btn-icon.danger:hover {
     background: var(--error-muted);
     color: var(--error);
+  }
+
+  .btn-portal {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 28px;
+    padding: 0 var(--space-2);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-portal:hover {
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   /* Edit form styles */
@@ -586,5 +695,21 @@
 
   .btn-secondary:hover:not(:disabled) {
     background: var(--bg-hover);
+  }
+
+  /* Awaiting previous state styling */
+  .submission-card.awaiting {
+    opacity: 0.6;
+    border-style: dashed;
+  }
+
+  .awaiting-message {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-style: italic;
   }
 </style>

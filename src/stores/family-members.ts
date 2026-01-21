@@ -37,6 +37,7 @@ export const inactiveMembers = derived(familyMembers, (members) =>
 // Create data type
 export interface FamilyMemberData {
   name: string;
+  plans?: string[];
 }
 
 export async function loadFamilyMembers() {

@@ -88,24 +88,24 @@
 
 **Goal**: Per-member plan ordering.
 
-- [ ] T037 [US8] Update `src/components/Setup/FamilyMemberForm.svelte` to add "Insurance Plans" reorderable list
-- [ ] T038 [US8] Update `src/components/Setup/InsurancePlanForm.svelte` to remove "Priority" field
-- [ ] T039 [US8] Update `api/src/services/insurance-claims-service.ts` `create` method to auto-generate submissions based on member plans
+- [x] T037 [US8] Update `src/components/Setup/FamilyMemberForm.svelte` to add "Insurance Plans" reorderable list
+- [x] T038 [US8] Update `src/components/Setup/InsurancePlanForm.svelte` to remove "Priority" field
+- [x] T039 [US8] Update `api/src/services/insurance-claims-service.ts` `create` method to auto-generate submissions based on member plans
 
 ## Phase 10: User Story 9 - Submission Waterfall (P2)
 
 **Goal**: Auto-calculate secondary claims.
 
-- [ ] T040 [US9] Update `api/src/services/insurance-claims-service.ts` `updateSubmission` to handle cascade logic
-- [ ] T041 [US9] Update `src/components/Insurance/SubmissionRow.svelte` to display 'Awaiting Previous' status distinctly
-- [ ] T042 [US9] Disable editing for 'Awaiting Previous' submissions in UI
+- [x] T040 [US9] Update `api/src/services/insurance-claims-service.ts` `updateSubmission` to handle cascade logic
+- [x] T041 [US9] Update `src/components/Insurance/SubmissionCard.svelte` to display 'Awaiting Previous' status distinctly
+- [x] T042 [US9] Disable editing for 'Awaiting Previous' submissions in UI
 
 ## Phase 11: User Story 10 - Easy Portal Access (P2)
 
 **Goal**: Open portals in external browser.
 
-- [ ] T043 [US10] Update `src/components/Insurance/SubmissionRow.svelte` to add "Go to Portal" button
-- [ ] T044 [US10] Implement `open(url)` call using `@tauri-apps/plugin-opener` in the button handler
+- [x] T043 [US10] Update `src/components/Insurance/SubmissionCard.svelte` to add "Go to Portal" button
+- [x] T044 [US10] Implement `open(url)` call using `@tauri-apps/plugin-opener` in the button handler
 
 ## Phase 12: Polish
 
