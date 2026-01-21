@@ -165,7 +165,15 @@
         throw new Error('Missing occurrence for payment updates. Refresh and try again.');
       }
 
-      await apiClient.post(endpoint, { amount: amountCents, date });
+      const response = await apiClient.post(endpoint, { amount: amountCents, date });
+
+      // Optimistic update - add payment to store immediately
+      const newPayment = {
+        id: response.id || crypto.randomUUID(),
+        amount: amountCents,
+        date,
+      };
+      detailedMonth.addPaymentToOccurrence(instanceId, occurrenceId, newPayment, type);
 
       success(`${typeLabel} added`);
       dispatch('updated', { paymentAmount: amountCents });
@@ -213,7 +221,15 @@
         throw new Error('Missing occurrence for payment updates. Refresh and try again.');
       }
 
-      await apiClient.post(endpoint, { amount: amountCents, date });
+      const response = await apiClient.post(endpoint, { amount: amountCents, date });
+
+      // Optimistic update - add payment to store immediately
+      const newPayment = {
+        id: response.id || crypto.randomUUID(),
+        amount: amountCents,
+        date,
+      };
+      detailedMonth.addPaymentToOccurrence(instanceId, occurrenceId, newPayment, type);
 
       success(`${typeLabel} added`);
       dispatch('updated', { paymentAmount: amountCents });
@@ -245,6 +261,10 @@
       }
 
       await apiClient.deletePath(endpoint);
+
+      // Optimistic update - remove payment from store immediately
+      detailedMonth.removePaymentFromOccurrence(instanceId, occurrenceId, paymentId, type);
+
       success(`${typeLabel} deleted`);
       dispatch('updated');
     } catch (err) {

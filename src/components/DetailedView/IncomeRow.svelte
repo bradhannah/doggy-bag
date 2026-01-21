@@ -393,7 +393,8 @@
   }
 
   function handleTransactionsUpdated() {
-    dispatch('refresh');
+    // Optimistic updates are now handled in the drawer, so we don't need to refresh
+    // for regular payment add/delete operations. The store is updated immediately.
   }
 
   function handleTransactionsRequestClose(

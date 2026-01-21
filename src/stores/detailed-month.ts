@@ -447,6 +447,212 @@ function createDetailedMonthStore() {
       });
     },
 
+    // Optimistic update for adding a payment to an occurrence
+    addPaymentToOccurrence(
+      instanceId: string,
+      occurrenceId: string,
+      payment: Payment,
+      type: 'bill' | 'income' = 'bill'
+    ): void {
+      update((state) => {
+        if (!state.data) return state;
+
+        if (type === 'bill') {
+          const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
+            const billItems = section.items as BillInstanceDetailed[];
+            const newItems = billItems.map((item) => {
+              if (item.id === instanceId) {
+                const newOccurrences = item.occurrences.map((occ) => {
+                  if (occ.id === occurrenceId) {
+                    return {
+                      ...occ,
+                      payments: [...occ.payments, payment],
+                    };
+                  }
+                  return occ;
+                });
+                const newTotalPaid = item.total_paid + payment.amount;
+                return {
+                  ...item,
+                  occurrences: newOccurrences,
+                  total_paid: newTotalPaid,
+                  remaining: Math.max(0, item.expected_amount - newTotalPaid),
+                };
+              }
+              return item;
+            });
+
+            // Recalculate subtotal
+            const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+            const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
+
+            return {
+              ...section,
+              items: newItems,
+              subtotal: { expected, actual },
+            };
+          });
+
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              billSections: newBillSections,
+            },
+          };
+        } else {
+          const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
+            const incomeItems = section.items as IncomeInstanceDetailed[];
+            const newItems = incomeItems.map((item) => {
+              if (item.id === instanceId) {
+                const newOccurrences = item.occurrences.map((occ) => {
+                  if (occ.id === occurrenceId) {
+                    return {
+                      ...occ,
+                      payments: [...occ.payments, payment],
+                    };
+                  }
+                  return occ;
+                });
+                const newTotalReceived = item.total_received + payment.amount;
+                return {
+                  ...item,
+                  occurrences: newOccurrences,
+                  total_received: newTotalReceived,
+                  remaining: Math.max(0, item.expected_amount - newTotalReceived),
+                };
+              }
+              return item;
+            });
+
+            // Recalculate subtotal
+            const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+            const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
+
+            return {
+              ...section,
+              items: newItems,
+              subtotal: { expected, actual },
+            };
+          });
+
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              incomeSections: newIncomeSections,
+            },
+          };
+        }
+      });
+    },
+
+    // Optimistic update for removing a payment from an occurrence
+    removePaymentFromOccurrence(
+      instanceId: string,
+      occurrenceId: string,
+      paymentId: string,
+      type: 'bill' | 'income' = 'bill'
+    ): void {
+      update((state) => {
+        if (!state.data) return state;
+
+        if (type === 'bill') {
+          const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
+            const billItems = section.items as BillInstanceDetailed[];
+            const newItems = billItems.map((item) => {
+              if (item.id === instanceId) {
+                let removedAmount = 0;
+                const newOccurrences = item.occurrences.map((occ) => {
+                  if (occ.id === occurrenceId) {
+                    const paymentToRemove = occ.payments.find((p) => p.id === paymentId);
+                    removedAmount = paymentToRemove?.amount ?? 0;
+                    return {
+                      ...occ,
+                      payments: occ.payments.filter((p) => p.id !== paymentId),
+                    };
+                  }
+                  return occ;
+                });
+                const newTotalPaid = item.total_paid - removedAmount;
+                return {
+                  ...item,
+                  occurrences: newOccurrences,
+                  total_paid: newTotalPaid,
+                  remaining: Math.max(0, item.expected_amount - newTotalPaid),
+                };
+              }
+              return item;
+            });
+
+            // Recalculate subtotal
+            const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+            const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
+
+            return {
+              ...section,
+              items: newItems,
+              subtotal: { expected, actual },
+            };
+          });
+
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              billSections: newBillSections,
+            },
+          };
+        } else {
+          const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
+            const incomeItems = section.items as IncomeInstanceDetailed[];
+            const newItems = incomeItems.map((item) => {
+              if (item.id === instanceId) {
+                let removedAmount = 0;
+                const newOccurrences = item.occurrences.map((occ) => {
+                  if (occ.id === occurrenceId) {
+                    const paymentToRemove = occ.payments.find((p) => p.id === paymentId);
+                    removedAmount = paymentToRemove?.amount ?? 0;
+                    return {
+                      ...occ,
+                      payments: occ.payments.filter((p) => p.id !== paymentId),
+                    };
+                  }
+                  return occ;
+                });
+                const newTotalReceived = item.total_received - removedAmount;
+                return {
+                  ...item,
+                  occurrences: newOccurrences,
+                  total_received: newTotalReceived,
+                  remaining: Math.max(0, item.expected_amount - newTotalReceived),
+                };
+              }
+              return item;
+            });
+
+            // Recalculate subtotal
+            const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+            const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
+
+            return {
+              ...section,
+              items: newItems,
+              subtotal: { expected, actual },
+            };
+          });
+
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              incomeSections: newIncomeSections,
+            },
+          };
+        }
+      });
+    },
+
     // Optimistic update for occurrence notes (doesn't trigger full refresh)
     updateOccurrenceNotes(
       instanceId: string,

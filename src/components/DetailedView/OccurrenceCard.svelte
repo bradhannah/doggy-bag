@@ -76,9 +76,9 @@
   }
 
   function handleTransactionsUpdated() {
-    showTransactionsDrawer = false;
-    selectedOccurrence = null;
-    dispatch('refresh');
+    // Optimistic updates are now handled in the drawer, so we don't need to refresh
+    // for regular payment add/delete operations. The store is updated immediately.
+    // Keep drawer open so user can continue managing payments
   }
 
   function handleTransactionsRequestClose(

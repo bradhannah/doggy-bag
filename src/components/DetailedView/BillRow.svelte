@@ -412,7 +412,8 @@
   }
 
   function handleTransactionsUpdated(event: CustomEvent<{ paymentAmount?: number }>) {
-    dispatch('refresh');
+    // Optimistic updates are now handled in the drawer, so we don't need to refresh
+    // for regular payment add/delete operations. The store is updated immediately.
 
     // If this is a payoff bill and we got a payment amount, show CC sync modal
     if (isPayoffBill && payoffSourceId && event.detail?.paymentAmount) {
