@@ -31,13 +31,13 @@
     incomeCategories,
   } from '../../stores/categories';
   import {
-    insurancePlansStore,
+    insurancePlansStore as _insurancePlansStore,
     loadInsurancePlans,
     deleteInsurancePlan,
     insurancePlans,
   } from '../../stores/insurance-plans';
   import {
-    insuranceCategoriesStore,
+    insuranceCategoriesStore as _insuranceCategoriesStore,
     loadInsuranceCategories,
     deleteInsuranceCategory,
     insuranceCategories,
@@ -51,7 +51,7 @@
   import { success, error as showError, addToast } from '../../stores/toast';
 
   // Components
-  import Drawer from './Drawer.svelte';
+  import Drawer from '../shared/Drawer.svelte';
   import PaymentSourceForm from './PaymentSourceForm.svelte';
   import PaymentSourceView from './PaymentSourceView.svelte';
   import BillForm from './BillForm.svelte';

@@ -17,7 +17,6 @@ describe('MonthsService - syncMetadata', () => {
     id: 'ps-checking-001',
     name: 'Checking',
     type: 'bank_account',
-    balance: 500000,
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
@@ -115,7 +114,7 @@ describe('MonthsService - syncMetadata', () => {
         name: 'Rent',
         billing_period: 'monthly',
         expected_amount: 150000,
-        actual_amount: null,
+        month: testMonth,
         occurrences: [
           {
             id: 'occ-1',
@@ -124,16 +123,17 @@ describe('MonthsService - syncMetadata', () => {
             expected_amount: 150000,
             is_closed: false,
             payments: [],
+            closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
           },
         ],
-        occurrence_count: 1,
-        payments: [],
+        is_default: true,
+        is_closed: false,
         payment_source_id: 'ps-checking-001',
         category_id: 'cat-housing-001',
-        is_active: true,
         is_adhoc: false,
         created_at: '2025-01-01T00:00:00.000Z',
         updated_at: '2025-01-01T00:00:00.000Z',
@@ -145,7 +145,7 @@ describe('MonthsService - syncMetadata', () => {
         name: 'Electric',
         billing_period: 'monthly',
         expected_amount: 15000,
-        actual_amount: null,
+        month: testMonth,
         occurrences: [
           {
             id: 'occ-2',
@@ -154,16 +154,17 @@ describe('MonthsService - syncMetadata', () => {
             expected_amount: 15000,
             is_closed: false,
             payments: [],
+            closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
           },
         ],
-        occurrence_count: 1,
-        payments: [],
+        is_default: true,
+        is_closed: false,
         payment_source_id: 'ps-checking-001',
         category_id: 'cat-housing-001',
-        is_active: true,
         is_adhoc: false,
         created_at: '2025-01-01T00:00:00.000Z',
         updated_at: '2025-01-01T00:00:00.000Z',
@@ -177,7 +178,7 @@ describe('MonthsService - syncMetadata', () => {
         name: 'Salary',
         billing_period: 'bi_weekly',
         expected_amount: 500000,
-        actual_amount: null,
+        month: testMonth,
         occurrences: [
           {
             id: 'occ-i1',
@@ -186,6 +187,8 @@ describe('MonthsService - syncMetadata', () => {
             expected_amount: 250000,
             is_closed: false,
             payments: [],
+            closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -197,16 +200,17 @@ describe('MonthsService - syncMetadata', () => {
             expected_amount: 250000,
             is_closed: false,
             payments: [],
+            closed_date: undefined,
+            notes: undefined,
             is_adhoc: false,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
           },
         ],
-        occurrence_count: 2,
-        payments: [],
+        is_default: true,
+        is_closed: false,
         payment_source_id: 'ps-checking-001',
         category_id: 'cat-income-001',
-        is_active: true,
         is_adhoc: false,
         created_at: '2025-01-01T00:00:00.000Z',
         updated_at: '2025-01-01T00:00:00.000Z',
@@ -304,7 +308,7 @@ describe('MonthsService - syncMetadata', () => {
     test('does not update instances when metadata has not changed', async () => {
       // First sync - should update
       const firstResult = await service.syncMetadata(testMonth);
-      const firstUpdatedAt = firstResult.updated_at;
+      const _firstUpdatedAt = firstResult.updated_at;
 
       // Wait a tiny bit to ensure timestamp would change if modified
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -334,7 +338,7 @@ describe('MonthsService - syncMetadata', () => {
             actual_amount: null,
             occurrences: [],
             occurrence_count: 0,
-            payments: [],
+            closed_date: undefined,
             payment_source_id: 'ps-checking-001',
             category_id: 'cat-housing-001',
             is_active: true,
@@ -356,6 +360,7 @@ describe('MonthsService - syncMetadata', () => {
       const adhocInstance = result.bill_instances.find((bi) => bi.id === 'bi-adhoc-001');
       expect(adhocInstance).toBeDefined();
       expect(adhocInstance?.is_adhoc).toBe(true);
+      expect(adhocInstance?.occurrences.length).toBe(1);
       // Should have no metadata (source doesn't exist)
       expect(adhocInstance?.metadata).toBeUndefined();
     });

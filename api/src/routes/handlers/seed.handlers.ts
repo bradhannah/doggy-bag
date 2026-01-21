@@ -14,9 +14,9 @@ const categoriesService = new CategoriesServiceImpl();
 
 // Default payment sources
 const DEFAULT_PAYMENT_SOURCES = [
-  { name: 'Main Checking', type: 'bank_account' as const, balance: 500000 }, // $5,000
-  { name: 'Credit Card', type: 'credit_card' as const, balance: -120000 }, // -$1,200 debt
-  { name: 'Cash', type: 'cash' as const, balance: 30000 }, // $300
+  { name: 'Main Checking', type: 'bank_account' as const },
+  { name: 'Credit Card', type: 'credit_card' as const },
+  { name: 'Cash', type: 'cash' as const },
 ];
 
 // Default bill categories (with sort_order and color for 002-detailed-monthly-view)

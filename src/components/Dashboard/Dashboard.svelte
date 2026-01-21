@@ -15,15 +15,12 @@
     loadPaymentSources,
     paymentSources,
     isDebtAccount,
-    formatBalanceForDisplay,
     type PaymentSource,
   } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount } from 'svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
-
-  const dispatch = createEventDispatcher<{ refresh: void }>();
 
   // Refresh function that can be called externally
   export function refresh() {
@@ -80,7 +77,7 @@
     }).format(dollars);
   }
 
-  // Types for items with occurrences and payments
+  // Types for items with occurrences
   interface Payment {
     amount: number;
   }
@@ -91,21 +88,15 @@
 
   interface ItemWithOccurrences {
     occurrences?: Occurrence[];
-    payments?: Payment[];
   }
 
   // Helper to sum payments from occurrences
   function sumOccurrencePayments(item: ItemWithOccurrences): number {
-    const occPayments = (item.occurrences || []).reduce(
+    return (item.occurrences || []).reduce(
       (oSum: number, occ: Occurrence) =>
         oSum + (occ.payments || []).reduce((pSum: number, p: Payment) => pSum + p.amount, 0),
       0
     );
-    const legacyPayments = (item.payments || []).reduce(
-      (pSum: number, p: Payment) => pSum + p.amount,
-      0
-    );
-    return occPayments + legacyPayments;
   }
 
   // Type for bill/income instances with expected_amount
@@ -113,7 +104,6 @@
     expected_amount?: number;
     amount?: number;
     occurrences?: Occurrence[];
-    payments?: Payment[];
     is_payoff_bill?: boolean;
     payoff_source_id?: string;
   }
@@ -167,8 +157,8 @@
   });
 
   $: totalCCPayoffs = ccPayoffs.reduce((sum, cc) => sum + cc.balance, 0);
-  $: totalCCPaid = ccPayoffs.reduce((sum, cc) => sum + cc.paid, 0);
-  $: totalCCRemaining = ccPayoffs.reduce((sum, cc) => sum + cc.remaining, 0);
+  $: _totalCCPaid = ccPayoffs.reduce((sum, cc) => sum + cc.paid, 0);
+  $: _totalCCRemaining = ccPayoffs.reduce((sum, cc) => sum + cc.remaining, 0);
 
   // Adjacent month data
   interface MonthSummary {
@@ -329,7 +319,8 @@
     const _sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const billsDueSoon = $billInstances.filter((b) => {
-      if (b.is_paid) return false;
+      const isClosed = (b as { is_closed?: boolean }).is_closed ?? false;
+      if (isClosed) return false;
       // If bill has expected_date, check if it's within 7 days
       // For now, we don't have expected_date in the basic instance, so skip this
       return false;
@@ -428,20 +419,20 @@
   // Only asset accounts for Starting Cash (no debt)
   $: assetAccounts = regularAccounts.filter((ps: PaymentSource) => !isDebtAccount(ps.type));
 
-  // Get balance for a payment source (use month-specific balance or fall back to default)
-  function getBalance(source: PaymentSource): number {
-    return $bankBalances[source.id] ?? source.balance;
+  // Get balance for a payment source (month-specific only)
+  function getBalance(source: PaymentSource): number | null {
+    return $bankBalances[source.id] ?? null;
   }
 
   // Calculate starting cash total
-  $: totalStartingCash = assetAccounts.reduce((sum, ps) => sum + getBalance(ps), 0);
+  $: totalStartingCash = assetAccounts.reduce((sum, ps) => sum + (getBalance(ps) ?? 0), 0);
 
   // API-driven leftover values (guaranteed to match Details sidebar)
   $: apiLeftover = $leftoverSummary?.leftover ?? 0;
   $: apiBankBalances = $leftoverSummary?.bankBalances ?? 0;
   $: apiRemainingIncome = $leftoverSummary?.remainingIncome ?? 0;
   $: apiRemainingExpenses = $leftoverSummary?.remainingExpenses ?? 0;
-  $: apiIsValid = $leftoverSummary?.isValid ?? false;
+  $: _apiIsValid = $leftoverSummary?.isValid ?? false;
   $: isPositive = apiLeftover >= 0;
 </script>
 
@@ -515,7 +506,7 @@
             <div class="item-row">
               <span class="item-name">{account.name}</span>
               <span class="item-dots"></span>
-              <span class="item-amount">{formatCurrency(getBalance(account))}</span>
+              <span class="item-amount">{formatCurrency(getBalance(account) ?? 0)}</span>
             </div>
           {/each}
           {#if assetAccounts.length === 0}

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { payments } from '../../stores/payments';
+  import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import Drawer from '../shared/Drawer.svelte';
 
   export let open = false;
   export let month: string;
@@ -9,6 +10,7 @@
   export let billName: string = '';
   export let expectedAmount: number = 0;
   export let totalPaid: number = 0;
+  export let occurrenceId: string | undefined = undefined;
 
   const dispatch = createEventDispatcher();
 
@@ -67,7 +69,17 @@
     error = '';
 
     try {
-      await payments.addPayment(month, billInstanceId, amountCents, date);
+      if (!occurrenceId) {
+        throw new Error('Missing occurrence for payment. Refresh and try again.');
+      }
+
+      await apiClient.post(
+        `/api/months/${month}/bills/${billInstanceId}/occurrences/${occurrenceId}/payments`,
+        {
+          amount: amountCents,
+          date,
+        }
+      );
       success('Payment added');
       dispatch('added');
       handleClose();
@@ -78,192 +90,85 @@
       saving = false;
     }
   }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      handleClose();
-    }
-  }
-
-  function handleBackdropClick(event: MouseEvent) {
-    if (event.target === event.currentTarget) {
-      handleClose();
-    }
-  }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
-{#if open}
-  <div
-    class="drawer-backdrop"
-    role="presentation"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && handleClose()}
-  >
-    <div
-      class="drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="add-payment-title"
-      tabindex="-1"
-    >
-      <header class="drawer-header">
-        <h3 id="add-payment-title">Add Payment</h3>
-        <button class="close-btn" on:click={handleClose} aria-label="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M18 6L6 18M6 6L18 18"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
-      </header>
-
-      <div class="drawer-content">
-        <div class="bill-info">
-          <span class="bill-name">{billName}</span>
-          <div class="bill-details">
-            <span>Expected: {formatCurrency(expectedAmount)}</span>
-            <span>Paid: {formatCurrency(totalPaid)}</span>
-            <span class="remaining">Remaining: {formatCurrency(remaining)}</span>
-          </div>
-        </div>
-
-        <form on:submit|preventDefault={handleSubmit}>
-          <div class="form-group">
-            <label for="amount">Amount</label>
-            <div class="amount-input-group">
-              <span class="prefix">$</span>
-              <input
-                id="amount"
-                type="text"
-                bind:value={amount}
-                placeholder="0.00"
-                disabled={saving}
-                class:error={!!error}
-              />
-              {#if remaining > 0}
-                <button type="button" class="suggest-btn" on:click={useSuggested}>
-                  Pay remaining
-                </button>
-              {/if}
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="date">Date</label>
-            <input id="date" type="date" bind:value={date} disabled={saving} />
-          </div>
-
-          {#if error}
-            <p class="error-message">{error}</p>
-          {/if}
-
-          <div class="form-actions">
-            <button type="button" class="cancel-btn" on:click={handleClose} disabled={saving}>
-              Cancel
-            </button>
-            <button type="submit" class="submit-btn" disabled={saving}>
-              {saving ? 'Adding...' : 'Add Payment'}
-            </button>
-          </div>
-        </form>
+<Drawer isOpen={open} title="Add Payment" onClose={handleClose}>
+  <div class="drawer-content-inner">
+    <div class="bill-info">
+      <span class="bill-name">{billName}</span>
+      <div class="bill-details">
+        <span>Expected: {formatCurrency(expectedAmount)}</span>
+        <span>Paid: {formatCurrency(totalPaid)}</span>
+        <span class="remaining">Remaining: {formatCurrency(remaining)}</span>
       </div>
     </div>
+
+    <form on:submit|preventDefault={handleSubmit}>
+      <div class="form-group">
+        <label for="amount">Amount</label>
+        <div class="amount-input-group">
+          <span class="prefix">$</span>
+          <input
+            id="amount"
+            type="text"
+            bind:value={amount}
+            placeholder="0.00"
+            disabled={saving}
+            class:error={!!error}
+          />
+          {#if remaining > 0}
+            <button type="button" class="suggest-btn" on:click={useSuggested}>
+              Pay remaining
+            </button>
+          {/if}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input id="date" type="date" bind:value={date} disabled={saving} />
+      </div>
+
+      {#if error}
+        <p class="error-message">{error}</p>
+      {/if}
+
+      <div class="form-actions">
+        <button type="button" class="cancel-btn" on:click={handleClose} disabled={saving}>
+          Cancel
+        </button>
+        <button type="submit" class="submit-btn" disabled={saving}>
+          {saving ? 'Adding...' : 'Add Payment'}
+        </button>
+      </div>
+    </form>
   </div>
-{/if}
+</Drawer>
 
 <style>
-  .drawer-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--overlay-bg);
-    display: flex;
-    justify-content: flex-end;
-    z-index: 1000;
-  }
-
-  .drawer {
-    width: 100%;
-    max-width: 400px;
-    height: 100%;
-    background: var(--bg-surface);
-    border-left: 1px solid var(--border-default);
+  .drawer-content-inner {
     display: flex;
     flex-direction: column;
-    animation: slideIn 0.2s ease-out;
-  }
-
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
-  .drawer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid var(--border-default);
-  }
-
-  .drawer-header h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
-  }
-
-  .close-btn:hover {
-    color: var(--text-primary);
-  }
-
-  .drawer-content {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
+    gap: var(--space-4);
   }
 
   .bill-info {
     background: var(--bg-elevated);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
   }
 
   .bill-name {
     display: block;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
 
   .bill-details {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
     font-size: 0.875rem;
     color: var(--text-secondary);
   }
@@ -274,20 +179,20 @@
   }
 
   .form-group {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-4);
   }
 
   .form-group label {
     display: block;
     font-size: 0.875rem;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
 
   .amount-input-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .amount-input-group .prefix {
@@ -297,10 +202,10 @@
 
   .amount-input-group input {
     flex: 1;
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--bg-base);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     color: var(--text-primary);
     font-size: 1rem;
   }
@@ -315,10 +220,10 @@
   }
 
   .suggest-btn {
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--warning-bg);
     border: 1px solid var(--warning-border);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     color: var(--warning);
     font-size: 0.75rem;
     cursor: pointer;
@@ -333,10 +238,10 @@
 
   input[type='date'] {
     width: 100%;
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--bg-base);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     color: var(--text-primary);
     font-size: 1rem;
   }
@@ -349,20 +254,20 @@
   .error-message {
     color: var(--error);
     font-size: 0.875rem;
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-4) 0;
   }
 
   .form-actions {
     display: flex;
-    gap: 12px;
-    margin-top: 24px;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
   }
 
   .cancel-btn,
   .submit-btn {
     flex: 1;
-    padding: 12px;
-    border-radius: 8px;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;

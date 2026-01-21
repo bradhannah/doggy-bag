@@ -16,6 +16,9 @@ import type {
   Income,
   BillingPeriod,
   Occurrence,
+  DateString,
+  MonthlyData,
+  Payment,
 } from '../types';
 
 // Request types
@@ -24,7 +27,7 @@ export interface CreateAdhocBillRequest {
   amount: number;
   category_id?: string;
   payment_source_id?: string;
-  date?: string;
+  date?: DateString;
 }
 
 export interface CreateAdhocIncomeRequest {
@@ -32,7 +35,16 @@ export interface CreateAdhocIncomeRequest {
   amount: number;
   category_id?: string;
   payment_source_id?: string;
-  date?: string;
+  date?: DateString;
+}
+
+export interface CreateGoalContributionRequest {
+  goal_id: string;
+  goal_name: string;
+  amount: number;
+  category_id: string;
+  payment_source_id: string;
+  date: DateString; // Today or earlier within current month
 }
 
 export interface UpdateAdhocRequest {
@@ -66,6 +78,9 @@ export interface AdhocService {
     instanceId: string,
     data: MakeRegularRequest
   ): Promise<{ bill: Bill; billInstance: BillInstance }>;
+
+  // Goal Contributions (one-time savings payments)
+  createGoalContribution(month: string, data: CreateGoalContributionRequest): Promise<BillInstance>;
 
   // Incomes
   createAdhocIncome(month: string, data: CreateAdhocIncomeRequest): Promise<IncomeInstance>;
@@ -146,6 +161,45 @@ export class AdhocServiceImpl implements AdhocService {
   }
 
   // ========================================================================
+  // Helper Methods
+  // ========================================================================
+
+  /**
+   * Get existing month data or generate it if it doesn't exist
+   */
+  private async ensureMonthData(month: string): Promise<MonthlyData> {
+    let monthData = await this.monthsService.getMonthlyData(month);
+    if (!monthData) {
+      monthData = await this.monthsService.generateMonthlyData(month);
+    }
+    return monthData;
+  }
+
+  /**
+   * Create a base occurrence object for ad-hoc items
+   */
+  private createBaseOccurrence(
+    amount: number,
+    expectedDate: string,
+    isClosed: boolean,
+    payments: Payment[] = []
+  ): Occurrence {
+    const now = new Date().toISOString();
+    return {
+      id: crypto.randomUUID(),
+      sequence: 1,
+      expected_date: expectedDate,
+      expected_amount: amount,
+      is_closed: isClosed,
+      closed_date: isClosed ? expectedDate : undefined,
+      payments,
+      is_adhoc: true,
+      created_at: now,
+      updated_at: now,
+    };
+  }
+
+  // ========================================================================
   // Bills
   // ========================================================================
 
@@ -158,43 +212,25 @@ export class AdhocServiceImpl implements AdhocService {
       throw new Error('Amount must be positive');
     }
 
-    // Get or create month data
-    let monthData = await this.monthsService.getMonthlyData(month);
-    if (!monthData) {
-      monthData = await this.monthsService.generateMonthlyData(month);
-    }
-
-    // Get category ID (use provided or default ad-hoc)
+    const monthData = await this.ensureMonthData(month);
     const categoryId = data.category_id || (await this.getAdhocBillCategory());
 
     const now = new Date().toISOString();
-    const today = now.split('T')[0]; // YYYY-MM-DD
+    const today = now.split('T')[0];
     const expectedDate = data.date || today;
     const isClosed = !!data.date;
 
-    // Ad-hoc bills have a single occurrence
-    const occurrence: Occurrence = {
-      id: crypto.randomUUID(),
-      sequence: 1,
-      expected_date: expectedDate,
-      expected_amount: data.amount,
-      is_closed: isClosed,
-      closed_date: isClosed ? expectedDate : undefined,
-      payments: [],
-      is_adhoc: true,
-      created_at: now,
-      updated_at: now,
-    };
+    const occurrence = this.createBaseOccurrence(data.amount, expectedDate, isClosed);
 
     const newInstance: BillInstance = {
       id: crypto.randomUUID(),
-      bill_id: null, // Always null for ad-hoc
+      bill_id: null,
       month,
-      billing_period: 'monthly', // Ad-hoc items are treated as monthly
-      expected_amount: data.amount, // Ad-hoc items use entered amount as expected
-      occurrences: [occurrence], // Single occurrence for ad-hoc
+      billing_period: 'monthly',
+      expected_amount: data.amount,
+      occurrences: [occurrence],
       is_default: false,
-      is_closed: isClosed, // Closed if date provided
+      is_closed: isClosed,
       is_adhoc: true,
       name: data.name.trim(),
       category_id: categoryId,
@@ -346,6 +382,86 @@ export class AdhocServiceImpl implements AdhocService {
   }
 
   // ========================================================================
+  // Goal Contributions (one-time savings payments)
+  // ========================================================================
+
+  public async createGoalContribution(
+    month: string,
+    data: CreateGoalContributionRequest
+  ): Promise<BillInstance> {
+    // Validate
+    if (!data.goal_id) {
+      throw new Error('Goal ID is required');
+    }
+    if (!data.goal_name) {
+      throw new Error('Goal name is required');
+    }
+    if (!data.amount || data.amount <= 0) {
+      throw new Error('Amount must be positive');
+    }
+    if (!data.category_id) {
+      throw new Error('Category ID is required');
+    }
+    if (!data.payment_source_id) {
+      throw new Error('Payment source ID is required');
+    }
+    if (!data.date) {
+      throw new Error('Date is required');
+    }
+
+    // Validate date is not in the future and is within the specified month
+    const today = new Date().toISOString().split('T')[0];
+    if (data.date > today) {
+      throw new Error('Payment date cannot be in the future');
+    }
+    const dateMonth = data.date.substring(0, 7);
+    if (dateMonth !== month) {
+      throw new Error('Payment date must be within the specified month');
+    }
+
+    const monthData = await this.ensureMonthData(month);
+    const now = new Date().toISOString();
+
+    // Create payment for the occurrence
+    const payment: Payment = {
+      id: crypto.randomUUID(),
+      amount: data.amount,
+      date: data.date,
+      payment_source_id: data.payment_source_id,
+      created_at: now,
+    };
+
+    const occurrence = this.createBaseOccurrence(data.amount, data.date, true, [payment]);
+
+    const newInstance: BillInstance = {
+      id: crypto.randomUUID(),
+      bill_id: null,
+      month,
+      billing_period: 'monthly',
+      expected_amount: data.amount,
+      occurrences: [occurrence],
+      is_default: false,
+      is_closed: true,
+      is_adhoc: true,
+      goal_id: data.goal_id,
+      name: `Payment: ${data.goal_name}`,
+      category_id: data.category_id,
+      payment_source_id: data.payment_source_id,
+      closed_date: data.date,
+      created_at: now,
+      updated_at: now,
+    };
+
+    monthData.bill_instances.push(newInstance);
+    await this.monthsService.saveMonthlyData(month, monthData);
+
+    console.log(
+      `[AdhocService] Created goal contribution for "${data.goal_name}" ($${data.amount / 100}) in ${month}`
+    );
+    return newInstance;
+  }
+
+  // ========================================================================
   // Incomes
   // ========================================================================
 
@@ -361,43 +477,25 @@ export class AdhocServiceImpl implements AdhocService {
       throw new Error('Amount must be positive');
     }
 
-    // Get or create month data
-    let monthData = await this.monthsService.getMonthlyData(month);
-    if (!monthData) {
-      monthData = await this.monthsService.generateMonthlyData(month);
-    }
-
-    // Get category ID (use provided or default ad-hoc)
+    const monthData = await this.ensureMonthData(month);
     const categoryId = data.category_id || (await this.getAdhocIncomeCategory());
 
     const now = new Date().toISOString();
-    const today = now.split('T')[0]; // YYYY-MM-DD
+    const today = now.split('T')[0];
     const expectedDate = data.date || today;
     const isClosed = !!data.date;
 
-    // Ad-hoc incomes have a single occurrence
-    const occurrence: Occurrence = {
-      id: crypto.randomUUID(),
-      sequence: 1,
-      expected_date: expectedDate,
-      expected_amount: data.amount,
-      is_closed: isClosed,
-      closed_date: isClosed ? expectedDate : undefined,
-      payments: [],
-      is_adhoc: true,
-      created_at: now,
-      updated_at: now,
-    };
+    const occurrence = this.createBaseOccurrence(data.amount, expectedDate, isClosed);
 
     const newInstance: IncomeInstance = {
       id: crypto.randomUUID(),
-      income_id: null, // Always null for ad-hoc
+      income_id: null,
       month,
-      billing_period: 'monthly', // Ad-hoc items are treated as monthly
-      expected_amount: data.amount, // Ad-hoc items use entered amount as expected
-      occurrences: [occurrence], // Single occurrence for ad-hoc
+      billing_period: 'monthly',
+      expected_amount: data.amount,
+      occurrences: [occurrence],
       is_default: false,
-      is_closed: isClosed, // Closed if date provided
+      is_closed: isClosed,
       is_adhoc: true,
       name: data.name.trim(),
       category_id: categoryId,

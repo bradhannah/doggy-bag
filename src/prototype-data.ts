@@ -22,7 +22,6 @@ export interface MockPaymentSource {
   id: string;
   name: string;
   type: 'bank_account' | 'credit_card' | 'cash';
-  balance: number;
 }
 
 export const mockBills: MockBill[] = [
@@ -92,19 +91,26 @@ export const mockPaymentSources: MockPaymentSource[] = [
     id: '1',
     name: 'Scotia Checking',
     type: 'bank_account',
-    balance: 250000,
   },
   {
     id: '2',
     name: 'Visa',
     type: 'credit_card',
-    balance: -5000,
   },
   {
     id: '3',
     name: 'Cash',
     type: 'cash',
-    balance: 20000,
+  },
+  {
+    id: '2',
+    name: 'Visa',
+    type: 'credit_card',
+  },
+  {
+    id: '3',
+    name: 'Cash',
+    type: 'cash',
   },
 ];
 

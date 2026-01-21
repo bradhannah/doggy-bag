@@ -105,6 +105,74 @@ function createWidthModeStore() {
 
 export const widthMode = createWidthModeStore();
 
+export type FilterScopeMode = {
+  categories: boolean;
+  items: boolean;
+  bills: boolean;
+  income: boolean;
+};
+
+const filterScopeStorageKey = 'doggybag-filter-scope';
+
+function getStoredFilterScope(): FilterScopeMode {
+  if (typeof window === 'undefined') {
+    return { categories: true, items: true, bills: true, income: true };
+  }
+
+  const stored = localStorage.getItem(filterScopeStorageKey);
+  if (!stored) {
+    return { categories: true, items: true, bills: true, income: true };
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as Partial<FilterScopeMode>;
+    return {
+      categories: parsed.categories ?? true,
+      items: parsed.items ?? true,
+      bills: parsed.bills ?? true,
+      income: parsed.income ?? true,
+    };
+  } catch {
+    return { categories: true, items: true, bills: true, income: true };
+  }
+}
+
+function createFilterScopeStore() {
+  const { subscribe, set, update } = writable<FilterScopeMode>({
+    categories: true,
+    items: true,
+    bills: true,
+    income: true,
+  });
+
+  if (typeof window !== 'undefined') {
+    set(getStoredFilterScope());
+  }
+
+  function persist(next: FilterScopeMode) {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(filterScopeStorageKey, JSON.stringify(next));
+    }
+  }
+
+  return {
+    subscribe,
+    set: (value: FilterScopeMode) => {
+      set(value);
+      persist(value);
+    },
+    update: (fn: (value: FilterScopeMode) => FilterScopeMode) => {
+      update((current) => {
+        const next = fn(current);
+        persist(next);
+        return next;
+      });
+    },
+  };
+}
+
+export const filterScope = createFilterScopeStore();
+
 // Compact mode store with localStorage persistence
 function getStoredCompactMode(): boolean {
   if (typeof window === 'undefined') return false;

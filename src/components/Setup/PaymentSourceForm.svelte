@@ -13,8 +13,8 @@
     type PaymentSourceType,
     type PaymentSourceMetadata,
   } from '../../stores/payment-sources';
-  import { success, error as showError } from '../../stores/toast';
   import type { PaymentSource } from '../../stores/payment-sources';
+  import { success, error as showError } from '../../stores/toast';
 
   export let editingItem: PaymentSource | null = null;
   export let onSave: () => void = () => {};
@@ -265,25 +265,28 @@
       const metadata = buildMetadata();
 
       if (editingItem) {
-        await updatePaymentSource(editingItem.id, {
+        const payload = {
           name,
           type,
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
           metadata,
-        });
+        };
+
+        await updatePaymentSource(editingItem.id, payload);
         success(`Payment source "${name}" updated`);
       } else {
-        await createPaymentSource({
+        const payload = {
           name,
           type,
-          balance: 0, // Balance is set per-month, not on the payment source
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
           metadata,
-        });
+        };
+
+        await createPaymentSource(payload);
         success(`Payment source "${name}" added`);
       }
       onSave();
@@ -353,7 +356,7 @@
           <span class="checkbox-text">
             <strong>Pay Off Monthly</strong>
             <span class="checkbox-description"
-              >Auto-generate a payoff bill for this balance each month</span
+              >Auto-generate a payoff bill for this account each month</span
             >
           </span>
         </label>

@@ -2,6 +2,16 @@
 // All entity interfaces, enums, and union types for the application
 
 // ============================================================================
+// Common Type Aliases
+// ============================================================================
+
+/** ISO date string in YYYY-MM-DD format */
+type DateString = string;
+
+/** ISO datetime string in full ISO 8601 format (e.g., 2024-01-15T10:30:00.000Z) */
+type ISODateTimeString = string;
+
+// ============================================================================
 // Enums
 // ============================================================================
 
@@ -16,7 +26,7 @@ const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'
 // Helper to determine if a payment source type is an investment account
 const INVESTMENT_ACCOUNT_TYPES: PaymentSourceType[] = ['investment'];
 
-type CategoryType = 'bill' | 'income' | 'variable';
+type CategoryType = 'bill' | 'income' | 'variable' | 'savings_goal';
 
 type PaymentMethod = 'auto' | 'manual';
 
@@ -76,6 +86,7 @@ interface Bill {
   category_id: string; // Required - reference to bill category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
+  goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -95,6 +106,7 @@ interface Income {
   category_id: string; // Required - reference to income category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment (default: 'auto')
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
+  goal_id?: string; // Optional link to SavingsGoal (for goal completion incomes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -123,6 +135,7 @@ interface Occurrence {
   expected_amount: number; // Cents - can be edited independently per occurrence
   is_closed: boolean; // Close/Open status for this occurrence
   closed_date?: string; // When closed (YYYY-MM-DD)
+  notes?: string; // Optional close notes
   payments: Payment[]; // Payments toward this specific occurrence
   is_adhoc: boolean; // True if manually added by user
   created_at: string;
@@ -145,6 +158,7 @@ interface BillInstance {
   is_adhoc: boolean; // True for one-time ad-hoc items
   is_payoff_bill?: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
+  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   closed_date?: string; // ISO date when fully closed (YYYY-MM-DD)
   name?: string; // For ad-hoc items (bill_id is null)
   category_id?: string; // For ad-hoc items (no bill reference)
@@ -216,7 +230,6 @@ interface PaymentSource {
   id: string;
   name: string;
   type: PaymentSourceType;
-  balance: number;
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
@@ -239,12 +252,39 @@ interface Category {
 }
 
 // ============================================================================
+// Savings Goal Interface
+// ============================================================================
+
+type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned' | 'archived';
+
+// Temperature indicator for goal progress tracking
+type GoalTemperature = 'green' | 'yellow' | 'red';
+
+interface SavingsGoal {
+  id: string;
+  name: string;
+  target_amount: number; // Cents
+  current_amount: number; // Cents (calculated dynamically from closed occurrences)
+  target_date: string; // YYYY-MM-DD
+  linked_account_id: string; // Reference to PaymentSource (savings account)
+  status: SavingsGoalStatus;
+  previous_status?: 'bought' | 'abandoned'; // Status before archiving (for unarchive)
+  paused_at?: string; // ISO timestamp when goal was paused
+  completed_at?: string; // ISO timestamp when goal was bought/abandoned
+  archived_at?: string; // ISO timestamp when goal was archived
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
 // Family Member Interface
 // ============================================================================
 
 interface FamilyMember {
   id: string;
   name: string; // Full name of the family member
+  plans: string[]; // Ordered list of Insurance Plan IDs
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -255,7 +295,7 @@ interface FamilyMember {
 // ============================================================================
 
 type ClaimStatus = 'draft' | 'in_progress' | 'closed';
-type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied';
+type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
 type DocumentType = 'receipt' | 'eob' | 'other';
 
 interface InsurancePlan {
@@ -265,7 +305,7 @@ interface InsurancePlan {
   policy_number?: string; // Policy/group number
   member_id?: string; // User's member ID on this plan
   owner?: string; // Who this plan belongs to (e.g., "Brad", "Partner")
-  priority: number; // Submission order (1 = primary, 2 = secondary)
+  // priority: number; // REMOVED - replaced by per-member ordering
   portal_url?: string; // URL to submit claims online
   notes?: string; // Freeform notes
   is_active: boolean;
@@ -302,7 +342,7 @@ interface PlanSnapshot {
   policy_number?: string;
   member_id?: string;
   owner?: string;
-  priority: number;
+  // priority: number; // REMOVED
   portal_url?: string;
 }
 
@@ -497,6 +537,7 @@ interface DetailedMonthResponse {
   month: string;
   billSections: CategorySection[];
   incomeSections: CategorySection[];
+  overdue_bills: { name: string; amount: number; due_date: string }[];
   tallies: {
     bills: SectionTally; // Regular bills (with expected amounts)
     adhocBills: SectionTally; // Ad-hoc bills (actual only)
@@ -543,10 +584,39 @@ interface ValidationResult {
 }
 
 // ============================================================================
+// Projections
+// ============================================================================
+
+interface ProjectionResponse {
+  start_date: string; // YYYY-MM-DD (Today or 1st of month)
+  end_date: string; // YYYY-MM-DD
+  starting_balance: number;
+  days: {
+    date: string;
+    balance: number | null;
+    has_balance: boolean;
+    income: number;
+    expense: number;
+    events: {
+      name: string;
+      amount: number;
+      type: 'income' | 'expense';
+      kind?: 'actual' | 'scheduled';
+    }[];
+    is_deficit: boolean;
+  }[];
+  overdue_bills: { name: string; amount: number; due_date: string }[];
+}
+
+// ============================================================================
 // Exports
 // ============================================================================
 
 export type {
+  // Common Type Aliases
+  DateString,
+  ISODateTimeString,
+  // Enums
   BillingPeriod,
   PaymentSourceType,
   CategoryType,
@@ -555,6 +625,8 @@ export type {
   ClaimStatus,
   SubmissionStatus,
   DocumentType,
+  SavingsGoalStatus,
+  GoalTemperature,
   EntityMetadata,
   PaymentSourceMetadata,
   Bill,
@@ -568,6 +640,7 @@ export type {
   FreeFlowingExpense,
   PaymentSource,
   Category,
+  SavingsGoal,
   FamilyMember,
   InsurancePlan,
   InsuranceCategory,
@@ -592,6 +665,7 @@ export type {
   DefaultEntity,
   InstanceEntity,
   ValidationResult,
+  ProjectionResponse,
 };
 
 export { DEBT_ACCOUNT_TYPES, INVESTMENT_ACCOUNT_TYPES };

@@ -658,14 +658,13 @@ export interface components {
             id: string;
             name: string;
             type: components["schemas"]["PaymentSourceType"];
-            /** Format: double */
-            balance: number;
             is_active: boolean;
             exclude_from_leftover?: boolean;
             pay_off_monthly?: boolean;
             created_at: string;
             updated_at: string;
         };
+
         /** @enum {string} */
         CategoryType: "bill" | "income" | "variable";
         Category: {
@@ -696,6 +695,7 @@ export interface components {
             expected_amount: number;
             is_closed: boolean;
             closed_date?: string;
+            notes?: string;
             payments: components["schemas"]["Payment"][];
             is_adhoc: boolean;
             created_at: string;
@@ -946,8 +946,6 @@ export interface components {
         CreatePaymentSourceRequest: {
             name: string;
             type: components["schemas"]["PaymentSourceType"];
-            /** Format: double */
-            balance: number;
             is_active?: boolean;
             exclude_from_leftover?: boolean;
             pay_off_monthly?: boolean;
@@ -955,8 +953,6 @@ export interface components {
         UpdatePaymentSourceRequest: {
             name?: string;
             type?: components["schemas"]["PaymentSourceType"];
-            /** Format: double */
-            balance?: number;
             is_active?: boolean;
             exclude_from_leftover?: boolean;
             pay_off_monthly?: boolean;
@@ -1111,6 +1107,12 @@ export interface components {
             month: string;
             billSections: components["schemas"]["CategorySection"][];
             incomeSections: components["schemas"]["CategorySection"][];
+            overdue_bills: {
+                name: string;
+                /** Format: double */
+                amount: number;
+                due_date: string;
+            }[];
             tallies: {
                 totalIncome: components["schemas"]["SectionTally"];
                 adhocIncome: components["schemas"]["SectionTally"];

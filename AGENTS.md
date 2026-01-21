@@ -54,6 +54,9 @@ make format       # Format code
 
 ## Active Technologies
 
+- TypeScript 5.x (Frontend & Backend), Rust (Tauri) + Svelte 5, Tauri v2, Bun 1.x (013-misc-fixes)
+- Local JSON files via `StorageService` (013-misc-fixes)
+
 - TypeScript 5.x (strict mode), Rust 2021 edition (Tauri) + Svelte 5.x, Bun 1.x, Tauri 2.x, Vite (012-misc-fixes)
 - JSON files in user-configurable directory + new documents/ folder for uploads (012-misc-fixes)
 

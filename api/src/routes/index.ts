@@ -50,10 +50,8 @@ import {
 import {
   createBillInstanceHandlerPUT,
   createBillInstanceHandlerReset,
-  createBillInstanceHandlerTogglePaid,
   createIncomeInstanceHandlerPUT,
   createIncomeInstanceHandlerReset,
-  createIncomeInstanceHandlerTogglePaid,
   createBillInstanceHandlerClose,
   createBillInstanceHandlerReopen,
   createIncomeInstanceHandlerClose,
@@ -85,22 +83,12 @@ import {
   createCategoriesHandlerPUT,
   createCategoriesHandlerDELETE,
   createCategoriesReorderHandler,
+  createCategoriesEnsureGoalsHandler,
 } from './handlers/categories.handlers';
 
 import { createSeedDefaultsHandler } from './handlers/seed.handlers';
 
 import { createDetailedViewHandler } from './handlers/detailed-view.handlers';
-
-import {
-  createAddPaymentHandler,
-  createUpdatePaymentHandler,
-  createDeletePaymentHandler,
-  createGetPaymentsHandler,
-  createAddIncomePaymentHandler,
-  createUpdateIncomePaymentHandler,
-  createDeleteIncomePaymentHandler,
-  createGetIncomePaymentsHandler,
-} from './handlers/payments.handlers';
 
 import {
   createBackupHandlerGET,
@@ -164,11 +152,29 @@ import {
 import {
   handleGetAllFamilyMembers,
   handleGetActiveFamilyMembers,
-  handleGetFamilyMember,
   handleCreateFamilyMember,
   handleUpdateFamilyMember,
   handleDeleteFamilyMember,
 } from './handlers/family-members.handlers';
+
+import {
+  createSavingsGoalsHandlerGET,
+  createSavingsGoalsHandlerPOST,
+  createSavingsGoalsHandlerPUT,
+  createSavingsGoalsHandlerDELETE,
+  createSavingsGoalsPauseHandler,
+  createSavingsGoalsResumeHandler,
+  createSavingsGoalsCompleteHandler,
+  createSavingsGoalsAbandonHandler,
+  createSavingsGoalsBillsHandler,
+  createSavingsGoalsArchiveHandler,
+  createSavingsGoalsUnarchiveHandler,
+  createSavingsGoalsContributeHandler,
+  createSavingsGoalsPaymentsHandler,
+  createSavingsGoalsRemoveScheduleHandler,
+} from './handlers/savings-goals.handlers';
+
+import { createProjectionsHandlerGET } from './handlers/projections.handlers';
 
 // Route definition type
 interface RouteDefinition {
@@ -262,6 +268,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/categories/reorder',
     definition: { method: 'PUT', handler: createCategoriesReorderHandler() },
+  },
+  {
+    path: '/api/categories/ensure-goals',
+    definition: { method: 'POST', handler: createCategoriesEnsureGoalsHandler() },
   },
 
   // Insurance Plans
@@ -413,6 +423,94 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
       handler: createInsuranceClaimsHandlerDELETE(),
       hasPathParam: true,
     },
+  },
+
+  // Savings Goals - action routes must come before generic routes
+  {
+    path: '/api/savings-goals/pause',
+    definition: { method: 'POST', handler: createSavingsGoalsPauseHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/resume',
+    definition: { method: 'POST', handler: createSavingsGoalsResumeHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/complete',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsCompleteHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/abandon',
+    definition: { method: 'POST', handler: createSavingsGoalsAbandonHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/archive',
+    definition: { method: 'POST', handler: createSavingsGoalsArchiveHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/unarchive',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsUnarchiveHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/bills',
+    definition: { method: 'GET', handler: createSavingsGoalsBillsHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals/contribute',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsContributeHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/payments',
+    definition: {
+      method: 'GET',
+      handler: createSavingsGoalsPaymentsHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals/remove-schedule',
+    definition: {
+      method: 'POST',
+      handler: createSavingsGoalsRemoveScheduleHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: { method: 'GET', handler: createSavingsGoalsHandlerGET(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: { method: 'POST', handler: createSavingsGoalsHandlerPOST() },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: { method: 'PUT', handler: createSavingsGoalsHandlerPUT(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-goals',
+    definition: {
+      method: 'DELETE',
+      handler: createSavingsGoalsHandlerDELETE(),
+      hasPathParam: true,
+    },
+  },
+
+  // Projections
+  {
+    path: '/api/projections',
+    definition: { method: 'GET', handler: createProjectionsHandlerGET(), hasPathParam: true },
   },
 
   // Payment Sources - savings endpoint must come before generic payment-sources routes
@@ -567,32 +665,8 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     },
   },
   {
-    path: '/api/months/bills/payments',
-    definition: { method: 'GET', handler: createGetPaymentsHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/bills/payments',
-    definition: { method: 'POST', handler: createAddPaymentHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/bills/payments',
-    definition: { method: 'PUT', handler: createUpdatePaymentHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/bills/payments',
-    definition: { method: 'DELETE', handler: createDeletePaymentHandler(), hasPathParam: true },
-  },
-  {
     path: '/api/months/bills/reset',
     definition: { method: 'POST', handler: createBillInstanceHandlerReset(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/bills/paid',
-    definition: {
-      method: 'POST',
-      handler: createBillInstanceHandlerTogglePaid(),
-      hasPathParam: true,
-    },
   },
   {
     path: '/api/months/bills/close',
@@ -678,36 +752,8 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     },
   },
   {
-    path: '/api/months/incomes/payments',
-    definition: { method: 'GET', handler: createGetIncomePaymentsHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/incomes/payments',
-    definition: { method: 'POST', handler: createAddIncomePaymentHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/incomes/payments',
-    definition: { method: 'PUT', handler: createUpdateIncomePaymentHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/incomes/payments',
-    definition: {
-      method: 'DELETE',
-      handler: createDeleteIncomePaymentHandler(),
-      hasPathParam: true,
-    },
-  },
-  {
     path: '/api/months/incomes/reset',
     definition: { method: 'POST', handler: createIncomeInstanceHandlerReset(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/incomes/paid',
-    definition: {
-      method: 'POST',
-      handler: createIncomeInstanceHandlerTogglePaid(),
-      hasPathParam: true,
-    },
   },
   {
     path: '/api/months/incomes/close',

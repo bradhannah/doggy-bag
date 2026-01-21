@@ -6,11 +6,7 @@
    * @prop onSave - Callback after successful save
    * @prop onCancel - Callback to close form without saving
    */
-  import {
-    createInsurancePlan,
-    updateInsurancePlan,
-    activePlans,
-  } from '../../stores/insurance-plans';
+  import { createInsurancePlan, updateInsurancePlan } from '../../stores/insurance-plans';
   import { success, error as showError } from '../../stores/toast';
   import type { InsurancePlan } from '../../types/insurance';
 
@@ -24,7 +20,6 @@
   let policyNumber = editingItem?.policy_number || '';
   let memberId = editingItem?.member_id || '';
   let owner = editingItem?.owner || '';
-  let priority = editingItem?.priority || $activePlans.length + 1;
   let portalUrl = editingItem?.portal_url || '';
   let notes = editingItem?.notes || '';
   let isActive = editingItem?.is_active ?? true;
@@ -39,7 +34,6 @@
     policyNumber: string;
     memberId: string;
     owner: string;
-    priority: number;
     portalUrl: string;
     notes: string;
     isActive: boolean;
@@ -51,7 +45,6 @@
     policyNumber: editingItem?.policy_number || '',
     memberId: editingItem?.member_id || '',
     owner: editingItem?.owner || '',
-    priority: editingItem?.priority || $activePlans.length + 1,
     portalUrl: editingItem?.portal_url || '',
     notes: editingItem?.notes || '',
     isActive: editingItem?.is_active ?? true,
@@ -64,7 +57,6 @@
       policyNumber !== initialValues.policyNumber ||
       memberId !== initialValues.memberId ||
       owner !== initialValues.owner ||
-      priority !== initialValues.priority ||
       portalUrl !== initialValues.portalUrl ||
       notes !== initialValues.notes ||
       isActive !== initialValues.isActive
@@ -78,7 +70,6 @@
     policyNumber = editingItem.policy_number || '';
     memberId = editingItem.member_id || '';
     owner = editingItem.owner || '';
-    priority = editingItem.priority;
     portalUrl = editingItem.portal_url || '';
     notes = editingItem.notes || '';
     isActive = editingItem.is_active;
@@ -89,7 +80,6 @@
       policyNumber: editingItem.policy_number || '',
       memberId: editingItem.member_id || '',
       owner: editingItem.owner || '',
-      priority: editingItem.priority,
       portalUrl: editingItem.portal_url || '',
       notes: editingItem.notes || '',
       isActive: editingItem.is_active,
@@ -103,11 +93,6 @@
       return;
     }
 
-    if (priority < 1) {
-      error = 'Priority must be at least 1';
-      return;
-    }
-
     saving = true;
     error = '';
 
@@ -118,7 +103,6 @@
         policy_number: policyNumber.trim() || undefined,
         member_id: memberId.trim() || undefined,
         owner: owner.trim() || undefined,
-        priority,
         portal_url: portalUrl.trim() || undefined,
         notes: notes.trim() || undefined,
       };
@@ -195,31 +179,16 @@
     </div>
   </div>
 
-  <div class="form-row">
-    <div class="form-group">
-      <label for="plan-owner">Owner</label>
-      <input
-        id="plan-owner"
-        type="text"
-        bind:value={owner}
-        placeholder="e.g., John, Jane"
-        disabled={saving}
-      />
-      <span class="help-text">Who this plan belongs to</span>
-    </div>
-
-    <div class="form-group">
-      <label for="plan-priority">Priority <span class="required">*</span></label>
-      <input
-        id="plan-priority"
-        type="number"
-        bind:value={priority}
-        min="1"
-        required
-        disabled={saving}
-      />
-      <span class="help-text">Lower numbers = higher priority (1 is primary)</span>
-    </div>
+  <div class="form-group">
+    <label for="plan-owner">Owner</label>
+    <input
+      id="plan-owner"
+      type="text"
+      bind:value={owner}
+      placeholder="e.g., John, Jane"
+      disabled={saving}
+    />
+    <span class="help-text">Who this plan belongs to</span>
   </div>
 
   <div class="form-group">

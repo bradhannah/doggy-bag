@@ -8,11 +8,21 @@
   } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
+  import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
+  import FilterBar from './FilterBar.svelte';
   import SectionStatsHeader from './SectionStatsHeader.svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import { widthMode, compactMode, hidePaidItems, goToMonth, columnMode } from '../../stores/ui';
+  import {
+    widthMode,
+    compactMode,
+    hidePaidItems,
+    goToMonth,
+    columnMode,
+    filterScope,
+  } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
+  import { filterSectionsByQuery } from '../../lib/filter-sections';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
 
   export let month: string;
@@ -21,6 +31,16 @@
   let savedScrollY: number | null = null;
   let restoreScrollAfterLoad = false;
   let isRefreshing = false; // Track if we're doing a soft refresh vs initial load
+
+  let filterQuery = '';
+  let isFilterOpen = false;
+  let filterBarRef: FilterBar | null = null;
+  let scopeCategories = true;
+  let scopeItems = true;
+  let scopeBills = true;
+  let scopeIncome = true;
+  let scopeInitialized = false;
+  let lastScopeSerialized = '';
 
   function _formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -43,6 +63,11 @@
     detailedMonth.loadMonth(month);
     monthsStore.loadMonth(month);
     loadPaymentSources();
+
+    window.addEventListener('keydown', handleGlobalKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeydown);
+    };
   });
 
   onDestroy(() => {
@@ -53,6 +78,42 @@
   $: if (month) {
     detailedMonth.loadMonth(month);
     monthsStore.loadMonth(month);
+  }
+
+  $: if (!scopeInitialized) {
+    scopeCategories = $filterScope.categories;
+    scopeItems = $filterScope.items;
+    scopeBills = $filterScope.bills;
+    scopeIncome = $filterScope.income;
+    scopeInitialized = true;
+  }
+
+  $: if (!scopeItems) {
+    scopeBills = false;
+    scopeIncome = false;
+  }
+
+  $: if (scopeItems && !scopeBills && !scopeIncome) {
+    scopeBills = true;
+    scopeIncome = true;
+  }
+
+  $: if (scopeInitialized) {
+    const serialized = JSON.stringify({
+      categories: scopeCategories,
+      items: scopeItems,
+      bills: scopeBills,
+      income: scopeIncome,
+    });
+    if (serialized !== lastScopeSerialized) {
+      lastScopeSerialized = serialized;
+      filterScope.set({
+        categories: scopeCategories,
+        items: scopeItems,
+        bills: scopeBills,
+        income: scopeIncome,
+      });
+    }
   }
 
   // Helper: check if a category section is complete (all closed or empty)
@@ -74,6 +135,17 @@
       if (aComplete === bComplete) return 0;
       return aComplete ? 1 : -1;
     });
+  }
+
+  function isEditableTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    const tagName = target.tagName.toLowerCase();
+    return (
+      tagName === 'input' ||
+      tagName === 'textarea' ||
+      tagName === 'select' ||
+      target.isContentEditable
+    );
   }
 
   // Sorted sections (complete/empty at bottom)
@@ -124,6 +196,117 @@
         }))
       : activeIncomeSections
   ) as IncomeSection[];
+
+  $: billScope = {
+    categories: scopeCategories && scopeBills,
+    items: scopeItems && scopeBills,
+  };
+  $: incomeScope = {
+    categories: scopeCategories && scopeIncome,
+    items: scopeItems && scopeIncome,
+  };
+
+  $: filteredActiveBillSections = filterSectionsByQuery(
+    displayActiveBillSections as unknown as { items: { name?: string | null }[] }[],
+    filterQuery,
+    billScope,
+    (section: unknown) => (section as BillSection).category.name
+  ) as BillSection[];
+  $: filteredCompletedBillSections = filterSectionsByQuery(
+    completedBillSections as unknown as { items: { name?: string | null }[] }[],
+    filterQuery,
+    billScope,
+    (section: unknown) => (section as BillSection).category.name
+  ) as BillSection[];
+  $: filteredActiveIncomeSections = filterSectionsByQuery(
+    displayActiveIncomeSections as unknown as { items: { name?: string | null }[] }[],
+    filterQuery,
+    incomeScope,
+    (section: unknown) => (section as IncomeSection).category.name
+  ) as IncomeSection[];
+  $: filteredCompletedIncomeSections = filterSectionsByQuery(
+    completedIncomeSections as unknown as { items: { name?: string | null }[] }[],
+    filterQuery,
+    incomeScope,
+    (section: unknown) => (section as IncomeSection).category.name
+  ) as IncomeSection[];
+
+  $: billMatchCount = filteredActiveBillSections.reduce(
+    (sum, section) => sum + section.items.length,
+    0
+  );
+  $: incomeMatchCount = filteredActiveIncomeSections.reduce(
+    (sum, section) => sum + section.items.length,
+    0
+  );
+  $: completedBillMatchCount = filteredCompletedBillSections.reduce(
+    (sum, section) => sum + section.items.length,
+    0
+  );
+  $: completedIncomeMatchCount = filteredCompletedIncomeSections.reduce(
+    (sum, section) => sum + section.items.length,
+    0
+  );
+  $: totalMatchCount =
+    billMatchCount + incomeMatchCount + completedBillMatchCount + completedIncomeMatchCount;
+  $: filterHasQuery = filterQuery.trim().length > 0;
+  $: hasMatches = totalMatchCount > 0;
+
+  function openFilter() {
+    if (!isFilterOpen) {
+      isFilterOpen = true;
+    }
+    requestAnimationFrame(() => {
+      filterBarRef?.focusAndSelect();
+    });
+  }
+
+  function closeFilter() {
+    filterQuery = '';
+    isFilterOpen = false;
+  }
+
+  function shouldShowNoMatches() {
+    return filterHasQuery && !hasMatches;
+  }
+
+  function handleFilterClear() {
+    filterQuery = '';
+    filterBarRef?.focusAndSelect();
+  }
+
+  function handleScopeChange() {
+    // persisted via reactive sync
+  }
+
+  function handleFilterEscape() {
+    closeFilter();
+  }
+
+  function handleFilterKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' && isFilterOpen) {
+      event.preventDefault();
+      closeFilter();
+    }
+  }
+
+  function handleGlobalKeydown(event: KeyboardEvent) {
+    const isModKey = event.metaKey || event.ctrlKey;
+    if (!isModKey) {
+      return;
+    }
+
+    if (event.key.toLowerCase() !== 'f') {
+      return;
+    }
+
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    openFilter();
+  }
 
   // Refresh all data with scroll position preservation - exported for external use
   export function refreshData() {
@@ -298,7 +481,7 @@
         <button on:click={() => detailedMonth.loadMonth(month)}>Retry</button>
       </div>
     {:else if $detailedMonthData}
-      <div class="detailed-layout">
+      <div class="detailed-layout" on:keydown={handleFilterKeydown}>
         <!-- Left: Summary Sidebar -->
         <SummarySidebar
           paymentSources={$paymentSources}
@@ -313,120 +496,149 @@
 
         <!-- Right: Main Content -->
         <div class="main-content">
+          <FilterBar
+            bind:query={filterQuery}
+            bind:categories={scopeCategories}
+            bind:items={scopeItems}
+            bind:bills={scopeBills}
+            bind:income={scopeIncome}
+            open={isFilterOpen}
+            matchCount={totalMatchCount}
+            bind:this={filterBarRef}
+            on:clear={handleFilterClear}
+            on:escape={handleFilterEscape}
+            on:scopeChange={handleScopeChange}
+          />
+          <OverdueBillsBanner
+            overdueBills={(
+              $detailedMonthData as {
+                overdue_bills?: { name: string; amount: number; due_date: string }[];
+              }
+            ).overdue_bills ?? []}
+            description="These bills are past due and still unpaid."
+          />
+
           <div class="sections-container" class:single-column={$columnMode === '1-col'}>
-            <!-- Bills Section -->
-            <section class="section bills-section">
-              <div class="section-header">
-                <h2>Bills</h2>
+            {#if shouldShowNoMatches()}
+              <div class="no-matches">
+                <h3>No matches</h3>
+                <p>Try a different search, or press Esc to clear.</p>
               </div>
+            {:else}
+              <!-- Bills Section -->
+              <section class="section bills-section">
+                <div class="section-header">
+                  <h2>Bills</h2>
+                </div>
 
-              {#if totalBills > 0}
-                <SectionStatsHeader
-                  sections={sortedBillSections}
-                  tally={$detailedMonthData.tallies.totalExpenses}
-                  type="bills"
-                />
-              {/if}
-
-              {#if totalBills === 0}
-                <p class="empty-text">No bill categories. Add categories in Setup.</p>
-              {:else}
-                <!-- Active (incomplete) categories -->
-                {#each displayActiveBillSections as section (section.category.id)}
-                  <CategorySection
-                    {section}
+                {#if totalBills > 0}
+                  <SectionStatsHeader
+                    sections={sortedBillSections}
+                    tally={$detailedMonthData.tallies.totalExpenses}
                     type="bills"
-                    {month}
-                    compactMode={$compactMode}
-                    readOnly={$monthIsReadOnly}
-                    hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
-                    collapsed={false}
-                    on:refresh={refreshData}
-                    on:reopened={handleReopened}
-                    on:closed={handleClosed}
                   />
-                {/each}
+                {/if}
 
-                <!-- Divider + Completed categories -->
-                {#if completedBillSections.length > 0}
-                  <div class="completed-divider">
-                    <span>Completed</span>
-                  </div>
-
-                  {#each completedBillSections as section (section.category.id)}
+                {#if totalBills === 0}
+                  <p class="empty-text">No bill categories. Add categories in Setup.</p>
+                {:else}
+                  <!-- Active (incomplete) categories -->
+                  {#each filteredActiveBillSections as section (section.category.id)}
                     <CategorySection
                       {section}
                       type="bills"
                       {month}
                       compactMode={$compactMode}
                       readOnly={$monthIsReadOnly}
-                      hiddenCount={0}
-                      collapsed={$hidePaidItems}
+                      hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
+                      collapsed={false}
                       on:refresh={refreshData}
                       on:reopened={handleReopened}
                       on:closed={handleClosed}
                     />
                   {/each}
+
+                  <!-- Divider + Completed categories -->
+                  {#if filteredCompletedBillSections.length > 0}
+                    <div class="completed-divider">
+                      <span>Completed</span>
+                    </div>
+
+                    {#each filteredCompletedBillSections as section (section.category.id)}
+                      <CategorySection
+                        {section}
+                        type="bills"
+                        {month}
+                        compactMode={$compactMode}
+                        readOnly={$monthIsReadOnly}
+                        hiddenCount={0}
+                        collapsed={$hidePaidItems}
+                        on:refresh={refreshData}
+                        on:reopened={handleReopened}
+                        on:closed={handleClosed}
+                      />
+                    {/each}
+                  {/if}
                 {/if}
-              {/if}
-            </section>
+              </section>
 
-            <!-- Income Section -->
-            <section class="section income-section">
-              <div class="section-header">
-                <h2>Income</h2>
-              </div>
+              <!-- Income Section -->
+              <section class="section income-section">
+                <div class="section-header">
+                  <h2>Income</h2>
+                </div>
 
-              {#if totalIncomes > 0}
-                <SectionStatsHeader
-                  sections={sortedIncomeSections}
-                  tally={$detailedMonthData.tallies.totalIncome}
-                  type="income"
-                />
-              {/if}
-
-              {#if totalIncomes === 0}
-                <p class="empty-text">No income categories. Add categories in Setup.</p>
-              {:else}
-                <!-- Active (incomplete) categories -->
-                {#each displayActiveIncomeSections as section (section.category.id)}
-                  <CategorySection
-                    {section}
+                {#if totalIncomes > 0}
+                  <SectionStatsHeader
+                    sections={sortedIncomeSections}
+                    tally={$detailedMonthData.tallies.totalIncome}
                     type="income"
-                    {month}
-                    compactMode={$compactMode}
-                    readOnly={$monthIsReadOnly}
-                    hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
-                    collapsed={false}
-                    on:refresh={refreshData}
-                    on:reopened={handleReopened}
-                    on:closed={handleClosed}
                   />
-                {/each}
+                {/if}
 
-                <!-- Divider + Completed categories -->
-                {#if completedIncomeSections.length > 0}
-                  <div class="completed-divider">
-                    <span>Completed</span>
-                  </div>
-
-                  {#each completedIncomeSections as section (section.category.id)}
+                {#if totalIncomes === 0}
+                  <p class="empty-text">No income categories. Add categories in Setup.</p>
+                {:else}
+                  <!-- Active (incomplete) categories -->
+                  {#each filteredActiveIncomeSections as section (section.category.id)}
                     <CategorySection
                       {section}
                       type="income"
                       {month}
                       compactMode={$compactMode}
                       readOnly={$monthIsReadOnly}
-                      hiddenCount={0}
-                      collapsed={$hidePaidItems}
+                      hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
+                      collapsed={false}
                       on:refresh={refreshData}
                       on:reopened={handleReopened}
                       on:closed={handleClosed}
                     />
                   {/each}
+
+                  <!-- Divider + Completed categories -->
+                  {#if filteredCompletedIncomeSections.length > 0}
+                    <div class="completed-divider">
+                      <span>Completed</span>
+                    </div>
+
+                    {#each filteredCompletedIncomeSections as section (section.category.id)}
+                      <CategorySection
+                        {section}
+                        type="income"
+                        {month}
+                        compactMode={$compactMode}
+                        readOnly={$monthIsReadOnly}
+                        hiddenCount={0}
+                        collapsed={$hidePaidItems}
+                        on:refresh={refreshData}
+                        on:reopened={handleReopened}
+                        on:closed={handleClosed}
+                      />
+                    {/each}
+                  {/if}
                 {/if}
-              {/if}
-            </section>
+              </section>
+            {/if}
           </div>
         </div>
       </div>
@@ -490,6 +702,24 @@
     display: grid;
     grid-template-columns: var(--panel-width-medium) var(--panel-width-medium);
     gap: var(--space-6);
+  }
+
+  .no-matches {
+    grid-column: 1 / -1;
+    padding: var(--space-5);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+  }
+
+  .no-matches h3 {
+    margin: 0 0 var(--space-2) 0;
+    color: var(--text-primary);
+  }
+
+  .no-matches p {
+    margin: 0;
   }
 
   /* Single column mode: stack vertically (Bills on top, Income below) */

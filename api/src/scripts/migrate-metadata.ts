@@ -75,7 +75,13 @@ function migrateEntity(item: OldBill | OldIncome): Bill | Income {
   const metadata = extractMetadata(item);
 
   // Create new object without flat fields
-  const { bank_transaction_name, account_number, account_url, notes, ...rest } = item;
+  const {
+    bank_transaction_name: _bank_transaction_name,
+    account_number: _account_number,
+    account_url: _account_url,
+    notes: _notes,
+    ...rest
+  } = item;
 
   return {
     ...rest,

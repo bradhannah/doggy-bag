@@ -15,6 +15,7 @@
   import { createEventDispatcher } from 'svelte';
   import SubmissionCard from './SubmissionCard.svelte';
   import DocumentUpload from './DocumentUpload.svelte';
+  import ConfirmDialog from '../shared/ConfirmDialog.svelte';
 
   export let claim: InsuranceClaim;
   export let onEdit: () => void = () => {};
@@ -26,6 +27,8 @@
   let newSubmissionPlanId = '';
   let newSubmissionAmount = '';
   let submitting = false;
+  let showDeleteConfirm = false;
+  let deleting = false;
 
   function getStatusColor(status: 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
@@ -72,9 +75,12 @@
     return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
-  async function handleDelete() {
-    if (!confirm(`Delete claim #${claim.claim_number}? This action cannot be undone.`)) return;
+  function handleDelete() {
+    showDeleteConfirm = true;
+  }
 
+  async function confirmDelete() {
+    deleting = true;
     try {
       await deleteClaim(claim.id);
       success(`Claim #${claim.claim_number} deleted`);
@@ -82,7 +88,14 @@
       onClose();
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to delete claim');
+    } finally {
+      deleting = false;
+      showDeleteConfirm = false;
     }
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
   }
 
   // Calculate remaining uncovered amount for new submissions
@@ -136,7 +149,7 @@
   }
 
   // Calculate totals
-  $: totalClaimed = claim.submissions.reduce((sum, s) => sum + s.amount_claimed, 0);
+  $: _totalClaimed = claim.submissions.reduce((sum, s) => sum + s.amount_claimed, 0);
   $: totalReimbursed = claim.submissions.reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
   $: hasActivePlans = $activePlans.length > 0;
 </script>
@@ -168,7 +181,7 @@
         </svg>
         Edit
       </button>
-      <button class="btn btn-danger btn-sm" on:click={handleDelete}>
+      <button class="btn btn-danger btn-sm" on:click={handleDelete} disabled={deleting}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
           <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" />
           <path
@@ -315,6 +328,16 @@
     on:deleted={handleSubmissionUpdate}
   />
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<ConfirmDialog
+  open={showDeleteConfirm}
+  title="Delete Claim"
+  message="Delete claim #{claim.claim_number}? This action cannot be undone."
+  confirmText={deleting ? 'Deleting...' : 'Delete'}
+  on:confirm={confirmDelete}
+  on:cancel={cancelDelete}
+/>
 
 <style>
   .claim-detail {

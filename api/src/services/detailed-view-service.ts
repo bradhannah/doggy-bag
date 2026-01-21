@@ -25,6 +25,7 @@ import type {
   SectionTally,
   PayoffSummary,
 } from '../types';
+import { getOverdueBills } from '../utils/overdue-bills';
 import { calculateDueDate, isOverdue, getDaysOverdue } from '../utils/due-date';
 import {
   calculateRegularBillsTally,
@@ -75,8 +76,10 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const billsMap = new Map(bills.map((b) => [b.id, b]));
     const incomesMap = new Map(incomes.map((i) => [i.id, i]));
     const paymentSourcesMap = new Map(paymentSources.map((ps) => [ps.id, ps]));
-    // Include both 'bill' and 'variable' category types for expenses
-    const billCategories = categories.filter((c) => c.type === 'bill' || c.type === 'variable');
+    // Include 'bill', 'variable', and 'savings_goal' category types for expenses
+    const billCategories = categories.filter(
+      (c) => c.type === 'bill' || c.type === 'variable' || c.type === 'savings_goal'
+    );
     const incomeCategories = categories.filter((c) => c.type === 'income');
 
     // Build detailed bill instances
@@ -133,6 +136,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const leftoverResult = calculateUnifiedLeftover(monthlyData, paymentSources);
     const hasActuals = hasActualsEntered(monthlyData);
 
+    const overdueBills = getOverdueBills(detailedBillInstances, month);
+
     // Build payoff summaries
     const payoffSummaries: PayoffSummary[] = payoffBills.map((bi) => {
       const paymentSource = bi.payoff_source_id ? paymentSourcesMap.get(bi.payoff_source_id) : null;
@@ -173,6 +178,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
           leftoverResult.missingBalances.length > 0 ? leftoverResult.missingBalances : undefined,
         errorMessage: leftoverResult.errorMessage,
       },
+      overdue_bills: overdueBills,
       payoffSummaries,
       bankBalances: monthlyData.bank_balances,
       lastUpdated: monthlyData.updated_at,
@@ -228,6 +234,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         is_adhoc: instance.is_adhoc,
         is_payoff_bill: instance.is_payoff_bill ?? false,
         payoff_source_id: instance.payoff_source_id,
+        due_date: dueDate,
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,
         days_overdue: daysOverdueValue,
@@ -285,6 +292,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         remaining,
         is_closed: instance.is_closed,
         is_adhoc: instance.is_adhoc,
+        due_date: dueDate,
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,

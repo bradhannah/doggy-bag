@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
-  import type { Payment } from '../../stores/detailed-month';
+  import { detailedMonth, type Payment } from '../../stores/detailed-month';
 
   export let open = false;
   export let month: string;
@@ -12,16 +12,49 @@
   export let transactionList: Payment[] = [];
   export let isClosed: boolean = false;
   export let type: 'bill' | 'income' = 'bill';
-  export let occurrenceId: string | undefined = undefined; // NEW: For occurrence-level payments
-  export let isPayoffBill: boolean = false; // NEW: Disable close actions for payoff bills
+  export let occurrenceId: string | undefined = undefined;
+  export let occurrenceNotes: string | null = null;
+  export let refreshNotes = 0;
+
+  export let isPayoffBill: boolean = false;
 
   const dispatch = createEventDispatcher();
+
+  let isDestroyed = false;
+  onDestroy(() => {
+    isDestroyed = true;
+  });
 
   // Form state
   let amount = '';
   let date = new Date().toISOString().split('T')[0];
   let saving = false;
   let error = '';
+  let notes = '';
+  let savingNotes = false;
+  let notesDirty = false;
+  let showDiscardConfirm = false;
+  let closeDate = new Date().toISOString().split('T')[0];
+  let closeDateTouched = false;
+
+  $: if (open) {
+    notes = occurrenceNotes ?? '';
+    notesDirty = false;
+    closeDate = date;
+    closeDateTouched = false;
+  }
+
+  $: if (open && !notesDirty) {
+    notes = occurrenceNotes ?? '';
+  }
+
+  $: if (!closeDateTouched && date) {
+    closeDate = date;
+  }
+
+  $: if (open && !notesDirty && refreshNotes !== undefined) {
+    notes = occurrenceNotes ?? '';
+  }
 
   // Computed values
   $: totalTransactions = transactionList.reduce((sum, p) => sum + p.amount, 0);
@@ -51,9 +84,37 @@
   }
 
   function handleClose() {
+    // If there are unsaved notes, show confirmation dialog
+    if (notesDirty) {
+      showDiscardConfirm = true;
+      return;
+    }
+    doClose();
+  }
+
+  function doClose() {
     open = false;
+    showDiscardConfirm = false;
     resetForm();
     dispatch('close');
+  }
+
+  function handleDiscardConfirm() {
+    notesDirty = false;
+    doClose();
+  }
+
+  function handleCancelDiscard() {
+    showDiscardConfirm = false;
+  }
+
+  async function handleSaveAndClose() {
+    await saveNotes();
+    if (!notesDirty) {
+      // Save succeeded
+      doClose();
+    }
+    showDiscardConfirm = false;
   }
 
   function resetForm() {
@@ -67,6 +128,8 @@
   }
 
   async function addTransactionAndClose() {
+    closeDateTouched = true;
+    closeDate = date;
     await addTransaction(true);
   }
 
@@ -100,22 +163,21 @@
         endpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/payments`;
         closeEndpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/close`;
       } else {
-        // Instance-level endpoints (legacy/monthly)
-        endpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/payments`
-            : `/api/months/${month}/incomes/${instanceId}/payments`;
-        closeEndpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/close`
-            : `/api/months/${month}/incomes/${instanceId}/close`;
+        throw new Error('Missing occurrence for payment updates. Refresh and try again.');
       }
 
       await apiClient.post(endpoint, { amount: amountCents, date });
 
       // Close the instance/occurrence if requested
       if (closeAfter) {
-        await apiClient.post(closeEndpoint, {});
+        if (!closeDate) {
+          error = 'Please select a close date';
+          return;
+        }
+        await apiClient.post(closeEndpoint, {
+          closed_date: closeDate,
+          notes,
+        });
         success(`${typeLabel} added and closed`);
       } else {
         success(`${typeLabel} added`);
@@ -147,13 +209,18 @@
       if (occurrenceId) {
         closeEndpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/close`;
       } else {
-        closeEndpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/close`
-            : `/api/months/${month}/incomes/${instanceId}/close`;
+        throw new Error('Missing occurrence for close action. Refresh and try again.');
       }
 
-      await apiClient.post(closeEndpoint, {});
+      if (!closeDate) {
+        error = 'Please select a close date';
+        return;
+      }
+
+      await apiClient.post(closeEndpoint, {
+        closed_date: closeDate,
+        notes,
+      });
       success(`${occurrenceId ? 'Occurrence' : type === 'bill' ? 'Bill' : 'Income'} closed`);
       dispatch('updated');
       handleClose();
@@ -174,11 +241,7 @@
         // Occurrence-level delete endpoint
         endpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/payments/${paymentId}`;
       } else {
-        // Instance-level endpoints (legacy/monthly)
-        endpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/payments/${paymentId}`
-            : `/api/months/${month}/incomes/${instanceId}/payments/${paymentId}`;
+        throw new Error('Missing occurrence for deletion. Refresh and try again.');
       }
 
       await apiClient.deletePath(endpoint);
@@ -187,6 +250,40 @@
     } catch (err) {
       showError(err instanceof Error ? err.message : `Failed to delete ${typeLabel.toLowerCase()}`);
     }
+  }
+
+  async function saveNotes() {
+    // Guard: Don't save if component is destroyed or drawer is closed
+    if (isDestroyed || !open) {
+      return;
+    }
+    if (!occurrenceId) {
+      showError('Missing occurrence for notes');
+      return;
+    }
+
+    savingNotes = true;
+    try {
+      await apiClient.putPath(
+        `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}`,
+        {
+          notes,
+        }
+      );
+      notesDirty = false;
+      // Use optimistic update instead of dispatch('notesUpdated') to prevent full refresh
+      detailedMonth.updateOccurrenceNotes(instanceId, occurrenceId, notes || null, type);
+      success('Notes saved');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to save notes');
+    } finally {
+      savingNotes = false;
+    }
+  }
+
+  function handleNotesInput() {
+    // Mark notes as dirty when user types (no auto-save)
+    notesDirty = true;
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -282,8 +379,33 @@
           <p class="no-transactions">No {typeLabelPlural.toLowerCase()} yet</p>
         {/if}
 
-        <!-- Add form (only if not closed) -->
         {#if !isClosed}
+          <div class="add-section">
+            <div class="section-header">
+              <h4>Occurrence Notes</h4>
+              <button
+                class="save-notes-btn"
+                on:click={saveNotes}
+                disabled={savingNotes || saving || !notesDirty}
+              >
+                {savingNotes ? 'Saving...' : 'Save Notes'}
+              </button>
+            </div>
+            <div class="form-group">
+              <textarea
+                id="notes"
+                rows="4"
+                placeholder="Add a note for this occurrence"
+                bind:value={notes}
+                disabled={savingNotes || saving}
+                on:input={handleNotesInput}
+              ></textarea>
+              {#if notesDirty}
+                <p class="notes-hint unsaved">You have unsaved changes</p>
+              {/if}
+            </div>
+          </div>
+
           <div class="add-section">
             <h4>Add {typeLabel}</h4>
 
@@ -308,8 +430,19 @@
             </div>
 
             <div class="form-group">
-              <label for="date">Date</label>
+              <label for="date">Payment date</label>
               <input id="date" type="date" bind:value={date} disabled={saving} />
+            </div>
+
+            <div class="form-group">
+              <label for="close-date">Close date</label>
+              <input
+                id="close-date"
+                type="date"
+                bind:value={closeDate}
+                on:input={() => (closeDateTouched = true)}
+                disabled={saving}
+              />
             </div>
 
             {#if error}
@@ -347,6 +480,30 @@
             This {type} is closed
           </div>
         {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Unsaved Changes Confirmation Dialog -->
+{#if showDiscardConfirm}
+  <div
+    class="confirm-overlay"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    on:click={handleCancelDiscard}
+    on:keydown={(e) => e.key === 'Escape' && handleCancelDiscard()}
+  >
+    <div class="confirm-dialog" on:click|stopPropagation>
+      <h3>Unsaved Changes</h3>
+      <p>You have unsaved notes. What would you like to do?</p>
+      <div class="confirm-actions">
+        <button class="confirm-btn cancel" on:click={handleCancelDiscard}>Cancel</button>
+        <button class="confirm-btn discard" on:click={handleDiscardConfirm}>Discard</button>
+        <button class="confirm-btn save" on:click={handleSaveAndClose} disabled={savingNotes}>
+          {savingNotes ? 'Saving...' : 'Save & Close'}
+        </button>
       </div>
     </div>
   </div>
@@ -451,6 +608,12 @@
 
   .item-details .remaining.zero {
     color: var(--success);
+  }
+
+  .notes-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
   }
 
   .transactions-section {
@@ -586,6 +749,24 @@
     border-color: var(--warning);
   }
 
+  textarea {
+    width: 100%;
+    min-height: calc(var(--input-height) * 4);
+    padding: var(--space-3);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    resize: vertical;
+  }
+
+  textarea:focus {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
+  }
+
   input[type='date'] {
     width: 100%;
     height: var(--input-height);
@@ -600,6 +781,10 @@
   input[type='date']:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  textarea::placeholder {
+    color: var(--text-tertiary);
   }
 
   .error-message {
@@ -689,5 +874,137 @@
 
   .checkmark {
     font-size: 1.25rem;
+  }
+
+  /* Section header with title and button */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+  }
+
+  .section-header h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .save-notes-btn {
+    padding: var(--space-2) var(--space-3);
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-inverse);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .save-notes-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .save-notes-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .notes-hint.unsaved {
+    color: var(--warning);
+    font-weight: 500;
+  }
+
+  /* Confirmation overlay and dialog */
+  .confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--overlay-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+  }
+
+  .confirm-dialog {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    max-width: 400px;
+    width: 90%;
+    box-shadow: var(--shadow-heavy);
+  }
+
+  .confirm-dialog h3 {
+    margin: 0 0 var(--space-3) 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .confirm-dialog p {
+    margin: 0 0 var(--space-4) 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: flex-end;
+  }
+
+  .confirm-btn {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .confirm-btn.cancel {
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+  }
+
+  .confirm-btn.cancel:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+  }
+
+  .confirm-btn.discard {
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error);
+  }
+
+  .confirm-btn.discard:hover {
+    background: var(--error);
+    color: var(--text-inverse);
+  }
+
+  .confirm-btn.save {
+    background: var(--accent);
+    border: none;
+    color: var(--text-inverse);
+  }
+
+  .confirm-btn.save:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .confirm-btn.save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

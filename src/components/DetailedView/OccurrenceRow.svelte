@@ -3,6 +3,8 @@
   import type { Occurrence } from '../../stores/detailed-month';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import CloseTransactionModal from './CloseTransactionModal.svelte';
+  import PayFullShortcutModal from './PayFullShortcutModal.svelte';
 
   export let occurrence: Occurrence;
   export let month: string;
@@ -66,22 +68,63 @@
   // API endpoint base
   $: apiBase = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrence.id}`;
 
-  async function handlePayFull() {
+  let showCloseModal = false;
+  let showPayFullModal = false;
+  let closeDate = new Date().toISOString().split('T')[0];
+
+  function clampDayToMonth(monthStr: string, day: number): string {
+    const [year, monthNum] = monthStr.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    return String(Math.min(Math.max(day, 1), lastDay)).padStart(2, '0');
+  }
+
+  function resolveMonthDay(monthStr: string, day: string): string {
+    const clamped = clampDayToMonth(monthStr, parseInt(day, 10) || 1);
+    return `${monthStr}-${clamped}`;
+  }
+
+  function openCloseModal() {
+    if (saving) return;
+    closeDate = new Date().toISOString().split('T')[0];
+    showCloseModal = true;
+  }
+
+  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
     if (saving) return;
     saving = true;
 
     try {
-      // Add payment for remaining amount
-      const paymentAmount = remaining > 0 ? remaining : occurrence.expected_amount;
-      const today = new Date().toISOString().split('T')[0];
+      await apiClient.post(`${apiBase}/close`, {
+        closed_date: event.detail.closedDate,
+        notes: event.detail.notes,
+      });
+      success('Closed');
+      dispatch('updated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to close');
+    } finally {
+      saving = false;
+      showCloseModal = false;
+    }
+  }
 
+  async function handlePayFullConfirm(
+    event: CustomEvent<{ amount: number; day: string; notes: string }>
+  ) {
+    if (saving) return;
+    saving = true;
+
+    try {
+      const paymentDate = resolveMonthDay(month, event.detail.day);
       await apiClient.post(`${apiBase}/payments`, {
-        amount: paymentAmount,
-        date: today,
+        amount: event.detail.amount,
+        date: paymentDate,
       });
 
-      // Close the occurrence
-      await apiClient.post(`${apiBase}/close`, {});
+      await apiClient.post(`${apiBase}/close`, {
+        closed_date: paymentDate,
+        notes: event.detail.notes,
+      });
 
       success(type === 'bill' ? 'Payment added and closed' : 'Receipt added and closed');
       dispatch('updated');
@@ -89,22 +132,13 @@
       showError(err instanceof Error ? err.message : 'Failed to process');
     } finally {
       saving = false;
+      showPayFullModal = false;
     }
   }
 
-  async function handleClose() {
+  function openPayFullModal() {
     if (saving) return;
-    saving = true;
-
-    try {
-      await apiClient.post(`${apiBase}/close`, {});
-      success('Closed');
-      dispatch('updated');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to close');
-    } finally {
-      saving = false;
-    }
+    showPayFullModal = true;
   }
 
   async function handleReopen() {
@@ -252,143 +286,148 @@
 </script>
 
 <div
-  class="occurrence-row"
+  class="occurrence-row-container"
   class:closed={occurrence.is_closed}
   class:partial={isPartiallyPaid}
   class:adhoc={occurrence.is_adhoc}
 >
-  <!-- Date (clickable to edit day of month) -->
-  <div class="occ-date">
-    {#if isEditingDate}
-      <div class="date-edit">
-        <input
-          type="number"
-          min="1"
-          max="31"
-          class="date-input"
-          bind:value={editingDayValue}
-          on:keydown={handleDateKeydown}
-          on:blur={saveDate}
-          disabled={saving}
-          autofocus
-        />
-      </div>
-    {:else if occurrence.is_closed && occurrence.closed_date}
-      <span class="closed-date">{formatDayOfMonth(occurrence.closed_date)}</span>
-    {:else}
-      <button
-        class="date-value"
-        class:editable={!readOnly && !occurrence.is_closed}
-        on:click={startEditingDate}
-        title={occurrence.is_closed ? 'Reopen to edit' : 'Click to edit date'}
-        disabled={readOnly || occurrence.is_closed}
-      >
-        {formatDayOfMonth(occurrence.expected_date)}
-      </button>
-    {/if}
-  </div>
-
-  <!-- Expected amount -->
-  <div class="amount-column">
-    <span class="amount-label">Expected</span>
-    {#if isEditingExpected}
-      <div class="inline-edit">
-        <span class="prefix">$</span>
-        <input
-          type="text"
-          bind:value={expectedEditValue}
-          on:keydown={handleExpectedKeydown}
-          on:blur={saveExpectedAmount}
-          disabled={saving}
-          autofocus
-        />
-      </div>
-    {:else}
-      <button
-        class="amount-value clickable"
-        class:disabled={occurrence.is_closed}
-        class:editable-highlight={!occurrence.is_closed && !readOnly}
-        on:click={startEditingExpected}
-        title={occurrence.is_closed ? 'Reopen to edit' : 'Click to edit'}
-      >
-        {formatCurrency(occurrence.expected_amount)}
-      </button>
-    {/if}
-  </div>
-
-  <!-- Arrow -->
-  <div class="arrow">→</div>
-
-  <!-- Actual/Paid amount -->
-  <div class="amount-column">
-    <span class="amount-label">
-      {type === 'bill' ? 'Paid' : 'Received'}
-      {#if occurrence.payments.length > 0}
-        <span class="payment-count">({occurrence.payments.length})</span>
+  <div class="occurrence-row">
+    <!-- Date (clickable to edit day of month) -->
+    <div class="occ-date">
+      {#if isEditingDate}
+        <div class="date-edit">
+          <input
+            type="number"
+            min="1"
+            max="31"
+            class="date-input"
+            bind:value={editingDayValue}
+            on:keydown={handleDateKeydown}
+            on:blur={saveDate}
+            disabled={saving}
+            autofocus
+          />
+        </div>
+      {:else if occurrence.is_closed && occurrence.closed_date}
+        <span class="closed-date">{formatDayOfMonth(occurrence.closed_date)}</span>
+      {:else}
+        <button
+          class="date-value"
+          class:editable={!readOnly && !occurrence.is_closed}
+          on:click={startEditingDate}
+          title={occurrence.is_closed ? 'Reopen to edit' : 'Click to edit date'}
+          disabled={readOnly || occurrence.is_closed}
+        >
+          {formatDayOfMonth(occurrence.expected_date)}
+        </button>
       {/if}
-    </span>
-    {#if hasPayments}
+    </div>
+
+    <!-- Expected amount -->
+    <div class="amount-column">
+      <span class="amount-label">Expected</span>
+      {#if isEditingExpected}
+        <div class="inline-edit">
+          <span class="prefix">$</span>
+          <input
+            type="text"
+            bind:value={expectedEditValue}
+            on:keydown={handleExpectedKeydown}
+            on:blur={saveExpectedAmount}
+            disabled={saving}
+            autofocus
+          />
+        </div>
+      {:else}
+        <button
+          class="amount-value clickable"
+          class:disabled={occurrence.is_closed}
+          class:editable-highlight={!occurrence.is_closed && !readOnly}
+          on:click={startEditingExpected}
+          title={occurrence.is_closed ? 'Reopen to edit' : 'Click to edit'}
+        >
+          {formatCurrency(occurrence.expected_amount)}
+        </button>
+      {/if}
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow">→</div>
+
+    <!-- Actual/Paid amount -->
+    <div class="amount-column">
+      <span class="amount-label">
+        {type === 'bill' ? 'Paid' : 'Received'}
+        {#if occurrence.payments.length > 0}
+          <span class="payment-count">({occurrence.payments.length})</span>
+        {/if}
+      </span>
+      {#if hasPayments}
+        <button
+          class="amount-value clickable"
+          class:amber={showAmber}
+          on:click={openPaymentDrawer}
+          title="View transactions"
+        >
+          {formatCurrency(totalPaid)}
+        </button>
+      {:else}
+        <button class="add-payment-link" on:click={openPaymentDrawer}>
+          {type === 'bill' ? 'Add Payment' : 'Add Receipt'}
+        </button>
+      {/if}
+    </div>
+
+    <!-- Remaining amount -->
+    <div class="amount-column remaining-column">
+      <span class="amount-label">Remaining</span>
+      <span class="amount-value remaining" class:zero={remaining === 0}>
+        {remaining === 0 ? '-' : formatCurrency(remaining)}
+      </span>
+    </div>
+
+    <!-- Status indicator -->
+    <div class="status-column">
+      {#if occurrence.is_closed}
+        <span class="status-badge closed-badge">
+          {type === 'bill' ? 'Closed' : 'Received'}
+        </span>
+      {:else if isPartiallyPaid}
+        <span class="status-badge partial-badge">Partial</span>
+      {:else}
+        <span class="status-badge open-badge">
+          {type === 'bill' ? 'Open' : 'Expected'}
+        </span>
+      {/if}
+    </div>
+
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      {#if occurrence.is_closed}
+        <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
+          Reopen
+        </button>
+      {:else}
+        <button class="action-btn close" on:click={openCloseModal} disabled={saving || readOnly}>
+          Close
+        </button>
+        {#if !isPayoffBill}
+          <button
+            class="action-btn pay-full"
+            on:click={openPayFullModal}
+            disabled={saving || readOnly}
+          >
+            {type === 'bill' ? 'Pay Full' : 'Receive Full'}
+          </button>
+        {/if}
+      {/if}
+
+      <!-- Delete button for all occurrences (except payoff bills) -->
       <button
-        class="amount-value clickable"
-        class:amber={showAmber}
+        class="action-btn-icon edit"
         on:click={openPaymentDrawer}
-        title="View transactions"
-      >
-        {formatCurrency(totalPaid)}
-      </button>
-    {:else}
-      <button class="add-payment-link" on:click={openPaymentDrawer}>
-        {type === 'bill' ? 'Add Payment' : 'Add Receipt'}
-      </button>
-    {/if}
-  </div>
-
-  <!-- Remaining amount -->
-  <div class="amount-column remaining-column">
-    <span class="amount-label">Remaining</span>
-    <span class="amount-value remaining" class:zero={remaining === 0}>
-      {remaining === 0 ? '-' : formatCurrency(remaining)}
-    </span>
-  </div>
-
-  <!-- Status indicator -->
-  <div class="status-column">
-    {#if occurrence.is_closed}
-      <span class="status-badge closed-badge">
-        {type === 'bill' ? 'Closed' : 'Received'}
-      </span>
-    {:else if isPartiallyPaid}
-      <span class="status-badge partial-badge">Partial</span>
-    {:else}
-      <span class="status-badge open-badge">
-        {type === 'bill' ? 'Open' : 'Expected'}
-      </span>
-    {/if}
-  </div>
-
-  <!-- Action buttons -->
-  <div class="action-buttons">
-    {#if occurrence.is_closed}
-      <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
-        Reopen
-      </button>
-    {:else if hasPayments}
-      <button class="action-btn close" on:click={handleClose} disabled={saving || readOnly}>
-        Close
-      </button>
-    {:else}
-      <button class="action-btn pay-full" on:click={handlePayFull} disabled={saving || readOnly}>
-        {type === 'bill' ? 'Pay Full' : 'Receive'}
-      </button>
-    {/if}
-
-    <!-- Delete button for all occurrences (except payoff bills) -->
-    {#if !readOnly && !isPayoffBill}
-      <button
-        class="action-btn-icon delete"
-        on:click={confirmDelete}
-        disabled={saving}
-        title="Delete occurrence"
+        disabled={saving || readOnly}
+        title="Edit transactions"
       >
         <svg
           width="12"
@@ -398,22 +437,72 @@
           stroke="currentColor"
           stroke-width="2"
         >
-          <polyline points="3 6 5 6 21 6" />
-          <path
-            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-          />
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
         </svg>
       </button>
-    {/if}
+
+      {#if !readOnly && !isPayoffBill}
+        <button
+          class="action-btn-icon delete"
+          on:click={confirmDelete}
+          disabled={saving}
+          title="Delete occurrence"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="3 6 5 6 21 6" />
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            />
+          </svg>
+        </button>
+      {/if}
+    </div>
+
+    <!-- Badges column (at the end to prevent pushing other columns) -->
+    <div class="badges-column">
+      {#if occurrence.is_adhoc}
+        <span class="badge adhoc-badge">ad-hoc</span>
+      {/if}
+    </div>
   </div>
 
-  <!-- Badges column (at the end to prevent pushing other columns) -->
-  <div class="badges-column">
-    {#if occurrence.is_adhoc}
-      <span class="badge adhoc-badge">ad-hoc</span>
-    {/if}
-  </div>
+  {#if (occurrence as Occurrence & { notes?: string | null }).notes}
+    <p class="inline-note">
+      {(occurrence as Occurrence & { notes?: string | null }).notes}
+    </p>
+  {/if}
 </div>
+
+<CloseTransactionModal
+  open={showCloseModal}
+  {type}
+  itemName={occurrence.expected_date}
+  initialDate={closeDate}
+  initialNotes={(occurrence as Occurrence & { notes?: string | null }).notes ?? ''}
+  {month}
+  on:close={() => (showCloseModal = false)}
+  on:confirm={handleCloseConfirm}
+/>
+
+<PayFullShortcutModal
+  open={showPayFullModal}
+  {type}
+  itemName={occurrence.expected_date}
+  amount={remaining > 0 ? remaining : occurrence.expected_amount}
+  initialDay={occurrence.expected_date?.split('-')[2] ?? ''}
+  initialNotes={(occurrence as Occurrence & { notes?: string | null }).notes ?? ''}
+  {month}
+  on:close={() => (showPayFullModal = false)}
+  on:confirm={handlePayFullConfirm}
+/>
 
 <!-- Delete Confirmation Dialog -->
 {#if showDeleteConfirm}
@@ -440,6 +529,20 @@
 {/if}
 
 <style>
+  .occurrence-row-container {
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .occurrence-row-container:hover {
+    background: var(--bg-surface);
+  }
+
+  .occurrence-row-container.closed {
+    background: var(--success-bg);
+  }
+
   .occurrence-row {
     display: grid;
     grid-template-columns: 45px 85px 20px 85px 70px 65px 90px 50px;
@@ -447,24 +550,24 @@
     gap: 8px;
     padding: 6px 12px;
     padding-left: 20px; /* Indent for sub-row appearance */
-    background: var(--bg-elevated);
-    border-radius: 6px;
-    transition: all 0.15s ease;
     font-size: 0.8rem; /* Smaller font for occurrence rows */
-  }
-
-  .occurrence-row:hover {
-    background: var(--bg-surface);
-  }
-
-  .occurrence-row.closed {
-    background: var(--success-bg);
   }
 
   .occ-date {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
+    gap: 2px;
+  }
+
+  .inline-note {
+    margin: 0;
+    padding: 0 12px 8px 20px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-style: italic;
   }
 
   .date-value {
@@ -768,6 +871,11 @@
   .action-btn-icon:hover:not(:disabled) {
     background: var(--error-bg);
     color: var(--error);
+  }
+
+  .action-btn-icon.edit:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   .action-btn-icon.delete:hover:not(:disabled) {

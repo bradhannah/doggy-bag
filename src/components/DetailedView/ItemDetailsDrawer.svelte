@@ -1,19 +1,36 @@
 <script lang="ts">
   /**
-   * ItemDetailsDrawer - Right-side readonly drawer showing bill/income details
+   * ItemDetailsDrawer - READ-ONLY drawer showing bill/income details
+   *
+   * This component is purely informational - no editing capabilities.
+   * For editing notes or managing payments, use TransactionsDrawer.
+   *
+   * Features:
+   * - Shows all occurrences for the bill/income (not filtered by occurrenceId)
+   * - Summary section with totals
+   * - Card-based layout for each occurrence
+   * - Read-only notes display
    *
    * @prop open - Controls drawer visibility
    * @prop type - 'bill' or 'income' (determines labels)
    * @prop item - The bill or income instance to display
    * @prop categoryName - The category name for this item
+   * @prop month - The month string (YYYY-MM)
    */
   import { createEventDispatcher } from 'svelte';
-  import type { BillInstanceDetailed, IncomeInstanceDetailed } from '../../stores/detailed-month';
+  import {
+    type BillInstanceDetailed,
+    type IncomeInstanceDetailed,
+    type Occurrence,
+  } from '../../stores/detailed-month';
 
   export let open = false;
   export let type: 'bill' | 'income' = 'bill';
   export let item: BillInstanceDetailed | IncomeInstanceDetailed | null = null;
   export let categoryName: string = '';
+  export let month = '';
+  // Note: occurrenceId prop kept for backwards compatibility but no longer used for filtering
+  export let occurrenceId: string | null = null;
 
   const dispatch = createEventDispatcher();
 
@@ -22,7 +39,7 @@
     return 'total_paid' in i;
   }
 
-  // Computed values
+  // Computed values for item details
   $: actualLabel = type === 'bill' ? 'Paid' : 'Received';
   $: actualAmount = item ? (isBill(item) ? item.total_paid : item.total_received) : 0;
   $: remainingAmount = item?.remaining ?? 0;
@@ -41,6 +58,19 @@
     metadata?.notes
   );
 
+  // Show ALL occurrences (not filtered by occurrenceId)
+  $: occurrences = item?.occurrences ?? [];
+  $: closedCount = occurrences.filter((occ) => occ.is_closed).length;
+  $: totalOccurrences = occurrences.length;
+
+  // Summary calculations across all occurrences
+  $: totalExpected = occurrences.reduce((sum, occ) => sum + (occ.expected_amount ?? 0), 0);
+  $: totalPaid = occurrences.reduce((sum, occ) => {
+    const payments = occ.payments ?? [];
+    return sum + payments.reduce((pSum, p) => pSum + p.amount, 0);
+  }, 0);
+  $: totalRemaining = Math.max(0, totalExpected - totalPaid);
+
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
     return new Intl.NumberFormat('en-US', {
@@ -54,6 +84,12 @@
     if (!dateStr) return '-';
     const date = new Date(dateStr + 'T00:00:00');
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function formatShortDate(dateStr: string | null): string {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   function formatBillingPeriod(period: string): string {
@@ -79,6 +115,17 @@
     } catch {
       return url.substring(0, 30) + (url.length > 30 ? '...' : '');
     }
+  }
+
+  // Get occurrence notes (read-only)
+  function getOccurrenceNotes(occurrence: Occurrence): string | null {
+    return (occurrence as Occurrence & { notes?: string | null }).notes ?? null;
+  }
+
+  // Get occurrence paid amount
+  function getOccurrencePaid(occurrence: Occurrence): number {
+    const payments = occurrence.payments ?? [];
+    return payments.reduce((sum, p) => sum + p.amount, 0);
   }
 
   function handleClose() {
@@ -155,7 +202,9 @@
             <div class="detail-row">
               <span class="detail-label">Status</span>
               <span class="detail-value status" class:closed={isClosed} class:open={!isClosed}>
-                {#if isClosed}
+                {#if totalOccurrences > 1}
+                  {isClosed ? 'Closed' : 'Open'} ({closedCount} of {totalOccurrences} closed)
+                {:else if isClosed}
                   Closed {closedDate ? `on ${formatDate(closedDate)}` : ''}
                 {:else}
                   Open
@@ -171,32 +220,128 @@
           </div>
         </section>
 
-        <!-- Amounts Section -->
-        <section class="section">
-          <h4 class="section-title">Amounts</h4>
-          <div class="details-grid">
-            <div class="detail-row">
-              <span class="detail-label">Expected</span>
-              <span class="detail-value amount">{formatCurrency(expectedAmount)}</span>
+        <!-- Summary Section (for multi-occurrence) -->
+        {#if totalOccurrences > 1}
+          <section class="section">
+            <h4 class="section-title">Summary</h4>
+            <div class="details-grid summary-grid">
+              <div class="detail-row">
+                <span class="detail-label">Total Expected</span>
+                <span class="detail-value amount">
+                  {formatCurrency(totalExpected)}
+                  <span class="amount-detail"
+                    >({totalOccurrences} × {formatCurrency(expectedAmount)})</span
+                  >
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Total {actualLabel}</span>
+                <span class="detail-value amount" class:positive={totalPaid > 0}>
+                  {formatCurrency(totalPaid)}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Total Remaining</span>
+                <span
+                  class="detail-value amount"
+                  class:zero={totalRemaining === 0}
+                  class:warning={totalRemaining > 0}
+                >
+                  {formatCurrency(totalRemaining)}
+                </span>
+              </div>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">{actualLabel}</span>
-              <span class="detail-value amount" class:positive={actualAmount > 0}>
-                {formatCurrency(actualAmount)}
-              </span>
+          </section>
+        {:else}
+          <!-- Single occurrence: show simple amounts -->
+          <section class="section">
+            <h4 class="section-title">Amounts</h4>
+            <div class="details-grid">
+              <div class="detail-row">
+                <span class="detail-label">Expected</span>
+                <span class="detail-value amount">{formatCurrency(expectedAmount)}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">{actualLabel}</span>
+                <span class="detail-value amount" class:positive={actualAmount > 0}>
+                  {formatCurrency(actualAmount)}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Remaining</span>
+                <span
+                  class="detail-value amount"
+                  class:zero={remainingAmount === 0}
+                  class:warning={remainingAmount > 0}
+                >
+                  {formatCurrency(remainingAmount)}
+                </span>
+              </div>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">Remaining</span>
-              <span
-                class="detail-value amount"
-                class:zero={remainingAmount === 0}
-                class:warning={remainingAmount > 0}
-              >
-                {formatCurrency(remainingAmount)}
-              </span>
+          </section>
+        {/if}
+
+        <!-- Occurrences Section -->
+        {#if occurrences.length > 0}
+          <section class="section">
+            <h4 class="section-title">Occurrences ({occurrences.length})</h4>
+            <div class="occurrences-list">
+              {#each occurrences as occurrence, index (occurrence.id)}
+                {@const occPaid = getOccurrencePaid(occurrence)}
+                {@const occExpected = occurrence.expected_amount ?? expectedAmount}
+                {@const occRemaining = Math.max(0, occExpected - occPaid)}
+                {@const occNotes = getOccurrenceNotes(occurrence)}
+                <div class="occurrence-card" class:closed={occurrence.is_closed}>
+                  <div class="occurrence-header">
+                    <span class="occurrence-label">Occurrence {index + 1}</span>
+                    <span class="occurrence-status" class:closed={occurrence.is_closed}>
+                      {occurrence.is_closed ? 'Closed' : 'Open'}
+                    </span>
+                  </div>
+                  <div class="occurrence-details">
+                    <div class="occurrence-row">
+                      <span class="occ-label">Expected Date</span>
+                      <span class="occ-value">{formatShortDate(occurrence.expected_date)}</span>
+                    </div>
+                    <div class="occurrence-row">
+                      <span class="occ-label">Expected</span>
+                      <span class="occ-value">{formatCurrency(occExpected)}</span>
+                    </div>
+                    <div class="occurrence-row">
+                      <span class="occ-label">{actualLabel}</span>
+                      <span class="occ-value" class:positive={occPaid > 0}
+                        >{formatCurrency(occPaid)}</span
+                      >
+                    </div>
+                    {#if !occurrence.is_closed}
+                      <div class="occurrence-row">
+                        <span class="occ-label">Remaining</span>
+                        <span
+                          class="occ-value"
+                          class:warning={occRemaining > 0}
+                          class:zero={occRemaining === 0}
+                        >
+                          {formatCurrency(occRemaining)}
+                        </span>
+                      </div>
+                    {:else if occurrence.closed_date}
+                      <div class="occurrence-row">
+                        <span class="occ-label">Closed Date</span>
+                        <span class="occ-value">{formatShortDate(occurrence.closed_date)}</span>
+                      </div>
+                    {/if}
+                    {#if occNotes}
+                      <div class="occurrence-notes-display">
+                        <span class="occ-label">Notes</span>
+                        <p class="occ-notes">{occNotes}</p>
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
             </div>
-          </div>
-        </section>
+          </section>
+        {/if}
 
         <!-- Metadata Section (only if metadata exists) -->
         {#if hasMetadata}
@@ -400,12 +545,132 @@
 
   /* Metadata styles */
   .metadata-content {
-    background: var(--bg-elevated);
-    border-radius: 8px;
-    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+  }
+
+  /* Summary grid with detail text */
+  .summary-grid .detail-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+
+  .amount-detail {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+  }
+
+  /* Occurrences list */
+  .occurrences-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .occurrence-card {
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    overflow: hidden;
+  }
+
+  .occurrence-card.closed {
+    opacity: 0.8;
+  }
+
+  .occurrence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .occurrence-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .occurrence-status {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  .occurrence-status.closed {
+    background: var(--success-bg);
+    color: var(--success);
+  }
+
+  .occurrence-details {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .occurrence-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle, var(--border-default));
+  }
+
+  .occurrence-row:last-child {
+    border-bottom: none;
+  }
+
+  .occ-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .occ-value {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-family: 'SF Mono', 'Menlo', monospace;
+  }
+
+  .occ-value.positive {
+    color: var(--success);
+  }
+
+  .occ-value.zero {
+    color: var(--success);
+  }
+
+  .occ-value.warning {
+    color: var(--warning);
+  }
+
+  .occurrence-notes-display {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-default);
+  }
+
+  .occurrence-notes-display .occ-label {
+    display: block;
+    margin-bottom: var(--space-2);
+  }
+
+  .occ-notes {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
 
   .metadata-field {

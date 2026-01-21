@@ -60,10 +60,10 @@
     error = '';
 
     try {
-      const response = await fetch(`/api/months/${month}/incomes/${incomeInstanceId}/paid`, {
+      const response = await fetch(`/api/months/${month}/incomes/${incomeInstanceId}/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actualAmount: amountCents }),
+        body: JSON.stringify({ amount: amountCents, date: new Date().toISOString().split('T')[0] }),
       });
 
       if (!response.ok) {
@@ -71,7 +71,7 @@
         throw new Error(data.error || 'Failed to mark income as received');
       }
 
-      success('Income received');
+      success('Receipt added');
       dispatch('received');
       handleClose();
     } catch (err) {

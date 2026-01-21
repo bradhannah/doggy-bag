@@ -22,22 +22,14 @@
     showNotesModal = false;
   }
 
-  // Sort plans by priority (lower = higher priority)
-  $: sortedPlans = [...plans].sort((a, b) => a.priority - b.priority);
-
-  function getPriorityLabel(priority: number): string {
-    if (priority === 1) return 'Primary';
-    if (priority === 2) return 'Secondary';
-    if (priority === 3) return 'Tertiary';
-    return `#${priority}`;
-  }
+  // Sort plans by name alphabetically
+  $: sortedPlans = [...plans].sort((a, b) => a.name.localeCompare(b.name));
 </script>
 
 <div class="insurance-plans-list">
   <div class="list-container">
     <!-- Column Header -->
     <div class="column-header">
-      <span class="col-priority">Priority</span>
       <span class="col-name">Plan Name</span>
       <span class="col-owner">Owner</span>
       <span class="col-status">Status</span>
@@ -50,11 +42,6 @@
     {:else}
       {#each sortedPlans as plan (plan.id)}
         <div class="plan-row" class:inactive={!plan.is_active} on:click={() => onView(plan)}>
-          <span class="col-priority">
-            <span class="priority-badge" class:primary={plan.priority === 1}>
-              {getPriorityLabel(plan.priority)}
-            </span>
-          </span>
           <div class="col-name">
             <span class="name-line">
               <span class="name-text">{plan.name}</span>
@@ -190,7 +177,7 @@
   /* Column Header */
   .column-header {
     display: grid;
-    grid-template-columns: 90px 1fr 100px 80px 120px;
+    grid-template-columns: 1fr 100px 80px 120px;
     gap: 12px;
     padding: 12px 16px;
     background: var(--bg-elevated);
@@ -205,7 +192,7 @@
   /* Plan Row */
   .plan-row {
     display: grid;
-    grid-template-columns: 90px 1fr 100px 80px 120px;
+    grid-template-columns: 1fr 100px 80px 120px;
     gap: 12px;
     padding: 14px 16px;
     align-items: center;
@@ -257,22 +244,6 @@
 
   .meta-item {
     white-space: nowrap;
-  }
-
-  /* Priority Badge */
-  .priority-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    background: var(--bg-hover);
-    color: var(--text-secondary);
-  }
-
-  .priority-badge.primary {
-    background: var(--accent-muted);
-    color: var(--accent);
   }
 
   /* Status Badge */
@@ -364,13 +335,11 @@
       grid-template-columns: 1fr 80px;
     }
 
-    .col-priority,
     .col-owner,
     .col-status {
       display: none;
     }
 
-    .column-header .col-priority,
     .column-header .col-owner,
     .column-header .col-status {
       display: none;

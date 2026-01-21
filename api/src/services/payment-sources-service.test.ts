@@ -17,7 +17,6 @@ describe('PaymentSourcesService', () => {
       id: 'ps-checking-001',
       name: 'Checking Account',
       type: 'bank_account',
-      balance: 500000, // $5,000.00
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -26,7 +25,6 @@ describe('PaymentSourcesService', () => {
       id: 'ps-savings-002',
       name: 'Savings Account',
       type: 'bank_account',
-      balance: 1000000, // $10,000.00
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -35,7 +33,6 @@ describe('PaymentSourcesService', () => {
       id: 'ps-creditcard-003',
       name: 'Visa',
       type: 'credit_card',
-      balance: -50000, // -$500.00 (owed)
       is_active: true,
       pay_off_monthly: true,
       exclude_from_leftover: true,
@@ -46,7 +43,6 @@ describe('PaymentSourcesService', () => {
       id: 'ps-inactive-004',
       name: 'Old Account',
       type: 'bank_account',
-      balance: 0,
       is_active: false, // Inactive
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -100,7 +96,6 @@ describe('PaymentSourcesService', () => {
       const checking = sources.find((s) => s.name === 'Checking Account');
       expect(checking).toBeDefined();
       expect(checking?.type).toBe('bank_account');
-      expect(checking?.balance).toBe(500000);
       expect(checking?.is_active).toBe(true);
     });
 
@@ -117,7 +112,6 @@ describe('PaymentSourcesService', () => {
       const source = await service.getById('ps-checking-001');
       expect(source).not.toBeNull();
       expect(source?.name).toBe('Checking Account');
-      expect(source?.balance).toBe(500000);
     });
 
     test('returns null when not found', async () => {
@@ -131,13 +125,11 @@ describe('PaymentSourcesService', () => {
       const newSource = await service.create({
         name: 'Emergency Fund',
         type: 'bank_account',
-        balance: 200000,
       });
 
       expect(newSource.id).toBeDefined();
       expect(newSource.name).toBe('Emergency Fund');
       expect(newSource.type).toBe('bank_account');
-      expect(newSource.balance).toBe(200000);
       expect(newSource.is_active).toBe(true);
       expect(newSource.created_at).toBeDefined();
       expect(newSource.updated_at).toBeDefined();
@@ -147,20 +139,17 @@ describe('PaymentSourcesService', () => {
       await service.create({
         name: 'New Savings',
         type: 'bank_account',
-        balance: 100000,
       });
 
       const sources = await service.getAll();
       const found = sources.find((s) => s.name === 'New Savings');
       expect(found).toBeDefined();
-      expect(found?.balance).toBe(100000);
     });
 
     test('creates credit card with pay_off_monthly', async () => {
       const newSource = await service.create({
         name: 'Mastercard',
         type: 'credit_card',
-        balance: -10000,
         pay_off_monthly: true,
       });
 
@@ -172,7 +161,6 @@ describe('PaymentSourcesService', () => {
       const newSource = await service.create({
         name: 'Home Equity',
         type: 'line_of_credit',
-        balance: -25000,
         exclude_from_leftover: true,
       });
 
@@ -184,22 +172,19 @@ describe('PaymentSourcesService', () => {
       const newSource = await service.create({
         name: 'Petty Cash',
         type: 'cash',
-        balance: 5000,
       });
 
       expect(newSource.type).toBe('cash');
-      expect(newSource.balance).toBe(5000);
     });
   });
 
   describe('update', () => {
     test('updates existing payment source', async () => {
       const updated = await service.update('ps-checking-001', {
-        balance: 600000,
+        name: 'Checking Account',
       });
 
       expect(updated).not.toBeNull();
-      expect(updated?.balance).toBe(600000);
       expect(updated?.name).toBe('Checking Account'); // Unchanged
       expect(updated?.updated_at).not.toBe('2025-01-01T00:00:00.000Z');
     });
@@ -207,15 +192,13 @@ describe('PaymentSourcesService', () => {
     test('updates multiple fields', async () => {
       const updated = await service.update('ps-savings-002', {
         name: 'High-Yield Savings',
-        balance: 1500000,
       });
 
       expect(updated?.name).toBe('High-Yield Savings');
-      expect(updated?.balance).toBe(1500000);
     });
 
     test('returns null for non-existent source', async () => {
-      const result = await service.update('non-existent-id', { balance: 100 });
+      const result = await service.update('non-existent-id', { name: 'Missing' });
       expect(result).toBeNull();
     });
 
@@ -272,7 +255,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test Account',
         type: 'bank_account',
-        balance: 100000,
       });
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -282,7 +264,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test Card',
         type: 'credit_card',
-        balance: -5000,
       });
       expect(result.isValid).toBe(true);
     });
@@ -291,7 +272,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test LOC',
         type: 'line_of_credit',
-        balance: -10000,
       });
       expect(result.isValid).toBe(true);
     });
@@ -300,7 +280,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Cash',
         type: 'cash',
-        balance: 500,
       });
       expect(result.isValid).toBe(true);
     });
@@ -308,7 +287,6 @@ describe('PaymentSourcesService', () => {
     test('returns invalid for missing name', () => {
       const result = service.validate({
         type: 'bank_account',
-        balance: 100000,
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Name cannot be blank or whitespace only');
@@ -318,7 +296,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: '   ',
         type: 'bank_account',
-        balance: 100000,
       });
       expect(result.isValid).toBe(false);
     });
@@ -327,7 +304,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'A'.repeat(101),
         type: 'bank_account',
-        balance: 0,
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Name cannot exceed 100 characters');
@@ -336,7 +312,6 @@ describe('PaymentSourcesService', () => {
     test('returns invalid for missing type', () => {
       const result = service.validate({
         name: 'Test',
-        balance: 100000,
       });
       expect(result.isValid).toBe(false);
     });
@@ -345,7 +320,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test',
         type: 'invalid' as 'bank_account',
-        balance: 100000,
       });
       expect(result.isValid).toBe(false);
     });
@@ -354,7 +328,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test',
         type: 'bank_account',
-        balance: 100000,
         pay_off_monthly: true,
       });
       expect(result.isValid).toBe(false);
@@ -367,7 +340,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test Card',
         type: 'credit_card',
-        balance: -5000,
         pay_off_monthly: true,
       });
       expect(result.isValid).toBe(true);
@@ -377,7 +349,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test LOC',
         type: 'line_of_credit',
-        balance: -5000,
         pay_off_monthly: true,
       });
       expect(result.isValid).toBe(true);
@@ -387,7 +358,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test',
         type: 'bank_account',
-        balance: 100000,
         exclude_from_leftover: true,
       });
       expect(result.isValid).toBe(false);
@@ -400,7 +370,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Test Card',
         type: 'credit_card',
-        balance: -5000,
         exclude_from_leftover: true,
       });
       expect(result.isValid).toBe(true);
@@ -410,7 +379,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Petty Cash',
         type: 'cash',
-        balance: 500,
         pay_off_monthly: true,
       });
       expect(result.isValid).toBe(false);
@@ -421,7 +389,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Emergency Fund',
         type: 'bank_account',
-        balance: 500000,
         is_savings: true,
       });
       expect(result.isValid).toBe(true);
@@ -431,7 +398,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: '401k',
         type: 'bank_account',
-        balance: 1000000,
         is_investment: true,
       });
       expect(result.isValid).toBe(true);
@@ -441,7 +407,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Hybrid Account',
         type: 'bank_account',
-        balance: 100000,
         is_savings: true,
         is_investment: true,
       });
@@ -455,7 +420,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Bad Savings',
         type: 'bank_account',
-        balance: 100000,
         is_savings: true,
         pay_off_monthly: true,
       });
@@ -469,7 +433,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Bad Investment',
         type: 'bank_account',
-        balance: 100000,
         is_investment: true,
         pay_off_monthly: true,
       });
@@ -483,7 +446,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Bad Savings Card',
         type: 'credit_card',
-        balance: 0,
         is_savings: true,
       });
       expect(result.isValid).toBe(false);
@@ -494,7 +456,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Bad Investment Cash',
         type: 'cash',
-        balance: 500,
         is_investment: true,
       });
       expect(result.isValid).toBe(false);
@@ -507,7 +468,6 @@ describe('PaymentSourcesService', () => {
       const result = service.validate({
         name: 'Savings with exclude',
         type: 'bank_account',
-        balance: 100000,
         is_savings: true,
         exclude_from_leftover: true,
       });
@@ -520,7 +480,6 @@ describe('PaymentSourcesService', () => {
       const source = await service.create({
         name: 'Brokerage',
         type: 'investment',
-        balance: 100000,
       });
       expect(source.type).toBe('investment');
       expect(source.exclude_from_leftover).toBe(true);
@@ -530,7 +489,6 @@ describe('PaymentSourcesService', () => {
       const source = await service.create({
         name: 'Brokerage',
         type: 'investment',
-        balance: 100000,
       });
       expect(source.is_investment).toBe(true);
     });
@@ -543,7 +501,6 @@ describe('PaymentSourcesService', () => {
         id: 'legacy-investment-1',
         name: 'Legacy 401k',
         type: 'bank_account',
-        balance: 500000,
         is_investment: true,
         is_active: true,
         created_at: new Date().toISOString(),
@@ -566,7 +523,6 @@ describe('PaymentSourcesService', () => {
         id: 'variable-rate-1',
         name: 'Variable LOC',
         type: 'line_of_credit',
-        balance: 10000,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

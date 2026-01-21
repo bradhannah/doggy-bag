@@ -242,3 +242,33 @@ export function createCategoriesReorderHandler() {
     }
   };
 }
+
+/**
+ * Ensure the Savings Goals category exists
+ * Creates it if not found, returns existing if found
+ */
+export function createCategoriesEnsureGoalsHandler() {
+  return async () => {
+    try {
+      const category = await categoriesService.ensureGoalsCategoryExists();
+
+      return new Response(JSON.stringify(category), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (error) {
+      console.error('[CategoriesHandler] Ensure Goals failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to ensure savings goals category',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}

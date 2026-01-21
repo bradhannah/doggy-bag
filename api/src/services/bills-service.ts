@@ -9,6 +9,7 @@ import type { Bill, ValidationResult } from '../types';
 export interface BillsService {
   getAll(): Promise<Bill[]>;
   getById(id: string): Promise<Bill | null>;
+  getByGoalId(goalId: string): Promise<Bill[]>;
   create(data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<Bill>;
   update(
     id: string,
@@ -45,6 +46,21 @@ export class BillsServiceImpl implements BillsService {
     } catch (error) {
       console.error('[BillsService] Failed to get bill:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get all bills linked to a specific savings goal
+   * @param goalId - The ID of the savings goal
+   * @returns Array of bills linked to the goal
+   */
+  public async getByGoalId(goalId: string): Promise<Bill[]> {
+    try {
+      const bills = await this.getAll();
+      return bills.filter((bill) => bill.goal_id === goalId);
+    } catch (error) {
+      console.error('[BillsService] Failed to get bills by goal:', error);
+      return [];
     }
   }
 

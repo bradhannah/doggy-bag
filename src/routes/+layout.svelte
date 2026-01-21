@@ -332,6 +332,19 @@
     box-sizing: border-box;
   }
 
+  :global(select),
+  :global(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color'])
+  ) {
+    height: var(--input-height) !important;
+    min-height: var(--input-height) !important;
+    box-sizing: border-box;
+  }
+
+  :global(textarea) {
+    box-sizing: border-box;
+  }
+
   .loading-overlay {
     position: fixed;
     top: 0;

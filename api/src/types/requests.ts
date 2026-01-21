@@ -29,7 +29,6 @@ export interface DeleteResponse {
 export interface CreatePaymentSourceRequest {
   name: string;
   type: PaymentSourceType;
-  balance: number;
   is_active?: boolean;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
@@ -38,7 +37,6 @@ export interface CreatePaymentSourceRequest {
 export interface UpdatePaymentSourceRequest {
   name?: string;
   type?: PaymentSourceType;
-  balance?: number;
   is_active?: boolean;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;

@@ -28,20 +28,20 @@
   let editValue: string = '';
 
   // Get effective balance for a payment source
-  // Use per-month override if available, otherwise use the source's current balance
+  // Use per-month balance only; missing balances default to 0
   function getEffectiveBalance(source: PaymentSource): number {
-    if (bankBalances[source.id] !== undefined) {
-      return bankBalances[source.id];
-    }
-    return source.balance;
+    return bankBalances[source.id] ?? 0;
   }
 
   // Calculate totals from effective balances with display balance for debt accounts
-  $: effectiveBalances = paymentSources.map((ps) => ({
-    ...ps,
-    effectiveBalance: getEffectiveBalance(ps),
-    displayBalance: formatBalanceForDisplay(getEffectiveBalance(ps), ps.type),
-  }));
+  $: effectiveBalances = paymentSources.map((ps) => {
+    const effectiveBalance = getEffectiveBalance(ps);
+    return {
+      ...ps,
+      effectiveBalance,
+      displayBalance: formatBalanceForDisplay(effectiveBalance, ps.type),
+    };
+  });
 
   // Separate by type - Assets vs Debt
   $: assetAccounts = effectiveBalances.filter((ps) => !isDebtAccount(ps.type));

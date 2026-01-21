@@ -15,13 +15,6 @@
   function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString();
   }
-
-  function getPriorityLabel(priority: number): string {
-    if (priority === 1) return 'Primary (#1)';
-    if (priority === 2) return 'Secondary (#2)';
-    if (priority === 3) return 'Tertiary (#3)';
-    return `#${priority}`;
-  }
 </script>
 
 <div class="entity-view">
@@ -60,13 +53,6 @@
         <div class="view-value">{item.owner}</div>
       </div>
     {/if}
-
-    <div class="view-field">
-      <span class="field-label">Priority</span>
-      <div class="view-value priority-badge" class:primary={item.priority === 1}>
-        {getPriorityLabel(item.priority)}
-      </div>
-    </div>
   </div>
 
   <div class="view-field">
@@ -157,21 +143,6 @@
     padding: 12px;
     border-radius: 6px;
     font-size: 0.875rem;
-  }
-
-  .priority-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    background: var(--bg-hover);
-    color: var(--text-secondary);
-  }
-
-  .priority-badge.primary {
-    background: var(--accent-muted);
-    color: var(--accent);
   }
 
   .status-badge {

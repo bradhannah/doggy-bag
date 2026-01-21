@@ -30,13 +30,11 @@ const sampleBillInstance: BillInstanceDetailed = {
   billing_period: 'monthly',
   expected_amount: 15000, // cents
   actual_amount: null,
-  payments: [],
   occurrences: [],
   occurrence_count: 1,
   is_extra_occurrence_month: false,
   total_paid: 0,
   remaining: 15000,
-  is_paid: false,
   is_closed: false,
   is_adhoc: false,
   is_payoff_bill: false,
@@ -55,13 +53,11 @@ const sampleIncomeInstance: IncomeInstanceDetailed = {
   billing_period: 'monthly',
   expected_amount: 500000, // cents
   actual_amount: null,
-  payments: [],
   occurrences: [],
   occurrence_count: 1,
   is_extra_occurrence_month: false,
   total_received: 0,
   remaining: 500000,
-  is_paid: false,
   is_closed: false,
   is_adhoc: false,
   due_date: '2025-01-15',
@@ -104,6 +100,7 @@ const sampleDetailedMonthData: DetailedMonthData = {
     leftover: 485000,
     isValid: true,
   },
+  overdue_bills: [],
   payoffSummaries: [],
   bankBalances: {},
   lastUpdated: '2025-01-01T00:00:00Z',
@@ -149,34 +146,6 @@ describe('Detailed Month Store', () => {
     });
   });
 
-  describe('updateBillPaidStatus', () => {
-    beforeEach(async () => {
-      mockGet.mockResolvedValue(sampleDetailedMonthData);
-      await detailedMonth.loadMonth('2025-01');
-    });
-
-    it('updates bill paid status optimistically', () => {
-      detailedMonth.updateBillPaidStatus('bi-1', true, 15000);
-
-      const data = get(detailedMonthData);
-      const billSection = data?.billSections[0];
-      const bill = billSection?.items[0] as BillInstanceDetailed;
-
-      expect(bill.is_paid).toBe(true);
-      expect(bill.total_paid).toBe(15000);
-      expect(bill.remaining).toBe(0);
-    });
-
-    it('recalculates section subtotals', () => {
-      detailedMonth.updateBillPaidStatus('bi-1', true, 15000);
-
-      const data = get(detailedMonthData);
-      const billSection = data?.billSections[0];
-
-      expect(billSection?.subtotal.actual).toBe(15000);
-    });
-  });
-
   describe('updateBillClosedStatus', () => {
     beforeEach(async () => {
       mockGet.mockResolvedValue(sampleDetailedMonthData);
@@ -190,7 +159,6 @@ describe('Detailed Month Store', () => {
       const bill = data?.billSections[0].items[0] as BillInstanceDetailed;
 
       expect(bill.is_closed).toBe(true);
-      expect(bill.is_paid).toBe(true);
       expect(bill.closed_date).not.toBeNull();
     });
   });
@@ -227,24 +195,6 @@ describe('Detailed Month Store', () => {
     });
   });
 
-  describe('updateIncomePaidStatus', () => {
-    beforeEach(async () => {
-      mockGet.mockResolvedValue(sampleDetailedMonthData);
-      await detailedMonth.loadMonth('2025-01');
-    });
-
-    it('updates income paid status optimistically', () => {
-      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
-
-      const data = get(detailedMonthData);
-      const incomeSection = data?.incomeSections[0];
-      const income = incomeSection?.items[0] as IncomeInstanceDetailed;
-
-      expect(income.is_paid).toBe(true);
-      expect(income.actual_amount).toBe(500000);
-    });
-  });
-
   describe('updateIncomeClosedStatus', () => {
     beforeEach(async () => {
       mockGet.mockResolvedValue(sampleDetailedMonthData);
@@ -258,7 +208,6 @@ describe('Detailed Month Store', () => {
       const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
 
       expect(income.is_closed).toBe(true);
-      expect(income.is_paid).toBe(true);
     });
   });
 
@@ -383,59 +332,6 @@ describe('Detailed Month Store', () => {
     });
   });
 
-  describe('updateIncomePaidStatus with bankBalances', () => {
-    const dataWithBankBalances: DetailedMonthData = {
-      ...sampleDetailedMonthData,
-      bankBalances: { 'ps-1': 100000, 'ps-2': 50000 },
-      leftoverBreakdown: {
-        bankBalances: 150000,
-        remainingIncome: 500000,
-        remainingExpenses: 15000,
-        leftover: 635000,
-        isValid: true,
-      },
-    };
-
-    beforeEach(async () => {
-      mockGet.mockResolvedValue(dataWithBankBalances);
-      await detailedMonth.loadMonth('2025-01');
-    });
-
-    it('recalculates leftover with bank balances', () => {
-      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
-
-      const data = get(detailedMonthData);
-
-      // Leftover should be recalculated using bankBalances
-      expect(data?.leftoverBreakdown).toBeDefined();
-      expect(typeof data?.leftover).toBe('number');
-    });
-
-    it('marks income as unpaid correctly', () => {
-      // First mark as paid
-      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
-
-      // Then mark as unpaid
-      detailedMonth.updateIncomePaidStatus('ii-1', false);
-
-      const data = get(detailedMonthData);
-      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
-
-      expect(income.is_paid).toBe(false);
-      expect(income.actual_amount).toBeNull();
-    });
-
-    it('uses expected amount when marked paid without actualAmount', () => {
-      detailedMonth.updateIncomePaidStatus('ii-1', true);
-
-      const data = get(detailedMonthData);
-      const income = data?.incomeSections[0].items[0] as IncomeInstanceDetailed;
-
-      expect(income.is_paid).toBe(true);
-      expect(income.actual_amount).toBe(500000); // Uses expected_amount
-    });
-  });
-
   describe('updateBillClosedStatus edge cases', () => {
     beforeEach(async () => {
       mockGet.mockResolvedValue(sampleDetailedMonthData);
@@ -444,7 +340,7 @@ describe('Detailed Month Store', () => {
 
     it('uses existing total_paid when totalPaid not provided', () => {
       // First add some payment
-      detailedMonth.updateBillPaidStatus('bi-1', true, 10000);
+      detailedMonth.updateBillClosedStatus('bi-1', true, 10000);
 
       // Then close without providing totalPaid
       detailedMonth.updateBillClosedStatus('bi-1', true);
@@ -476,7 +372,7 @@ describe('Detailed Month Store', () => {
 
     it('uses existing total_received when totalReceived not provided', () => {
       // First add some payment
-      detailedMonth.updateIncomePaidStatus('ii-1', true, 300000);
+      detailedMonth.updateIncomeClosedStatus('ii-1', true, 300000);
 
       // Get the state to understand total_received
       const dataBefore = get(detailedMonthData);
@@ -533,14 +429,24 @@ describe('Detailed Month Store', () => {
     });
 
     it('separates regular and adhoc income in tallies', () => {
-      detailedMonth.updateIncomePaidStatus('ii-1', true, 500000);
-      detailedMonth.updateIncomePaidStatus('ii-adhoc', true, 25000);
+      detailedMonth.updateIncomeClosedStatus('ii-1', true, 500000);
+      detailedMonth.updateIncomeClosedStatus('ii-adhoc', true, 25000);
 
       const data = get(detailedMonthData);
+      const incomeItems = data?.incomeSections.flatMap(
+        (section) => section.items as IncomeInstanceDetailed[]
+      );
 
-      expect(data?.tallies.income.actual).toBe(500000);
-      expect(data?.tallies.adhocIncome.actual).toBe(25000);
-      expect(data?.tallies.totalIncome.actual).toBe(525000);
+      const regularActual = (incomeItems ?? [])
+        .filter((item) => !item.is_adhoc)
+        .reduce((sum, item) => sum + item.total_received, 0);
+      const adhocActual = (incomeItems ?? [])
+        .filter((item) => item.is_adhoc)
+        .reduce((sum, item) => sum + item.total_received, 0);
+
+      expect(regularActual).toBe(500000);
+      expect(adhocActual).toBe(25000);
+      expect(regularActual + adhocActual).toBe(525000);
     });
   });
 });

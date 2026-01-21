@@ -13,11 +13,11 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type {
-  InsuranceClaim,
+  InsuranceClaim as _InsuranceClaim,
   InsuranceCategory,
   InsurancePlan,
   FamilyMember,
-  ClaimSubmission,
+  ClaimSubmission as _ClaimSubmission,
 } from '../types';
 
 describe('InsuranceClaimsService', () => {
@@ -30,6 +30,7 @@ describe('InsuranceClaimsService', () => {
       id: 'fm-john-001',
       name: 'John Doe',
       is_active: true,
+      plans: [],
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
     },
@@ -37,6 +38,7 @@ describe('InsuranceClaimsService', () => {
       id: 'fm-jane-002',
       name: 'Jane Doe',
       is_active: true,
+      plans: [],
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
     },
@@ -47,6 +49,9 @@ describe('InsuranceClaimsService', () => {
     {
       id: 'ic-dental-001',
       name: 'Dental',
+      icon: '🦷',
+      sort_order: 1,
+      is_predefined: false,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -54,6 +59,9 @@ describe('InsuranceClaimsService', () => {
     {
       id: 'ic-vision-002',
       name: 'Vision',
+      icon: '👓',
+      sort_order: 2,
+      is_predefined: false,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -61,6 +69,9 @@ describe('InsuranceClaimsService', () => {
     {
       id: 'ic-medical-003',
       name: 'Medical',
+      icon: '🩺',
+      sort_order: 3,
+      is_predefined: false,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -76,7 +87,6 @@ describe('InsuranceClaimsService', () => {
       policy_number: 'POL-12345',
       member_id: 'MEM-98765',
       owner: 'John Doe',
-      priority: 1,
       portal_url: 'https://portal.bluecross.example.com',
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
@@ -89,7 +99,6 @@ describe('InsuranceClaimsService', () => {
       policy_number: 'POL-67890',
       member_id: 'MEM-54321',
       owner: 'Jane Doe',
-      priority: 2,
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -840,6 +849,236 @@ describe('InsuranceClaimsService', () => {
       expect(summary.pending_amount).toBe(25000);
       expect(summary.closed_count).toBe(1);
       expect(summary.reimbursed_amount).toBe(12000);
+    });
+  });
+
+  // ============================================================================
+  // Submission Waterfall / Cascade Logic (User Story 9)
+  // ============================================================================
+
+  describe('Submission Waterfall Cascade', () => {
+    test('create() should set awaiting_previous submissions to $0 amount', async () => {
+      // Update family member to have multiple plans
+      const memberWithPlans: FamilyMember[] = [
+        {
+          ...sampleFamilyMembers[0],
+          plans: ['ip-primary-001', 'ip-secondary-002'],
+        },
+        sampleFamilyMembers[1],
+      ];
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(memberWithPlans, null, 2)
+      );
+
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 10000, // $100.00
+      });
+
+      expect(claim.submissions.length).toBe(2);
+
+      // First submission should be draft with full amount
+      expect(claim.submissions[0].status).toBe('draft');
+      expect(claim.submissions[0].amount_claimed).toBe(10000);
+
+      // Second submission should be awaiting_previous with $0
+      expect(claim.submissions[1].status).toBe('awaiting_previous');
+      expect(claim.submissions[1].amount_claimed).toBe(0);
+    });
+
+    test('updateSubmission should cascade to next awaiting submission on approval', async () => {
+      // Setup: member with 2 plans
+      const memberWithPlans: FamilyMember[] = [
+        {
+          ...sampleFamilyMembers[0],
+          plans: ['ip-primary-001', 'ip-secondary-002'],
+        },
+        sampleFamilyMembers[1],
+      ];
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(memberWithPlans, null, 2)
+      );
+
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 10000, // $100.00
+      });
+
+      const primarySub = claim.submissions[0];
+      const secondarySub = claim.submissions[1];
+
+      // Approve primary with partial reimbursement
+      await service.updateSubmission(claim.id, primarySub.id, {
+        status: 'approved',
+        amount_reimbursed: 6000, // $60 reimbursed
+      });
+
+      // Fetch updated claim
+      const updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim).not.toBeNull();
+
+      // Secondary should now be draft with remaining amount
+      const updatedSecondary = updatedClaim!.submissions.find((s) => s.id === secondarySub.id);
+      expect(updatedSecondary!.status).toBe('draft');
+      expect(updatedSecondary!.amount_claimed).toBe(4000); // $100 - $60 = $40
+    });
+
+    test('updateSubmission should cascade with full amount when previous denied', async () => {
+      // Setup: member with 2 plans
+      const memberWithPlans: FamilyMember[] = [
+        {
+          ...sampleFamilyMembers[0],
+          plans: ['ip-primary-001', 'ip-secondary-002'],
+        },
+        sampleFamilyMembers[1],
+      ];
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(memberWithPlans, null, 2)
+      );
+
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 10000,
+      });
+
+      const primarySub = claim.submissions[0];
+      const secondarySub = claim.submissions[1];
+
+      // Deny primary ($0 reimbursed)
+      await service.updateSubmission(claim.id, primarySub.id, {
+        status: 'denied',
+      });
+
+      // Fetch updated claim
+      const updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim).not.toBeNull();
+
+      // Secondary should now be draft with full amount
+      const updatedSecondary = updatedClaim!.submissions.find((s) => s.id === secondarySub.id);
+      expect(updatedSecondary!.status).toBe('draft');
+      expect(updatedSecondary!.amount_claimed).toBe(10000); // Full amount
+    });
+
+    test('updateSubmission should not cascade when no awaiting submissions exist', async () => {
+      // Create claim without auto-generated submissions (member has no plans)
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 10000,
+      });
+
+      // Manually add a single submission
+      const submission = await service.addSubmission(claim.id, {
+        plan_id: 'ip-primary-001',
+        amount_claimed: 10000,
+        documents_sent: [],
+      });
+
+      // Approve it
+      await service.updateSubmission(claim.id, submission.id, {
+        status: 'approved',
+        amount_reimbursed: 8000,
+      });
+
+      // Should not throw, and no cascade happens (no secondary to activate)
+      const updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim!.submissions.length).toBe(1);
+      expect(updatedClaim!.submissions[0].status).toBe('approved');
+    });
+
+    test('updateSubmission should handle remaining amount = 0 when fully reimbursed', async () => {
+      // Setup: member with 2 plans
+      const memberWithPlans: FamilyMember[] = [
+        {
+          ...sampleFamilyMembers[0],
+          plans: ['ip-primary-001', 'ip-secondary-002'],
+        },
+        sampleFamilyMembers[1],
+      ];
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(memberWithPlans, null, 2)
+      );
+
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 10000,
+      });
+
+      const primarySub = claim.submissions[0];
+      const secondarySub = claim.submissions[1];
+
+      // Approve primary with FULL reimbursement
+      await service.updateSubmission(claim.id, primarySub.id, {
+        status: 'approved',
+        amount_reimbursed: 10000, // Fully covered
+      });
+
+      // Fetch updated claim
+      const updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim).not.toBeNull();
+
+      // Secondary should be draft with $0 remaining
+      const updatedSecondary = updatedClaim!.submissions.find((s) => s.id === secondarySub.id);
+      expect(updatedSecondary!.status).toBe('draft');
+      expect(updatedSecondary!.amount_claimed).toBe(0);
+    });
+
+    test('updateSubmission cascade should handle 3+ submissions correctly', async () => {
+      // Create claim and manually add 3 submissions to test chained cascade
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 10000,
+      });
+
+      // Add 3 submissions manually (simulating auto-generation)
+      const sub1 = await service.addSubmission(claim.id, {
+        plan_id: 'ip-primary-001',
+        amount_claimed: 10000,
+        documents_sent: [],
+      });
+
+      // Manually update sub2 and sub3 to awaiting_previous with $0
+      const claimAfterAdd = await service.getById(claim.id);
+      expect(claimAfterAdd).not.toBeNull();
+
+      // Add second submission (we'll manually set it to awaiting_previous)
+      const sub2 = await service.addSubmission(claim.id, {
+        plan_id: 'ip-secondary-002',
+        amount_claimed: 0,
+        documents_sent: [],
+      });
+
+      // Directly update status to awaiting_previous via updateSubmission
+      await service.updateSubmission(claim.id, sub2.id, {
+        status: 'awaiting_previous',
+      });
+
+      // Approve first submission with partial payment
+      await service.updateSubmission(claim.id, sub1.id, {
+        status: 'approved',
+        amount_reimbursed: 4000,
+      });
+
+      // Check that sub2 was activated with remaining amount
+      const updatedClaim = await service.getById(claim.id);
+      const updatedSub2 = updatedClaim!.submissions.find((s) => s.id === sub2.id);
+      expect(updatedSub2!.status).toBe('draft');
+      expect(updatedSub2!.amount_claimed).toBe(6000); // $100 - $40 = $60
     });
   });
 });

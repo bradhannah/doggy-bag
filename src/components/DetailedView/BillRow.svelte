@@ -6,6 +6,8 @@
   import MakeRegularDrawer from './MakeRegularDrawer.svelte';
   import CCBalanceSyncModal from './CCBalanceSyncModal.svelte';
   import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
+  import CloseTransactionModal from './CloseTransactionModal.svelte';
+  import PayFullShortcutModal from './PayFullShortcutModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import { paymentSources, type PaymentSourceType } from '../../stores/payment-sources';
@@ -23,6 +25,9 @@
   let showDeleteConfirm = false;
   let showCCBalanceSyncModal = false;
   let showDetailsDrawer = false;
+  let showCloseModal = false;
+  let showPayFullModal = false;
+  let closeDate = '';
   let ccSyncPaymentAmount = 0;
   let isEditingExpected = false;
   let expectedEditValue = '';
@@ -35,7 +40,7 @@
   $: payoffSource = $paymentSources.find((ps) => ps.id === payoffSourceId);
   $: payoffSourceName = payoffSource?.name || bill.payment_source?.name || 'Credit Card';
   $: payoffSourceType = (payoffSource?.type || 'credit_card') as PaymentSourceType;
-  $: payoffSourceBalance = payoffSource?.balance ?? 0;
+  const payoffSourceBalance = 0;
 
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -82,26 +87,95 @@
   interface BillInstanceExtended {
     is_closed?: boolean;
     closed_date?: string | null;
-    occurrences?: Array<{ id: string; expected_date: string }>;
+    occurrences?: Array<{
+      id: string;
+      expected_date: string;
+      notes?: string | null;
+      payments?: Array<{ id: string; amount: number; date: string }>;
+    }>;
   }
-
-  // Computed values
-  $: hasTransactions = (bill.payments && bill.payments.length > 0) || bill.total_paid > 0;
-  $: transactionCount = bill.payments?.length ?? 0;
-  $: isClosed = (bill as unknown as BillInstanceExtended).is_closed ?? false;
-  $: closedDate = (bill as unknown as BillInstanceExtended).closed_date ?? null;
-  $: showAmber = bill.total_paid !== bill.expected_amount && bill.total_paid > 0;
-  $: isPartiallyPaid =
-    hasTransactions && bill.total_paid > 0 && bill.total_paid < bill.expected_amount && !isClosed;
-  $: isPayoffBill = bill.is_payoff_bill ?? false;
 
   // Single-occurrence detection for "on Xth" display
   $: occurrences = (bill as unknown as BillInstanceExtended).occurrences ?? [];
   $: isSingleOccurrence = occurrences.length <= 1;
   $: firstOccurrenceDate = occurrences[0]?.expected_date || bill.due_date;
+  $: primaryOccurrenceId = occurrences[0]?.id;
+
+  $: if (!closeDate) {
+    closeDate = new Date().toISOString().split('T')[0];
+  }
+
+  function getCloseOccurrenceId(): string | undefined {
+    return primaryOccurrenceId;
+  }
+
+  function clampDayToMonth(monthStr: string, day: number): string {
+    const [year, monthNum] = monthStr.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    return String(Math.min(Math.max(day, 1), lastDay)).padStart(2, '0');
+  }
+
+  function resolveMonthDay(monthStr: string, day: string): string {
+    const clamped = clampDayToMonth(monthStr, parseInt(day, 10) || 1);
+    return `${monthStr}-${clamped}`;
+  }
+
+  async function handlePayFullConfirm(
+    event: CustomEvent<{ amount: number; day: string; notes: string }>
+  ) {
+    if (saving) return;
+    const occurrenceId = getCloseOccurrenceId();
+    if (!occurrenceId) {
+      showError('Missing occurrence for payment');
+      return;
+    }
+
+    saving = true;
+    try {
+      const paymentDate = resolveMonthDay(month, event.detail.day);
+      await apiClient.post(
+        `/api/months/${month}/bills/${bill.id}/occurrences/${occurrenceId}/payments`,
+        {
+          amount: event.detail.amount,
+          date: paymentDate,
+        }
+      );
+
+      await apiClient.post(
+        `/api/months/${month}/bills/${bill.id}/occurrences/${occurrenceId}/close`,
+        {
+          closed_date: paymentDate,
+          notes: event.detail.notes,
+        }
+      );
+
+      dispatch('closed', { id: bill.id, type: 'bill' });
+      success('Bill paid and closed');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to pay bill');
+    } finally {
+      saving = false;
+      showPayFullModal = false;
+    }
+  }
+
+  // Computed values
+  $: transactionList = occurrences.flatMap((occ) => occ.payments || []);
+  $: hasTransactions = transactionList.length > 0 || bill.total_paid > 0;
+  $: transactionCount = transactionList.length;
+  $: primaryOccurrenceNotes =
+    (occurrences[0] as unknown as { notes?: string | null } | undefined)?.notes ?? '';
+
+  $: isClosed = (bill as unknown as BillInstanceExtended).is_closed ?? false;
+  $: closedDate = (bill as unknown as BillInstanceExtended).closed_date ?? null;
+  $: showAmber = bill.total_paid !== bill.expected_amount && bill.total_paid > 0;
+
+  $: isPartiallyPaid =
+    hasTransactions && bill.total_paid > 0 && bill.total_paid < bill.expected_amount && !isClosed;
+  $: isPayoffBill = bill.is_payoff_bill ?? false;
 
   // Check if bill has any metadata to display
-  function hasMetadata(b: BillInstanceDetailed): boolean {
+  function _hasMetadata(b: BillInstanceDetailed): boolean {
     return !!(
       b.metadata?.bank_transaction_name ||
       b.metadata?.account_number ||
@@ -147,57 +221,40 @@
   }
 
   async function handlePayFull() {
-    if (saving) return;
-    saving = true;
-
-    try {
-      // Add payment for remaining amount
-      const paymentAmount = bill.remaining > 0 ? bill.remaining : bill.expected_amount;
-      const today = new Date().toISOString().split('T')[0];
-
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/payments`, {
-        amount: paymentAmount,
-        date: today,
-      });
-
-      // Close the bill
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
-
-      success('Bill paid and closed');
-      // Optimistic update - update totals and close status without re-sorting
-      const newTotalPaid = bill.total_paid + paymentAmount;
-      detailedMonth.updateBillClosedStatus(bill.id, true, newTotalPaid);
-
-      // Dispatch closed event so parent can scroll to the item's new location
-      dispatch('closed', { id: bill.id, type: 'bill' });
-
-      // If this is a payoff bill, show the CC balance sync modal
-      if (isPayoffBill && payoffSourceId) {
-        ccSyncPaymentAmount = paymentAmount;
-        showCCBalanceSyncModal = true;
-      }
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to pay bill');
-    } finally {
-      saving = false;
-    }
+    if (saving || readOnly) return;
+    showPayFullModal = true;
   }
 
-  async function handleClose() {
-    if (saving) return;
-    saving = true;
+  function openCloseModal() {
+    if (saving || readOnly) return;
+    closeDate = new Date().toISOString().split('T')[0];
+    showCloseModal = true;
+  }
 
+  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
+    if (saving) return;
+    const occurrenceId = getCloseOccurrenceId();
+    if (!occurrenceId) {
+      showError('Missing occurrence to close');
+      return;
+    }
+
+    saving = true;
     try {
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/close`, {});
+      await apiClient.post(
+        `/api/months/${month}/bills/${bill.id}/occurrences/${occurrenceId}/close`,
+        {
+          closed_date: event.detail.closedDate,
+          notes: event.detail.notes,
+        }
+      );
       success('Bill closed');
-      // Optimistic update - close without re-sorting
-      detailedMonth.updateBillClosedStatus(bill.id, true);
-      // Dispatch closed event so parent can scroll to the item's new location
       dispatch('closed', { id: bill.id, type: 'bill' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to close bill');
     } finally {
       saving = false;
+      showCloseModal = false;
     }
   }
 
@@ -206,7 +263,14 @@
     saving = true;
 
     try {
-      await apiClient.post(`/api/months/${month}/bills/${bill.id}/reopen`, {});
+      if (primaryOccurrenceId) {
+        await apiClient.post(
+          `/api/months/${month}/bills/${bill.id}/occurrences/${primaryOccurrenceId}/reopen`,
+          {}
+        );
+      } else {
+        await apiClient.post(`/api/months/${month}/bills/${bill.id}/reopen`, {});
+      }
       success('Bill reopened');
       // Optimistic update - reopen without re-sorting
       detailedMonth.updateBillClosedStatus(bill.id, false);
@@ -527,11 +591,10 @@
           <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
             Reopen
           </button>
-        {:else if hasTransactions}
-          <button class="action-btn close" on:click={handleClose} disabled={saving || readOnly}>
+        {:else if month}
+          <button class="action-btn close" on:click={openCloseModal} disabled={saving || readOnly}>
             Close
           </button>
-        {:else if month}
           <button
             class="action-btn pay-full"
             on:click={handlePayFull}
@@ -540,6 +603,26 @@
             Pay Full
           </button>
         {/if}
+
+        <!-- Edit button to open transactions drawer -->
+        <button
+          class="action-btn-icon edit"
+          on:click={openTransactionsDrawer}
+          title="Edit transactions"
+          disabled={readOnly}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        </button>
 
         <!-- Add occurrence button (not for payoff bills, not when closed) -->
         {#if !readOnly && !isPayoffBill && !isClosed && month}
@@ -605,6 +688,10 @@
       </div>
     </div>
   </div>
+
+  {#if primaryOccurrenceNotes}
+    <p class="inline-note">{primaryOccurrenceNotes}</p>
+  {/if}
 </div>
 
 <!-- Transactions Drawer -->
@@ -614,9 +701,11 @@
   instanceId={bill.id}
   instanceName={bill.name}
   expectedAmount={bill.expected_amount}
-  transactionList={bill.payments || []}
+  {transactionList}
   {isClosed}
   type="bill"
+  occurrenceId={primaryOccurrenceId}
+  occurrenceNotes={primaryOccurrenceNotes}
   {isPayoffBill}
   on:updated={handleTransactionsUpdated}
 />
@@ -674,11 +763,54 @@
 {/if}
 
 <!-- Item Details Drawer -->
-<ItemDetailsDrawer bind:open={showDetailsDrawer} type="bill" item={bill} {categoryName} />
+<ItemDetailsDrawer
+  bind:open={showDetailsDrawer}
+  type="bill"
+  item={bill}
+  {categoryName}
+  {month}
+  occurrenceId={primaryOccurrenceId ?? null}
+  on:updated={() => dispatch('refresh')}
+/>
+
+<CloseTransactionModal
+  open={showCloseModal}
+  type="bill"
+  itemName={bill.name}
+  initialDate={closeDate}
+  initialNotes={primaryOccurrenceNotes}
+  {month}
+  on:close={() => (showCloseModal = false)}
+  on:confirm={handleCloseConfirm}
+/>
+
+<PayFullShortcutModal
+  open={showPayFullModal}
+  type="bill"
+  itemName={bill.name}
+  amount={bill.remaining > 0 ? bill.remaining : bill.expected_amount}
+  initialDay={firstOccurrenceDate ? firstOccurrenceDate.split('-')[2] : ''}
+  initialNotes={primaryOccurrenceNotes}
+  {month}
+  on:close={() => (showPayFullModal = false)}
+  on:confirm={handlePayFullConfirm}
+/>
 
 <style>
   .bill-row-container {
     margin-bottom: 4px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .bill-row-container:hover {
+    background: var(--bg-hover);
+  }
+
+  .bill-row-container:has(.bill-row.closed) {
+    background: var(--success-bg);
   }
 
   .bill-row {
@@ -686,18 +818,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: var(--bg-elevated);
-    border-radius: 8px;
-    border: 1px solid transparent;
-    transition: all 0.15s ease;
-  }
-
-  .bill-row:hover {
-    background: var(--bg-hover);
-  }
-
-  .bill-row.closed {
-    background: var(--success-bg);
+    padding-bottom: 8px;
   }
 
   .bill-main {
@@ -716,12 +837,22 @@
   }
 
   .bill-name {
-    font-weight: 500;
-    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .inline-note {
+    margin: 0;
+    padding: 0 16px 12px 16px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-style: italic;
   }
 
   .name-link {
@@ -1159,6 +1290,11 @@
   }
 
   .action-btn-icon.info:hover:not(:disabled) {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .action-btn-icon.edit:hover:not(:disabled) {
     background: var(--accent-muted);
     color: var(--accent);
   }

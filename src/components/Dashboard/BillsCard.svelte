@@ -101,23 +101,26 @@
     }
   }
 
-  async function togglePaid(id: string, currentPaid: boolean) {
+  async function toggleClosed(id: string, isClosed: boolean) {
     saving = true;
     error = '';
 
     try {
-      const response = await fetch(apiUrl(`/api/months/${month}/bills/${id}/paid`), {
+      const endpoint = isClosed
+        ? `/api/months/${month}/bills/${id}/reopen`
+        : `/api/months/${month}/bills/${id}/close`;
+      const response = await fetch(apiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to toggle paid');
+        throw new Error(data.error || 'Failed to update status');
       }
 
       dispatch('refresh');
-      success(currentPaid ? 'Bill marked as unpaid' : 'Bill marked as paid');
+      success(isClosed ? 'Bill reopened' : 'Bill closed');
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unknown error';
       showError(error);
@@ -150,11 +153,12 @@
   {:else}
     <ul class="bills-list">
       {#each bills as bill (bill.id)}
+        {@const billIsClosed = (bill as BillInstance & { is_closed?: boolean }).is_closed ?? false}
         <li
           class="bill-item"
           class:editing={editingId === bill.id}
           class:modified={!bill.is_default}
-          class:paid={bill.is_paid}
+          class:paid={billIsClosed}
         >
           {#if editingId === bill.id}
             <div class="edit-row">
@@ -185,12 +189,12 @@
               <div class="bill-details">
                 <button
                   class="paid-checkbox"
-                  class:checked={bill.is_paid}
-                  on:click={() => togglePaid(bill.id, bill.is_paid ?? false)}
+                  class:checked={billIsClosed}
+                  on:click={() => toggleClosed(bill.id, billIsClosed)}
                   disabled={saving}
-                  title={bill.is_paid ? 'Mark as unpaid' : 'Mark as paid'}
+                  title={billIsClosed ? 'Reopen bill' : 'Close bill'}
                 >
-                  {#if bill.is_paid}
+                  {#if billIsClosed}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <path
                         d="M5 12L10 17L20 7"
@@ -202,15 +206,15 @@
                     </svg>
                   {/if}
                 </button>
-                <span class="bill-name" class:paid-text={bill.is_paid}>{bill.name}</span>
+                <span class="bill-name" class:paid-text={billIsClosed}>{bill.name}</span>
                 {#if !bill.is_default}
                   <span class="modified-badge">modified</span>
                 {/if}
-                {#if bill.is_paid}
-                  <span class="paid-badge">paid</span>
+                {#if billIsClosed}
+                  <span class="paid-badge">closed</span>
                 {/if}
               </div>
-              <span class="bill-amount expense" class:paid-text={bill.is_paid}
+              <span class="bill-amount expense" class:paid-text={billIsClosed}
                 >{formatCurrency(bill.amount)}</span
               >
             </div>

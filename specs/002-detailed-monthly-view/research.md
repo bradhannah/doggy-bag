@@ -284,7 +284,7 @@ Build simple custom color picker with preset swatches + hex input.
 ```svelte
 <script>
   export let value = '#3b82f6';
-  const presets = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', ...];
+  const presets = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b'];
 </script>
 
 <div class="color-picker">

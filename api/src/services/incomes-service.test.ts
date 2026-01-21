@@ -16,7 +16,6 @@ describe('IncomesService', () => {
     id: 'ps-checking-001',
     name: 'Checking',
     type: 'bank_account',
-    balance: 500000,
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',

@@ -372,6 +372,56 @@ describe('CategoriesService', () => {
     });
   });
 
+  describe('ensureGoalsCategoryExists', () => {
+    test('creates goals category if not exists', async () => {
+      const goals = await service.ensureGoalsCategoryExists();
+      expect(goals.name).toBe('Savings Goals');
+      expect(goals.type).toBe('savings_goal');
+      expect(goals.is_predefined).toBe(true);
+      expect(goals.color).toBe('#10b981'); // Emerald green
+    });
+
+    test('returns existing goals category if exists', async () => {
+      const first = await service.ensureGoalsCategoryExists();
+      const second = await service.ensureGoalsCategoryExists();
+      expect(first.id).toBe(second.id);
+    });
+
+    test('goals category appears after other bill categories', async () => {
+      // Get all bill categories before creating Savings Goals
+      const beforeBills = await service.getByType('bill');
+      const maxSortOrder = Math.max(...beforeBills.map((c) => c.sort_order));
+
+      const goals = await service.ensureGoalsCategoryExists();
+      expect(goals.sort_order).toBe(maxSortOrder + 1);
+    });
+  });
+
+  describe('ensureGoalCompletionsCategoryExists', () => {
+    test('creates goal completions category if not exists', async () => {
+      const goalCompletions = await service.ensureGoalCompletionsCategoryExists();
+      expect(goalCompletions.name).toBe('Goal Completions');
+      expect(goalCompletions.type).toBe('income');
+      expect(goalCompletions.is_predefined).toBe(true);
+      expect(goalCompletions.color).toBe('#10b981'); // Emerald green
+    });
+
+    test('returns existing goal completions category if exists', async () => {
+      const first = await service.ensureGoalCompletionsCategoryExists();
+      const second = await service.ensureGoalCompletionsCategoryExists();
+      expect(first.id).toBe(second.id);
+    });
+
+    test('goal completions category appears after other income categories', async () => {
+      // Get all income categories before creating Goal Completions
+      const beforeIncomes = await service.getByType('income');
+      const maxSortOrder = Math.max(...beforeIncomes.map((c) => c.sort_order));
+
+      const goalCompletions = await service.ensureGoalCompletionsCategoryExists();
+      expect(goalCompletions.sort_order).toBe(maxSortOrder + 1);
+    });
+  });
+
   describe('validate', () => {
     test('returns valid for correct data', () => {
       const result = service.validate({

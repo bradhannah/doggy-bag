@@ -21,7 +21,7 @@ import type {
   ValidationResult,
 } from '../types';
 import { join } from 'path';
-import { mkdir, unlink, readdir, stat } from 'fs/promises';
+import { mkdir, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 
 const STORAGE_PATH = 'data/entities/insurance-claims.json';
@@ -243,6 +243,43 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const claimNumber = await this.getNextClaimNumber();
       const now = new Date().toISOString();
 
+      // Auto-generate draft submissions based on family member's plans array
+      const submissions: ClaimSubmission[] = [];
+      const memberPlans = familyMember.plans || [];
+
+      for (let i = 0; i < memberPlans.length; i++) {
+        const planId = memberPlans[i];
+        const plan = await this.plansService.getById(planId);
+
+        // Skip inactive or non-existent plans
+        if (!plan || !plan.is_active) {
+          continue;
+        }
+
+        // Create plan snapshot
+        const planSnapshot: PlanSnapshot = {
+          name: plan.name,
+          provider_name: plan.provider_name,
+          policy_number: plan.policy_number,
+          member_id: plan.member_id,
+          owner: plan.owner,
+          portal_url: plan.portal_url,
+        };
+
+        // First submission is 'draft', rest are 'awaiting_previous'
+        const status: SubmissionStatus = submissions.length === 0 ? 'draft' : 'awaiting_previous';
+
+        submissions.push({
+          id: crypto.randomUUID(),
+          plan_id: planId,
+          plan_snapshot: planSnapshot,
+          status,
+          // First submission gets full amount, awaiting_previous submissions get $0 (calculated on activation)
+          amount_claimed: status === 'awaiting_previous' ? 0 : data.total_amount,
+          documents_sent: [],
+        });
+      }
+
       const newClaim: InsuranceClaim = {
         id: crypto.randomUUID(),
         claim_number: claimNumber,
@@ -256,7 +293,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         total_amount: data.total_amount,
         status: 'draft',
         documents: [],
-        submissions: [],
+        submissions,
         created_at: now,
         updated_at: now,
       };
@@ -264,7 +301,13 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       claims.push(newClaim);
       await this.storage.writeJSON(STORAGE_PATH, claims);
 
-      console.log('[InsuranceClaimsService] Created claim #', claimNumber);
+      console.log(
+        '[InsuranceClaimsService] Created claim #',
+        claimNumber,
+        'with',
+        submissions.length,
+        'auto-generated submissions'
+      );
       return newClaim;
     } catch (error) {
       console.error('[InsuranceClaimsService] Failed to create claim:', error);
@@ -647,7 +690,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         policy_number: plan.policy_number,
         member_id: plan.member_id,
         owner: plan.owner,
-        priority: plan.priority,
+        // priority: plan.priority, // REMOVED
         portal_url: plan.portal_url,
       };
 
@@ -743,6 +786,35 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       };
 
       claim.submissions[subIndex] = updatedSubmission;
+
+      // Cascade logic: when a submission is approved/denied, activate the next awaiting submission
+      if (updates.status === 'approved' || updates.status === 'denied') {
+        // Find the next submission with status 'awaiting_previous' (must be after current in array order)
+        const nextAwaitingIndex = claim.submissions.findIndex(
+          (s, idx) => idx > subIndex && s.status === 'awaiting_previous'
+        );
+
+        if (nextAwaitingIndex !== -1) {
+          // Calculate total reimbursed from all submissions before the awaiting one
+          const totalReimbursed = claim.submissions
+            .slice(0, nextAwaitingIndex)
+            .reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
+
+          // Remaining amount to claim (minimum 0)
+          const remainingAmount = Math.max(0, claim.total_amount - totalReimbursed);
+
+          // Activate the next submission
+          claim.submissions[nextAwaitingIndex].status = 'draft';
+          claim.submissions[nextAwaitingIndex].amount_claimed = remainingAmount;
+
+          console.log(
+            '[InsuranceClaimsService] Cascaded to next submission:',
+            claim.submissions[nextAwaitingIndex].plan_snapshot.name,
+            'with amount:',
+            remainingAmount
+          );
+        }
+      }
 
       // Recalculate claim status
       claim.status = this.calculateClaimStatus(claim.submissions);
