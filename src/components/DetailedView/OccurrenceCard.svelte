@@ -8,6 +8,7 @@
   import OccurrenceRow from './OccurrenceRow.svelte';
   import TransactionsDrawer from './TransactionsDrawer.svelte';
   import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
+  import CloseTransactionModal from './CloseTransactionModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
 
@@ -23,8 +24,11 @@
 
   let showTransactionsDrawer = false;
   let showDetailsDrawer = false;
+  let showCloseModal = false;
+  let closeDate = '';
   let selectedOccurrence: Occurrence | null = null;
   let addingOccurrence = false;
+  let saving = false;
 
   function openDetailsDrawer() {
     showDetailsDrawer = true;
@@ -72,9 +76,41 @@
   }
 
   function handleTransactionsUpdated() {
-    showTransactionsDrawer = false;
-    selectedOccurrence = null;
-    dispatch('refresh');
+    // Optimistic updates are now handled in the drawer, so we don't need to refresh
+    // for regular payment add/delete operations. The store is updated immediately.
+    // Keep drawer open so user can continue managing payments
+  }
+
+  function handleTransactionsRequestClose(
+    event: CustomEvent<{ paymentDate: string; notes: string }>
+  ) {
+    // Open CloseTransactionModal when user clicks "Add & Close" or "Close Without Adding"
+    closeDate = event.detail.paymentDate || new Date().toISOString().split('T')[0];
+    showCloseModal = true;
+  }
+
+  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
+    if (saving || !selectedOccurrence) return;
+    saving = true;
+
+    try {
+      await apiClient.post(
+        `/api/months/${month}/${type}s/${item.id}/occurrences/${selectedOccurrence.id}/close`,
+        {
+          closed_date: event.detail.closedDate,
+          notes: event.detail.notes,
+        }
+      );
+      success('Closed');
+      dispatch('refresh');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to close');
+    } finally {
+      saving = false;
+      showCloseModal = false;
+      showTransactionsDrawer = false;
+      selectedOccurrence = null;
+    }
   }
 
   function handleNotesUpdated() {
@@ -200,6 +236,20 @@
     {isPayoffBill}
     on:updated={handleTransactionsUpdated}
     on:notesUpdated={handleNotesUpdated}
+    on:requestClose={handleTransactionsRequestClose}
+  />
+
+  <CloseTransactionModal
+    open={showCloseModal}
+    {type}
+    itemName="{item.name} - {new Date(
+      selectedOccurrence.expected_date + 'T00:00:00'
+    ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}"
+    initialDate={closeDate}
+    initialNotes={(selectedOccurrence as Occurrence & { notes?: string | null }).notes ?? ''}
+    {month}
+    on:close={() => (showCloseModal = false)}
+    on:confirm={handleCloseConfirm}
   />
 {/if}
 

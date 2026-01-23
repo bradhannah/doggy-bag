@@ -238,8 +238,12 @@
     margin-bottom: 24px;
   }
 
-  /* Complete/empty category state: reduced opacity */
-  .category-section.complete {
+  /* Complete/empty category state: use muted colors instead of opacity
+     (opacity creates a stacking context which breaks position:fixed drawers inside).
+     Only the header gets opacity - the items section is not dimmed because
+     BillRow/IncomeRow/OccurrenceCard contain position:fixed drawers that would
+     be trapped in the stacking context. Each row handles its own "closed" styling. */
+  .category-section.complete .category-header {
     opacity: 0.6;
   }
 

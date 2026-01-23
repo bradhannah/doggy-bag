@@ -652,9 +652,9 @@
   }
 
   .content-wrapper {
-    /* Container query context for responsive internal layout */
-    container-type: inline-size;
-    container-name: content;
+    /* Note: container-type was removed because it breaks position:fixed for child drawers
+       (fixed positioning becomes relative to the container instead of the viewport).
+       Using media queries instead of container queries for responsive layout. */
     /* Explicit width based on content: summary sidebar + gap + 2 panels + gap between panels */
     width: calc(
       var(--summary-sidebar-width) + var(--space-6) + (2 * var(--panel-width-medium)) +
@@ -879,26 +879,9 @@
     }
   }
 
-  /* Container query: 2-column layout when content-wrapper is wide enough
-     Note: CSS container queries don't support var() or calc() in conditions.
-     Medium mode breakpoint = 2 * var(--panel-width-medium) + var(--space-6) = 2*660 + 24 = 1344px
-     Wide mode breakpoint = 2 * var(--panel-width-min-wide) + var(--space-6) = 2*720 + 24 = 1464px */
-  @container content (min-width: 1344px) {
-    /* Medium mode: two fixed columns */
-    .sections-container {
-      grid-template-columns: var(--panel-width-medium) var(--panel-width-medium);
-    }
-  }
-
-  @container content (min-width: 1464px) {
-    /* Wide mode: two flexible columns */
-    .content-wrapper.wide .sections-container {
-      grid-template-columns: minmax(var(--panel-width-min-wide), 1fr) minmax(
-          var(--panel-width-min-wide),
-          1fr
-        );
-    }
-  }
+  /* Note: Container queries were removed because container-type breaks position:fixed
+     for child elements (drawers). Layout is now controlled by the widthMode store
+     which applies .medium or .wide classes directly. */
 
   /* Compact mode styles */
   .detailed-view.compact {

@@ -27,29 +27,39 @@
 
   // Form state
   let amount = '';
-  let date = new Date().toISOString().split('T')[0];
   let saving = false;
   let error = '';
   let notes = '';
   let savingNotes = false;
   let notesDirty = false;
   let showDiscardConfirm = false;
-  let closeDate = new Date().toISOString().split('T')[0];
-  let closeDateTouched = false;
+
+  // Day-of-month dropdown state
+  let selectedDay = '';
+  const today = new Date();
+  const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+  $: resolvedMonth = month === todayMonth ? month : todayMonth;
+  $: [resolvedYear, resolvedMonthNum] = resolvedMonth.split('-').map(Number);
+  $: lastDay =
+    resolvedYear && resolvedMonthNum
+      ? new Date(resolvedYear, resolvedMonthNum, 0).getDate()
+      : today.getDate();
+  $: maxDay = Math.min(today.getDate(), lastDay);
+  $: dayOptions = Array.from({ length: maxDay }, (_, index) => String(index + 1));
+
+  // Compute full date from selected day
+  $: date = selectedDay ? `${resolvedMonth}-${selectedDay.padStart(2, '0')}` : '';
 
   $: if (open) {
     notes = occurrenceNotes ?? '';
     notesDirty = false;
-    closeDate = date;
-    closeDateTouched = false;
+    // Default to today's day (clamped to maxDay)
+    selectedDay = String(Math.min(today.getDate(), maxDay));
   }
 
   $: if (open && !notesDirty) {
     notes = occurrenceNotes ?? '';
-  }
-
-  $: if (!closeDateTouched && date) {
-    closeDate = date;
   }
 
   $: if (open && !notesDirty && refreshNotes !== undefined) {
@@ -119,7 +129,7 @@
 
   function resetForm() {
     amount = '';
-    date = new Date().toISOString().split('T')[0];
+    selectedDay = String(Math.min(today.getDate(), maxDay));
     error = '';
   }
 
@@ -128,16 +138,7 @@
   }
 
   async function addTransactionAndClose() {
-    closeDateTouched = true;
-    closeDate = date;
-    await addTransaction(true);
-  }
-
-  async function addTransactionAndKeepOpen() {
-    await addTransaction(false);
-  }
-
-  async function addTransaction(closeAfter: boolean) {
+    // First add the payment, then dispatch event for parent to open CloseTransactionModal
     const amountCents = parseDollarsToCents(amount);
 
     if (amountCents <= 0) {
@@ -156,40 +157,83 @@
     try {
       // Build the endpoint - use occurrence endpoint if occurrenceId provided
       let endpoint: string;
-      let closeEndpoint: string;
 
       if (occurrenceId) {
         // Occurrence-level endpoints
         endpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/payments`;
-        closeEndpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/close`;
       } else {
         throw new Error('Missing occurrence for payment updates. Refresh and try again.');
       }
 
-      await apiClient.post(endpoint, { amount: amountCents, date });
+      const response = await apiClient.post(endpoint, { amount: amountCents, date });
 
-      // Close the instance/occurrence if requested
-      if (closeAfter) {
-        if (!closeDate) {
-          error = 'Please select a close date';
-          return;
-        }
-        await apiClient.post(closeEndpoint, {
-          closed_date: closeDate,
-          notes,
-        });
-        success(`${typeLabel} added and closed`);
-      } else {
-        success(`${typeLabel} added`);
-      }
+      // Optimistic update - add payment to store immediately
+      const newPayment = {
+        id: response.id || crypto.randomUUID(),
+        amount: amountCents,
+        date,
+      };
+      detailedMonth.addPaymentToOccurrence(instanceId, occurrenceId, newPayment, type);
 
+      success(`${typeLabel} added`);
       dispatch('updated', { paymentAmount: amountCents });
 
-      if (closeAfter) {
-        handleClose();
+      // Close the drawer and dispatch event for parent to handle closing via CloseTransactionModal
+      resetForm();
+      open = false;
+      dispatch('requestClose', { paymentDate: date, notes });
+    } catch (err) {
+      error = err instanceof Error ? err.message : `Failed to add ${typeLabel.toLowerCase()}`;
+      showError(error);
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function addTransactionAndKeepOpen() {
+    await addTransaction();
+  }
+
+  async function addTransaction() {
+    const amountCents = parseDollarsToCents(amount);
+
+    if (amountCents <= 0) {
+      error = 'Please enter a valid amount';
+      return;
+    }
+
+    if (!date) {
+      error = 'Please select a date';
+      return;
+    }
+
+    saving = true;
+    error = '';
+
+    try {
+      // Build the endpoint - use occurrence endpoint if occurrenceId provided
+      let endpoint: string;
+
+      if (occurrenceId) {
+        // Occurrence-level endpoints
+        endpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/payments`;
       } else {
-        resetForm();
+        throw new Error('Missing occurrence for payment updates. Refresh and try again.');
       }
+
+      const response = await apiClient.post(endpoint, { amount: amountCents, date });
+
+      // Optimistic update - add payment to store immediately
+      const newPayment = {
+        id: response.id || crypto.randomUUID(),
+        amount: amountCents,
+        date,
+      };
+      detailedMonth.addPaymentToOccurrence(instanceId, occurrenceId, newPayment, type);
+
+      success(`${typeLabel} added`);
+      dispatch('updated', { paymentAmount: amountCents });
+      resetForm();
     } catch (err) {
       error = err instanceof Error ? err.message : `Failed to add ${typeLabel.toLowerCase()}`;
       showError(error);
@@ -199,37 +243,9 @@
   }
 
   async function closeWithoutAdding() {
-    saving = true;
-    error = '';
-
-    try {
-      // Build the close endpoint - use occurrence endpoint if occurrenceId provided
-      let closeEndpoint: string;
-
-      if (occurrenceId) {
-        closeEndpoint = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrenceId}/close`;
-      } else {
-        throw new Error('Missing occurrence for close action. Refresh and try again.');
-      }
-
-      if (!closeDate) {
-        error = 'Please select a close date';
-        return;
-      }
-
-      await apiClient.post(closeEndpoint, {
-        closed_date: closeDate,
-        notes,
-      });
-      success(`${occurrenceId ? 'Occurrence' : type === 'bill' ? 'Bill' : 'Income'} closed`);
-      dispatch('updated');
-      handleClose();
-    } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to close';
-      showError(error);
-    } finally {
-      saving = false;
-    }
+    // Dispatch event for parent to open CloseTransactionModal
+    open = false;
+    dispatch('requestClose', { paymentDate: date, notes });
   }
 
   async function deleteTransaction(paymentId: string) {
@@ -245,6 +261,10 @@
       }
 
       await apiClient.deletePath(endpoint);
+
+      // Optimistic update - remove payment from store immediately
+      detailedMonth.removePaymentFromOccurrence(instanceId, occurrenceId, paymentId, type);
+
       success(`${typeLabel} deleted`);
       dispatch('updated');
     } catch (err) {
@@ -430,19 +450,13 @@
             </div>
 
             <div class="form-group">
-              <label for="date">Payment date</label>
-              <input id="date" type="date" bind:value={date} disabled={saving} />
-            </div>
-
-            <div class="form-group">
-              <label for="close-date">Close date</label>
-              <input
-                id="close-date"
-                type="date"
-                bind:value={closeDate}
-                on:input={() => (closeDateTouched = true)}
-                disabled={saving}
-              />
+              <label for="date">Payment day</label>
+              <select id="date" bind:value={selectedDay} disabled={saving}>
+                {#each dayOptions as option (option)}
+                  <option value={option}>{option}</option>
+                {/each}
+              </select>
+              <p class="hint">Defaults to today. Only days from 1st to today are available.</p>
             </div>
 
             {#if error}
@@ -767,7 +781,7 @@
     outline-offset: 1px;
   }
 
-  input[type='date'] {
+  select {
     width: 100%;
     height: var(--input-height);
     padding: 0 var(--space-3);
@@ -778,9 +792,15 @@
     font-size: 1rem;
   }
 
-  input[type='date']:focus {
+  select:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  .hint {
+    margin: var(--space-1) 0 0 0;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
   }
 
   textarea::placeholder {

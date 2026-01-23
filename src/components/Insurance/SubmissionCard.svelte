@@ -163,6 +163,75 @@
     }
   }
 
+  async function markApproved() {
+    saving = true;
+    try {
+      const updates: {
+        status: SubmissionStatus;
+        amount_reimbursed?: number;
+        date_submitted?: string;
+        date_resolved: string;
+        notes?: string;
+      } = {
+        status: 'approved',
+        date_resolved: getTodayDate(),
+      };
+
+      // Include reimbursed amount if entered
+      if (editAmountReimbursed) {
+        updates.amount_reimbursed = dollarsToCents(editAmountReimbursed);
+      }
+      if (editDateSubmitted) {
+        updates.date_submitted = editDateSubmitted;
+      }
+      if (editNotes.trim()) {
+        updates.notes = editNotes.trim();
+      }
+
+      await updateSubmission(claimId, submission.id, updates);
+      success('Submission marked as approved');
+      editing = false;
+      dispatch('updated');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to update submission');
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function markDenied() {
+    saving = true;
+    try {
+      const updates: {
+        status: SubmissionStatus;
+        amount_reimbursed: number;
+        date_submitted?: string;
+        date_resolved: string;
+        notes?: string;
+      } = {
+        status: 'denied',
+        amount_reimbursed: 0,
+        date_resolved: getTodayDate(),
+      };
+
+      if (editDateSubmitted) {
+        updates.date_submitted = editDateSubmitted;
+      }
+      if (editNotes.trim()) {
+        updates.notes = editNotes.trim();
+      }
+
+      await updateSubmission(claimId, submission.id, updates);
+      success('Submission marked as denied');
+      editing = false;
+      dispatch('updated');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to update submission');
+    } finally {
+      saving = false;
+    }
+  }
+
   function handleDelete() {
     showDeleteConfirm = true;
   }
@@ -293,12 +362,32 @@
         ></textarea>
       </div>
       <div class="edit-actions">
-        <button class="btn btn-secondary btn-sm" on:click={cancelEdit} disabled={saving}>
-          Cancel
-        </button>
-        <button class="btn btn-primary btn-sm" on:click={saveEdit} disabled={saving}>
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        <div class="quick-actions">
+          <button
+            class="btn btn-success btn-sm"
+            on:click={markApproved}
+            disabled={saving}
+            title="Set status to Approved and date resolved to today"
+          >
+            Mark Approved
+          </button>
+          <button
+            class="btn btn-danger btn-sm"
+            on:click={markDenied}
+            disabled={saving}
+            title="Set status to Denied, clear reimbursement, and set date resolved to today"
+          >
+            Mark Denied
+          </button>
+        </div>
+        <div class="standard-actions">
+          <button class="btn btn-secondary btn-sm" on:click={cancelEdit} disabled={saving}>
+            Cancel
+          </button>
+          <button class="btn btn-primary btn-sm" on:click={saveEdit} disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   {:else}
@@ -656,7 +745,19 @@
 
   .edit-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .quick-actions {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .standard-actions {
+    display: flex;
     gap: var(--space-2);
   }
 
@@ -695,6 +796,24 @@
 
   .btn-secondary:hover:not(:disabled) {
     background: var(--bg-hover);
+  }
+
+  .btn-success {
+    background: var(--success);
+    color: var(--text-inverse);
+  }
+
+  .btn-success:hover:not(:disabled) {
+    background: var(--success-hover);
+  }
+
+  .btn-danger {
+    background: var(--error);
+    color: var(--text-inverse);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: var(--error-hover);
   }
 
   /* Awaiting previous state styling */
