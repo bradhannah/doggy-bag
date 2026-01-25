@@ -2,12 +2,7 @@
 import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import { DetailedViewServiceImpl } from './detailed-view-service';
 import { MonthsServiceImpl } from './months-service';
-import type {
-  ProjectionResponse,
-  BillInstanceDetailed,
-  IncomeInstanceDetailed,
-  Payment,
-} from '../types';
+import type { ProjectionResponse, BillInstanceDetailed, IncomeInstanceDetailed } from '../types';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { getOverdueBills, sumOverdueBills } from '../utils/overdue-bills';
 
@@ -90,37 +85,26 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
       for (const occ of occurrences) {
         const dueDate = occ.expected_date;
-        const payments = occ.payments || [];
-        const paidAmount = sumPayments(payments) || 0;
-        const remaining = occ.expected_amount - paidAmount;
 
-        for (const payment of payments) {
-          pushEvent(payment.date, {
+        // In occurrence-only model, closed = paid
+        if (occ.is_closed) {
+          // Closed occurrence: actual expense on closed_date or due date
+          const closedDate = occ.closed_date || dueDate;
+          pushEvent(closedDate, {
             name: bill.name,
-            amount: payment.amount,
+            amount: occ.expected_amount,
             type: 'expense',
             kind: 'actual',
           });
-        }
-
-        if (occ.is_closed) {
-          if (payments.length === 0 && occ.expected_amount > 0 && dueDate < todayStr) {
-            pushEvent(dueDate, {
-              name: bill.name,
-              amount: occ.expected_amount,
-              type: 'expense',
-              kind: 'actual',
-            });
-          }
           continue;
         }
 
-        if (remaining <= 0) continue;
-
+        // Open occurrence: scheduled expense
         if (dueDate < balanceStartDate) {
+          // Overdue - schedule for balance start date
           pushEvent(balanceStartDate, {
             name: bill.name,
-            amount: remaining,
+            amount: occ.expected_amount,
             type: 'expense',
             kind: 'scheduled',
           });
@@ -128,7 +112,7 @@ export class ProjectionsServiceImpl implements ProjectionsService {
           // Future event
           pushEvent(dueDate, {
             name: bill.name,
-            amount: remaining,
+            amount: occ.expected_amount,
             type: 'expense',
             kind: 'scheduled',
           });
@@ -147,39 +131,27 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
       for (const occ of occurrences) {
         const dueDate = occ.expected_date;
-        const payments = occ.payments || [];
-        const paidAmount = sumPayments(payments) || 0;
-        const remaining = occ.expected_amount - paidAmount;
 
-        for (const payment of payments) {
-          pushEvent(payment.date, {
+        // In occurrence-only model, closed = received
+        if (occ.is_closed) {
+          // Closed occurrence: actual income on closed_date or due date
+          const closedDate = occ.closed_date || dueDate;
+          pushEvent(closedDate, {
             name: income.name,
-            amount: payment.amount,
+            amount: occ.expected_amount,
             type: 'income',
             kind: 'actual',
           });
-        }
-
-        if (occ.is_closed) {
-          if (payments.length === 0 && occ.expected_amount > 0 && dueDate < todayStr) {
-            pushEvent(dueDate, {
-              name: income.name,
-              amount: occ.expected_amount,
-              type: 'income',
-              kind: 'actual',
-            });
-          }
           continue;
         }
 
-        if (remaining <= 0) continue;
-
+        // Open occurrence: scheduled income
         // For income, "overdue" means not yet received. Assume it arrives on start date if past.
         const effectiveDate = dueDate < balanceStartDate ? balanceStartDate : dueDate;
 
         pushEvent(effectiveDate, {
           name: income.name,
-          amount: remaining,
+          amount: occ.expected_amount,
           type: 'income',
           kind: 'scheduled',
         });
@@ -238,10 +210,4 @@ export class ProjectionsServiceImpl implements ProjectionsService {
       overdue_bills: overdueBills,
     };
   }
-}
-
-// Helper to sum payments
-function sumPayments(payments: Payment[] | undefined): number {
-  if (!payments) return 0;
-  return payments.reduce((sum, p) => sum + p.amount, 0);
 }

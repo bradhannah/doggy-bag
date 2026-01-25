@@ -122,7 +122,6 @@ describe('MonthsService - syncMetadata', () => {
             expected_date: '2025-03-01',
             expected_amount: 150000,
             is_closed: false,
-            payments: [],
             closed_date: undefined,
             notes: undefined,
             is_adhoc: false,
@@ -153,7 +152,6 @@ describe('MonthsService - syncMetadata', () => {
             expected_date: '2025-03-15',
             expected_amount: 15000,
             is_closed: false,
-            payments: [],
             closed_date: undefined,
             notes: undefined,
             is_adhoc: false,
@@ -186,7 +184,6 @@ describe('MonthsService - syncMetadata', () => {
             expected_date: '2025-03-07',
             expected_amount: 250000,
             is_closed: false,
-            payments: [],
             closed_date: undefined,
             notes: undefined,
             is_adhoc: false,
@@ -199,7 +196,6 @@ describe('MonthsService - syncMetadata', () => {
             expected_date: '2025-03-21',
             expected_amount: 250000,
             is_closed: false,
-            payments: [],
             closed_date: undefined,
             notes: undefined,
             is_adhoc: false,
@@ -402,9 +398,9 @@ describe('MonthsService - syncMetadata', () => {
       expect(rentInstance?.metadata?.account_url).toBeUndefined();
     });
 
-    test('preserves payment data when syncing metadata', async () => {
-      // Add payment data to the monthly file
-      const monthlyDataWithPayments = {
+    test('preserves closed state when syncing metadata', async () => {
+      // Add closed occurrence data to the monthly file
+      const monthlyDataWithClosedOccurrence = {
         ...sampleMonthlyData,
         bill_instances: [
           {
@@ -416,14 +412,7 @@ describe('MonthsService - syncMetadata', () => {
                 ...sampleMonthlyData.bill_instances[0].occurrences[0],
                 is_closed: true,
                 closed_date: '2025-03-01',
-                payments: [
-                  {
-                    id: 'pay-001',
-                    amount: 150000,
-                    date: '2025-03-01',
-                    created_at: '2025-03-01T00:00:00.000Z',
-                  },
-                ],
+                actual_amount: 150000,
               },
             ],
           },
@@ -432,18 +421,17 @@ describe('MonthsService - syncMetadata', () => {
       };
       await writeFile(
         join(testDir, 'months', `${testMonth}.json`),
-        JSON.stringify(monthlyDataWithPayments, null, 2)
+        JSON.stringify(monthlyDataWithClosedOccurrence, null, 2)
       );
 
       service = new MonthsServiceImpl();
       const result = await service.syncMetadata(testMonth);
 
-      // Payment data should be preserved
+      // Closed state should be preserved
       const rentInstance = result.bill_instances.find((bi) => bi.bill_id === 'bill-rent-001');
       expect(rentInstance?.is_closed).toBe(true);
       expect(rentInstance?.occurrences[0]?.is_closed).toBe(true);
-      expect(rentInstance?.occurrences[0]?.payments?.length).toBe(1);
-      expect(rentInstance?.occurrences[0]?.payments?.[0]?.amount).toBe(150000);
+      expect(rentInstance?.occurrences[0]?.closed_date).toBe('2025-03-01');
 
       // And metadata should be synced
       expect(rentInstance?.metadata?.bank_transaction_name).toBe('RENT PAYMENT LANDLORD');

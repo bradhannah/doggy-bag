@@ -1,20 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import type { BillInstanceDetailed, Occurrence, Payment } from '../types';
+import type { BillInstanceDetailed, Occurrence } from '../types';
 import { getOverdueBills } from './overdue-bills';
-
-function makePayment(amount: number, date: string): Payment {
-  return {
-    id: crypto.randomUUID(),
-    amount,
-    date,
-    created_at: date + 'T00:00:00Z',
-  };
-}
 
 function makeOccurrence(
   expected_date: string,
   expected_amount: number,
-  payments: Payment[] = [],
   is_closed = false
 ): Occurrence {
   return {
@@ -23,7 +13,7 @@ function makeOccurrence(
     expected_date,
     expected_amount,
     is_closed,
-    payments,
+    closed_date: is_closed ? expected_date : undefined,
     is_adhoc: false,
     created_at: expected_date + 'T00:00:00Z',
     updated_at: expected_date + 'T00:00:00Z',
@@ -58,13 +48,14 @@ function makeBill(name: string, occurrences: Occurrence[]): BillInstanceDetailed
 
 describe('getOverdueBills', () => {
   it('returns unpaid overdue occurrences before balance start date', () => {
+    // In occurrence-only model: closed = paid
     const karate = makeBill('Karate - Tallacks', [
-      makeOccurrence('2026-01-04', 6500, [makePayment(6500, '2026-01-04')]),
-      makeOccurrence('2026-01-18', 6441, []),
+      makeOccurrence('2026-01-04', 6500, true), // closed = paid
+      makeOccurrence('2026-01-18', 6441, false), // open = unpaid
     ]);
 
     const transfer = makeBill('Shared Account Transfer', [
-      makeOccurrence('2026-01-01', 140000, [makePayment(140000, '2026-01-01')]),
+      makeOccurrence('2026-01-01', 140000, true), // closed = paid
     ]);
 
     const overdue = getOverdueBills([karate, transfer], '2026-01', '2026-01-20');
@@ -81,7 +72,7 @@ describe('getOverdueBills', () => {
   });
 
   it('excludes closed occurrences', () => {
-    const bill = makeBill('Utilities', [makeOccurrence('2026-01-03', 8900, [], true)]);
+    const bill = makeBill('Utilities', [makeOccurrence('2026-01-03', 8900, true)]);
 
     const overdue = getOverdueBills([bill], '2026-01', '2026-01-20');
 
