@@ -3,7 +3,7 @@
    * ItemDetailsDrawer - READ-ONLY drawer showing bill/income details
    *
    * This component is purely informational - no editing capabilities.
-   * For editing notes or managing payments, use TransactionsDrawer.
+   * For editing/closing occurrences, use EditCloseModal via the Edit button.
    *
    * Features:
    * - Shows all occurrences for the bill/income (not filtered by occurrenceId)
@@ -64,10 +64,14 @@
   $: totalOccurrences = occurrences.length;
 
   // Summary calculations across all occurrences
+  // In the new model, closed occurrences represent payments - use expected_amount when closed
   $: totalExpected = occurrences.reduce((sum, occ) => sum + (occ.expected_amount ?? 0), 0);
   $: totalPaid = occurrences.reduce((sum, occ) => {
-    const payments = occ.payments ?? [];
-    return sum + payments.reduce((pSum, p) => pSum + p.amount, 0);
+    // If occurrence is closed, it counts as paid with expected_amount
+    if (occ.is_closed) {
+      return sum + (occ.expected_amount ?? 0);
+    }
+    return sum;
   }, 0);
   $: totalRemaining = Math.max(0, totalExpected - totalPaid);
 
@@ -122,10 +126,13 @@
     return (occurrence as Occurrence & { notes?: string | null }).notes ?? null;
   }
 
-  // Get occurrence paid amount
+  // Get occurrence paid amount - in the new model, closing = payment at expected_amount
   function getOccurrencePaid(occurrence: Occurrence): number {
-    const payments = occurrence.payments ?? [];
-    return payments.reduce((sum, p) => sum + p.amount, 0);
+    // If occurrence is closed, it's paid at expected_amount
+    if (occurrence.is_closed) {
+      return occurrence.expected_amount ?? 0;
+    }
+    return 0;
   }
 
   function handleClose() {

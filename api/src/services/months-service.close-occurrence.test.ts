@@ -30,9 +30,9 @@ describe('MonthsService - close occurrence notes', () => {
             expected_date: '2025-04-01',
             expected_amount: 120000,
             is_closed: false,
-            payments: [],
             closed_date: undefined,
             notes: undefined,
+            payment_source_id: undefined,
             is_adhoc: true,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -63,9 +63,9 @@ describe('MonthsService - close occurrence notes', () => {
             expected_date: '2025-04-02',
             expected_amount: 500000,
             is_closed: false,
-            payments: [],
             closed_date: undefined,
             notes: undefined,
+            payment_source_id: undefined,
             is_adhoc: true,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: '2025-01-01T00:00:00.000Z',
@@ -131,5 +131,36 @@ describe('MonthsService - close occurrence notes', () => {
 
     expect(result?.occurrences[0].notes).toBe('Bonus included');
     expect(result?.occurrences[0].closed_date).toBe('2025-04-06');
+  });
+
+  test('stores payment_source_id on closed bill occurrence', async () => {
+    const result = await service.closeBillOccurrence(testMonth, 'bi-rent-001', 'occ-b1', {
+      closed_date: '2025-04-05',
+      notes: 'Paid via checking',
+      payment_source_id: 'ps-checking-001',
+    });
+
+    expect(result?.occurrences[0].payment_source_id).toBe('ps-checking-001');
+    expect(result?.occurrences[0].is_closed).toBe(true);
+    expect(result?.occurrences[0].notes).toBe('Paid via checking');
+  });
+
+  test('stores payment_source_id on closed income occurrence', async () => {
+    const result = await service.closeIncomeOccurrence(testMonth, 'ii-pay-001', 'occ-i1', {
+      closed_date: '2025-04-06',
+      payment_source_id: 'ps-savings-001',
+    });
+
+    expect(result?.occurrences[0].payment_source_id).toBe('ps-savings-001');
+    expect(result?.occurrences[0].is_closed).toBe(true);
+  });
+
+  test('closes occurrence without payment_source_id', async () => {
+    const result = await service.closeBillOccurrence(testMonth, 'bi-rent-001', 'occ-b1', {
+      closed_date: '2025-04-05',
+    });
+
+    expect(result?.occurrences[0].is_closed).toBe(true);
+    expect(result?.occurrences[0].payment_source_id).toBeUndefined();
   });
 });

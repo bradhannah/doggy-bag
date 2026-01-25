@@ -15,31 +15,17 @@ import {
   calculateAdhocIncomeTally,
   combineTallies,
 } from './tally';
-import type { BillInstance, IncomeInstance, Occurrence, Payment, SectionTally } from '../types';
-
-// Helper to create test payments
-function createPayment(amount: number, date: string = '2025-01-15'): Payment {
-  return {
-    id: crypto.randomUUID(),
-    amount,
-    date,
-    created_at: new Date().toISOString(),
-  };
-}
+import type { BillInstance, IncomeInstance, Occurrence, SectionTally } from '../types';
 
 // Helper to create test occurrences
-function createOccurrence(
-  expectedAmount: number,
-  payments: Payment[] = [],
-  isClosed: boolean = false
-): Occurrence {
+// In the new model, is_closed = true means the occurrence is paid (expected_amount counts as actual)
+function createOccurrence(expectedAmount: number, isClosed: boolean = false): Occurrence {
   return {
     id: crypto.randomUUID(),
     sequence: 1,
     expected_date: '2025-01-15',
     expected_amount: expectedAmount,
     is_closed: isClosed,
-    payments,
     is_adhoc: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -89,36 +75,36 @@ describe('Tally Utilities', () => {
       expect(getEffectiveBillAmount(bill)).toBe(0);
     });
 
-    test('returns 0 when occurrences have no payments', () => {
+    test('returns 0 when occurrences are all open (not paid)', () => {
       const bill = createBillInstance({
-        occurrences: [createOccurrence(10000, [])],
+        occurrences: [createOccurrence(10000, false)],
       });
       expect(getEffectiveBillAmount(bill)).toBe(0);
     });
 
-    test('sums payments from single occurrence', () => {
+    test('returns expected_amount from single closed occurrence', () => {
       const bill = createBillInstance({
-        occurrences: [createOccurrence(10000, [createPayment(5000), createPayment(3000)])],
-      });
-      expect(getEffectiveBillAmount(bill)).toBe(8000);
-    });
-
-    test('sums payments from multiple occurrences', () => {
-      const bill = createBillInstance({
-        occurrences: [
-          createOccurrence(5000, [createPayment(5000)]),
-          createOccurrence(5000, [createPayment(5000)]),
-        ],
+        occurrences: [createOccurrence(10000, true)],
       });
       expect(getEffectiveBillAmount(bill)).toBe(10000);
     });
 
-    test('handles partial payments', () => {
+    test('sums expected_amounts from multiple closed occurrences', () => {
       const bill = createBillInstance({
-        expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [createPayment(2500)])],
+        occurrences: [createOccurrence(5000, true), createOccurrence(5000, true)],
       });
-      expect(getEffectiveBillAmount(bill)).toBe(2500);
+      expect(getEffectiveBillAmount(bill)).toBe(10000);
+    });
+
+    test('only counts closed occurrences', () => {
+      const bill = createBillInstance({
+        expected_amount: 20000,
+        occurrences: [
+          createOccurrence(10000, true), // Closed - counts
+          createOccurrence(10000, false), // Open - doesn't count
+        ],
+      });
+      expect(getEffectiveBillAmount(bill)).toBe(10000);
     });
   });
 
@@ -127,39 +113,42 @@ describe('Tally Utilities', () => {
       const bill = createBillInstance({
         is_closed: true,
         expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [])],
+        occurrences: [createOccurrence(10000, false)],
       });
       expect(getRemainingBillAmount(bill)).toBe(0);
     });
 
-    test('returns full expected when no payments made', () => {
+    test('returns full expected when no occurrences are closed', () => {
       const bill = createBillInstance({
         expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [])],
+        occurrences: [createOccurrence(10000, false)],
       });
       expect(getRemainingBillAmount(bill)).toBe(10000);
     });
 
-    test('returns difference between expected and paid', () => {
+    test('returns difference between expected and closed occurrences', () => {
       const bill = createBillInstance({
         expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [createPayment(7000)])],
+        occurrences: [
+          createOccurrence(7000, true), // Closed
+          createOccurrence(3000, false), // Open
+        ],
       });
       expect(getRemainingBillAmount(bill)).toBe(3000);
     });
 
-    test('returns 0 when fully paid', () => {
+    test('returns 0 when all occurrences are closed', () => {
       const bill = createBillInstance({
         expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [createPayment(10000)])],
+        occurrences: [createOccurrence(10000, true)],
       });
       expect(getRemainingBillAmount(bill)).toBe(0);
     });
 
-    test('returns 0 when overpaid (no negative remaining)', () => {
+    test('returns 0 when overpaid (closed amounts > expected)', () => {
       const bill = createBillInstance({
         expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [createPayment(15000)])],
+        occurrences: [createOccurrence(15000, true)],
       });
       expect(getRemainingBillAmount(bill)).toBe(0);
     });
@@ -171,10 +160,13 @@ describe('Tally Utilities', () => {
       expect(tally).toEqual({ expected: 0, actual: 0, remaining: 0 });
     });
 
-    test('calculates tally for single bill', () => {
+    test('calculates tally for single bill with partially closed occurrences', () => {
       const bill = createBillInstance({
         expected_amount: 10000,
-        occurrences: [createOccurrence(10000, [createPayment(4000)])],
+        occurrences: [
+          createOccurrence(4000, true), // Closed
+          createOccurrence(6000, false), // Open
+        ],
       });
       const tally = calculateBillsTally([bill]);
       expect(tally).toEqual({
@@ -188,23 +180,26 @@ describe('Tally Utilities', () => {
       const bills = [
         createBillInstance({
           expected_amount: 10000,
-          occurrences: [createOccurrence(10000, [createPayment(10000)])],
+          occurrences: [createOccurrence(10000, true)], // Fully paid
         }),
         createBillInstance({
           expected_amount: 20000,
-          occurrences: [createOccurrence(20000, [createPayment(5000)])],
+          occurrences: [
+            createOccurrence(5000, true), // Partial
+            createOccurrence(15000, false), // Open
+          ],
         }),
         createBillInstance({
           expected_amount: 15000,
-          is_closed: true,
-          occurrences: [createOccurrence(15000, [createPayment(15000)])],
+          is_closed: true, // Instance closed
+          occurrences: [createOccurrence(15000, true)],
         }),
       ];
       const tally = calculateBillsTally(bills);
       expect(tally).toEqual({
         expected: 45000,
-        actual: 30000,
-        remaining: 15000, // Only second bill has remaining (closed bill = 0)
+        actual: 30000, // 10000 + 5000 + 15000
+        remaining: 15000, // Only second bill has remaining (20000 - 5000)
       });
     });
   });
@@ -215,19 +210,16 @@ describe('Tally Utilities', () => {
       expect(getEffectiveIncomeAmount(income)).toBe(0);
     });
 
-    test('returns 0 when occurrences have no payments', () => {
+    test('returns 0 when occurrences are all open (not received)', () => {
       const income = createIncomeInstance({
-        occurrences: [createOccurrence(500000, [])],
+        occurrences: [createOccurrence(500000, false)],
       });
       expect(getEffectiveIncomeAmount(income)).toBe(0);
     });
 
-    test('sums payments from occurrences', () => {
+    test('sums expected_amounts from closed occurrences', () => {
       const income = createIncomeInstance({
-        occurrences: [
-          createOccurrence(250000, [createPayment(250000)]),
-          createOccurrence(250000, [createPayment(250000)]),
-        ],
+        occurrences: [createOccurrence(250000, true), createOccurrence(250000, true)],
       });
       expect(getEffectiveIncomeAmount(income)).toBe(500000);
     });
@@ -242,18 +234,21 @@ describe('Tally Utilities', () => {
       expect(getRemainingIncomeAmount(income)).toBe(0);
     });
 
-    test('returns full expected when no payments received', () => {
+    test('returns full expected when no occurrences are closed', () => {
       const income = createIncomeInstance({
         expected_amount: 500000,
-        occurrences: [createOccurrence(500000, [])],
+        occurrences: [createOccurrence(500000, false)],
       });
       expect(getRemainingIncomeAmount(income)).toBe(500000);
     });
 
-    test('returns difference between expected and received', () => {
+    test('returns difference between expected and closed occurrences', () => {
       const income = createIncomeInstance({
         expected_amount: 500000,
-        occurrences: [createOccurrence(500000, [createPayment(300000)])],
+        occurrences: [
+          createOccurrence(300000, true), // Closed
+          createOccurrence(200000, false), // Open
+        ],
       });
       expect(getRemainingIncomeAmount(income)).toBe(200000);
     });
@@ -261,7 +256,7 @@ describe('Tally Utilities', () => {
     test('returns 0 when fully received', () => {
       const income = createIncomeInstance({
         expected_amount: 500000,
-        occurrences: [createOccurrence(500000, [createPayment(500000)])],
+        occurrences: [createOccurrence(500000, true)],
       });
       expect(getRemainingIncomeAmount(income)).toBe(0);
     });
@@ -276,7 +271,7 @@ describe('Tally Utilities', () => {
     test('calculates tally for single income', () => {
       const income = createIncomeInstance({
         expected_amount: 500000,
-        occurrences: [createOccurrence(500000, [createPayment(500000)])],
+        occurrences: [createOccurrence(500000, true)],
       });
       const tally = calculateIncomeTally([income]);
       expect(tally).toEqual({
@@ -290,11 +285,11 @@ describe('Tally Utilities', () => {
       const incomes = [
         createIncomeInstance({
           expected_amount: 500000,
-          occurrences: [createOccurrence(500000, [createPayment(500000)])],
+          occurrences: [createOccurrence(500000, true)],
         }),
         createIncomeInstance({
           expected_amount: 100000,
-          occurrences: [createOccurrence(100000, [])],
+          occurrences: [createOccurrence(100000, false)], // Not received
         }),
       ];
       const tally = calculateIncomeTally(incomes);
@@ -316,11 +311,11 @@ describe('Tally Utilities', () => {
       const bills = [
         createBillInstance({
           expected_amount: 10000,
-          occurrences: [createOccurrence(10000, [createPayment(10000)])],
+          occurrences: [createOccurrence(10000, true)],
         }),
         createBillInstance({
           expected_amount: 20000,
-          occurrences: [createOccurrence(20000, [createPayment(15000)])],
+          occurrences: [createOccurrence(15000, true), createOccurrence(5000, false)],
         }),
       ];
       const subtotal = calculateCategoryBillSubtotal(bills);
@@ -341,11 +336,11 @@ describe('Tally Utilities', () => {
       const incomes = [
         createIncomeInstance({
           expected_amount: 500000,
-          occurrences: [createOccurrence(500000, [createPayment(500000)])],
+          occurrences: [createOccurrence(500000, true)],
         }),
         createIncomeInstance({
           expected_amount: 200000,
-          occurrences: [createOccurrence(200000, [createPayment(100000)])],
+          occurrences: [createOccurrence(100000, true), createOccurrence(100000, false)],
         }),
       ];
       const subtotal = calculateCategoryIncomeSubtotal(incomes);
@@ -362,12 +357,12 @@ describe('Tally Utilities', () => {
         createBillInstance({
           expected_amount: 10000,
           is_adhoc: false,
-          occurrences: [createOccurrence(10000, [createPayment(10000)])],
+          occurrences: [createOccurrence(10000, true)],
         }),
         createBillInstance({
           expected_amount: 5000,
           is_adhoc: true, // Should be excluded
-          occurrences: [createOccurrence(5000, [createPayment(5000)])],
+          occurrences: [createOccurrence(5000, true)],
         }),
       ];
       const tally = calculateRegularBillsTally(bills);
@@ -394,12 +389,12 @@ describe('Tally Utilities', () => {
         createBillInstance({
           expected_amount: 10000,
           is_adhoc: false, // Should be excluded
-          occurrences: [createOccurrence(10000, [createPayment(10000)])],
+          occurrences: [createOccurrence(10000, true)],
         }),
         createBillInstance({
           expected_amount: 5000,
           is_adhoc: true,
-          occurrences: [createOccurrence(5000, [createPayment(5000)])],
+          occurrences: [createOccurrence(5000, true)],
         }),
       ];
       const tally = calculateAdhocBillsTally(bills);
@@ -423,11 +418,11 @@ describe('Tally Utilities', () => {
       const bills = [
         createBillInstance({
           is_adhoc: true,
-          occurrences: [createOccurrence(0, [createPayment(3000)])],
+          occurrences: [createOccurrence(3000, true)],
         }),
         createBillInstance({
           is_adhoc: true,
-          occurrences: [createOccurrence(0, [createPayment(7000)])],
+          occurrences: [createOccurrence(7000, true)],
         }),
       ];
       const tally = calculateAdhocBillsTally(bills);
@@ -445,12 +440,12 @@ describe('Tally Utilities', () => {
         createIncomeInstance({
           expected_amount: 500000,
           is_adhoc: false,
-          occurrences: [createOccurrence(500000, [createPayment(500000)])],
+          occurrences: [createOccurrence(500000, true)],
         }),
         createIncomeInstance({
           expected_amount: 10000,
           is_adhoc: true, // Should be excluded
-          occurrences: [createOccurrence(10000, [createPayment(10000)])],
+          occurrences: [createOccurrence(10000, true)],
         }),
       ];
       const tally = calculateRegularIncomeTally(incomes);
@@ -468,12 +463,12 @@ describe('Tally Utilities', () => {
         createIncomeInstance({
           expected_amount: 500000,
           is_adhoc: false, // Should be excluded
-          occurrences: [createOccurrence(500000, [createPayment(500000)])],
+          occurrences: [createOccurrence(500000, true)],
         }),
         createIncomeInstance({
           expected_amount: 0,
           is_adhoc: true,
-          occurrences: [createOccurrence(0, [createPayment(10000)])],
+          occurrences: [createOccurrence(10000, true)],
         }),
       ];
       const tally = calculateAdhocIncomeTally(incomes);

@@ -65,16 +65,16 @@ import {
   createIncomeOccurrenceHandlerPUT,
   createBillOccurrenceHandlerClose,
   createBillOccurrenceHandlerReopen,
+  createBillOccurrenceHandlerSplit,
   createIncomeOccurrenceHandlerClose,
   createIncomeOccurrenceHandlerReopen,
-  createBillOccurrencePaymentHandler,
-  createIncomeOccurrencePaymentHandler,
+  createIncomeOccurrenceHandlerSplit,
   createBillAdhocOccurrenceHandler,
   createIncomeAdhocOccurrenceHandler,
   createBillOccurrenceHandlerDelete,
   createIncomeOccurrenceHandlerDelete,
-  createDeleteBillOccurrencePaymentHandler,
-  createDeleteIncomeOccurrencePaymentHandler,
+  // Payoff bill handlers
+  createPayoffBillPaymentHandler,
 } from './handlers/instances.handlers';
 
 import {
@@ -619,32 +619,29 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   },
 
   // Bill instances - must come before expenses for proper matching
+  // Payoff bill routes must come before occurrence routes
+  {
+    path: '/api/months/payoff-bills/pay',
+    definition: {
+      method: 'POST',
+      handler: createPayoffBillPaymentHandler(),
+      hasPathParam: true,
+    },
+  },
   // Occurrence routes must come before other bill instance routes
   {
     path: '/api/months/bills/occurrences/close',
     definition: { method: 'POST', handler: createBillOccurrenceHandlerClose(), hasPathParam: true },
   },
   {
+    path: '/api/months/bills/occurrences/split',
+    definition: { method: 'POST', handler: createBillOccurrenceHandlerSplit(), hasPathParam: true },
+  },
+  {
     path: '/api/months/bills/occurrences/reopen',
     definition: {
       method: 'POST',
       handler: createBillOccurrenceHandlerReopen(),
-      hasPathParam: true,
-    },
-  },
-  {
-    path: '/api/months/bills/occurrences/payments',
-    definition: {
-      method: 'POST',
-      handler: createBillOccurrencePaymentHandler(),
-      hasPathParam: true,
-    },
-  },
-  {
-    path: '/api/months/bills/occurrences/payments',
-    definition: {
-      method: 'DELETE',
-      handler: createDeleteBillOccurrencePaymentHandler(),
       hasPathParam: true,
     },
   },
@@ -708,26 +705,18 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     },
   },
   {
+    path: '/api/months/incomes/occurrences/split',
+    definition: {
+      method: 'POST',
+      handler: createIncomeOccurrenceHandlerSplit(),
+      hasPathParam: true,
+    },
+  },
+  {
     path: '/api/months/incomes/occurrences/reopen',
     definition: {
       method: 'POST',
       handler: createIncomeOccurrenceHandlerReopen(),
-      hasPathParam: true,
-    },
-  },
-  {
-    path: '/api/months/incomes/occurrences/payments',
-    definition: {
-      method: 'POST',
-      handler: createIncomeOccurrencePaymentHandler(),
-      hasPathParam: true,
-    },
-  },
-  {
-    path: '/api/months/incomes/occurrences/payments',
-    definition: {
-      method: 'DELETE',
-      handler: createDeleteIncomeOccurrencePaymentHandler(),
       hasPathParam: true,
     },
   },

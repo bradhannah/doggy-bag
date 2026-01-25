@@ -6,7 +6,7 @@ import { MonthsServiceImpl } from '../../services/months-service';
 import { AdhocServiceImpl } from '../../services/adhoc-service';
 import { CategoriesServiceImpl } from '../../services/categories-service';
 import { formatErrorForUser } from '../../utils/errors';
-import { sumOccurrencePayments } from '../../utils/occurrences';
+import { sumClosedOccurrenceAmounts } from '../../utils/tally';
 import type { SavingsGoalStatus, GoalTemperature } from '../../types';
 
 const savingsGoalsService: SavingsGoalsService = new SavingsGoalsServiceImpl();
@@ -70,9 +70,9 @@ async function calculateSavedAmount(goalId: string): Promise<number> {
 
         if (!isLinkedViaBill && !isLinkedDirectly) continue;
 
-        // Sum payments from all occurrences (closed or open)
+        // Sum payments from all closed occurrences
         if (billInstance.occurrences && billInstance.occurrences.length > 0) {
-          totalSaved += sumOccurrencePayments(billInstance.occurrences);
+          totalSaved += sumClosedOccurrenceAmounts(billInstance.occurrences);
         }
       }
     }

@@ -37,6 +37,7 @@ export function generateIncomeOccurrences(
 
 /**
  * Core occurrence generation logic
+ * Generates occurrences without the legacy payments[] array
  */
 export function generateOccurrences(
   billingPeriod: BillingPeriod,
@@ -54,7 +55,6 @@ export function generateOccurrences(
     expected_date: date,
     expected_amount: amount,
     is_closed: false,
-    payments: [],
     is_adhoc: false,
     created_at: now,
     updated_at: now,
@@ -316,16 +316,6 @@ export function sumOccurrenceExpectedAmounts(occurrences: Occurrence[]): number 
 }
 
 /**
- * Calculate total paid amount from occurrence payments
- */
-export function sumOccurrencePayments(occurrences: Occurrence[]): number {
-  return occurrences.reduce((sum, occ) => {
-    const occPayments = occ.payments.reduce((pSum, p) => pSum + p.amount, 0);
-    return sum + occPayments;
-  }, 0);
-}
-
-/**
  * Check if all occurrences are closed
  */
 export function areAllOccurrencesClosed(occurrences: Occurrence[]): boolean {
@@ -344,7 +334,6 @@ export function createAdhocOccurrence(expectedDate: string, expectedAmount: numb
     expected_date: expectedDate,
     expected_amount: expectedAmount,
     is_closed: false,
-    payments: [],
     is_adhoc: true,
     created_at: now,
     updated_at: now,
