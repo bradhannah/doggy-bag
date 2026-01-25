@@ -8,6 +8,12 @@ import { serve } from 'bun';
 import { routes } from './src/routes';
 import { StorageServiceImpl } from './src/services/storage';
 
+// Check for version flag (used by Makefile to distinguish runtime from compiled binary)
+if (process.argv.includes('--version')) {
+  console.log('DoggyBag Backend v0.0.0'); // Prefix ensures it fails the Bun version check
+  process.exit(0);
+}
+
 // Initialize storage service with DATA_DIR from environment or default
 // In production, Tauri passes DATA_DIR when spawning the sidecar
 // In development, it defaults to './data' (project-relative)

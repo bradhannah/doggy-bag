@@ -17,7 +17,7 @@ export interface SavingsGoal {
   target_amount: number; // Cents
   current_amount: number; // Cents (legacy, use saved_amount instead)
   saved_amount: number; // Cents - calculated from closed bill occurrences
-  target_date: string; // YYYY-MM-DD
+  target_date?: string; // YYYY-MM-DD (optional for open-ended goals)
   linked_account_id: string; // Reference to PaymentSource
   status: SavingsGoalStatus;
   paused_at?: string; // ISO timestamp when goal was paused
@@ -35,7 +35,7 @@ export interface SavingsGoal {
 export interface SavingsGoalData {
   name: string;
   target_amount: number;
-  target_date: string;
+  target_date?: string; // Optional for open-ended goals
   linked_account_id: string;
   status?: SavingsGoalStatus;
   notes?: string;
@@ -44,7 +44,7 @@ export interface SavingsGoalData {
 export interface SavingsGoalUpdate {
   name?: string;
   target_amount?: number;
-  target_date?: string;
+  target_date?: string | null; // null to clear the target date
   linked_account_id?: string;
   notes?: string;
 }

@@ -10,8 +10,10 @@
     abandonedGoals,
     archivedGoals,
     loadSavingsGoals,
+    pauseGoal,
     resumeGoal,
     completeGoal,
+    abandonGoal,
     archiveGoal,
     unarchiveGoal,
     deleteSavingsGoal,
@@ -23,6 +25,7 @@
   import { success, error as showError } from '../../stores/toast';
   import { type Bill } from '../../stores/bills';
   import MakePaymentModal from '../../components/Goals/MakePaymentModal.svelte';
+  import ViewPaymentsModal from '../../components/Goals/ViewPaymentsModal.svelte';
 
   // Filter state
   let showActive = true;
@@ -37,6 +40,9 @@
   // Make payment modal state
   let makePaymentModal: SavingsGoal | null = null;
 
+  // View payments modal state
+  let viewPaymentsModal: SavingsGoal | null = null;
+
   // Schedule summaries cache
   interface ScheduleSummary {
     amount: number;
@@ -47,7 +53,7 @@
 
   // Confirmation modal state
   let confirmModal: {
-    type: 'complete' | 'delete' | 'archive';
+    type: 'complete' | 'delete' | 'archive' | 'pause' | 'abandon';
     goal: SavingsGoal;
   } | null = null;
 
@@ -159,8 +165,35 @@
     try {
       await resumeGoal(goal.id);
       success(`"${goal.name}" resumed`);
+      confirmModal = null;
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to resume goal');
+    } finally {
+      actionLoading = null;
+    }
+  }
+
+  async function handlePause(goal: SavingsGoal) {
+    actionLoading = goal.id;
+    try {
+      await pauseGoal(goal.id);
+      success(`"${goal.name}" paused`);
+      confirmModal = null;
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to pause goal');
+    } finally {
+      actionLoading = null;
+    }
+  }
+
+  async function handleAbandon(goal: SavingsGoal) {
+    actionLoading = goal.id;
+    try {
+      await abandonGoal(goal.id);
+      success(`"${goal.name}" abandoned`);
+      confirmModal = null;
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to abandon goal');
     } finally {
       actionLoading = null;
     }
@@ -220,7 +253,10 @@
     }
   }
 
-  function openConfirmModal(type: 'complete' | 'delete' | 'archive', goal: SavingsGoal) {
+  function openConfirmModal(
+    type: 'complete' | 'delete' | 'archive' | 'pause' | 'abandon',
+    goal: SavingsGoal
+  ) {
     confirmModal = { type, goal };
   }
 
@@ -314,8 +350,9 @@
   {:else}
     <div class="goals-grid">
       {#each filteredGoals as goal (goal.id)}
-        {@const daysRemaining = getDaysRemaining(goal.target_date)}
-        {@const isOverdue = daysRemaining < 0 && goal.status === 'saving'}
+        {@const daysRemaining = goal.target_date ? getDaysRemaining(goal.target_date) : null}
+        {@const isOverdue = daysRemaining !== null && daysRemaining < 0 && goal.status === 'saving'}
+        {@const isOpenEnded = !goal.target_date}
         {@const isOpen = goal.status === 'saving' || goal.status === 'paused'}
         <div
           class="goal-card"
@@ -330,6 +367,53 @@
               <h3 class="goal-name">{goal.name}</h3>
             </a>
             <div class="header-right">
+              {#if goal.status === 'saving'}
+                <button
+                  class="icon-btn warning"
+                  on:click|stopPropagation={() => openConfirmModal('pause', goal)}
+                  disabled={actionLoading === goal.id}
+                  title="Pause goal"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="6"
+                      y="5"
+                      width="4"
+                      height="14"
+                      rx="1"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <rect
+                      x="14"
+                      y="5"
+                      width="4"
+                      height="14"
+                      rx="1"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </button>
+              {/if}
+              {#if goal.status === 'saving' || goal.status === 'paused'}
+                <button
+                  class="icon-btn danger"
+                  on:click|stopPropagation={() => openConfirmModal('abandon', goal)}
+                  disabled={actionLoading === goal.id}
+                  title="Abandon goal"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path
+                      d="M15 9L9 15M9 9l6 6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+              {/if}
               <a href="/goals/edit/{goal.id}" class="edit-link" title="Edit goal">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path
@@ -367,7 +451,7 @@
               <span class="saved-amount">{formatCurrency(goal.saved_amount)}</span>
               <span class="target-amount">of {formatCurrency(goal.target_amount)}</span>
             </div>
-            {#if goal.status === 'saving' && (!goal.saved_amount || goal.saved_amount === 0)}
+            {#if goal.status === 'saving' && !scheduleSummaries.has(goal.id)}
               <a href="/goals/edit/{goal.id}" class="no-payments-hint">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path
@@ -473,17 +557,24 @@
 
           <!-- Info section -->
           <div class="goal-info">
-            <div class="info-item">
-              <span class="info-label">Target Date</span>
-              <span class="info-value" class:overdue={isOverdue}>
-                {formatDate(goal.target_date)}
-                {#if isOpen}
-                  <span class="days-remaining" class:overdue={isOverdue}>
-                    ({getDaysRemainingText(goal.target_date)})
-                  </span>
-                {/if}
-              </span>
-            </div>
+            {#if goal.target_date}
+              <div class="info-item">
+                <span class="info-label">Target Date</span>
+                <span class="info-value" class:overdue={isOverdue}>
+                  {formatDate(goal.target_date)}
+                  {#if isOpen}
+                    <span class="days-remaining" class:overdue={isOverdue}>
+                      ({getDaysRemainingText(goal.target_date)})
+                    </span>
+                  {/if}
+                </span>
+              </div>
+            {:else}
+              <div class="info-item">
+                <span class="info-label">Target Date</span>
+                <span class="info-value open-ended">Open-ended</span>
+              </div>
+            {/if}
             <div class="info-item">
               <span class="info-label">Progress</span>
               <span class="info-value">{goal.progress_percentage}%</span>
@@ -507,6 +598,13 @@
                 + Payment
               </button>
               <button
+                class="action-btn view"
+                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
+                disabled={actionLoading === goal.id}
+              >
+                History
+              </button>
+              <button
                 class="action-btn success"
                 on:click={() => openConfirmModal('complete', goal)}
                 disabled={actionLoading === goal.id}
@@ -521,7 +619,21 @@
               >
                 Resume
               </button>
+              <button
+                class="action-btn view"
+                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
+                disabled={actionLoading === goal.id}
+              >
+                History
+              </button>
             {:else if goal.status === 'bought' || goal.status === 'abandoned'}
+              <button
+                class="action-btn view"
+                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
+                disabled={actionLoading === goal.id}
+              >
+                History
+              </button>
               <button
                 class="action-btn secondary"
                 on:click={() => openConfirmModal('archive', goal)}
@@ -537,6 +649,13 @@
                 Delete
               </button>
             {:else if goal.status === 'archived'}
+              <button
+                class="action-btn view"
+                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
+                disabled={actionLoading === goal.id}
+              >
+                History
+              </button>
               <button
                 class="action-btn primary"
                 on:click={() => openUnarchiveModal(goal)}
@@ -629,6 +748,42 @@
             {actionLoading === confirmModal.goal.id ? 'Archiving...' : 'Archive Goal'}
           </button>
         </div>
+      {:else if confirmModal.type === 'pause'}
+        <h2>Pause Goal</h2>
+        <p>
+          Pause saving for <strong>"{confirmModal.goal.name}"</strong>?
+        </p>
+        <p class="modal-info">
+          Scheduled payments will continue to appear in your budget. You can resume saving anytime.
+        </p>
+        <div class="modal-actions">
+          <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
+          <button
+            class="action-btn warning"
+            on:click={() => confirmModal && handlePause(confirmModal.goal)}
+            disabled={actionLoading === confirmModal.goal.id}
+          >
+            {actionLoading === confirmModal.goal.id ? 'Pausing...' : 'Pause Goal'}
+          </button>
+        </div>
+      {:else if confirmModal.type === 'abandon'}
+        <h2>Abandon Goal</h2>
+        <p>
+          Are you sure you want to abandon <strong>"{confirmModal.goal.name}"</strong>?
+        </p>
+        <p class="modal-warning">
+          This will mark the goal as abandoned. Any scheduled payments will remain on your budget.
+        </p>
+        <div class="modal-actions">
+          <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
+          <button
+            class="action-btn danger"
+            on:click={() => confirmModal && handleAbandon(confirmModal.goal)}
+            disabled={actionLoading === confirmModal.goal.id}
+          >
+            {actionLoading === confirmModal.goal.id ? 'Abandoning...' : 'Abandon Goal'}
+          </button>
+        </div>
       {/if}
     </div>
   </div>
@@ -703,6 +858,11 @@
     onClose={() => (makePaymentModal = null)}
     on:payment={handlePaymentComplete}
   />
+{/if}
+
+<!-- View Payments Modal -->
+{#if viewPaymentsModal}
+  <ViewPaymentsModal goal={viewPaymentsModal} onClose={() => (viewPaymentsModal = null)} />
 {/if}
 
 <style>
@@ -920,6 +1080,42 @@
     color: var(--accent);
   }
 
+  .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .icon-btn.warning {
+    color: var(--text-tertiary);
+  }
+
+  .icon-btn.warning:hover:not(:disabled) {
+    background: var(--warning-muted);
+    color: var(--warning);
+  }
+
+  .icon-btn.danger {
+    color: var(--text-tertiary);
+  }
+
+  .icon-btn.danger:hover:not(:disabled) {
+    background: var(--error-muted);
+    color: var(--error);
+  }
+
   .status-pill {
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
@@ -1084,6 +1280,11 @@
     color: var(--error);
   }
 
+  .info-value.open-ended {
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
   .days-remaining {
     font-weight: 400;
     color: var(--text-secondary);
@@ -1094,15 +1295,7 @@
   }
 
   /* Action Buttons */
-  .goal-actions {
-    display: flex;
-    gap: var(--space-2);
-    margin-top: auto;
-    padding-top: var(--space-2);
-  }
-
   .action-btn {
-    flex: 1;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-md);
     font-weight: 500;
@@ -1173,6 +1366,39 @@
   .action-btn.payment:hover:not(:disabled) {
     background: var(--accent);
     color: var(--text-inverse);
+  }
+
+  .action-btn.view {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+  }
+
+  .action-btn.view:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--accent);
+  }
+
+  .action-btn.warning {
+    background: var(--warning);
+    color: var(--text-inverse);
+  }
+
+  .action-btn.warning:hover:not(:disabled) {
+    background: var(--warning-hover);
+  }
+
+  /* Actions Layout */
+  .goal-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .goal-actions .action-btn {
+    flex: 1;
   }
 
   /* Modal */

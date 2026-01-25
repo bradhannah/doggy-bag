@@ -98,12 +98,13 @@ export async function loadBills() {
   }
 }
 
-export async function createBill(data: BillData) {
+export async function createBill(data: BillData): Promise<Bill> {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    await apiClient.post('/api/bills', data);
+    const newBill = await apiClient.post('/api/bills', data);
     await loadBills();
+    return newBill as Bill;
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to create bill');
     store.update((s) => ({ ...s, loading: false, error: err.message }));

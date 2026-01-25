@@ -373,11 +373,18 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
    * - Yellow: Slightly behind (saved is 75-99% of expected)
    * - Red: Significantly behind (saved is <75% of expected)
    *
+   * For open-ended goals (no target_date), always returns 'green'
+   *
    * @param goal - The savings goal
    * @param savedAmount - Current amount saved (in cents)
    * @returns Temperature indicator
    */
   public calculateTemperature(goal: SavingsGoal, savedAmount: number): GoalTemperature {
+    // Open-ended goals (no target date) are always green
+    if (!goal.target_date) {
+      return 'green';
+    }
+
     const expectedAmount = this.getExpectedSavedAmount(goal);
 
     // If we've reached or exceeded the target, always green
@@ -404,11 +411,18 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
   /**
    * Calculate expected saved amount based on linear progress from creation to target date
    *
+   * For open-ended goals (no target_date), returns 0 (no expected progress)
+   *
    * @param goal - The savings goal
    * @param asOfDate - Calculate as of this date (defaults to now)
    * @returns Expected amount saved in cents
    */
   public getExpectedSavedAmount(goal: SavingsGoal, asOfDate?: Date): number {
+    // Open-ended goals have no expected amount based on time
+    if (!goal.target_date) {
+      return 0;
+    }
+
     const now = asOfDate || new Date();
     const targetDate = new Date(goal.target_date);
     const createdDate = new Date(goal.created_at);

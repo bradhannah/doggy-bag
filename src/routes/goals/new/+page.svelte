@@ -12,6 +12,7 @@
   let targetDate = '';
   let linkedAccountId = '';
   let notes = '';
+  let isOpenEnded = false; // No target date - indefinite saving
 
   let saving = false;
   let creatingBill = false;
@@ -37,11 +38,11 @@
     (ps) => ps.type === 'bank_account' || ps.type === 'cash'
   );
 
-  // Form validation
+  // Form validation - target date not required for open-ended goals
   $: isValid =
     name.trim() !== '' &&
     parseFloat(targetAmountDollars) > 0 &&
-    targetDate !== '' &&
+    (isOpenEnded || targetDate !== '') &&
     linkedAccountId !== '';
 
   // Calculate minimum date (today)
@@ -145,7 +146,7 @@
       const data: SavingsGoalData = {
         name: name.trim(),
         target_amount: Math.round(parseFloat(targetAmountDollars) * 100), // Convert to cents
-        target_date: targetDate,
+        target_date: isOpenEnded ? undefined : targetDate,
         linked_account_id: linkedAccountId,
         notes: notes.trim() || undefined,
       };
@@ -176,6 +177,7 @@
             // Determine amount and billing period
             let amount: number;
             let billingPeriod: 'weekly' | 'bi_weekly' | 'monthly';
+            let dayOfMonth: number | undefined;
 
             if (selectedSchedule === 'weekly') {
               amount = weeklyPayment;
@@ -189,6 +191,11 @@
               amount = monthlyPayment;
               billingPeriod = 'monthly';
               billFrequency = 'Monthly';
+              // For monthly bills, extract day of month from start date (1-31)
+              // Use split/parseInt to avoid timezone shifts
+              if (scheduleStartDate) {
+                dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
+              }
             }
 
             billName = `Savings: ${name.trim()}`;
@@ -199,6 +206,7 @@
               amount: amount,
               billing_period: billingPeriod,
               start_date: scheduleStartDate,
+              day_of_month: dayOfMonth,
               payment_source_id: linkedAccountId,
               category_id: category.id,
               goal_id: createdGoal.id,
@@ -311,7 +319,17 @@
 
         <div class="form-field">
           <label for="targetDate">Target Date</label>
-          <input type="date" id="targetDate" bind:value={targetDate} min={today} />
+          <input
+            type="date"
+            id="targetDate"
+            bind:value={targetDate}
+            min={today}
+            disabled={isOpenEnded}
+          />
+          <label class="checkbox-field open-ended-checkbox">
+            <input type="checkbox" bind:checked={isOpenEnded} />
+            <span>Open-ended goal (no target date)</span>
+          </label>
         </div>
       </div>
 
@@ -337,8 +355,8 @@
       </div>
     </div>
 
-    <!-- Payment Schedule Section -->
-    {#if targetAmountCents > 0 && daysUntilTarget > 0}
+    <!-- Payment Schedule Section - only for goals with a target date -->
+    {#if !isOpenEnded && targetAmountCents > 0 && daysUntilTarget > 0}
       <div class="form-section schedule-section">
         <h2>Payment Schedule (Optional)</h2>
 
@@ -755,6 +773,15 @@
     padding-left: 26px;
     font-size: 0.8rem;
     color: var(--text-tertiary);
+  }
+
+  .open-ended-checkbox {
+    margin-top: var(--space-2);
+    font-size: 0.875rem;
+  }
+
+  .open-ended-checkbox span {
+    color: var(--text-secondary);
   }
 
   .schedule-selected-note {

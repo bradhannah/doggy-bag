@@ -608,7 +608,33 @@ export function createSavingsGoalsBillsHandler() {
         );
       }
 
-      const bills = await billsService.getByGoalId(id);
+      // Get bills linked to this goal
+      let bills = await billsService.getByGoalId(id);
+
+      // Self-healing: If no linked bills found, look for orphaned bills with matching name
+      // This handles cases where goal_id might have been lost or not saved correctly in older versions
+      if (bills.length === 0) {
+        const expectedBillName = `Savings: ${goal.name}`;
+        const allBills = await billsService.getAll();
+        const orphanBill = allBills.find(
+          (b) => b.name === expectedBillName && b.is_active && !b.goal_id
+        );
+
+        if (orphanBill) {
+          console.log(
+            `[SavingsGoalsHandler] Found orphaned bill "${orphanBill.name}" (${orphanBill.id}) for goal "${goal.name}". Auto-linking...`
+          );
+
+          // Update the bill with the goal_id
+          const updatedBill = await billsService.update(orphanBill.id, {
+            goal_id: goal.id,
+          });
+
+          if (updatedBill) {
+            bills = [updatedBill];
+          }
+        }
+      }
 
       return new Response(JSON.stringify(bills), {
         headers: { 'Content-Type': 'application/json' },

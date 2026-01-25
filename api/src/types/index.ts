@@ -265,7 +265,7 @@ interface SavingsGoal {
   name: string;
   target_amount: number; // Cents
   current_amount: number; // Cents (calculated dynamically from closed occurrences)
-  target_date: string; // YYYY-MM-DD
+  target_date?: string; // YYYY-MM-DD (optional for open-ended goals)
   linked_account_id: string; // Reference to PaymentSource (savings account)
   status: SavingsGoalStatus;
   previous_status?: 'bought' | 'abandoned'; // Status before archiving (for unarchive)

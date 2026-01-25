@@ -7,8 +7,6 @@
     getSavingsGoal,
     updateSavingsGoal,
     getGoalBills,
-    pauseGoal,
-    resumeGoal,
     completeGoal,
     abandonGoal,
     type SavingsGoal,
@@ -17,8 +15,6 @@
   import { createBill, type Bill } from '../../../../stores/bills';
   import { success, error as showError } from '../../../../stores/toast';
   import { apiClient } from '$lib/api/client';
-  import MakePaymentModal from '../../../../components/Goals/MakePaymentModal.svelte';
-  import ViewPaymentsModal from '../../../../components/Goals/ViewPaymentsModal.svelte';
 
   // Get goal ID from URL
   $: goalId = ($page.params as { id: string }).id;
@@ -43,9 +39,15 @@
   let scheduleStartDate = new Date().toISOString().split('T')[0];
   let includeCurrentMonth = true;
 
-  // Modal states
-  let showMakePaymentModal = false;
-  let showViewPaymentsModal = false;
+  // Custom amount state (for "Set your own amount" feature)
+  let customAmountDollars = '';
+  let customFrequency: 'weekly' | 'bi_weekly' | 'monthly' = 'monthly';
+
+  // Selected schedule mode: calculated options or custom amount
+  type ScheduleSelection =
+    | { type: 'calculated'; frequency: 'weekly' | 'bi_weekly' | 'monthly'; amount: number }
+    | { type: 'custom' };
+  let selectedSchedule: ScheduleSelection | null = null;
 
   // Confirm modal state
   let confirmModal: {
@@ -65,17 +67,18 @@
   let targetDate = '';
   let linkedAccountId = '';
   let notes = '';
+  let isOpenEnded = false; // No target date - indefinite saving
 
   // Get payment sources for account selection
   $: bankAccounts = $paymentSources.filter(
     (ps) => ps.type === 'bank_account' || ps.type === 'cash'
   );
 
-  // Form validation
+  // Form validation - target date not required for open-ended goals
   $: isValid =
     name.trim() !== '' &&
     parseFloat(targetAmountDollars) > 0 &&
-    targetDate !== '' &&
+    (isOpenEnded || targetDate !== '') &&
     linkedAccountId !== '';
 
   // Check if form has changes
@@ -83,7 +86,8 @@
     goal !== null &&
     (name !== goal.name ||
       Math.round(parseFloat(targetAmountDollars) * 100) !== goal.target_amount ||
-      targetDate !== goal.target_date ||
+      targetDate !== (goal.target_date || '') ||
+      isOpenEnded !== !goal.target_date ||
       linkedAccountId !== goal.linked_account_id ||
       (notes || '') !== (goal.notes || ''));
 
@@ -112,6 +116,80 @@
   $: weeklyFinalDate = calculateFinalPaymentDate('weekly', scheduleStartDate);
   $: biweeklyFinalDate = calculateFinalPaymentDate('biweekly', scheduleStartDate);
   $: monthlyFinalDate = calculateFinalPaymentDate('monthly', scheduleStartDate);
+
+  // Custom amount calculations
+  $: customAmountCents = Math.round((parseFloat(customAmountDollars) || 0) * 100);
+  $: customPaymentsNeeded =
+    customAmountCents > 0 ? Math.ceil(remainingAmount / customAmountCents) : 0;
+  $: customCompletionInfo = calculateCustomCompletionInfo(
+    customAmountCents,
+    customFrequency,
+    scheduleStartDate,
+    targetDate
+  );
+
+  // Validate schedule selection for the Create Schedule button
+  $: isScheduleSelectionValid =
+    selectedSchedule !== null &&
+    (selectedSchedule.type === 'calculated' ||
+      (selectedSchedule.type === 'custom' && customAmountCents > 0));
+
+  interface CustomCompletionInfo {
+    completionDate: string;
+    paymentsNeeded: number;
+    meetsTarget: boolean;
+    monthsBehind: number;
+  }
+
+  function calculateCustomCompletionInfo(
+    amount: number,
+    frequency: 'weekly' | 'bi_weekly' | 'monthly',
+    startDate: string,
+    goalTargetDate: string
+  ): CustomCompletionInfo | null {
+    if (amount <= 0 || remainingAmount <= 0) return null;
+
+    const paymentsNeeded = Math.ceil(remainingAmount / amount);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    let completionDate: Date;
+    switch (frequency) {
+      case 'weekly':
+        completionDate = new Date(start);
+        completionDate.setDate(completionDate.getDate() + (paymentsNeeded - 1) * 7);
+        break;
+      case 'bi_weekly':
+        completionDate = new Date(start);
+        completionDate.setDate(completionDate.getDate() + (paymentsNeeded - 1) * 14);
+        break;
+      case 'monthly':
+        completionDate = new Date(start);
+        completionDate.setMonth(completionDate.getMonth() + paymentsNeeded - 1);
+        break;
+    }
+
+    let meetsTarget = true;
+    let monthsBehind = 0;
+
+    if (goalTargetDate) {
+      const target = new Date(goalTargetDate);
+      target.setHours(0, 0, 0, 0);
+      meetsTarget = completionDate <= target;
+      if (!meetsTarget) {
+        monthsBehind = Math.ceil(
+          (completionDate.getTime() - target.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        );
+      }
+    }
+
+    return {
+      completionDate: formatDateShort(completionDate),
+      paymentsNeeded,
+      meetsTarget,
+      monthsBehind,
+    };
+  }
 
   function calculateDaysUntil(date: string): number {
     if (!date) return 0;
@@ -187,7 +265,8 @@
       // Populate form fields
       name = goal.name;
       targetAmountDollars = (goal.target_amount / 100).toFixed(2);
-      targetDate = goal.target_date;
+      targetDate = goal.target_date || '';
+      isOpenEnded = !goal.target_date;
       linkedAccountId = goal.linked_account_id;
       notes = goal.notes || '';
 
@@ -214,7 +293,7 @@
       const updates: SavingsGoalUpdate = {
         name: name.trim(),
         target_amount: Math.round(parseFloat(targetAmountDollars) * 100),
-        target_date: targetDate,
+        target_date: isOpenEnded ? null : targetDate,
         linked_account_id: linkedAccountId,
         notes: notes.trim() || undefined,
       };
@@ -259,44 +338,53 @@
       // Generate bill name
       const billName = `Savings: ${goal.name}`;
 
+      // Calculate day of month for monthly schedules
+      let dayOfMonth: number | undefined;
+      if (frequency === 'monthly' && scheduleStartDate) {
+        // Use split/parseInt to avoid timezone shifts
+        dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
+      }
+
       // Create the bill with the selected start date
-      await createBill({
+      const newBill = await createBill({
         name: billName,
         amount: amount,
         billing_period: frequency,
         start_date: scheduleStartDate,
+        day_of_month: dayOfMonth,
         payment_source_id: goal.linked_account_id,
         category_id: category.id,
         goal_id: goal.id,
         payment_method: 'manual',
       });
 
-      // If "include current month" is checked and start date is after today,
-      // create an immediate ad-hoc contribution for this month
+      // Update local bills list immediately to show active schedule
+      bills = [...bills, newBill];
+
+      // If "include current month" is checked, create an immediate contribution for this month
       if (includeCurrentMonth) {
         const today = new Date().toISOString().split('T')[0];
-        const startDateObj = new Date(scheduleStartDate);
-        const todayObj = new Date(today);
 
-        // Only create ad-hoc if schedule starts in the future
-        if (startDateObj > todayObj) {
-          try {
-            await apiClient.post(`/api/savings-goals/${goal.id}/contribute`, {
-              amount: amount,
-              date: today,
-            });
-          } catch {
-            // Ignore errors for optional current month payment
-            console.warn('Failed to create current month contribution');
-          }
+        try {
+          await apiClient.post(`/api/savings-goals/${goal.id}/contribute`, {
+            amount: amount,
+            date: today,
+          });
+        } catch (e) {
+          // Show error to user instead of silently failing
+          showError(e instanceof Error ? e.message : 'Failed to create current month contribution');
         }
       }
 
-      // Reload bills to show the new one
+      // Reload bills to ensure sync (optional, but good practice)
       try {
-        bills = (await getGoalBills(goalId)) as Bill[];
+        const serverBills = (await getGoalBills(goalId)) as Bill[];
+        // Only update if we got results back, otherwise keep our local optimistic update
+        if (serverBills && serverBills.length > 0) {
+          bills = serverBills;
+        }
       } catch {
-        bills = [];
+        // Ignore fetch errors, rely on local update
       }
 
       // Reset schedule form
@@ -321,6 +409,22 @@
     }
   }
 
+  /**
+   * Handler for the unified "Create Schedule" button that uses the selected schedule option
+   */
+  async function handleCreateScheduleFromSelection() {
+    if (!selectedSchedule) return;
+
+    if (selectedSchedule.type === 'calculated') {
+      await handleCreatePaymentSchedule(selectedSchedule.frequency, selectedSchedule.amount);
+    } else {
+      // Custom amount
+      await handleCreatePaymentSchedule(customFrequency, customAmountCents);
+    }
+    // Reset selection after creation
+    selectedSchedule = null;
+  }
+
   async function handleRemoveSchedule() {
     if (!activeBill || removingSchedule) return;
 
@@ -343,36 +447,6 @@
       showError(e instanceof Error ? e.message : 'Failed to remove schedule');
     } finally {
       removingSchedule = false;
-    }
-  }
-
-  async function handlePause() {
-    if (!goal || actionLoading) return;
-
-    actionLoading = true;
-    try {
-      await pauseGoal(goal.id);
-      success(`"${goal.name}" paused`);
-      await loadGoalData();
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to pause goal');
-    } finally {
-      actionLoading = false;
-    }
-  }
-
-  async function handleResume() {
-    if (!goal || actionLoading) return;
-
-    actionLoading = true;
-    try {
-      await resumeGoal(goal.id);
-      success(`"${goal.name}" resumed`);
-      await loadGoalData();
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to resume goal');
-    } finally {
-      actionLoading = false;
     }
   }
 
@@ -462,11 +536,6 @@
         return status;
     }
   }
-
-  function handlePaymentComplete() {
-    // Reload goal data to get updated saved_amount
-    loadGoalData();
-  }
 </script>
 
 <div class="edit-goal-page">
@@ -542,8 +611,16 @@
               id="targetDate"
               bind:value={targetDate}
               min={minDate}
-              disabled={goal.status === 'bought' || goal.status === 'abandoned'}
+              disabled={goal.status === 'bought' || goal.status === 'abandoned' || isOpenEnded}
             />
+            <label class="checkbox-field open-ended-checkbox">
+              <input
+                type="checkbox"
+                bind:checked={isOpenEnded}
+                disabled={goal.status === 'bought' || goal.status === 'abandoned'}
+              />
+              <span>Open-ended goal (no target date)</span>
+            </label>
           </div>
         </div>
 
@@ -572,56 +649,6 @@
           ></textarea>
         </div>
       </div>
-
-      <!-- Quick Actions for Active Goals -->
-      {#if goal.status === 'saving'}
-        <div class="form-section quick-actions-section">
-          <h2>Quick Actions</h2>
-          <div class="quick-actions">
-            <button
-              type="button"
-              class="quick-action-btn payment"
-              on:click={() => (showMakePaymentModal = true)}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              </svg>
-              Make Payment
-            </button>
-            <button
-              type="button"
-              class="quick-action-btn view"
-              on:click={() => (showViewPaymentsModal = true)}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-                <rect
-                  x="9"
-                  y="3"
-                  width="6"
-                  height="4"
-                  rx="1"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M9 12h6M9 16h4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-              View Payments
-            </button>
-          </div>
-        </div>
-      {/if}
 
       <!-- Payment Schedule Section -->
       {#if goal.status === 'saving'}
@@ -668,76 +695,260 @@
                 </span>
               </label>
 
-              <p class="schedule-intro">Choose a payment frequency:</p>
+              {#if !isOpenEnded && daysUntilTarget > 0}
+                <!-- Calculated Amount Section -->
+                <div
+                  class="schedule-option-box"
+                  class:selected={selectedSchedule?.type === 'calculated'}
+                >
+                  <label class="option-header">
+                    <input
+                      type="radio"
+                      name="scheduleType"
+                      checked={selectedSchedule?.type === 'calculated'}
+                      on:change={() =>
+                        (selectedSchedule = {
+                          type: 'calculated',
+                          frequency: 'monthly',
+                          amount: monthlyPayment,
+                        })}
+                    />
+                    <span class="option-title">Use calculated amount</span>
+                    <span class="option-subtitle">Reach goal by target date</span>
+                  </label>
 
-              <div class="payment-options">
-                {#if weeklyPayment > 0 && weeksUntilTarget > 0}
-                  <button
-                    type="button"
-                    class="payment-option"
-                    on:click={() => handleCreatePaymentSchedule('weekly', weeklyPayment)}
-                    disabled={creatingBill}
-                  >
-                    <div class="payment-amount">{formatCurrency(weeklyPayment)}</div>
-                    <div class="payment-label">per week</div>
-                    <div class="payment-detail">{weeksUntilTarget} payments</div>
-                    {#if weeklyFinalDate}
-                      <div class="payment-final">Final: {weeklyFinalDate}</div>
+                  <div class="payment-options" class:muted={selectedSchedule?.type === 'custom'}>
+                    {#if weeklyPayment > 0 && weeksUntilTarget > 0}
+                      <label
+                        class="payment-option"
+                        class:selected={selectedSchedule?.type === 'calculated' &&
+                          selectedSchedule.frequency === 'weekly'}
+                      >
+                        <input
+                          type="radio"
+                          name="calculatedFrequency"
+                          disabled={selectedSchedule?.type === 'custom'}
+                          checked={selectedSchedule?.type === 'calculated' &&
+                            selectedSchedule.frequency === 'weekly'}
+                          on:change={() =>
+                            (selectedSchedule = {
+                              type: 'calculated',
+                              frequency: 'weekly',
+                              amount: weeklyPayment,
+                            })}
+                        />
+                        <div class="payment-amount">{formatCurrency(weeklyPayment)}</div>
+                        <div class="payment-label">per week</div>
+                        <div class="payment-detail">{weeksUntilTarget} payments</div>
+                        {#if weeklyFinalDate}
+                          <div class="payment-final">Final: {weeklyFinalDate}</div>
+                        {/if}
+                      </label>
                     {/if}
-                    <div class="payment-action">
-                      {creatingBill ? 'Creating...' : 'Create Schedule'}
-                    </div>
-                  </button>
-                {/if}
 
-                {#if biweeklyPayment > 0 && weeksUntilTarget > 1}
-                  <button
-                    type="button"
-                    class="payment-option"
-                    on:click={() => handleCreatePaymentSchedule('bi_weekly', biweeklyPayment)}
-                    disabled={creatingBill}
-                  >
-                    <div class="payment-amount">{formatCurrency(biweeklyPayment)}</div>
-                    <div class="payment-label">every 2 weeks</div>
-                    <div class="payment-detail">{Math.ceil(weeksUntilTarget / 2)} payments</div>
-                    {#if biweeklyFinalDate}
-                      <div class="payment-final">Final: {biweeklyFinalDate}</div>
+                    {#if biweeklyPayment > 0 && weeksUntilTarget > 1}
+                      <label
+                        class="payment-option"
+                        class:selected={selectedSchedule?.type === 'calculated' &&
+                          selectedSchedule.frequency === 'bi_weekly'}
+                      >
+                        <input
+                          type="radio"
+                          name="calculatedFrequency"
+                          disabled={selectedSchedule?.type === 'custom'}
+                          checked={selectedSchedule?.type === 'calculated' &&
+                            selectedSchedule.frequency === 'bi_weekly'}
+                          on:change={() =>
+                            (selectedSchedule = {
+                              type: 'calculated',
+                              frequency: 'bi_weekly',
+                              amount: biweeklyPayment,
+                            })}
+                        />
+                        <div class="payment-amount">{formatCurrency(biweeklyPayment)}</div>
+                        <div class="payment-label">every 2 weeks</div>
+                        <div class="payment-detail">{Math.ceil(weeksUntilTarget / 2)} payments</div>
+                        {#if biweeklyFinalDate}
+                          <div class="payment-final">Final: {biweeklyFinalDate}</div>
+                        {/if}
+                      </label>
                     {/if}
-                    <div class="payment-action">
-                      {creatingBill ? 'Creating...' : 'Create Schedule'}
-                    </div>
-                  </button>
-                {/if}
 
-                {#if monthlyPayment > 0 && monthsUntilTarget > 0}
-                  <button
-                    type="button"
-                    class="payment-option"
-                    on:click={() => handleCreatePaymentSchedule('monthly', monthlyPayment)}
-                    disabled={creatingBill}
-                  >
-                    <div class="payment-amount">{formatCurrency(monthlyPayment)}</div>
-                    <div class="payment-label">per month</div>
-                    <div class="payment-detail">{monthsUntilTarget} payments</div>
-                    {#if monthlyFinalDate}
-                      <div class="payment-final">Final: {monthlyFinalDate}</div>
+                    {#if monthlyPayment > 0 && monthsUntilTarget > 0}
+                      <label
+                        class="payment-option"
+                        class:selected={selectedSchedule?.type === 'calculated' &&
+                          selectedSchedule.frequency === 'monthly'}
+                      >
+                        <input
+                          type="radio"
+                          name="calculatedFrequency"
+                          disabled={selectedSchedule?.type === 'custom'}
+                          checked={selectedSchedule?.type === 'calculated' &&
+                            selectedSchedule.frequency === 'monthly'}
+                          on:change={() =>
+                            (selectedSchedule = {
+                              type: 'calculated',
+                              frequency: 'monthly',
+                              amount: monthlyPayment,
+                            })}
+                        />
+                        <div class="payment-amount">{formatCurrency(monthlyPayment)}</div>
+                        <div class="payment-label">per month</div>
+                        <div class="payment-detail">{monthsUntilTarget} payments</div>
+                        {#if monthlyFinalDate}
+                          <div class="payment-final">Final: {monthlyFinalDate}</div>
+                        {/if}
+                      </label>
                     {/if}
-                    <div class="payment-action">
-                      {creatingBill ? 'Creating...' : 'Create Schedule'}
+                  </div>
+                </div>
+
+                <!-- OR Divider -->
+                <div class="or-divider">
+                  <span>OR</span>
+                </div>
+              {/if}
+
+              <!-- Set Your Own Amount Section -->
+              <div class="schedule-option-box" class:selected={selectedSchedule?.type === 'custom'}>
+                <label class="option-header">
+                  <input
+                    type="radio"
+                    name="scheduleType"
+                    checked={selectedSchedule?.type === 'custom'}
+                    on:change={() => (selectedSchedule = { type: 'custom' })}
+                  />
+                  <span class="option-title">Set your own amount</span>
+                </label>
+
+                <div
+                  class="custom-amount-form"
+                  class:muted={selectedSchedule?.type === 'calculated'}
+                >
+                  <div class="form-field">
+                    <label for="customAmount">Amount</label>
+                    <div class="input-with-prefix">
+                      <span class="prefix">$</span>
+                      <input
+                        type="number"
+                        id="customAmount"
+                        bind:value={customAmountDollars}
+                        placeholder="0.00"
+                        min="0.01"
+                        step="0.01"
+                        disabled={selectedSchedule?.type === 'calculated'}
+                        on:focus={() => (selectedSchedule = { type: 'custom' })}
+                      />
                     </div>
-                  </button>
-                {/if}
+                  </div>
+
+                  <div class="form-field">
+                    <label for="customFrequency">Frequency</label>
+                    <select
+                      id="customFrequency"
+                      bind:value={customFrequency}
+                      disabled={selectedSchedule?.type === 'calculated'}
+                      on:focus={() => (selectedSchedule = { type: 'custom' })}
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="bi_weekly">Every 2 Weeks</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+
+                  {#if customCompletionInfo && selectedSchedule?.type === 'custom'}
+                    <div
+                      class="custom-amount-result"
+                      class:warning={!customCompletionInfo.meetsTarget}
+                    >
+                      {#if customCompletionInfo.meetsTarget}
+                        <div class="result-icon success">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path
+                              d="M20 6L9 17L4 12"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        <div class="result-text">
+                          <strong>{customCompletionInfo.paymentsNeeded} payments</strong> - Goal
+                          reached by {customCompletionInfo.completionDate}
+                        </div>
+                      {:else if targetDate}
+                        <div class="result-icon warning">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path
+                              d="M12 9V13M12 17H12.01M5.07 19H18.93C20.47 19 21.45 17.33 20.68 16L13.75 4C12.98 2.67 11.02 2.67 10.25 4L3.32 16C2.55 17.33 3.53 19 5.07 19Z"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        <div class="result-text">
+                          <strong>{customCompletionInfo.paymentsNeeded} payments</strong> - Goal
+                          reached {customCompletionInfo.completionDate}
+                          <span class="result-warning"
+                            >({customCompletionInfo.monthsBehind} month{customCompletionInfo.monthsBehind !==
+                            1
+                              ? 's'
+                              : ''} after target)</span
+                          >
+                        </div>
+                      {:else}
+                        <div class="result-icon success">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path
+                              d="M20 6L9 17L4 12"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        <div class="result-text">
+                          <strong>{customCompletionInfo.paymentsNeeded} payments</strong> - Goal
+                          reached by {customCompletionInfo.completionDate}
+                        </div>
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
               </div>
 
-              <button type="button" class="btn-text" on:click={() => (showScheduleForm = false)}>
-                Cancel
-              </button>
+              <!-- Action Buttons -->
+              <div class="schedule-actions">
+                <button
+                  type="button"
+                  class="btn-primary"
+                  on:click={handleCreateScheduleFromSelection}
+                  disabled={creatingBill || !isScheduleSelectionValid}
+                >
+                  {creatingBill ? 'Creating...' : 'Create Schedule'}
+                </button>
+                <button
+                  type="button"
+                  class="btn-text"
+                  on:click={() => {
+                    showScheduleForm = false;
+                    selectedSchedule = null;
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           {:else}
             <!-- Add Schedule Button -->
             <div class="no-schedule">
               <p class="no-schedule-text">No payment schedule set up yet.</p>
-              {#if daysUntilTarget > 0 && remainingAmount > 0}
+              {#if !isOpenEnded && daysUntilTarget > 0 && remainingAmount > 0}
                 <button type="button" class="btn-accent" on:click={() => (showScheduleForm = true)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
@@ -755,6 +966,24 @@
                   </svg>
                   Add Payment Schedule
                 </button>
+              {:else if isOpenEnded}
+                <button type="button" class="btn-accent" on:click={() => (showScheduleForm = true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 5V19"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M5 12H19"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  Set Your Own Amount
+                </button>
               {:else if remainingAmount <= 0}
                 <p class="schedule-hint">Goal is fully funded!</p>
               {:else}
@@ -764,102 +993,6 @@
               {/if}
             </div>
           {/if}
-        </div>
-      {/if}
-
-      <!-- Goal Actions (Pause/Resume/Complete/Abandon) -->
-      {#if goal.status === 'saving' || goal.status === 'paused'}
-        <div class="form-section actions-section">
-          <h2>Goal Status</h2>
-          <div class="goal-actions-grid">
-            {#if goal.status === 'saving'}
-              <button
-                type="button"
-                class="goal-action-btn pause"
-                on:click={handlePause}
-                disabled={actionLoading}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="6"
-                    y="5"
-                    width="4"
-                    height="14"
-                    rx="1"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <rect
-                    x="14"
-                    y="5"
-                    width="4"
-                    height="14"
-                    rx="1"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                <span>Pause Goal</span>
-                <span class="action-desc">Temporarily stop saving</span>
-              </button>
-            {:else}
-              <button
-                type="button"
-                class="goal-action-btn resume"
-                on:click={handleResume}
-                disabled={actionLoading}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <polygon
-                    points="5,3 19,12 5,21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    fill="none"
-                  />
-                </svg>
-                <span>Resume Goal</span>
-                <span class="action-desc">Continue saving</span>
-              </button>
-            {/if}
-
-            <button
-              type="button"
-              class="goal-action-btn complete"
-              on:click={() => (confirmModal = { type: 'complete' })}
-              disabled={actionLoading}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M20 6L9 17L4 12"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span>Buy That Thing!</span>
-              <span class="action-desc">Mark as completed</span>
-            </button>
-
-            <button
-              type="button"
-              class="goal-action-btn abandon"
-              on:click={() => (confirmModal = { type: 'abandon' })}
-              disabled={actionLoading}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                <path
-                  d="M15 9L9 15M9 9l6 6"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-              <span>Abandon Goal</span>
-              <span class="action-desc">Stop saving for this</span>
-            </button>
-          </div>
         </div>
       {/if}
 
@@ -887,20 +1020,6 @@
     </form>
   {/if}
 </div>
-
-<!-- Make Payment Modal -->
-{#if showMakePaymentModal && goal}
-  <MakePaymentModal
-    {goal}
-    onClose={() => (showMakePaymentModal = false)}
-    on:payment={handlePaymentComplete}
-  />
-{/if}
-
-<!-- View Payments Modal -->
-{#if showViewPaymentsModal && goal}
-  <ViewPaymentsModal {goal} onClose={() => (showViewPaymentsModal = false)} />
-{/if}
 
 <!-- Confirmation Modals -->
 {#if confirmModal}
@@ -1240,47 +1359,6 @@
     color: var(--text-tertiary);
   }
 
-  /* Quick Actions */
-  .quick-actions-section {
-    background: var(--bg-elevated);
-    border-radius: var(--radius-md);
-    padding: var(--space-4);
-  }
-
-  .quick-actions {
-    display: flex;
-    gap: var(--space-3);
-  }
-
-  .quick-action-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-4);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .quick-action-btn:hover {
-    border-color: var(--accent);
-    background: var(--accent-muted);
-  }
-
-  .quick-action-btn.payment svg {
-    color: var(--success);
-  }
-
-  .quick-action-btn.view svg {
-    color: var(--accent);
-  }
-
   /* Schedule Section */
   .schedule-section {
     background: var(--bg-elevated);
@@ -1373,54 +1451,97 @@
     font-weight: 400 !important;
   }
 
-  .schedule-intro {
-    margin: 0;
+  .open-ended-checkbox {
+    margin-top: var(--space-2);
+    font-size: 0.875rem;
+  }
+
+  .open-ended-checkbox span {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+  }
+
+  /* Schedule Option Box (shared styling for both options) */
+  .schedule-option-box {
+    background: var(--bg-surface);
+    border: 2px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    transition: all 0.2s;
+  }
+
+  .schedule-option-box:hover {
+    border-color: var(--accent);
+  }
+
+  .schedule-option-box.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .option-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+    margin-bottom: var(--space-3);
+  }
+
+  .option-header input[type='radio'] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+
+  .option-title {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .option-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-left: var(--space-1);
   }
 
   .payment-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: var(--space-3);
+    transition: opacity 0.2s;
+  }
+
+  .payment-options.muted {
+    opacity: 0.4;
+    pointer-events: none;
   }
 
   .payment-option {
-    background: var(--bg-surface);
+    background: var(--bg-base);
     border: 2px solid var(--border-default);
     border-radius: var(--radius-md);
     padding: var(--space-4);
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
+    position: relative;
   }
 
-  .payment-option:hover:not(:disabled) {
+  .payment-option input[type='radio'] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .payment-option:hover:not(.disabled) {
     border-color: var(--accent);
     background: var(--accent-muted);
   }
 
-  .payment-option:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .payment-action {
-    margin-top: var(--space-3);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--border-subtle);
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--accent);
-  }
-
-  .payment-option:hover:not(:disabled) .payment-action {
-    color: var(--text-inverse);
-    background: var(--accent);
-    margin: var(--space-3) calc(var(--space-4) * -1) calc(var(--space-4) * -1);
-    padding: var(--space-2) var(--space-4);
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    border-top: none;
+  .payment-option.selected {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    box-shadow: 0 0 0 1px var(--accent);
   }
 
   .payment-amount {
@@ -1449,6 +1570,109 @@
     border-top: 1px solid var(--border-subtle);
   }
 
+  /* OR Divider */
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+  }
+
+  .or-divider::before,
+  .or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-default);
+  }
+
+  .or-divider span {
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Custom Amount Form (inside schedule-option-box) */
+  .custom-amount-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    transition: opacity 0.2s;
+  }
+
+  .custom-amount-form.muted {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .custom-amount-form .form-field {
+    margin-bottom: 0;
+  }
+
+  .custom-amount-form .input-with-prefix {
+    background: var(--bg-base);
+  }
+
+  .custom-amount-result {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .custom-amount-result.warning {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+  }
+
+  .result-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result-icon.success {
+    color: var(--success);
+  }
+
+  .result-icon.warning {
+    color: var(--warning);
+  }
+
+  .result-text {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+  }
+
+  .result-warning {
+    color: var(--warning);
+    font-weight: 500;
+  }
+
+  /* Schedule Action Buttons */
+  .schedule-actions {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    margin-top: var(--space-2);
+  }
+
+  .schedule-actions .btn-primary {
+    flex: 1;
+  }
+
+  .schedule-actions .btn-text {
+    flex-shrink: 0;
+  }
+
   .no-schedule {
     text-align: center;
     padding: var(--space-4);
@@ -1464,97 +1688,6 @@
     font-size: 0.875rem;
     color: var(--text-tertiary);
     font-style: italic;
-  }
-
-  /* Goal Actions Grid */
-  .actions-section {
-    background: var(--bg-elevated);
-    border-radius: var(--radius-md);
-    padding: var(--space-4);
-    border: 1px solid var(--border-default);
-  }
-
-  .goal-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .goal-action-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-4);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .goal-action-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .goal-action-btn span:first-of-type {
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .goal-action-btn .action-desc {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
-    font-weight: 400;
-  }
-
-  .goal-action-btn.pause {
-    border-color: var(--warning-border);
-  }
-
-  .goal-action-btn.pause:hover:not(:disabled) {
-    background: var(--warning-bg);
-  }
-
-  .goal-action-btn.pause svg {
-    color: var(--warning);
-  }
-
-  .goal-action-btn.resume {
-    border-color: var(--success-border);
-  }
-
-  .goal-action-btn.resume:hover:not(:disabled) {
-    background: var(--success-bg);
-  }
-
-  .goal-action-btn.resume svg {
-    color: var(--success);
-  }
-
-  .goal-action-btn.complete {
-    border-color: var(--accent-border);
-  }
-
-  .goal-action-btn.complete:hover:not(:disabled) {
-    background: var(--accent-muted);
-  }
-
-  .goal-action-btn.complete svg {
-    color: var(--accent);
-  }
-
-  .goal-action-btn.abandon {
-    border-color: var(--error-border);
-  }
-
-  .goal-action-btn.abandon:hover:not(:disabled) {
-    background: var(--error-muted);
-  }
-
-  .goal-action-btn.abandon svg {
-    color: var(--error);
   }
 
   /* Closed Notice */
@@ -1688,14 +1821,6 @@
       flex-direction: column;
       align-items: flex-start;
       gap: var(--space-1);
-    }
-
-    .quick-actions {
-      flex-direction: column;
-    }
-
-    .goal-actions-grid {
-      grid-template-columns: 1fr;
     }
   }
 
