@@ -218,6 +218,21 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       }
     }
 
+    // track_payments_manually is only valid for debt accounts (credit_card, line_of_credit)
+    if (data.track_payments_manually === true) {
+      const debtTypes = ['credit_card', 'line_of_credit'];
+      if (data.type && !debtTypes.includes(data.type)) {
+        errors.push(
+          'track_payments_manually can only be enabled for credit cards and lines of credit'
+        );
+      }
+    }
+
+    // pay_off_monthly and track_payments_manually are mutually exclusive
+    if (data.pay_off_monthly === true && data.track_payments_manually === true) {
+      errors.push('pay_off_monthly and track_payments_manually cannot both be enabled');
+    }
+
     // exclude_from_leftover is only valid for debt accounts (unless savings/investment)
     if (data.exclude_from_leftover === true) {
       const debtTypes = ['credit_card', 'line_of_credit'];
@@ -235,12 +250,12 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
       errors.push('An account cannot be both a savings account and an investment account');
     }
 
-    // is_savings/is_investment are mutually exclusive with pay_off_monthly
+    // is_savings/is_investment are mutually exclusive with pay_off_monthly and track_payments_manually
     if (
       (data.is_savings === true || data.is_investment === true) &&
-      data.pay_off_monthly === true
+      (data.pay_off_monthly === true || data.track_payments_manually === true)
     ) {
-      errors.push('Savings and investment accounts cannot have pay_off_monthly enabled');
+      errors.push('Savings and investment accounts cannot have payment tracking enabled');
     }
 
     // is_savings is only valid for bank_account type

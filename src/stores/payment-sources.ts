@@ -93,6 +93,7 @@ export interface PaymentSource {
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
+  track_payments_manually?: boolean; // If true, show payoff bill for manual payment tracking (no auto-populate)
   is_savings?: boolean; // If true, this is a savings account (mutually exclusive with is_investment and pay_off_monthly)
   is_investment?: boolean; // If true, this is an investment account (mutually exclusive with is_savings and pay_off_monthly)
   metadata?: PaymentSourceMetadata; // Optional metadata (last 4, limits, rates, etc.)
@@ -105,6 +106,7 @@ export interface PaymentSourceData {
   type: PaymentSourceType;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
+  track_payments_manually?: boolean;
   is_savings?: boolean;
   is_investment?: boolean;
   metadata?: PaymentSourceMetadata;
@@ -178,6 +180,7 @@ export async function createPaymentSource(data: {
   type: PaymentSourceType;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
+  track_payments_manually?: boolean;
   is_savings?: boolean;
   is_investment?: boolean;
   metadata?: PaymentSourceMetadata;
@@ -201,6 +204,7 @@ export async function updatePaymentSource(
     type: PaymentSourceType;
     exclude_from_leftover?: boolean;
     pay_off_monthly?: boolean;
+    track_payments_manually?: boolean;
     is_savings?: boolean;
     is_investment?: boolean;
     metadata?: PaymentSourceMetadata;

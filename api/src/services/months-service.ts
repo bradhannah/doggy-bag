@@ -17,7 +17,6 @@ import type {
   VariableExpense,
   FreeFlowingExpense,
   Occurrence,
-  Payment,
 } from '../types';
 import { calculateActualMonthlyAmount } from '../utils/billing-period';
 import {
@@ -140,7 +139,7 @@ export interface MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    details?: { closed_date?: string; notes?: string }
+    details?: { closed_date?: string; notes?: string; payment_source_id?: string }
   ): Promise<BillInstance | null>;
   reopenBillOccurrence(
     month: string,
@@ -151,40 +150,12 @@ export interface MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    details?: { closed_date?: string; notes?: string }
+    details?: { closed_date?: string; notes?: string; payment_source_id?: string }
   ): Promise<IncomeInstance | null>;
   reopenIncomeOccurrence(
     month: string,
     instanceId: string,
     occurrenceId: string
-  ): Promise<IncomeInstance | null>;
-
-  // Add payment to occurrence
-  addBillOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    payment: { amount: number; date: string; payment_source_id?: string }
-  ): Promise<BillInstance | null>;
-  addIncomeOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    payment: { amount: number; date: string; payment_source_id?: string }
-  ): Promise<IncomeInstance | null>;
-
-  // Remove payment from occurrence
-  removeBillOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    paymentId: string
-  ): Promise<BillInstance | null>;
-  removeIncomeOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    paymentId: string
   ): Promise<IncomeInstance | null>;
 
   // Add ad-hoc occurrence
@@ -210,6 +181,43 @@ export interface MonthsService {
     instanceId: string,
     occurrenceId: string
   ): Promise<IncomeInstance | null>;
+
+  // Split occurrence (partial payment)
+  splitBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    details: {
+      paid_amount: number;
+      closed_date: string;
+      payment_source_id?: string;
+      notes?: string;
+    }
+  ): Promise<{ closedOccurrence: Occurrence; newOccurrence: Occurrence } | null>;
+  splitIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    details: {
+      paid_amount: number;
+      closed_date: string;
+      payment_source_id?: string;
+      notes?: string;
+    }
+  ): Promise<{ closedOccurrence: Occurrence; newOccurrence: Occurrence } | null>;
+
+  // ============================================================================
+  // Payoff Bill Methods (occurrence-based CC payment tracking)
+  // ============================================================================
+
+  // Add payment to a payoff bill (creates a closed occurrence instead of using payments[])
+  addPayoffBillPayment(
+    month: string,
+    instanceId: string,
+    amount: number,
+    date: string,
+    newBalance?: number
+  ): Promise<{ instance: BillInstance; newBalance: number; remaining: number } | null>;
 }
 
 export class MonthsServiceImpl implements MonthsService {
@@ -257,8 +265,14 @@ export class MonthsServiceImpl implements MonthsService {
       });
 
       // Ensure occurrences are never empty
+      // Exception: payoff bills for track_payments_manually cards should start with zero occurrences
       const fallbackDate = `${month}-01`;
       const normalizedBillInstances = migratedBillInstances.map((instance) => {
+        // Skip fallback for payoff bills - they intentionally have zero occurrences
+        // (user adds payments manually for track_payments_manually cards)
+        if (instance.is_payoff_bill) {
+          return instance;
+        }
         const ensured = ensureOccurrenceFallback(instance.occurrences, fallbackDate, 0);
         if (ensured !== instance.occurrences) {
           needsSave = true;
@@ -414,6 +428,40 @@ export class MonthsServiceImpl implements MonthsService {
         );
       }
 
+      // Generate payoff bills for track_payments_manually cards immediately (with zero occurrences)
+      const manualTrackSources = paymentSources.filter(
+        (ps) => ps.track_payments_manually === true && ps.is_active
+      );
+
+      if (manualTrackSources.length > 0) {
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+
+        for (const source of manualTrackSources) {
+          billInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: 0, // No pre-calculated amount
+            occurrences: [], // Zero occurrences - user adds payments manually
+            is_default: true,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,
+            payoff_source_id: source.id,
+            name: `${source.name} Payments`,
+            category_id: payoffCategory.id,
+            payment_source_id: source.id,
+            created_at: now,
+            updated_at: now,
+          });
+
+          console.log(
+            `[MonthsService] Created manual payment tracking bill for ${source.name} in ${month}`
+          );
+        }
+      }
+
       const incomeInstances: IncomeInstance[] = [];
       for (const income of incomes) {
         if (!income.is_active) continue;
@@ -527,6 +575,45 @@ export class MonthsServiceImpl implements MonthsService {
         console.log(
           `[MonthsService] Skipping payoff bill sync for ${month} until balances are entered`
         );
+      }
+
+      // Sync payoff bills for track_payments_manually payment sources
+      const manualTrackSources = paymentSources.filter(
+        (ps) => ps.track_payments_manually === true && ps.is_active
+      );
+
+      // Create payoff bills for manual-track sources that don't have one yet
+      const newManualTrackSources = manualTrackSources.filter(
+        (ps) => !existingPayoffSourceIds.has(ps.id)
+      );
+
+      if (newManualTrackSources.length > 0) {
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+
+        for (const source of newManualTrackSources) {
+          newBillInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: 0, // No pre-calculated amount
+            occurrences: [], // Zero occurrences - user adds payments manually
+            is_default: true,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,
+            payoff_source_id: source.id,
+            name: `${source.name} Payments`,
+            category_id: payoffCategory.id,
+            payment_source_id: source.id,
+            created_at: now,
+            updated_at: now,
+          });
+
+          console.log(
+            `[MonthsService] Created manual payment tracking bill for ${source.name} in ${month}`
+          );
+        }
       }
 
       // Find incomes that don't have instances yet
@@ -690,27 +777,62 @@ export class MonthsServiceImpl implements MonthsService {
         if (bi.is_payoff_bill && bi.payoff_source_id) {
           const newBalance = balances[bi.payoff_source_id];
           if (newBalance !== undefined) {
-            // Update the bill instance's expected_amount to match the CC balance
-            // Credit card balances are stored as negative in cents, but we want positive expected_amount
-            const expectedAmount = Math.abs(newBalance);
+            // NEW: Occurrence-based reconciliation for payoff bills
+            // The newBalance IS the current remaining debt on the card.
+            // Closed occurrences are historical payment records - we don't subtract them
+            // because the bank balance already reflects those payments.
+            const remaining = Math.abs(newBalance);
+
+            // Find the open occurrence (should be at most one)
+            const openOccurrenceIndex = bi.occurrences.findIndex((o) => !o.is_closed);
+
+            if (remaining > 0) {
+              // Update or create the open occurrence for remaining amount
+              if (openOccurrenceIndex !== -1) {
+                bi.occurrences[openOccurrenceIndex].expected_amount = remaining;
+                bi.occurrences[openOccurrenceIndex].updated_at = now;
+              } else {
+                // Create a new open occurrence for the remaining amount
+                const nextSequence = Math.max(0, ...bi.occurrences.map((o) => o.sequence)) + 1;
+                const remainingOccurrence: Occurrence = {
+                  id: crypto.randomUUID(),
+                  sequence: nextSequence,
+                  expected_date: `${month}-28`,
+                  expected_amount: remaining,
+                  is_closed: false,
+                  is_adhoc: false,
+                  created_at: now,
+                  updated_at: now,
+                };
+                bi.occurrences.push(remainingOccurrence);
+              }
+              bi.is_closed = false;
+              bi.closed_date = undefined;
+            } else {
+              // Remaining is 0 - close any open occurrence and the instance
+              if (openOccurrenceIndex !== -1) {
+                bi.occurrences[openOccurrenceIndex].expected_amount = 0;
+                bi.occurrences[openOccurrenceIndex].is_closed = true;
+                bi.occurrences[openOccurrenceIndex].closed_date = new Date()
+                  .toISOString()
+                  .split('T')[0];
+                bi.occurrences[openOccurrenceIndex].updated_at = now;
+              }
+              bi.is_closed = true;
+              bi.closed_date = bi.closed_date || new Date().toISOString().split('T')[0];
+            }
+
+            // Resequence occurrences
+            bi.occurrences = resequenceOccurrences(bi.occurrences);
+
             data.bill_instances[i] = {
               ...bi,
-              expected_amount: expectedAmount,
+              expected_amount: remaining, // Total remaining = card balance
               updated_at: now,
             };
 
-            // Also update all occurrences if they exist
-            if (bi.occurrences && bi.occurrences.length > 0) {
-              // For payoff bills, there should be just one occurrence
-              data.bill_instances[i].occurrences = bi.occurrences.map((occ) => ({
-                ...occ,
-                expected_amount: expectedAmount,
-                updated_at: now,
-              }));
-            }
-
             console.log(
-              `[MonthsService] Updated payoff bill ${bi.id} expected_amount to ${expectedAmount} for source ${bi.payoff_source_id}`
+              `[MonthsService] Reconciled payoff bill ${bi.id}: remaining=$${(remaining / 100).toFixed(2)}`
             );
           }
         }
@@ -735,7 +857,6 @@ export class MonthsServiceImpl implements MonthsService {
             expected_date: `${month}-28`,
             expected_amount: expectedAmount,
             is_closed: false,
-            payments: [],
             is_adhoc: false,
             created_at: now,
             updated_at: now,
@@ -1367,6 +1488,40 @@ export class MonthsServiceImpl implements MonthsService {
         );
       }
 
+      // Generate payoff bills for track_payments_manually cards immediately (with zero occurrences)
+      const manualTrackSources = paymentSources.filter(
+        (ps) => ps.track_payments_manually === true && ps.is_active
+      );
+
+      if (manualTrackSources.length > 0) {
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+
+        for (const source of manualTrackSources) {
+          billInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: 0, // No pre-calculated amount
+            occurrences: [], // Zero occurrences - user adds payments manually
+            is_default: true,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,
+            payoff_source_id: source.id,
+            name: `${source.name} Payments`,
+            category_id: payoffCategory.id,
+            payment_source_id: source.id,
+            created_at: nowIso,
+            updated_at: nowIso,
+          });
+
+          console.log(
+            `[MonthsService] Created manual payment tracking bill for ${source.name} in ${month}`
+          );
+        }
+      }
+
       // Generate income instances from active incomes
       const incomeInstances: IncomeInstance[] = [];
       for (const income of incomes) {
@@ -1658,7 +1813,7 @@ export class MonthsServiceImpl implements MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    details?: { closed_date?: string; notes?: string }
+    details?: { closed_date?: string; notes?: string; payment_source_id?: string }
   ): Promise<BillInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1675,12 +1830,14 @@ export class MonthsServiceImpl implements MonthsService {
       const today = now.split('T')[0];
       const closedDate = details?.closed_date ?? today;
       const notes = details?.notes?.trim() || undefined;
+      const paymentSourceId = details?.payment_source_id || undefined;
 
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: true,
         closed_date: closedDate,
         notes,
+        payment_source_id: paymentSourceId,
         updated_at: now,
       };
 
@@ -1747,7 +1904,7 @@ export class MonthsServiceImpl implements MonthsService {
     month: string,
     instanceId: string,
     occurrenceId: string,
-    details?: { closed_date?: string; notes?: string }
+    details?: { closed_date?: string; notes?: string; payment_source_id?: string }
   ): Promise<IncomeInstance | null> {
     try {
       const data = await this.getMonthlyData(month);
@@ -1764,12 +1921,14 @@ export class MonthsServiceImpl implements MonthsService {
       const today = now.split('T')[0];
       const closedDate = details?.closed_date ?? today;
       const notes = details?.notes?.trim() || undefined;
+      const paymentSourceId = details?.payment_source_id || undefined;
 
       instance.occurrences[occIndex] = {
         ...instance.occurrences[occIndex],
         is_closed: true,
         closed_date: closedDate,
         notes,
+        payment_source_id: paymentSourceId,
         updated_at: now,
       };
 
@@ -1828,178 +1987,6 @@ export class MonthsServiceImpl implements MonthsService {
       return instance;
     } catch (error) {
       console.error('[MonthsService] Failed to reopen income occurrence:', error);
-      throw error;
-    }
-  }
-
-  public async addBillOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    payment: { amount: number; date: string; payment_source_id?: string }
-  ): Promise<BillInstance | null> {
-    try {
-      const data = await this.getMonthlyData(month);
-      if (!data) throw new Error(`Monthly data for ${month} not found`);
-
-      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
-      if (instanceIndex === -1) return null;
-
-      const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
-      if (occIndex === -1) return null;
-
-      const now = new Date().toISOString();
-
-      const newPayment: Payment = {
-        id: crypto.randomUUID(),
-        amount: payment.amount,
-        date: payment.date,
-        payment_source_id: payment.payment_source_id,
-        created_at: now,
-      };
-
-      instance.occurrences[occIndex].payments.push(newPayment);
-      instance.occurrences[occIndex].updated_at = now;
-
-      // actual_amount is computed from occurrences, no instance-level field needed
-      instance.updated_at = now;
-
-      data.bill_instances[instanceIndex] = instance;
-      data.updated_at = now;
-
-      await this.saveMonthlyData(month, data);
-      return instance;
-    } catch (error) {
-      console.error('[MonthsService] Failed to add bill occurrence payment:', error);
-      throw error;
-    }
-  }
-
-  public async addIncomeOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    payment: { amount: number; date: string; payment_source_id?: string }
-  ): Promise<IncomeInstance | null> {
-    try {
-      const data = await this.getMonthlyData(month);
-      if (!data) throw new Error(`Monthly data for ${month} not found`);
-
-      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
-      if (instanceIndex === -1) return null;
-
-      const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
-      if (occIndex === -1) return null;
-
-      const now = new Date().toISOString();
-
-      const newPayment: Payment = {
-        id: crypto.randomUUID(),
-        amount: payment.amount,
-        date: payment.date,
-        payment_source_id: payment.payment_source_id,
-        created_at: now,
-      };
-
-      instance.occurrences[occIndex].payments.push(newPayment);
-      instance.occurrences[occIndex].updated_at = now;
-
-      // actual_amount is computed from occurrences, no instance-level field needed
-      instance.updated_at = now;
-
-      data.income_instances[instanceIndex] = instance;
-      data.updated_at = now;
-
-      await this.saveMonthlyData(month, data);
-      return instance;
-    } catch (error) {
-      console.error('[MonthsService] Failed to add income occurrence payment:', error);
-      throw error;
-    }
-  }
-
-  public async removeBillOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    paymentId: string
-  ): Promise<BillInstance | null> {
-    try {
-      const data = await this.getMonthlyData(month);
-      if (!data) throw new Error(`Monthly data for ${month} not found`);
-
-      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
-      if (instanceIndex === -1) return null;
-
-      const instance = data.bill_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
-      if (occIndex === -1) return null;
-
-      const paymentIndex = instance.occurrences[occIndex].payments.findIndex(
-        (p) => p.id === paymentId
-      );
-      if (paymentIndex === -1) return null;
-
-      const now = new Date().toISOString();
-
-      // Remove the payment
-      instance.occurrences[occIndex].payments.splice(paymentIndex, 1);
-      instance.occurrences[occIndex].updated_at = now;
-
-      // actual_amount is computed from occurrences, no instance-level field needed
-      instance.updated_at = now;
-
-      data.bill_instances[instanceIndex] = instance;
-      data.updated_at = now;
-
-      await this.saveMonthlyData(month, data);
-      return instance;
-    } catch (error) {
-      console.error('[MonthsService] Failed to remove bill occurrence payment:', error);
-      throw error;
-    }
-  }
-
-  public async removeIncomeOccurrencePayment(
-    month: string,
-    instanceId: string,
-    occurrenceId: string,
-    paymentId: string
-  ): Promise<IncomeInstance | null> {
-    try {
-      const data = await this.getMonthlyData(month);
-      if (!data) throw new Error(`Monthly data for ${month} not found`);
-
-      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
-      if (instanceIndex === -1) return null;
-
-      const instance = data.income_instances[instanceIndex];
-      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
-      if (occIndex === -1) return null;
-
-      const paymentIndex = instance.occurrences[occIndex].payments.findIndex(
-        (p) => p.id === paymentId
-      );
-      if (paymentIndex === -1) return null;
-
-      const now = new Date().toISOString();
-
-      // Remove the payment
-      instance.occurrences[occIndex].payments.splice(paymentIndex, 1);
-      instance.occurrences[occIndex].updated_at = now;
-
-      // actual_amount is computed from occurrences, no instance-level field needed
-      instance.updated_at = now;
-
-      data.income_instances[instanceIndex] = instance;
-      data.updated_at = now;
-
-      await this.saveMonthlyData(month, data);
-      return instance;
-    } catch (error) {
-      console.error('[MonthsService] Failed to remove income occurrence payment:', error);
       throw error;
     }
   }
@@ -2096,8 +2083,8 @@ export class MonthsServiceImpl implements MonthsService {
       const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
       if (occIndex === -1) return null;
 
-      // Only allow removing ad-hoc occurrences
-      if (!instance.occurrences[occIndex].is_adhoc) {
+      // Only allow removing ad-hoc occurrences OR occurrences from payoff bills
+      if (!instance.occurrences[occIndex].is_adhoc && !instance.is_payoff_bill) {
         throw new Error('Can only remove ad-hoc occurrences');
       }
 
@@ -2160,6 +2147,342 @@ export class MonthsServiceImpl implements MonthsService {
       return instance;
     } catch (error) {
       console.error('[MonthsService] Failed to remove income occurrence:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // Payoff Bill Methods (occurrence-based CC payment tracking)
+  // ============================================================================
+
+  /**
+   * Add a payment to a payoff bill by creating a new closed occurrence (payment chunk).
+   * This replaces the old payments[] approach for payoff bills specifically.
+   *
+   * Logic:
+   * 1. Create a new closed occurrence with the payment amount
+   * 2. Update the CC balance if newBalance is provided, or calculate it
+   * 3. Reconcile the open "remaining" occurrence based on balance - closedChunks
+   *
+   * @param month - Month in YYYY-MM format
+   * @param instanceId - The payoff bill instance ID
+   * @param amount - Payment amount in cents
+   * @param date - Payment date (YYYY-MM-DD)
+   * @param newBalance - Optional new CC balance (if user overrides auto-calculation)
+   * @returns Updated instance, new balance, and remaining amount
+   */
+  public async addPayoffBillPayment(
+    month: string,
+    instanceId: string,
+    amount: number,
+    date: string,
+    newBalance?: number
+  ): Promise<{ instance: BillInstance; newBalance: number; remaining: number } | null> {
+    try {
+      const data = await this.getMonthlyData(month);
+      if (!data) throw new Error(`Monthly data for ${month} not found`);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
+      if (instanceIndex === -1) return null;
+
+      const instance = data.bill_instances[instanceIndex];
+
+      // Validate this is a payoff bill
+      if (!instance.is_payoff_bill || !instance.payoff_source_id) {
+        console.error(`[MonthsService] Instance ${instanceId} is not a payoff bill`);
+        return null;
+      }
+
+      const now = new Date().toISOString();
+
+      // Get current balance for this payment source
+      const currentBalance = data.bank_balances?.[instance.payoff_source_id] ?? 0;
+
+      // Calculate new balance if not provided
+      // CC balances are stored as negative, so adding payment (positive) decreases debt
+      // If current = -200000 (-$2000), payment = 100 ($1), new = -199900 (-$1999)
+      const calculatedNewBalance =
+        newBalance !== undefined ? -Math.abs(newBalance) : currentBalance + amount;
+
+      // The new balance (remaining debt) - always positive for display
+      const newBalanceAbs = Math.abs(calculatedNewBalance);
+
+      // Find the current open occurrence (at most one)
+      const openOccurrenceIndex = instance.occurrences.findIndex((o) => !o.is_closed);
+
+      if (openOccurrenceIndex !== -1) {
+        // CLOSE the existing open occurrence and set its amount to the payment
+        // This occurrence now represents this payment in the history
+        const openOcc = instance.occurrences[openOccurrenceIndex];
+        openOcc.expected_amount = amount; // This occurrence now represents the payment
+        openOcc.is_closed = true;
+        openOcc.closed_date = date;
+        openOcc.updated_at = now;
+        // Keep original sequence number - it stays where it is in history
+      } else {
+        // No open occurrence exists - create a closed one for the payment record
+        const nextSequence = Math.max(0, ...instance.occurrences.map((o) => o.sequence)) + 1;
+        const paymentOccurrence: Occurrence = {
+          id: crypto.randomUUID(),
+          sequence: nextSequence,
+          expected_date: date,
+          expected_amount: amount,
+          is_closed: true,
+          closed_date: date,
+          is_adhoc: true,
+          created_at: now,
+          updated_at: now,
+        };
+        instance.occurrences.push(paymentOccurrence);
+      }
+
+      // Calculate remaining amount
+      const remaining = newBalanceAbs;
+
+      if (remaining > 0) {
+        // Create NEW open occurrence for remaining balance
+        const nextSequence = Math.max(0, ...instance.occurrences.map((o) => o.sequence)) + 1;
+        const remainingOccurrence: Occurrence = {
+          id: crypto.randomUUID(),
+          sequence: nextSequence,
+          expected_date: `${month}-28`, // Default to 28th for payoff bills
+          expected_amount: remaining,
+          is_closed: false,
+          is_adhoc: false,
+          created_at: now,
+          updated_at: now,
+        };
+        instance.occurrences.push(remainingOccurrence);
+        instance.is_closed = false;
+        instance.closed_date = undefined;
+      } else {
+        // Balance is 0 - payoff bill is complete, close it
+        instance.is_closed = true;
+        instance.closed_date = date;
+      }
+
+      // Resequence occurrences and update instance totals
+      instance.occurrences = resequenceOccurrences(instance.occurrences);
+      instance.expected_amount = newBalanceAbs; // Total owed = card balance
+      instance.updated_at = now;
+
+      data.bill_instances[instanceIndex] = instance;
+
+      // Update the bank balance for this payment source
+      if (!data.bank_balances) {
+        data.bank_balances = {};
+      }
+      data.bank_balances[instance.payoff_source_id] = calculatedNewBalance;
+      data.updated_at = now;
+
+      console.log(
+        `[MonthsService] Added payoff payment: $${(amount / 100).toFixed(2)} to ${instance.name}, ` +
+          `new balance: $${(calculatedNewBalance / 100).toFixed(2)}, remaining: $${(remaining / 100).toFixed(2)}`
+      );
+
+      await this.saveMonthlyData(month, data);
+
+      return {
+        instance,
+        newBalance: calculatedNewBalance,
+        remaining,
+      };
+    } catch (error) {
+      console.error('[MonthsService] Failed to add payoff bill payment:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // Split Occurrence Methods (for partial payments)
+  // ============================================================================
+
+  public async splitBillOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    details: {
+      paid_amount: number;
+      closed_date: string;
+      payment_source_id?: string;
+      notes?: string;
+    }
+  ): Promise<{ closedOccurrence: Occurrence; newOccurrence: Occurrence } | null> {
+    try {
+      const data = await this.getMonthlyData(month);
+      if (!data) throw new Error(`Monthly data for ${month} not found`);
+
+      const instanceIndex = data.bill_instances.findIndex((bi) => bi.id === instanceId);
+      if (instanceIndex === -1) return null;
+
+      const instance = data.bill_instances[instanceIndex];
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
+      if (occIndex === -1) return null;
+
+      const occurrence = instance.occurrences[occIndex];
+
+      // Validation
+      if (occurrence.is_closed) {
+        throw new Error('Cannot split an already closed occurrence');
+      }
+      if (details.paid_amount <= 0) {
+        throw new Error('Paid amount must be greater than 0');
+      }
+      if (details.paid_amount >= occurrence.expected_amount) {
+        throw new Error('Paid amount must be less than expected amount');
+      }
+
+      const now = new Date().toISOString();
+      const remainingAmount = occurrence.expected_amount - details.paid_amount;
+
+      // Calculate end of month for new occurrence
+      const [year, monthNum] = month.split('-').map(Number);
+      const endOfMonth = new Date(year, monthNum, 0).getDate();
+      const newExpectedDate = `${month}-${String(endOfMonth).padStart(2, '0')}`;
+
+      // Get next sequence number
+      const maxSequence = Math.max(...instance.occurrences.map((o) => o.sequence));
+      const nextSequence = maxSequence + 1;
+
+      // Update original occurrence: reduce amount and close it
+      const closedOccurrence: Occurrence = {
+        ...occurrence,
+        expected_amount: details.paid_amount,
+        is_closed: true,
+        closed_date: details.closed_date,
+        payment_source_id: details.payment_source_id,
+        notes: details.notes?.trim() || undefined,
+        updated_at: now,
+      };
+
+      // Create new occurrence for remainder
+      const newOccurrence: Occurrence = {
+        id: crypto.randomUUID(),
+        sequence: nextSequence,
+        expected_date: newExpectedDate,
+        expected_amount: remainingAmount,
+        is_closed: false,
+        is_adhoc: true,
+        created_at: now,
+        updated_at: now,
+      };
+
+      // Update occurrences array
+      instance.occurrences[occIndex] = closedOccurrence;
+      instance.occurrences.push(newOccurrence);
+
+      // Update instance-level is_closed (not all occurrences are closed now)
+      instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
+      instance.updated_at = now;
+
+      data.bill_instances[instanceIndex] = instance;
+      data.updated_at = now;
+
+      await this.saveMonthlyData(month, data);
+
+      console.log(
+        `[MonthsService] Split bill occurrence: paid $${(details.paid_amount / 100).toFixed(2)}, ` +
+          `remaining $${(remainingAmount / 100).toFixed(2)}`
+      );
+
+      return { closedOccurrence, newOccurrence };
+    } catch (error) {
+      console.error('[MonthsService] Failed to split bill occurrence:', error);
+      throw error;
+    }
+  }
+
+  public async splitIncomeOccurrence(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    details: {
+      paid_amount: number;
+      closed_date: string;
+      payment_source_id?: string;
+      notes?: string;
+    }
+  ): Promise<{ closedOccurrence: Occurrence; newOccurrence: Occurrence } | null> {
+    try {
+      const data = await this.getMonthlyData(month);
+      if (!data) throw new Error(`Monthly data for ${month} not found`);
+
+      const instanceIndex = data.income_instances.findIndex((ii) => ii.id === instanceId);
+      if (instanceIndex === -1) return null;
+
+      const instance = data.income_instances[instanceIndex];
+      const occIndex = instance.occurrences.findIndex((o) => o.id === occurrenceId);
+      if (occIndex === -1) return null;
+
+      const occurrence = instance.occurrences[occIndex];
+
+      // Validation
+      if (occurrence.is_closed) {
+        throw new Error('Cannot split an already closed occurrence');
+      }
+      if (details.paid_amount <= 0) {
+        throw new Error('Paid amount must be greater than 0');
+      }
+      if (details.paid_amount >= occurrence.expected_amount) {
+        throw new Error('Paid amount must be less than expected amount');
+      }
+
+      const now = new Date().toISOString();
+      const remainingAmount = occurrence.expected_amount - details.paid_amount;
+
+      // Calculate end of month for new occurrence
+      const [year, monthNum] = month.split('-').map(Number);
+      const endOfMonth = new Date(year, monthNum, 0).getDate();
+      const newExpectedDate = `${month}-${String(endOfMonth).padStart(2, '0')}`;
+
+      // Get next sequence number
+      const maxSequence = Math.max(...instance.occurrences.map((o) => o.sequence));
+      const nextSequence = maxSequence + 1;
+
+      // Update original occurrence: reduce amount and close it
+      const closedOccurrence: Occurrence = {
+        ...occurrence,
+        expected_amount: details.paid_amount,
+        is_closed: true,
+        closed_date: details.closed_date,
+        payment_source_id: details.payment_source_id,
+        notes: details.notes?.trim() || undefined,
+        updated_at: now,
+      };
+
+      // Create new occurrence for remainder
+      const newOccurrence: Occurrence = {
+        id: crypto.randomUUID(),
+        sequence: nextSequence,
+        expected_date: newExpectedDate,
+        expected_amount: remainingAmount,
+        is_closed: false,
+        is_adhoc: true,
+        created_at: now,
+        updated_at: now,
+      };
+
+      // Update occurrences array
+      instance.occurrences[occIndex] = closedOccurrence;
+      instance.occurrences.push(newOccurrence);
+
+      // Update instance-level is_closed (not all occurrences are closed now)
+      instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
+      instance.updated_at = now;
+
+      data.income_instances[instanceIndex] = instance;
+      data.updated_at = now;
+
+      await this.saveMonthlyData(month, data);
+
+      console.log(
+        `[MonthsService] Split income occurrence: received $${(details.paid_amount / 100).toFixed(2)}, ` +
+          `remaining $${(remainingAmount / 100).toFixed(2)}`
+      );
+
+      return { closedOccurrence, newOccurrence };
+    } catch (error) {
+      console.error('[MonthsService] Failed to split income occurrence:', error);
       throw error;
     }
   }

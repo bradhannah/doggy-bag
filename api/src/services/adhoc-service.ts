@@ -18,7 +18,6 @@ import type {
   Occurrence,
   DateString,
   MonthlyData,
-  Payment,
 } from '../types';
 
 // Request types
@@ -181,8 +180,7 @@ export class AdhocServiceImpl implements AdhocService {
   private createBaseOccurrence(
     amount: number,
     expectedDate: string,
-    isClosed: boolean,
-    payments: Payment[] = []
+    isClosed: boolean
   ): Occurrence {
     const now = new Date().toISOString();
     return {
@@ -192,7 +190,6 @@ export class AdhocServiceImpl implements AdhocService {
       expected_amount: amount,
       is_closed: isClosed,
       closed_date: isClosed ? expectedDate : undefined,
-      payments,
       is_adhoc: true,
       created_at: now,
       updated_at: now,
@@ -422,16 +419,11 @@ export class AdhocServiceImpl implements AdhocService {
     const monthData = await this.ensureMonthData(month);
     const now = new Date().toISOString();
 
-    // Create payment for the occurrence
-    const payment: Payment = {
-      id: crypto.randomUUID(),
-      amount: data.amount,
-      date: data.date,
-      payment_source_id: data.payment_source_id,
-      created_at: now,
-    };
-
-    const occurrence = this.createBaseOccurrence(data.amount, data.date, true, [payment]);
+    // In occurrence-only model, a goal contribution is a closed occurrence
+    // (closing = payment, so we create a closed occurrence with the contribution amount)
+    const occurrence = this.createBaseOccurrence(data.amount, data.date, true);
+    // Set payment source on the occurrence for tracking
+    occurrence.payment_source_id = data.payment_source_id;
 
     const newInstance: BillInstance = {
       id: crypto.randomUUID(),

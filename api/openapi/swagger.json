@@ -7,928 +7,6 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
-			"BillingPeriod": {
-				"type": "string",
-				"enum": [
-					"monthly",
-					"bi_weekly",
-					"weekly",
-					"semi_annually"
-				]
-			},
-			"Bill": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"billing_period": {
-						"$ref": "#/components/schemas/BillingPeriod"
-					},
-					"start_date": {
-						"type": "string"
-					},
-					"day_of_month": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_week": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"due_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
-						"type": "boolean"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"amount",
-					"billing_period",
-					"payment_source_id",
-					"is_active",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"Income": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"billing_period": {
-						"$ref": "#/components/schemas/BillingPeriod"
-					},
-					"start_date": {
-						"type": "string"
-					},
-					"day_of_month": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_week": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"due_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
-						"type": "boolean"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"amount",
-					"billing_period",
-					"payment_source_id",
-					"is_active",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"PaymentSourceType": {
-				"type": "string",
-				"enum": [
-					"bank_account",
-					"credit_card",
-					"line_of_credit",
-					"cash",
-					"investment"
-				]
-			},
-			"PaymentSource": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"type": {
-						"$ref": "#/components/schemas/PaymentSourceType"
-					},
-					"balance": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
-						"type": "boolean"
-					},
-					"exclude_from_leftover": {
-						"type": "boolean"
-					},
-					"pay_off_monthly": {
-						"type": "boolean"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"type",
-					"balance",
-					"is_active",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CategoryType": {
-				"type": "string",
-				"enum": [
-					"bill",
-					"income",
-					"variable"
-				]
-			},
-			"Category": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"is_predefined": {
-						"type": "boolean"
-					},
-					"sort_order": {
-						"type": "number",
-						"format": "double"
-					},
-					"color": {
-						"type": "string"
-					},
-					"type": {
-						"$ref": "#/components/schemas/CategoryType"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"is_predefined",
-					"sort_order",
-					"color",
-					"type",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"Payment": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"date": {
-						"type": "string"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"created_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"amount",
-					"date",
-					"created_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"Occurrence": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"sequence": {
-						"type": "number",
-						"format": "double"
-					},
-					"expected_date": {
-						"type": "string"
-					},
-					"expected_amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_closed": {
-						"type": "boolean"
-					},
-					"closed_date": {
-						"type": "string"
-					},
-					"payments": {
-						"items": {
-							"$ref": "#/components/schemas/Payment"
-						},
-						"type": "array"
-					},
-					"is_adhoc": {
-						"type": "boolean"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"sequence",
-					"expected_date",
-					"expected_amount",
-					"is_closed",
-					"payments",
-					"is_adhoc",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"BillInstance": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"bill_id": {
-						"type": "string",
-						"nullable": true
-					},
-					"month": {
-						"type": "string"
-					},
-					"billing_period": {
-						"type": "string"
-					},
-					"expected_amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"occurrences": {
-						"items": {
-							"$ref": "#/components/schemas/Occurrence"
-						},
-						"type": "array"
-					},
-					"is_default": {
-						"type": "boolean"
-					},
-					"is_closed": {
-						"type": "boolean"
-					},
-					"is_adhoc": {
-						"type": "boolean"
-					},
-					"is_payoff_bill": {
-						"type": "boolean"
-					},
-					"payoff_source_id": {
-						"type": "string"
-					},
-					"closed_date": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"bill_id",
-					"month",
-					"billing_period",
-					"expected_amount",
-					"occurrences",
-					"is_default",
-					"is_closed",
-					"is_adhoc",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"IncomeInstance": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"income_id": {
-						"type": "string",
-						"nullable": true
-					},
-					"month": {
-						"type": "string"
-					},
-					"billing_period": {
-						"type": "string"
-					},
-					"expected_amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"occurrences": {
-						"items": {
-							"$ref": "#/components/schemas/Occurrence"
-						},
-						"type": "array"
-					},
-					"is_default": {
-						"type": "boolean"
-					},
-					"is_closed": {
-						"type": "boolean"
-					},
-					"is_adhoc": {
-						"type": "boolean"
-					},
-					"closed_date": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"income_id",
-					"month",
-					"billing_period",
-					"expected_amount",
-					"occurrences",
-					"is_default",
-					"is_closed",
-					"is_adhoc",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"VariableExpense": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"month": {
-						"type": "string"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"amount",
-					"payment_source_id",
-					"month",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"FreeFlowingExpense": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"month": {
-						"type": "string"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"amount",
-					"payment_source_id",
-					"month",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"Record_string.number_": {
-				"properties": {},
-				"additionalProperties": {
-					"type": "number",
-					"format": "double"
-				},
-				"type": "object",
-				"description": "Construct a type with a set of properties K of type T"
-			},
-			"MonthlyData": {
-				"properties": {
-					"month": {
-						"type": "string"
-					},
-					"bill_instances": {
-						"items": {
-							"$ref": "#/components/schemas/BillInstance"
-						},
-						"type": "array"
-					},
-					"income_instances": {
-						"items": {
-							"$ref": "#/components/schemas/IncomeInstance"
-						},
-						"type": "array"
-					},
-					"variable_expenses": {
-						"items": {
-							"$ref": "#/components/schemas/VariableExpense"
-						},
-						"type": "array"
-					},
-					"free_flowing_expenses": {
-						"items": {
-							"$ref": "#/components/schemas/FreeFlowingExpense"
-						},
-						"type": "array"
-					},
-					"bank_balances": {
-						"$ref": "#/components/schemas/Record_string.number_"
-					},
-					"is_read_only": {
-						"type": "boolean"
-					},
-					"created_at": {
-						"type": "string"
-					},
-					"updated_at": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"month",
-					"bill_instances",
-					"income_instances",
-					"variable_expenses",
-					"free_flowing_expenses",
-					"bank_balances",
-					"is_read_only",
-					"created_at",
-					"updated_at"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"BackupFileData": {
-				"properties": {
-					"export_date": {
-						"type": "string"
-					},
-					"bills": {
-						"items": {
-							"$ref": "#/components/schemas/Bill"
-						},
-						"type": "array"
-					},
-					"incomes": {
-						"items": {
-							"$ref": "#/components/schemas/Income"
-						},
-						"type": "array"
-					},
-					"payment_sources": {
-						"items": {
-							"$ref": "#/components/schemas/PaymentSource"
-						},
-						"type": "array"
-					},
-					"categories": {
-						"items": {
-							"$ref": "#/components/schemas/Category"
-						},
-						"type": "array"
-					},
-					"months": {
-						"items": {
-							"$ref": "#/components/schemas/MonthlyData"
-						},
-						"type": "array"
-					}
-				},
-				"required": [
-					"export_date",
-					"bills",
-					"incomes",
-					"payment_sources",
-					"categories",
-					"months"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiError": {
-				"properties": {
-					"error": {
-						"type": "string"
-					},
-					"message": {
-						"type": "string"
-					},
-					"details": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					}
-				},
-				"required": [
-					"error",
-					"message"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"RestoreBackupRequest": {
-				"properties": {
-					"data": {
-						"description": "Base64 encoded backup file content or JSON object"
-					}
-				},
-				"required": [
-					"data"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ValidateBackupResponse": {
-				"properties": {
-					"isValid": {
-						"type": "boolean"
-					},
-					"errors": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"warnings": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"summary": {
-						"properties": {
-							"months": {
-								"type": "number",
-								"format": "double"
-							},
-							"categories": {
-								"type": "number",
-								"format": "double"
-							},
-							"paymentSources": {
-								"type": "number",
-								"format": "double"
-							},
-							"incomes": {
-								"type": "number",
-								"format": "double"
-							},
-							"bills": {
-								"type": "number",
-								"format": "double"
-							}
-						},
-						"required": [
-							"months",
-							"categories",
-							"paymentSources",
-							"incomes",
-							"bills"
-						],
-						"type": "object"
-					}
-				},
-				"required": [
-					"isValid",
-					"errors",
-					"warnings"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ValidateBackupRequest": {
-				"properties": {
-					"data": {
-						"description": "Backup data to validate"
-					}
-				},
-				"required": [
-					"data"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CreateCategoryRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"type": {
-						"$ref": "#/components/schemas/CategoryType"
-					},
-					"color": {
-						"type": "string"
-					},
-					"sort_order": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"name",
-					"type"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateCategoryRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"type": {
-						"$ref": "#/components/schemas/CategoryType"
-					},
-					"color": {
-						"type": "string"
-					},
-					"sort_order": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ReorderCategoriesRequest": {
-				"properties": {
-					"order": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array",
-						"description": "Array of category IDs in desired order"
-					}
-				},
-				"required": [
-					"order"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"HealthResponse": {
-				"properties": {
-					"status": {
-						"type": "string"
-					},
-					"timestamp": {
-						"type": "string"
-					},
-					"version": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"status",
-					"timestamp"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CreateBillRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"billing_period": {
-						"$ref": "#/components/schemas/BillingPeriod"
-					},
-					"start_date": {
-						"type": "string"
-					},
-					"day_of_month": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_week": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"due_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
-						"type": "boolean"
-					}
-				},
-				"required": [
-					"name",
-					"amount",
-					"billing_period",
-					"payment_source_id"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateBillRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"billing_period": {
-						"$ref": "#/components/schemas/BillingPeriod"
-					},
-					"start_date": {
-						"type": "string"
-					},
-					"day_of_month": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_week": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"due_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
-						"type": "boolean"
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
 			"SettingsResponse": {
 				"description": "Current settings response from the API.",
 				"properties": {
@@ -1088,6 +166,28 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"ApiError": {
+				"properties": {
+					"error": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"details": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"error",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"MigrateDataRequest": {
 				"properties": {
 					"sourceDir": {
@@ -1125,17 +225,61 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"CreatePaymentSourceRequest": {
+			"PaymentSourceType": {
+				"type": "string",
+				"enum": [
+					"bank_account",
+					"credit_card",
+					"line_of_credit",
+					"cash",
+					"investment"
+				]
+			},
+			"PaymentSourceMetadata": {
+				"description": "PaymentSourceMetadata - Metadata fields for Payment Sources\nFields are conditional based on payment source type:\n- last_four_digits: All types\n- credit_limit: credit_card, line_of_credit\n- interest_rate: All types\n- interest_rate_cash_advance: credit_card only\n- is_variable_rate: line_of_credit, savings, investment\n- statement_day: credit_card, line_of_credit\n- account_url: All types\n- notes: All types",
 				"properties": {
+					"last_four_digits": {
+						"type": "string"
+					},
+					"credit_limit": {
+						"type": "number",
+						"format": "double"
+					},
+					"interest_rate": {
+						"type": "number",
+						"format": "double"
+					},
+					"interest_rate_cash_advance": {
+						"type": "number",
+						"format": "double"
+					},
+					"is_variable_rate": {
+						"type": "boolean"
+					},
+					"statement_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"account_url": {
+						"type": "string"
+					},
+					"notes": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"PaymentSource": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
 					"name": {
 						"type": "string"
 					},
 					"type": {
 						"$ref": "#/components/schemas/PaymentSourceType"
-					},
-					"balance": {
-						"type": "number",
-						"format": "double"
 					},
 					"is_active": {
 						"type": "boolean"
@@ -1145,12 +289,61 @@
 					},
 					"pay_off_monthly": {
 						"type": "boolean"
+					},
+					"track_payments_manually": {
+						"type": "boolean"
+					},
+					"is_savings": {
+						"type": "boolean"
+					},
+					"is_investment": {
+						"type": "boolean"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/PaymentSourceMetadata"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"type",
+					"is_active",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreatePaymentSourceRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"$ref": "#/components/schemas/PaymentSourceType"
+					},
+					"is_active": {
+						"type": "boolean"
+					},
+					"exclude_from_leftover": {
+						"type": "boolean"
+					},
+					"pay_off_monthly": {
+						"type": "boolean"
+					},
+					"track_payments_manually": {
+						"type": "boolean"
 					}
 				},
 				"required": [
 					"name",
-					"type",
-					"balance"
+					"type"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1163,10 +356,6 @@
 					"type": {
 						"$ref": "#/components/schemas/PaymentSourceType"
 					},
-					"balance": {
-						"type": "number",
-						"format": "double"
-					},
 					"is_active": {
 						"type": "boolean"
 					},
@@ -1175,99 +364,8 @@
 					},
 					"pay_off_monthly": {
 						"type": "boolean"
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CreateIncomeRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
 					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"billing_period": {
-						"$ref": "#/components/schemas/BillingPeriod"
-					},
-					"start_date": {
-						"type": "string"
-					},
-					"day_of_month": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_week": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"due_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
-						"type": "boolean"
-					}
-				},
-				"required": [
-					"name",
-					"amount",
-					"billing_period",
-					"payment_source_id"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateIncomeRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"amount": {
-						"type": "number",
-						"format": "double"
-					},
-					"billing_period": {
-						"$ref": "#/components/schemas/BillingPeriod"
-					},
-					"start_date": {
-						"type": "string"
-					},
-					"day_of_month": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_week": {
-						"type": "number",
-						"format": "double"
-					},
-					"recurrence_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"payment_source_id": {
-						"type": "string"
-					},
-					"category_id": {
-						"type": "string"
-					},
-					"due_day": {
-						"type": "number",
-						"format": "double"
-					},
-					"is_active": {
+					"track_payments_manually": {
 						"type": "boolean"
 					}
 				},
@@ -1293,6 +391,393 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"Occurrence": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"sequence": {
+						"type": "number",
+						"format": "double"
+					},
+					"expected_date": {
+						"type": "string"
+					},
+					"expected_amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"is_closed": {
+						"type": "boolean"
+					},
+					"closed_date": {
+						"type": "string"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"notes": {
+						"type": "string"
+					},
+					"is_adhoc": {
+						"type": "boolean"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"sequence",
+					"expected_date",
+					"expected_amount",
+					"is_closed",
+					"is_adhoc",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"EntityMetadata": {
+				"description": "EntityMetadata - Common metadata fields for Bills and Incomes\nThis is copied to monthly instances as a point-in-time snapshot",
+				"properties": {
+					"bank_transaction_name": {
+						"type": "string"
+					},
+					"account_number": {
+						"type": "string"
+					},
+					"account_url": {
+						"type": "string"
+					},
+					"notes": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"BillInstance": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"bill_id": {
+						"type": "string",
+						"nullable": true
+					},
+					"month": {
+						"type": "string"
+					},
+					"billing_period": {
+						"type": "string"
+					},
+					"expected_amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"occurrences": {
+						"items": {
+							"$ref": "#/components/schemas/Occurrence"
+						},
+						"type": "array"
+					},
+					"is_default": {
+						"type": "boolean"
+					},
+					"is_closed": {
+						"type": "boolean"
+					},
+					"is_adhoc": {
+						"type": "boolean"
+					},
+					"is_payoff_bill": {
+						"type": "boolean"
+					},
+					"payoff_source_id": {
+						"type": "string"
+					},
+					"goal_id": {
+						"type": "string"
+					},
+					"closed_date": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/EntityMetadata"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"bill_id",
+					"month",
+					"billing_period",
+					"expected_amount",
+					"occurrences",
+					"is_default",
+					"is_closed",
+					"is_adhoc",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"IncomeInstance": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"income_id": {
+						"type": "string",
+						"nullable": true
+					},
+					"month": {
+						"type": "string"
+					},
+					"billing_period": {
+						"type": "string"
+					},
+					"expected_amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"occurrences": {
+						"items": {
+							"$ref": "#/components/schemas/Occurrence"
+						},
+						"type": "array"
+					},
+					"is_default": {
+						"type": "boolean"
+					},
+					"is_closed": {
+						"type": "boolean"
+					},
+					"is_adhoc": {
+						"type": "boolean"
+					},
+					"closed_date": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/EntityMetadata"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"income_id",
+					"month",
+					"billing_period",
+					"expected_amount",
+					"occurrences",
+					"is_default",
+					"is_closed",
+					"is_adhoc",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"VariableExpense": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"month": {
+						"type": "string"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"amount",
+					"payment_source_id",
+					"month",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"FreeFlowingExpense": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"month": {
+						"type": "string"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"amount",
+					"payment_source_id",
+					"month",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Record_string.number_": {
+				"properties": {},
+				"additionalProperties": {
+					"type": "number",
+					"format": "double"
+				},
+				"type": "object",
+				"description": "Construct a type with a set of properties K of type T"
+			},
+			"MonthlyData": {
+				"properties": {
+					"month": {
+						"type": "string"
+					},
+					"bill_instances": {
+						"items": {
+							"$ref": "#/components/schemas/BillInstance"
+						},
+						"type": "array"
+					},
+					"income_instances": {
+						"items": {
+							"$ref": "#/components/schemas/IncomeInstance"
+						},
+						"type": "array"
+					},
+					"variable_expenses": {
+						"items": {
+							"$ref": "#/components/schemas/VariableExpense"
+						},
+						"type": "array"
+					},
+					"free_flowing_expenses": {
+						"items": {
+							"$ref": "#/components/schemas/FreeFlowingExpense"
+						},
+						"type": "array"
+					},
+					"bank_balances": {
+						"$ref": "#/components/schemas/Record_string.number_"
+					},
+					"savings_balances_start": {
+						"$ref": "#/components/schemas/Record_string.number_"
+					},
+					"savings_balances_end": {
+						"$ref": "#/components/schemas/Record_string.number_"
+					},
+					"savings_contributions": {
+						"$ref": "#/components/schemas/Record_string.number_"
+					},
+					"is_read_only": {
+						"type": "boolean"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"month",
+					"bill_instances",
+					"income_instances",
+					"variable_expenses",
+					"free_flowing_expenses",
+					"bank_balances",
+					"is_read_only",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CategoryType": {
+				"type": "string",
+				"enum": [
+					"bill",
+					"income",
+					"variable",
+					"savings_goal"
+				]
+			},
+			"PaymentMethod": {
+				"type": "string",
+				"enum": [
+					"auto",
+					"manual"
+				]
 			},
 			"BillInstanceDetailed": {
 				"properties": {
@@ -1380,6 +865,12 @@
 					},
 					"category_id": {
 						"type": "string"
+					},
+					"payment_method": {
+						"$ref": "#/components/schemas/PaymentMethod"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/EntityMetadata"
 					}
 				},
 				"required": [
@@ -1481,6 +972,9 @@
 					},
 					"category_id": {
 						"type": "string"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/EntityMetadata"
 					}
 				},
 				"required": [
@@ -1691,6 +1185,29 @@
 						},
 						"type": "array"
 					},
+					"overdue_bills": {
+						"items": {
+							"properties": {
+								"due_date": {
+									"type": "string"
+								},
+								"amount": {
+									"type": "number",
+									"format": "double"
+								},
+								"name": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"due_date",
+								"amount",
+								"name"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					},
 					"tallies": {
 						"properties": {
 							"totalIncome": {
@@ -1750,6 +1267,7 @@
 					"month",
 					"billSections",
 					"incomeSections",
+					"overdue_bills",
 					"tallies",
 					"leftover",
 					"leftoverBreakdown",
@@ -1842,14 +1360,580 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"BillingPeriod": {
+				"type": "string",
+				"enum": [
+					"monthly",
+					"bi_weekly",
+					"weekly",
+					"semi_annually"
+				]
+			},
+			"Income": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"billing_period": {
+						"$ref": "#/components/schemas/BillingPeriod"
+					},
+					"start_date": {
+						"type": "string"
+					},
+					"day_of_month": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_week": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"payment_method": {
+						"$ref": "#/components/schemas/PaymentMethod"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/EntityMetadata"
+					},
+					"goal_id": {
+						"type": "string"
+					},
+					"is_active": {
+						"type": "boolean"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"amount",
+					"billing_period",
+					"payment_source_id",
+					"category_id",
+					"is_active",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateIncomeRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"billing_period": {
+						"$ref": "#/components/schemas/BillingPeriod"
+					},
+					"start_date": {
+						"type": "string"
+					},
+					"day_of_month": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_week": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"is_active": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"name",
+					"amount",
+					"billing_period",
+					"payment_source_id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateIncomeRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"billing_period": {
+						"$ref": "#/components/schemas/BillingPeriod"
+					},
+					"start_date": {
+						"type": "string"
+					},
+					"day_of_month": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_week": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"is_active": {
+						"type": "boolean"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"HealthResponse": {
+				"properties": {
+					"status": {
+						"type": "string"
+					},
+					"timestamp": {
+						"type": "string"
+					},
+					"version": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"status",
+					"timestamp"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Category": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"is_predefined": {
+						"type": "boolean"
+					},
+					"sort_order": {
+						"type": "number",
+						"format": "double"
+					},
+					"color": {
+						"type": "string"
+					},
+					"type": {
+						"$ref": "#/components/schemas/CategoryType"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"is_predefined",
+					"sort_order",
+					"color",
+					"type",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateCategoryRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"$ref": "#/components/schemas/CategoryType"
+					},
+					"color": {
+						"type": "string"
+					},
+					"sort_order": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"name",
+					"type"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateCategoryRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"$ref": "#/components/schemas/CategoryType"
+					},
+					"color": {
+						"type": "string"
+					},
+					"sort_order": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ReorderCategoriesRequest": {
+				"properties": {
+					"order": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Array of category IDs in desired order"
+					}
+				},
+				"required": [
+					"order"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Bill": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"billing_period": {
+						"$ref": "#/components/schemas/BillingPeriod"
+					},
+					"start_date": {
+						"type": "string"
+					},
+					"day_of_month": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_week": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"payment_method": {
+						"$ref": "#/components/schemas/PaymentMethod"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/EntityMetadata"
+					},
+					"goal_id": {
+						"type": "string"
+					},
+					"is_active": {
+						"type": "boolean"
+					},
+					"created_at": {
+						"type": "string"
+					},
+					"updated_at": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"amount",
+					"billing_period",
+					"payment_source_id",
+					"category_id",
+					"is_active",
+					"created_at",
+					"updated_at"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateBillRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"billing_period": {
+						"$ref": "#/components/schemas/BillingPeriod"
+					},
+					"start_date": {
+						"type": "string"
+					},
+					"day_of_month": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_week": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"is_active": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"name",
+					"amount",
+					"billing_period",
+					"payment_source_id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateBillRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"billing_period": {
+						"$ref": "#/components/schemas/BillingPeriod"
+					},
+					"start_date": {
+						"type": "string"
+					},
+					"day_of_month": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_week": {
+						"type": "number",
+						"format": "double"
+					},
+					"recurrence_day": {
+						"type": "number",
+						"format": "double"
+					},
+					"payment_source_id": {
+						"type": "string"
+					},
+					"category_id": {
+						"type": "string"
+					},
+					"is_active": {
+						"type": "boolean"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"BackupFileData": {
+				"properties": {
+					"export_date": {
+						"type": "string"
+					},
+					"bills": {
+						"items": {
+							"$ref": "#/components/schemas/Bill"
+						},
+						"type": "array"
+					},
+					"incomes": {
+						"items": {
+							"$ref": "#/components/schemas/Income"
+						},
+						"type": "array"
+					},
+					"payment_sources": {
+						"items": {
+							"$ref": "#/components/schemas/PaymentSource"
+						},
+						"type": "array"
+					},
+					"categories": {
+						"items": {
+							"$ref": "#/components/schemas/Category"
+						},
+						"type": "array"
+					},
+					"months": {
+						"items": {
+							"$ref": "#/components/schemas/MonthlyData"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"export_date",
+					"bills",
+					"incomes",
+					"payment_sources",
+					"categories",
+					"months"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"RestoreBackupRequest": {
+				"properties": {
+					"data": {
+						"description": "Base64 encoded backup file content or JSON object"
+					}
+				},
+				"required": [
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ValidateBackupResponse": {
+				"properties": {
+					"isValid": {
+						"type": "boolean"
+					},
+					"errors": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"warnings": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"summary": {
+						"properties": {
+							"months": {
+								"type": "number",
+								"format": "double"
+							},
+							"categories": {
+								"type": "number",
+								"format": "double"
+							},
+							"paymentSources": {
+								"type": "number",
+								"format": "double"
+							},
+							"incomes": {
+								"type": "number",
+								"format": "double"
+							},
+							"bills": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"months",
+							"categories",
+							"paymentSources",
+							"incomes",
+							"bills"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"isValid",
+					"errors",
+					"warnings"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ValidateBackupRequest": {
+				"properties": {
+					"data": {
+						"description": "Backup data to validate"
+					}
+				},
+				"required": [
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
 			}
 		},
 		"securitySchemes": {}
 	},
 	"info": {
-		"title": "Doggy Bag API",
+		"title": "doggy-bag API",
 		"version": "1.0.0",
-		"description": "Doggy Bag API - Personal budget tracking application",
+		"description": "doggy-bag API - Personal budget tracking application",
 		"license": {
 			"name": "MIT"
 		},
@@ -1858,571 +1942,6 @@
 		}
 	},
 	"paths": {
-		"/api/backup": {
-			"get": {
-				"operationId": "ExportBackup",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/BackupFileData"
-								}
-							}
-						}
-					}
-				},
-				"description": "Export all data as a backup file",
-				"summary": "Export backup",
-				"tags": [
-					"Backup"
-				],
-				"security": [],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "RestoreBackup",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"message": {
-											"type": "string"
-										},
-										"success": {
-											"type": "boolean"
-										}
-									},
-									"required": [
-										"message",
-										"success"
-									],
-									"type": "object"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Invalid backup data",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Restore data from a backup file",
-				"summary": "Restore backup",
-				"tags": [
-					"Backup"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/RestoreBackupRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/backup/validate": {
-			"post": {
-				"operationId": "ValidateBackup",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ValidateBackupResponse"
-								}
-							}
-						}
-					}
-				},
-				"description": "Validate a backup file without restoring",
-				"summary": "Validate backup",
-				"tags": [
-					"Backup"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/ValidateBackupRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/categories": {
-			"get": {
-				"operationId": "GetCategories",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/Category"
-									},
-									"type": "array"
-								},
-								"examples": {
-									"Example 1": {
-										"value": [
-											{
-												"id": "cat-utilities",
-												"name": "Utilities",
-												"type": "bill",
-												"color": "#3b82f6",
-												"sort_order": 0,
-												"is_predefined": true,
-												"created_at": "2025-01-01T00:00:00Z",
-												"updated_at": "2025-01-01T00:00:00Z"
-											}
-										]
-									}
-								}
-							}
-						}
-					}
-				},
-				"description": "Get all categories",
-				"summary": "List all categories",
-				"tags": [
-					"Categories"
-				],
-				"security": [],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "CreateCategory",
-				"responses": {
-					"201": {
-						"description": "Created",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Category"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Create a new category",
-				"summary": "Create a category",
-				"tags": [
-					"Categories"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateCategoryRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/categories/{id}": {
-			"put": {
-				"operationId": "UpdateCategory",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Category"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "Not Found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Update an existing category",
-				"summary": "Update a category",
-				"tags": [
-					"Categories"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateCategoryRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteCategory",
-				"responses": {
-					"204": {
-						"description": "No Content"
-					},
-					"404": {
-						"description": "Not Found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Delete a category",
-				"summary": "Delete a category",
-				"tags": [
-					"Categories"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/categories/reorder": {
-			"put": {
-				"operationId": "ReorderCategories",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/Category"
-									},
-									"type": "array"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Reorder categories",
-				"summary": "Reorder categories",
-				"tags": [
-					"Categories"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/ReorderCategoriesRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/health": {
-			"get": {
-				"operationId": "GetHealth",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/HealthResponse"
-								}
-							}
-						}
-					}
-				},
-				"description": "Check API health status",
-				"summary": "Health check",
-				"tags": [
-					"Health"
-				],
-				"security": [],
-				"parameters": []
-			}
-		},
-		"/api/bills": {
-			"get": {
-				"operationId": "GetBills",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/Bill"
-									},
-									"type": "array"
-								},
-								"examples": {
-									"Example 1": {
-										"value": [
-											{
-												"id": "bill-123",
-												"name": "Electric Bill",
-												"amount": 15000,
-												"billing_period": "monthly",
-												"day_of_month": 15,
-												"payment_source_id": "ps-001",
-												"category_id": "cat-utilities",
-												"is_active": true,
-												"created_at": "2025-01-01T00:00:00Z",
-												"updated_at": "2025-01-01T00:00:00Z"
-											}
-										]
-									}
-								}
-							}
-						}
-					}
-				},
-				"description": "Get all bill definitions",
-				"summary": "List all bills",
-				"tags": [
-					"Bills"
-				],
-				"security": [],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "CreateBill",
-				"responses": {
-					"201": {
-						"description": "Created",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Bill"
-								},
-								"examples": {
-									"Example 1": {
-										"value": {
-											"id": "bill-123",
-											"name": "Electric Bill",
-											"amount": 15000,
-											"billing_period": "monthly",
-											"day_of_month": 15,
-											"payment_source_id": "ps-001",
-											"category_id": "cat-utilities",
-											"is_active": true,
-											"created_at": "2025-01-01T00:00:00Z",
-											"updated_at": "2025-01-01T00:00:00Z"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Create a new bill definition",
-				"summary": "Create a bill",
-				"tags": [
-					"Bills"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateBillRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/bills/{id}": {
-			"put": {
-				"operationId": "UpdateBill",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Bill"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "Not Found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Update an existing bill definition",
-				"summary": "Update a bill",
-				"tags": [
-					"Bills"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateBillRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteBill",
-				"responses": {
-					"204": {
-						"description": "No Content"
-					},
-					"404": {
-						"description": "Not Found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Delete a bill definition",
-				"summary": "Delete a bill",
-				"tags": [
-					"Bills"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
 		"/api/settings": {
 			"get": {
 				"operationId": "GetSettings",
@@ -2626,7 +2145,6 @@
 												"id": "ps-001",
 												"name": "Checking Account",
 												"type": "bank_account",
-												"balance": 250000,
 												"is_active": true,
 												"exclude_from_leftover": false,
 												"pay_off_monthly": false,
@@ -2774,190 +2292,6 @@
 				"summary": "Delete a payment source",
 				"tags": [
 					"Payment Sources"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/incomes": {
-			"get": {
-				"operationId": "GetIncomes",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/Income"
-									},
-									"type": "array"
-								},
-								"examples": {
-									"Example 1": {
-										"value": [
-											{
-												"id": "inc-123",
-												"name": "Salary",
-												"amount": 500000,
-												"billing_period": "bi_weekly",
-												"start_date": "2025-01-03",
-												"payment_source_id": "ps-001",
-												"category_id": "cat-employment",
-												"is_active": true,
-												"created_at": "2025-01-01T00:00:00Z",
-												"updated_at": "2025-01-01T00:00:00Z"
-											}
-										]
-									}
-								}
-							}
-						}
-					}
-				},
-				"description": "Get all income definitions",
-				"summary": "List all incomes",
-				"tags": [
-					"Incomes"
-				],
-				"security": [],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "CreateIncome",
-				"responses": {
-					"201": {
-						"description": "Created",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Income"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Create a new income definition",
-				"summary": "Create an income",
-				"tags": [
-					"Incomes"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateIncomeRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/incomes/{id}": {
-			"put": {
-				"operationId": "UpdateIncome",
-				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Income"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad Request",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "Not Found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Update an existing income definition",
-				"summary": "Update an income",
-				"tags": [
-					"Incomes"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateIncomeRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteIncome",
-				"responses": {
-					"204": {
-						"description": "No Content"
-					},
-					"404": {
-						"description": "Not Found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiError"
-								}
-							}
-						}
-					}
-				},
-				"description": "Delete an income definition",
-				"summary": "Delete an income",
-				"tags": [
-					"Incomes"
 				],
 				"security": [],
 				"parameters": [
@@ -3469,6 +2803,755 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/UpdateBankBalancesRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/incomes": {
+			"get": {
+				"operationId": "GetIncomes",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/Income"
+									},
+									"type": "array"
+								},
+								"examples": {
+									"Example 1": {
+										"value": [
+											{
+												"id": "inc-123",
+												"name": "Salary",
+												"amount": 500000,
+												"billing_period": "bi_weekly",
+												"start_date": "2025-01-03",
+												"payment_source_id": "ps-001",
+												"category_id": "cat-employment",
+												"is_active": true,
+												"created_at": "2025-01-01T00:00:00Z",
+												"updated_at": "2025-01-01T00:00:00Z"
+											}
+										]
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "Get all income definitions",
+				"summary": "List all incomes",
+				"tags": [
+					"Incomes"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateIncome",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Income"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Create a new income definition",
+				"summary": "Create an income",
+				"tags": [
+					"Incomes"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateIncomeRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/incomes/{id}": {
+			"put": {
+				"operationId": "UpdateIncome",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Income"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not Found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Update an existing income definition",
+				"summary": "Update an income",
+				"tags": [
+					"Incomes"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateIncomeRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteIncome",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					},
+					"404": {
+						"description": "Not Found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Delete an income definition",
+				"summary": "Delete an income",
+				"tags": [
+					"Incomes"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/health": {
+			"get": {
+				"operationId": "GetHealth",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HealthResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Check API health status",
+				"summary": "Health check",
+				"tags": [
+					"Health"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/api/categories": {
+			"get": {
+				"operationId": "GetCategories",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/Category"
+									},
+									"type": "array"
+								},
+								"examples": {
+									"Example 1": {
+										"value": [
+											{
+												"id": "cat-utilities",
+												"name": "Utilities",
+												"type": "bill",
+												"color": "#3b82f6",
+												"sort_order": 0,
+												"is_predefined": true,
+												"created_at": "2025-01-01T00:00:00Z",
+												"updated_at": "2025-01-01T00:00:00Z"
+											}
+										]
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "Get all categories",
+				"summary": "List all categories",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateCategory",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Category"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Create a new category",
+				"summary": "Create a category",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateCategoryRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/categories/{id}": {
+			"put": {
+				"operationId": "UpdateCategory",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Category"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not Found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Update an existing category",
+				"summary": "Update a category",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCategoryRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteCategory",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					},
+					"404": {
+						"description": "Not Found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Delete a category",
+				"summary": "Delete a category",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/categories/reorder": {
+			"put": {
+				"operationId": "ReorderCategories",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/Category"
+									},
+									"type": "array"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Reorder categories",
+				"summary": "Reorder categories",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ReorderCategoriesRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/bills": {
+			"get": {
+				"operationId": "GetBills",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/Bill"
+									},
+									"type": "array"
+								},
+								"examples": {
+									"Example 1": {
+										"value": [
+											{
+												"id": "bill-123",
+												"name": "Electric Bill",
+												"amount": 15000,
+												"billing_period": "monthly",
+												"day_of_month": 15,
+												"payment_source_id": "ps-001",
+												"category_id": "cat-utilities",
+												"is_active": true,
+												"created_at": "2025-01-01T00:00:00Z",
+												"updated_at": "2025-01-01T00:00:00Z"
+											}
+										]
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "Get all bill definitions",
+				"summary": "List all bills",
+				"tags": [
+					"Bills"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateBill",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Bill"
+								},
+								"examples": {
+									"Example 1": {
+										"value": {
+											"id": "bill-123",
+											"name": "Electric Bill",
+											"amount": 15000,
+											"billing_period": "monthly",
+											"day_of_month": 15,
+											"payment_source_id": "ps-001",
+											"category_id": "cat-utilities",
+											"is_active": true,
+											"created_at": "2025-01-01T00:00:00Z",
+											"updated_at": "2025-01-01T00:00:00Z"
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Create a new bill definition",
+				"summary": "Create a bill",
+				"tags": [
+					"Bills"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateBillRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/bills/{id}": {
+			"put": {
+				"operationId": "UpdateBill",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Bill"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not Found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Update an existing bill definition",
+				"summary": "Update a bill",
+				"tags": [
+					"Bills"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateBillRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteBill",
+				"responses": {
+					"204": {
+						"description": "No Content"
+					},
+					"404": {
+						"description": "Not Found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Delete a bill definition",
+				"summary": "Delete a bill",
+				"tags": [
+					"Bills"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/backup": {
+			"get": {
+				"operationId": "ExportBackup",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/BackupFileData"
+								}
+							}
+						}
+					}
+				},
+				"description": "Export all data as a backup file",
+				"summary": "Export backup",
+				"tags": [
+					"Backup"
+				],
+				"security": [],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "RestoreBackup",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid backup data",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiError"
+								}
+							}
+						}
+					}
+				},
+				"description": "Restore data from a backup file",
+				"summary": "Restore backup",
+				"tags": [
+					"Backup"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RestoreBackupRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/backup/validate": {
+			"post": {
+				"operationId": "ValidateBackup",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ValidateBackupResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Validate a backup file without restoring",
+				"summary": "Validate backup",
+				"tags": [
+					"Backup"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ValidateBackupRequest"
 							}
 						}
 					}

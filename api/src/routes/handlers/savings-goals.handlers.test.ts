@@ -123,24 +123,15 @@ describe('SavingsGoalsHandlers', () => {
           expected_amount: 10000,
           is_closed: month < '2026-01', // Past months are closed
           closed_date: month < '2026-01' ? `${month}-15` : undefined,
-          payments:
-            month < '2026-01'
-              ? [
-                  {
-                    id: `pay-${month}-001`,
-                    amount: 10000,
-                    date: `${month}-15`,
-                    payment_source_id: 'ps-savings-001',
-                    created_at: '2026-01-01T00:00:00.000Z',
-                  },
-                ]
-              : [],
+          payment_source_id: month < '2026-01' ? 'ps-savings-001' : undefined,
+          is_adhoc: false,
           created_at: '2026-01-01T00:00:00.000Z',
           updated_at: '2026-01-01T00:00:00.000Z',
         },
       ],
       is_default: true,
       is_closed: month < '2026-01',
+      is_adhoc: false,
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     };
@@ -151,6 +142,8 @@ describe('SavingsGoalsHandlers', () => {
       income_instances: [],
       bank_balances: {},
       variable_expenses: [],
+      free_flowing_expenses: [],
+      is_read_only: false,
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     };

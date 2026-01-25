@@ -4,7 +4,8 @@
   import { categories, loadCategories } from '../../stores/categories';
   import { bills, loadBills, type Bill } from '../../stores/bills';
   import { incomes, loadIncomes, type Income } from '../../stores/incomes';
-  import { detailedMonthData } from '../../stores/detailed-month';
+  import { detailedMonth, detailedMonthData } from '../../stores/detailed-month';
+  import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
 
   export let open = false;
@@ -17,10 +18,12 @@
   // Mode: 'existing' to add occurrence to existing item, 'adhoc' to create new
   let mode: 'existing' | 'adhoc' = 'adhoc';
   let selectedExistingId = ''; // The instanceId of the selected existing item
+  let existingAmount = ''; // Custom amount for existing item occurrence
 
   let name = '';
   let amount = '';
   let categoryId = '';
+  let paymentSourceId = ''; // Required payment source
   let saving = false;
   let error = '';
   let _loadingExisting = false;
@@ -32,6 +35,19 @@
 
   // Track previous open state to detect when form opens
   let prevOpen = false;
+
+  // Filter payment sources (exclude investments, and for income also exclude debt accounts)
+  $: filteredPaymentSources = $paymentSources.filter((ps) => {
+    // Exclude investment accounts - we don't pay bills or receive income from investments
+    if (ps.type === 'investment') return false;
+
+    // For income, also exclude credit cards and lines of credit
+    if (type === 'income') {
+      return ps.type === 'bank_account' || ps.type === 'cash';
+    }
+    // For bills, show bank accounts, cash, credit cards, lines of credit
+    return true;
+  });
 
   // Filter categories by type
   $: filteredCategories = $categories.filter((c) => {
@@ -62,12 +78,18 @@
     existingItems = [];
 
     try {
+      // Force refresh month data to get latest bills/incomes
+      await detailedMonth.loadMonth(month);
+
       // Ensure master lists are loaded
       if ($bills.length === 0 && type === 'bill') {
         await loadBills();
       }
       if ($incomes.length === 0 && type === 'income') {
         await loadIncomes();
+      }
+      if ($paymentSources.length === 0) {
+        await loadPaymentSources();
       }
 
       const monthData = $detailedMonthData;
@@ -98,11 +120,12 @@
         }
 
         // For each master bill in this category, find its instance
+        const items: ExistingItem[] = [];
         for (const bill of $bills) {
           if (!bill.is_active) continue;
           const instance = instanceByBillId.get(bill.id);
           if (instance) {
-            existingItems.push({
+            items.push({
               master: bill,
               instanceId: instance.id,
               name: bill.name,
@@ -110,6 +133,7 @@
             });
           }
         }
+        existingItems = items; // Reassign for Svelte reactivity
       } else {
         // Build mapping: income_id -> instance from incomeSections
         // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive
@@ -123,11 +147,12 @@
         }
 
         // For each master income in this category, find its instance
+        const items: ExistingItem[] = [];
         for (const income of $incomes) {
           if (!income.is_active) continue;
           const instance = instanceByIncomeId.get(income.id);
           if (instance) {
-            existingItems.push({
+            items.push({
               master: income,
               instanceId: instance.id,
               name: income.name,
@@ -135,6 +160,7 @@
             });
           }
         }
+        existingItems = items; // Reassign for Svelte reactivity
       }
 
       // Set default mode based on available items for this category
@@ -181,7 +207,9 @@
     name = '';
     amount = '';
     categoryId = defaultCategoryId || '';
+    paymentSourceId = '';
     selectedExistingId = '';
+    existingAmount = '';
     mode = 'adhoc';
     error = '';
     existingItems = [];
@@ -193,6 +221,13 @@
     error = '';
 
     try {
+      // Payment source is required for both modes
+      if (!paymentSourceId) {
+        error = 'Payment source is required';
+        saving = false;
+        return;
+      }
+
       if (mode === 'existing') {
         // Add occurrence to existing item
         if (!selectedExistingId) {
@@ -201,7 +236,15 @@
           return;
         }
 
-        // Find the selected item to get its amount
+        // Validate and parse the amount
+        const amountCents = parseDollarsToCents(existingAmount);
+        if (amountCents <= 0 || isNaN(amountCents)) {
+          error = 'Amount is required and must be greater than $0';
+          saving = false;
+          return;
+        }
+
+        // Find the selected item for the success message
         const selectedItem = filteredExistingItems.find(
           (item) => item.instanceId === selectedExistingId
         );
@@ -212,7 +255,6 @@
         }
 
         const expectedDate = getLastDayOfMonth(month);
-        const expectedAmount = Math.floor(selectedItem.master.amount / 2); // Half of master amount
 
         const endpoint =
           type === 'bill'
@@ -221,7 +263,8 @@
 
         await apiClient.post(endpoint, {
           expected_date: expectedDate,
-          expected_amount: expectedAmount,
+          expected_amount: amountCents,
+          payment_source_id: paymentSourceId,
         });
 
         success(`Occurrence added to ${selectedItem.master.name}`);
@@ -245,9 +288,15 @@
             ? `/api/months/${month}/adhoc/bills`
             : `/api/months/${month}/adhoc/incomes`;
 
-        const payload: { name: string; amount: number; category_id?: string } = {
+        const payload: {
+          name: string;
+          amount: number;
+          category_id?: string;
+          payment_source_id?: string;
+        } = {
           name: name.trim(),
           amount: amountCents,
+          payment_source_id: paymentSourceId,
         };
 
         if (categoryId) {
@@ -286,19 +335,19 @@
 
 {#if open}
   <div
-    class="drawer-backdrop"
+    class="modal-backdrop"
     role="presentation"
     on:click={handleBackdropClick}
     on:keydown={(e) => e.key === 'Escape' && handleClose()}
   >
     <div
-      class="drawer"
+      class="modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="adhoc-form-title"
       tabindex="-1"
     >
-      <header class="drawer-header">
+      <header class="modal-header">
         <h3 id="adhoc-form-title">Add {type === 'bill' ? 'Bill' : 'Income'}</h3>
         <button class="close-btn" on:click={handleClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -312,117 +361,43 @@
         </button>
       </header>
 
-      <div class="drawer-content">
+      <div class="modal-content">
         <form on:submit|preventDefault={handleSubmit}>
-          {#if filteredExistingItems.length > 0}
-            <!-- Mode: Add occurrence to existing item -->
-            <div class="mode-section">
-              <div class="mode-header">
-                <input
-                  type="radio"
-                  id="mode-existing"
-                  value="existing"
-                  bind:group={mode}
-                  disabled={saving}
-                />
-                <label for="mode-existing">Add occurrence to existing {type}</label>
-              </div>
+          <!-- Mode Selection - Always visible -->
+          <div class="mode-toggle">
+            <label class="mode-option" class:selected={mode === 'adhoc'}>
+              <input type="radio" value="adhoc" bind:group={mode} disabled={saving} />
+              <span class="mode-label">New ad-hoc {type === 'bill' ? 'expense' : 'income'}</span>
+            </label>
+            <label
+              class="mode-option"
+              class:selected={mode === 'existing'}
+              class:disabled={filteredExistingItems.length === 0}
+            >
+              <input
+                type="radio"
+                value="existing"
+                bind:group={mode}
+                disabled={saving || filteredExistingItems.length === 0}
+              />
+              <span class="mode-label">
+                Add to existing
+                {#if filteredExistingItems.length === 0}
+                  <span class="mode-hint">(none available)</span>
+                {/if}
+              </span>
+            </label>
+          </div>
 
-              {#if mode === 'existing'}
-                <div class="mode-content">
-                  <p class="mode-description">
-                    Add another occurrence of an existing {type} for this month.
-                  </p>
-                  <div class="form-group">
-                    <label for="existing-item">Select {type === 'bill' ? 'Bill' : 'Income'}</label>
-                    <select
-                      id="existing-item"
-                      bind:value={selectedExistingId}
-                      disabled={saving}
-                      class:error={!!error && !selectedExistingId}
-                    >
-                      <option value="">-- Select --</option>
-                      {#each filteredExistingItems as item (item.instanceId)}
-                        <option value={item.instanceId}>
-                          {item.master.name} (${(item.master.amount / 100).toFixed(2)})
-                        </option>
-                      {/each}
-                    </select>
-                  </div>
-                </div>
-              {/if}
-            </div>
-
-            <div class="mode-divider">
-              <span>OR</span>
-            </div>
-
-            <!-- Mode: Create new ad-hoc item -->
-            <div class="mode-section">
-              <div class="mode-header">
-                <input
-                  type="radio"
-                  id="mode-adhoc"
-                  value="adhoc"
-                  bind:group={mode}
-                  disabled={saving}
-                />
-                <label for="mode-adhoc">Create new ad-hoc {type}</label>
-              </div>
-
-              {#if mode === 'adhoc'}
-                <div class="mode-content">
-                  <p class="mode-description">
-                    Add a one-time {type} for this month only.
-                  </p>
-
-                  <div class="form-group">
-                    <label for="name">Name</label>
-                    <input
-                      id="name"
-                      type="text"
-                      bind:value={name}
-                      placeholder={type === 'bill' ? 'e.g., Car Repair' : 'e.g., Bonus'}
-                      disabled={saving}
-                      class:error={!!error && !name.trim()}
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="amount">Amount</label>
-                    <div class="amount-input-group">
-                      <span class="prefix">$</span>
-                      <input
-                        id="amount"
-                        type="text"
-                        bind:value={amount}
-                        placeholder="0.00"
-                        disabled={saving}
-                        class:error={!!error && parseDollarsToCents(amount) < 0}
-                      />
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="category">Category (Optional)</label>
-                    <select id="category" bind:value={categoryId} disabled={saving}>
-                      <option value="">-- Select Category --</option>
-                      {#each filteredCategories as category (category.id)}
-                        <option value={category.id}>{category.name}</option>
-                      {/each}
-                    </select>
-                  </div>
-                </div>
-              {/if}
-            </div>
-          {:else}
-            <!-- No existing items, show only ad-hoc form -->
-            <p class="description">
-              Add a one-time {type} for this month only. You can convert it to a recurring {type} later.
+          <!-- Form fields based on mode -->
+          {#if mode === 'adhoc'}
+            <!-- Ad-hoc mode: Create new one-time item -->
+            <p class="mode-description">
+              Add a one-time {type === 'bill' ? 'expense' : 'income'} for this month only.
             </p>
 
             <div class="form-group">
-              <label for="name">Name</label>
+              <label for="name">Name <span class="required">*</span></label>
               <input
                 id="name"
                 type="text"
@@ -434,7 +409,7 @@
             </div>
 
             <div class="form-group">
-              <label for="amount">Amount</label>
+              <label for="amount">Amount <span class="required">*</span></label>
               <div class="amount-input-group">
                 <span class="prefix">$</span>
                 <input
@@ -449,11 +424,84 @@
             </div>
 
             <div class="form-group">
+              <label for="adhoc-payment-source"
+                >Payment Source <span class="required">*</span></label
+              >
+              <select
+                id="adhoc-payment-source"
+                bind:value={paymentSourceId}
+                disabled={saving}
+                class:error={!!error && !paymentSourceId}
+              >
+                <option value="">-- Select Payment Source --</option>
+                {#each filteredPaymentSources as source (source.id)}
+                  <option value={source.id}>{source.name}</option>
+                {/each}
+              </select>
+            </div>
+
+            <div class="form-group">
               <label for="category">Category (Optional)</label>
               <select id="category" bind:value={categoryId} disabled={saving}>
                 <option value="">-- Select Category --</option>
                 {#each filteredCategories as category (category.id)}
                   <option value={category.id}>{category.name}</option>
+                {/each}
+              </select>
+            </div>
+          {:else}
+            <!-- Existing mode: Add occurrence to existing item -->
+            <p class="mode-description">
+              Add another occurrence of an existing {type === 'bill' ? 'bill' : 'income'} for this month.
+            </p>
+
+            <div class="form-group">
+              <label for="existing-item"
+                >Select {type === 'bill' ? 'Bill' : 'Income'} <span class="required">*</span></label
+              >
+              <select
+                id="existing-item"
+                bind:value={selectedExistingId}
+                disabled={saving}
+                class:error={!!error && !selectedExistingId}
+              >
+                <option value="">-- Select --</option>
+                {#each filteredExistingItems as item (item.instanceId)}
+                  <option value={item.instanceId}>
+                    {item.master.name}
+                  </option>
+                {/each}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="existing-amount">Amount <span class="required">*</span></label>
+              <div class="amount-input-group">
+                <span class="prefix">$</span>
+                <input
+                  id="existing-amount"
+                  type="text"
+                  bind:value={existingAmount}
+                  placeholder="0.00"
+                  disabled={saving}
+                  class:error={!!error && parseDollarsToCents(existingAmount) <= 0}
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="existing-payment-source"
+                >Payment Source <span class="required">*</span></label
+              >
+              <select
+                id="existing-payment-source"
+                bind:value={paymentSourceId}
+                disabled={saving}
+                class:error={!!error && !paymentSourceId}
+              >
+                <option value="">-- Select Payment Source --</option>
+                {#each filteredPaymentSources as source (source.id)}
+                  <option value={source.id}>{source.name}</option>
                 {/each}
               </select>
             </div>
@@ -468,7 +516,7 @@
               Cancel
             </button>
             <button type="submit" class="submit-btn" disabled={saving}>
-              {saving ? 'Adding...' : `Add ${type === 'bill' ? 'Bill' : 'Income'}`}
+              {saving ? 'Adding...' : `Add ${type === 'bill' ? 'Expense' : 'Income'}`}
             </button>
           </div>
         </form>
@@ -478,7 +526,7 @@
 {/if}
 
 <style>
-  .drawer-backdrop {
+  .modal-backdrop {
     position: fixed;
     top: 0;
     left: 0;
@@ -486,39 +534,44 @@
     bottom: 0;
     background: var(--overlay-bg);
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
     z-index: 1000;
   }
 
-  .drawer {
+  .modal {
     width: 100%;
-    max-width: 400px;
-    height: 100%;
+    max-width: 500px;
+    max-height: 90vh;
     background: var(--bg-surface);
-    border-left: 1px solid var(--border-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
-    animation: slideIn 0.2s ease-out;
+    animation: fadeIn 0.2s ease-out;
+    box-shadow: var(--shadow-heavy);
   }
 
-  @keyframes slideIn {
+  @keyframes fadeIn {
     from {
-      transform: translateX(100%);
+      opacity: 0;
+      transform: scale(0.95);
     }
     to {
-      transform: translateX(0);
+      opacity: 1;
+      transform: scale(1);
     }
   }
 
-  .drawer-header {
+  .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: var(--space-5);
     border-bottom: 1px solid var(--border-default);
   }
 
-  .drawer-header h3 {
+  .modal-header h3 {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
@@ -530,7 +583,7 @@
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px;
+    padding: var(--space-1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -541,103 +594,93 @@
     color: var(--text-primary);
   }
 
-  .drawer-content {
+  .modal-content {
     flex: 1;
-    padding: 20px;
+    padding: var(--space-5);
     overflow-y: auto;
   }
 
-  .description {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    margin-bottom: 24px;
+  /* Mode toggle styles */
+  .mode-toggle {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
   }
 
-  /* Mode selection styles */
-  .mode-section {
-    margin-bottom: 16px;
-    padding: 12px;
-    border: 1px solid var(--border-default);
-    border-radius: 8px;
+  .mode-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
     background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .mode-section:has(input[type='radio']:checked) {
+  .mode-option:hover:not(.disabled) {
+    border-color: var(--border-hover);
+  }
+
+  .mode-option.selected {
     border-color: var(--accent);
     background: var(--accent-muted);
   }
 
-  .mode-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
+  .mode-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
-  .mode-header input[type='radio'] {
-    width: 18px;
-    height: 18px;
+  .mode-option input[type='radio'] {
+    width: 16px;
+    height: 16px;
     accent-color: var(--accent);
-    cursor: pointer;
+    cursor: inherit;
   }
 
-  .mode-header label {
-    font-size: 0.9rem;
+  .mode-label {
+    font-size: 0.85rem;
     font-weight: 500;
     color: var(--text-primary);
-    cursor: pointer;
   }
 
-  .mode-content {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-default);
+  .mode-hint {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-tertiary);
   }
 
   .mode-description {
     color: var(--text-secondary);
-    font-size: 0.8rem;
-    margin: 0 0 16px 0;
-  }
-
-  .mode-divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 16px 0;
-    color: var(--text-tertiary);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .mode-divider::before,
-  .mode-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border-default);
-    margin: 0 12px;
+    font-size: 0.85rem;
+    margin: 0 0 var(--space-5) 0;
   }
 
   .form-group {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
   }
 
   .form-group label {
     display: block;
     font-size: 0.875rem;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
+  }
+
+  .form-group label .required {
+    color: var(--error);
   }
 
   .form-group input[type='text'],
   .form-group select {
     width: 100%;
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--bg-base);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--text-primary);
     font-size: 1rem;
     height: 42px;
@@ -658,7 +701,7 @@
   .amount-input-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .amount-input-group .prefix {
@@ -668,10 +711,10 @@
 
   .amount-input-group input {
     flex: 1;
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--bg-base);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--text-primary);
     font-size: 1rem;
   }
@@ -688,20 +731,20 @@
   .error-message {
     color: var(--error);
     font-size: 0.875rem;
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-4) 0;
   }
 
   .form-actions {
     display: flex;
-    gap: 12px;
-    margin-top: 24px;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
   }
 
   .cancel-btn,
   .submit-btn {
     flex: 1;
-    padding: 12px;
-    border-radius: 8px;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;

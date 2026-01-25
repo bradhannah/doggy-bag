@@ -23,12 +23,17 @@ import { getEffectiveBillAmount, getEffectiveIncomeAmount } from './tally';
 
 /**
  * Get IDs of payment sources that should be excluded from leftover calculation
- * Excludes accounts with pay_off_monthly=true OR exclude_from_leftover=true
+ * Excludes accounts with pay_off_monthly=true OR track_payments_manually=true OR exclude_from_leftover=true
  */
 function getExcludedSourceIds(paymentSources: PaymentSource[]): Set<string> {
   return new Set(
     paymentSources
-      .filter((ps) => ps.pay_off_monthly === true || ps.exclude_from_leftover === true)
+      .filter(
+        (ps) =>
+          ps.pay_off_monthly === true ||
+          ps.track_payments_manually === true ||
+          ps.exclude_from_leftover === true
+      )
       .map((ps) => ps.id)
   );
 }
@@ -40,7 +45,11 @@ function getExcludedSourceIds(paymentSources: PaymentSource[]): Set<string> {
 function getIncludedSourceIds(paymentSources: PaymentSource[]): string[] {
   return paymentSources
     .filter(
-      (ps) => ps.is_active && ps.pay_off_monthly !== true && ps.exclude_from_leftover !== true
+      (ps) =>
+        ps.is_active &&
+        ps.pay_off_monthly !== true &&
+        ps.track_payments_manually !== true &&
+        ps.exclude_from_leftover !== true
     )
     .map((ps) => ps.id);
 }
@@ -59,13 +68,21 @@ function getMissingBalances(monthData: MonthlyData, paymentSources: PaymentSourc
 /**
  * Calculate remaining amount for a bill instance
  * Closed bills = 0 (already paid, reflected in bank balance)
- * Open bills = expected - actual_paid
+ * Regular open bills = expected - actual_paid
+ * Payoff bills = open occurrence's expected_amount (the remaining balance)
  */
 function getRemainingBillExpense(bill: BillInstance): number {
   if (bill.is_closed) {
     return 0; // Already paid, reflected in bank balance
   }
 
+  // Payoff bills: remaining is the open occurrence's expected_amount
+  if (bill.is_payoff_bill && bill.occurrences) {
+    const openOcc = bill.occurrences.find((occ) => !occ.is_closed);
+    return openOcc ? openOcc.expected_amount : 0;
+  }
+
+  // Regular bills: expected - paid
   const paid = getEffectiveBillAmount(bill); // Sum of payments from occurrences
   return Math.max(0, bill.expected_amount - paid);
 }
@@ -225,22 +242,21 @@ export function calculateLeftoverBreakdown(
  * Check if any actual amounts have been entered
  * Used to determine if leftover calculation is meaningful
  *
+ * In the occurrence-only model, we check for closed occurrences
+ * (each closed occurrence represents a completed payment/receipt)
+ *
  * @param monthData - Monthly data
  * @returns true if at least one actual amount has been entered
  */
 export function hasActualsEntered(monthData: MonthlyData): boolean {
-  // Check bill instances for payments or closed status
+  // Check bill instances for closed status (occurrence or instance level)
   const hasBillActuals = monthData.bill_instances.some(
-    (bill) =>
-      bill.is_closed ||
-      (bill.occurrences && bill.occurrences.some((occ) => occ.payments && occ.payments.length > 0))
+    (bill) => bill.is_closed || (bill.occurrences && bill.occurrences.some((occ) => occ.is_closed))
   );
 
-  // Check income instances
+  // Check income instances for closed status (occurrence or instance level)
   const hasIncomeActuals = monthData.income_instances.some(
-    (inc) =>
-      inc.is_closed ||
-      (inc.occurrences && inc.occurrences.some((occ) => occ.payments && occ.payments.length > 0))
+    (inc) => inc.is_closed || (inc.occurrences && inc.occurrences.some((occ) => occ.is_closed))
   );
 
   // Check variable expenses (always count as actual)

@@ -28,16 +28,16 @@ import type {
 import { getOverdueBills } from '../utils/overdue-bills';
 import { calculateDueDate, isOverdue, getDaysOverdue } from '../utils/due-date';
 import {
+  getEffectiveBillAmount,
+  getEffectiveIncomeAmount,
+  sumClosedOccurrenceAmounts,
   calculateRegularBillsTally,
   calculateAdhocBillsTally,
   calculateRegularIncomeTally,
   calculateAdhocIncomeTally,
   combineTallies,
-  getEffectiveBillAmount,
-  getEffectiveIncomeAmount,
 } from '../utils/tally';
 import { calculateUnifiedLeftover, hasActualsEntered } from '../utils/leftover';
-import { sumOccurrencePayments } from '../utils/occurrences';
 
 export interface DetailedViewService {
   getDetailedMonth(month: string): Promise<DetailedMonthResponse>;
@@ -115,8 +115,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const ccPayoffsTally: SectionTally = {
       expected: payoffBills.reduce((sum, bi) => sum + (bi.expected_amount || 0), 0),
       actual: payoffBills.reduce((sum, bi) => {
-        // Sum of all payments from occurrences
-        return sum + sumOccurrencePayments(bi.occurrences || []);
+        // Sum of all closed occurrence amounts
+        return sum + sumClosedOccurrenceAmounts(bi.occurrences || []);
       }, 0),
       remaining: 0,
     };
@@ -141,8 +141,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     // Build payoff summaries
     const payoffSummaries: PayoffSummary[] = payoffBills.map((bi) => {
       const paymentSource = bi.payoff_source_id ? paymentSourcesMap.get(bi.payoff_source_id) : null;
-      // Sum payments from occurrences
-      const paid = sumOccurrencePayments(bi.occurrences || []);
+      // Sum closed occurrence amounts
+      const paid = sumClosedOccurrenceAmounts(bi.occurrences || []);
       const balance = bi.expected_amount || 0;
       return {
         paymentSourceId: bi.payoff_source_id || '',
@@ -210,8 +210,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const overdueStatus = isOverdue(dueDate || undefined, instance.is_closed);
       const daysOverdueValue = overdueStatus && dueDate ? getDaysOverdue(dueDate) : null;
 
-      // Compute actual_amount from occurrences
-      const actualAmount = sumOccurrencePayments(instance.occurrences || []);
+      // Compute actual_amount from closed occurrences
+      const actualAmount = sumClosedOccurrenceAmounts(instance.occurrences || []);
 
       return {
         id: instance.id,
@@ -270,8 +270,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const totalReceived = getEffectiveIncomeAmount(instance);
       const remaining = Math.max(0, instance.expected_amount - totalReceived);
 
-      // Compute actual_amount from occurrences
-      const actualAmount = sumOccurrencePayments(instance.occurrences || []);
+      // Compute actual_amount from closed occurrences
+      const actualAmount = sumClosedOccurrenceAmounts(instance.occurrences || []);
 
       return {
         id: instance.id,

@@ -81,26 +81,43 @@ Choose the appropriate version increment:
 
 ### Step 3: Bump Version
 
-Edit `src-tauri/tauri.conf.json` and update the `"version"` field:
+Update the version number in all configuration files to ensure consistency:
 
-```json
-{
-  "version": "X.Y.Z"
-}
+1. `package.json`
+2. `src-tauri/Cargo.toml`
+3. `src-tauri/tauri.conf.json`
+4. `src-tauri/tauri.conf.json` (ensure `version` is updated)
+
+You can use the `edit` tool to update these files.
+
+```bash
+# Example: updating version to 0.5.0
+sed -i '' 's/"version": "0.4.1"/"version": "0.5.0"/' package.json src-tauri/tauri.conf.json
+sed -i '' 's/^version = "0.4.1"/version = "0.5.0"/' src-tauri/Cargo.toml
 ```
 
-### Step 4: Commit, Tag, and Push
+### Step 4: Commit, Tag, and Push (CRITICAL)
+
+The release workflow is **ONLY** triggered by pushing a tag starting with `v`. Merging to `main` is NOT sufficient.
 
 ```bash
 # Commit the version bump
-git add src-tauri/tauri.conf.json
+git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json src-tauri/Cargo.lock
 git commit -m "chore: bump version to X.Y.Z"
 
-# Create tag and push everything
-git tag vX.Y.Z && git push && git push origin vX.Y.Z
+# Create tag and push (This triggers the release!)
+git tag vX.Y.Z
+git push origin main
+git push origin vX.Y.Z
 ```
 
-**Important:** The tag format must be `vX.Y.Z` (with the `v` prefix) to trigger the release workflow.
+**CRITICAL CHECK:**
+Run `git tag --contains HEAD` to verify the tag exists on the current commit before pushing.
+
+### Step 5: Verify Workflow Triggered
+
+Check that the 'Release' workflow has started:
+https://github.com/bradhannah/doggy-bag/actions
 
 ## What Happens Automatically
 

@@ -56,6 +56,10 @@ describe('AdhocService', () => {
     month,
     bill_instances: [],
     income_instances: [],
+    variable_expenses: [],
+    free_flowing_expenses: [],
+    bank_balances: {},
+    is_read_only: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   });
@@ -124,12 +128,11 @@ describe('AdhocService', () => {
       expect(contribution.category_id).toBe('cat-savings-goals');
       expect(contribution.payment_source_id).toBe('ps-savings-001');
 
-      // Should have a single occurrence with payment
+      // Should have a single closed occurrence (closing = payment in occurrence-only model)
       expect(contribution.occurrences).toHaveLength(1);
       expect(contribution.occurrences[0].is_closed).toBe(true);
-      expect(contribution.occurrences[0].payments).toHaveLength(1);
-      expect(contribution.occurrences[0].payments![0].amount).toBe(10000);
-      expect(contribution.occurrences[0].payments![0].date).toBe(today);
+      expect(contribution.occurrences[0].closed_date).toBe(today);
+      expect(contribution.occurrences[0].expected_amount).toBe(10000);
     });
 
     test('should reject contribution without goal_id', async () => {

@@ -1,14 +1,22 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  /**
+   * OccurrenceRow - Displays a single occurrence within a bill/income instance
+   *
+   * In the occurrence-only model:
+   * - Closing an occurrence = payment recorded
+   * - The expected_amount becomes the paid amount when closed
+   * - No separate payments array
+   */
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import type { Occurrence } from '../../stores/detailed-month';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
-  import CloseTransactionModal from './CloseTransactionModal.svelte';
-  import PayFullShortcutModal from './PayFullShortcutModal.svelte';
+  import EditCloseModal from './EditCloseModal.svelte';
 
   export let occurrence: Occurrence;
   export let month: string;
   export let instanceId: string;
+  export let itemName: string = '';
   export let type: 'bill' | 'income' = 'bill';
   export let readOnly: boolean = false;
   export let isPayoffBill: boolean = false;
@@ -16,11 +24,12 @@
   const dispatch = createEventDispatcher();
 
   let saving = false;
-  let isEditingExpected = false;
-  let expectedEditValue = '';
-  let isEditingDate = false;
-  let editingDayValue = '';
   let showDeleteConfirm = false;
+  let showEditCloseModal = false;
+  let showOverflowMenu = false;
+  let overflowMenuRef: HTMLDivElement | null = null;
+  let overflowBtnRef: HTMLButtonElement | null = null;
+  let menuPosition = { top: 0, left: 0 };
 
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -52,97 +61,31 @@
     }
   }
 
-  function parseDollarsToCents(value: string): number {
-    const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
-    return isNaN(dollars) ? 0 : Math.round(dollars * 100);
-  }
-
-  // Computed values
-  $: totalPaid = occurrence.payments.reduce((sum, p) => sum + p.amount, 0);
-  $: remaining = occurrence.expected_amount - totalPaid;
-  $: hasPayments = occurrence.payments.length > 0 || totalPaid > 0;
-  $: showAmber = totalPaid !== occurrence.expected_amount && totalPaid > 0;
-  $: isPartiallyPaid =
-    hasPayments && totalPaid > 0 && totalPaid < occurrence.expected_amount && !occurrence.is_closed;
-
   // API endpoint base
   $: apiBase = `/api/months/${month}/${type}s/${instanceId}/occurrences/${occurrence.id}`;
 
-  let showCloseModal = false;
-  let showPayFullModal = false;
-  let closeDate = new Date().toISOString().split('T')[0];
-
-  function clampDayToMonth(monthStr: string, day: number): string {
-    const [year, monthNum] = monthStr.split('-').map(Number);
-    const lastDay = new Date(year, monthNum, 0).getDate();
-    return String(Math.min(Math.max(day, 1), lastDay)).padStart(2, '0');
+  // Open the unified Edit & Close modal
+  function openEditCloseModal() {
+    if (saving || readOnly) return;
+    showEditCloseModal = true;
   }
 
-  function resolveMonthDay(monthStr: string, day: string): string {
-    const clamped = clampDayToMonth(monthStr, parseInt(day, 10) || 1);
-    return `${monthStr}-${clamped}`;
+  function handleEditCloseModalClose() {
+    showEditCloseModal = false;
   }
 
-  function openCloseModal() {
-    if (saving) return;
-    closeDate = new Date().toISOString().split('T')[0];
-    showCloseModal = true;
+  function handleEditCloseModalSaved() {
+    showEditCloseModal = false;
+    dispatch('updated');
   }
 
-  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
-    if (saving) return;
-    saving = true;
-
-    try {
-      await apiClient.post(`${apiBase}/close`, {
-        closed_date: event.detail.closedDate,
-        notes: event.detail.notes,
-      });
-      success('Closed');
-      dispatch('updated');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to close');
-    } finally {
-      saving = false;
-      showCloseModal = false;
-    }
-  }
-
-  async function handlePayFullConfirm(
-    event: CustomEvent<{ amount: number; day: string; notes: string }>
-  ) {
-    if (saving) return;
-    saving = true;
-
-    try {
-      const paymentDate = resolveMonthDay(month, event.detail.day);
-      await apiClient.post(`${apiBase}/payments`, {
-        amount: event.detail.amount,
-        date: paymentDate,
-      });
-
-      await apiClient.post(`${apiBase}/close`, {
-        closed_date: paymentDate,
-        notes: event.detail.notes,
-      });
-
-      success(type === 'bill' ? 'Payment added and closed' : 'Receipt added and closed');
-      dispatch('updated');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to process');
-    } finally {
-      saving = false;
-      showPayFullModal = false;
-    }
-  }
-
-  function openPayFullModal() {
-    if (saving) return;
-    showPayFullModal = true;
+  function handleEditCloseModalClosed() {
+    showEditCloseModal = false;
+    dispatch('updated');
   }
 
   async function handleReopen() {
-    if (saving) return;
+    if (saving || readOnly) return;
     saving = true;
 
     try {
@@ -156,107 +99,11 @@
     }
   }
 
-  function startEditingExpected() {
-    if (readOnly || occurrence.is_closed) return;
-    expectedEditValue = (occurrence.expected_amount / 100).toFixed(2);
-    isEditingExpected = true;
-  }
-
-  async function saveExpectedAmount() {
-    const newAmount = parseDollarsToCents(expectedEditValue);
-    if (newAmount === occurrence.expected_amount) {
-      isEditingExpected = false;
-      return;
-    }
-
-    if (newAmount < 0 || isNaN(newAmount)) {
-      showError('Amount must be $0 or greater');
-      return;
-    }
-
-    saving = true;
-    try {
-      await apiClient.putPath(apiBase, {
-        expected_amount: newAmount,
-      });
-      success('Amount updated');
-      isEditingExpected = false;
-      dispatch('updated');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to update amount');
-    } finally {
-      saving = false;
-    }
-  }
-
-  function cancelEditingExpected() {
-    isEditingExpected = false;
-    expectedEditValue = '';
-  }
-
-  function handleExpectedKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      saveExpectedAmount();
-    } else if (event.key === 'Escape') {
-      cancelEditingExpected();
-    }
-  }
-
-  // Date editing functions
-  function startEditingDate() {
-    if (readOnly || occurrence.is_closed) return;
-    const day = parseInt(occurrence.expected_date?.split('-')[2] || '1', 10);
-    editingDayValue = day.toString();
-    isEditingDate = true;
-  }
-
-  async function saveDate() {
-    const newDay = parseInt(editingDayValue, 10);
-    if (isNaN(newDay) || newDay < 1 || newDay > 31) {
-      showError('Please enter a valid day (1-31)');
-      return;
-    }
-
-    // Build new date string
-    const [year, monthNum] = month.split('-');
-    const newDate = `${year}-${monthNum}-${newDay.toString().padStart(2, '0')}`;
-
-    if (newDate === occurrence.expected_date) {
-      isEditingDate = false;
-      return;
-    }
-
-    saving = true;
-    try {
-      await apiClient.putPath(apiBase, {
-        expected_date: newDate,
-      });
-      success('Date updated');
-      isEditingDate = false;
-      dispatch('updated');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to update date');
-    } finally {
-      saving = false;
-    }
-  }
-
-  function cancelEditingDate() {
-    isEditingDate = false;
-    editingDayValue = '';
-  }
-
-  function handleDateKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      saveDate();
-    } else if (event.key === 'Escape') {
-      cancelEditingDate();
-    }
-  }
-
   // Delete occurrence
   function confirmDelete() {
-    if (readOnly || !occurrence.is_adhoc) return;
+    if (readOnly) return;
+    // Allow deletion for payoff bills (any occurrence) or adhoc occurrences for regular bills
+    if (!isPayoffBill && !occurrence.is_adhoc) return;
     showDeleteConfirm = true;
   }
 
@@ -280,109 +127,74 @@
     }
   }
 
-  function openPaymentDrawer() {
-    dispatch('openPayments', { occurrence });
+  // Determine if delete is available
+  // Can delete: ad-hoc occurrences only (NOT payoff bills - those are auto-managed)
+  $: canDelete = !readOnly && !isPayoffBill && occurrence.is_adhoc;
+
+  // Overflow menu click-outside handler
+  function handleClickOutside(event: MouseEvent) {
+    if (overflowMenuRef && !overflowMenuRef.contains(event.target as Node)) {
+      showOverflowMenu = false;
+    }
   }
+
+  function toggleOverflowMenu(event: MouseEvent) {
+    event.stopPropagation();
+    if (!showOverflowMenu && overflowBtnRef) {
+      // Calculate position based on button location
+      const rect = overflowBtnRef.getBoundingClientRect();
+      menuPosition = {
+        top: rect.bottom + 4,
+        left: rect.right - 140, // Menu width is 140px, align right edge
+      };
+    }
+    showOverflowMenu = !showOverflowMenu;
+  }
+
+  function closeOverflowMenu() {
+    showOverflowMenu = false;
+  }
+
+  // View details action - opens the edit modal in view mode
+  function handleViewDetails() {
+    closeOverflowMenu();
+    openEditCloseModal();
+  }
+
+  // Delete action from overflow menu
+  function handleDeleteFromMenu() {
+    closeOverflowMenu();
+    confirmDelete();
+  }
+
+  onMount(() => {
+    document.addEventListener('click', handleClickOutside);
+  });
+
+  onDestroy(() => {
+    document.removeEventListener('click', handleClickOutside);
+  });
 </script>
 
 <div
   class="occurrence-row-container"
   class:closed={occurrence.is_closed}
-  class:partial={isPartiallyPaid}
   class:adhoc={occurrence.is_adhoc}
 >
   <div class="occurrence-row">
-    <!-- Date (clickable to edit day of month) -->
+    <!-- Date -->
     <div class="occ-date">
-      {#if isEditingDate}
-        <div class="date-edit">
-          <input
-            type="number"
-            min="1"
-            max="31"
-            class="date-input"
-            bind:value={editingDayValue}
-            on:keydown={handleDateKeydown}
-            on:blur={saveDate}
-            disabled={saving}
-            autofocus
-          />
-        </div>
-      {:else if occurrence.is_closed && occurrence.closed_date}
+      {#if occurrence.is_closed && occurrence.closed_date}
         <span class="closed-date">{formatDayOfMonth(occurrence.closed_date)}</span>
       {:else}
-        <button
-          class="date-value"
-          class:editable={!readOnly && !occurrence.is_closed}
-          on:click={startEditingDate}
-          title={occurrence.is_closed ? 'Reopen to edit' : 'Click to edit date'}
-          disabled={readOnly || occurrence.is_closed}
-        >
-          {formatDayOfMonth(occurrence.expected_date)}
-        </button>
+        <span class="date-value">{formatDayOfMonth(occurrence.expected_date)}</span>
       {/if}
     </div>
 
-    <!-- Expected amount -->
+    <!-- Amount -->
     <div class="amount-column">
-      <span class="amount-label">Expected</span>
-      {#if isEditingExpected}
-        <div class="inline-edit">
-          <span class="prefix">$</span>
-          <input
-            type="text"
-            bind:value={expectedEditValue}
-            on:keydown={handleExpectedKeydown}
-            on:blur={saveExpectedAmount}
-            disabled={saving}
-            autofocus
-          />
-        </div>
-      {:else}
-        <button
-          class="amount-value clickable"
-          class:disabled={occurrence.is_closed}
-          class:editable-highlight={!occurrence.is_closed && !readOnly}
-          on:click={startEditingExpected}
-          title={occurrence.is_closed ? 'Reopen to edit' : 'Click to edit'}
-        >
-          {formatCurrency(occurrence.expected_amount)}
-        </button>
-      {/if}
-    </div>
-
-    <!-- Arrow -->
-    <div class="arrow">→</div>
-
-    <!-- Actual/Paid amount -->
-    <div class="amount-column">
-      <span class="amount-label">
-        {type === 'bill' ? 'Paid' : 'Received'}
-        {#if occurrence.payments.length > 0}
-          <span class="payment-count">({occurrence.payments.length})</span>
-        {/if}
-      </span>
-      {#if hasPayments}
-        <button
-          class="amount-value clickable"
-          class:amber={showAmber}
-          on:click={openPaymentDrawer}
-          title="View transactions"
-        >
-          {formatCurrency(totalPaid)}
-        </button>
-      {:else}
-        <button class="add-payment-link" on:click={openPaymentDrawer}>
-          {type === 'bill' ? 'Add Payment' : 'Add Receipt'}
-        </button>
-      {/if}
-    </div>
-
-    <!-- Remaining amount -->
-    <div class="amount-column remaining-column">
-      <span class="amount-label">Remaining</span>
-      <span class="amount-value remaining" class:zero={remaining === 0}>
-        {remaining === 0 ? '-' : formatCurrency(remaining)}
+      <span class="amount-value" class:closed={occurrence.is_closed}>
+        {formatCurrency(occurrence.expected_amount)}
       </span>
     </div>
 
@@ -390,10 +202,8 @@
     <div class="status-column">
       {#if occurrence.is_closed}
         <span class="status-badge closed-badge">
-          {type === 'bill' ? 'Closed' : 'Received'}
+          {type === 'bill' ? 'Paid' : 'Received'}
         </span>
-      {:else if isPartiallyPaid}
-        <span class="status-badge partial-badge">Partial</span>
       {:else}
         <span class="status-badge open-badge">
           {type === 'bill' ? 'Open' : 'Expected'}
@@ -401,107 +211,115 @@
       {/if}
     </div>
 
-    <!-- Action buttons -->
-    <div class="action-buttons">
-      {#if occurrence.is_closed}
-        <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
-          Reopen
-        </button>
-      {:else}
-        <button class="action-btn close" on:click={openCloseModal} disabled={saving || readOnly}>
-          Close
-        </button>
-        {#if !isPayoffBill}
-          <button
-            class="action-btn pay-full"
-            on:click={openPayFullModal}
-            disabled={saving || readOnly}
-          >
-            {type === 'bill' ? 'Pay Full' : 'Receive Full'}
-          </button>
-        {/if}
-      {/if}
-
-      <!-- Delete button for all occurrences (except payoff bills) -->
-      <button
-        class="action-btn-icon edit"
-        on:click={openPaymentDrawer}
-        disabled={saving || readOnly}
-        title="Edit transactions"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-        </svg>
-      </button>
-
-      {#if !readOnly && !isPayoffBill}
-        <button
-          class="action-btn-icon delete"
-          on:click={confirmDelete}
-          disabled={saving}
-          title="Delete occurrence"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="3 6 5 6 21 6" />
-            <path
-              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-            />
-          </svg>
-        </button>
-      {/if}
-    </div>
-
-    <!-- Badges column (at the end to prevent pushing other columns) -->
+    <!-- Badges column -->
     <div class="badges-column">
       {#if occurrence.is_adhoc}
         <span class="badge adhoc-badge">ad-hoc</span>
       {/if}
     </div>
+
+    <!-- Action buttons (right-aligned) -->
+    <div class="action-buttons">
+      {#if isPayoffBill}
+        <!-- Payoff bill occurrences: no action buttons, state is auto-managed -->
+      {:else if occurrence.is_closed}
+        <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
+          Reopen
+        </button>
+      {:else}
+        <button class="action-btn edit" on:click={openEditCloseModal} disabled={saving || readOnly}>
+          Edit
+        </button>
+      {/if}
+
+      <!-- Overflow menu -->
+      {#if !readOnly}
+        <div class="overflow-menu-container" bind:this={overflowMenuRef}>
+          <button
+            class="overflow-btn"
+            bind:this={overflowBtnRef}
+            on:click={toggleOverflowMenu}
+            disabled={saving}
+            title="More options"
+            aria-haspopup="true"
+            aria-expanded={showOverflowMenu}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
+
+          {#if showOverflowMenu}
+            <div
+              class="overflow-menu"
+              role="menu"
+              style="top: {menuPosition.top}px; left: {menuPosition.left}px;"
+            >
+              <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                View Details
+              </button>
+              {#if canDelete}
+                <button
+                  class="overflow-menu-item danger"
+                  on:click={handleDeleteFromMenu}
+                  role="menuitem"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    />
+                  </svg>
+                  Delete
+                </button>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </div>
   </div>
 
-  {#if (occurrence as Occurrence & { notes?: string | null }).notes}
-    <p class="inline-note">
-      {(occurrence as Occurrence & { notes?: string | null }).notes}
-    </p>
+  {#if occurrence.notes}
+    <p class="inline-note">{occurrence.notes}</p>
   {/if}
 </div>
 
-<CloseTransactionModal
-  open={showCloseModal}
+<!-- Edit & Close Modal -->
+<EditCloseModal
+  open={showEditCloseModal}
   {type}
-  itemName={occurrence.expected_date}
-  initialDate={closeDate}
-  initialNotes={(occurrence as Occurrence & { notes?: string | null }).notes ?? ''}
   {month}
-  on:close={() => (showCloseModal = false)}
-  on:confirm={handleCloseConfirm}
-/>
-
-<PayFullShortcutModal
-  open={showPayFullModal}
-  {type}
-  itemName={occurrence.expected_date}
-  amount={remaining > 0 ? remaining : occurrence.expected_amount}
-  initialDay={occurrence.expected_date?.split('-')[2] ?? ''}
-  initialNotes={(occurrence as Occurrence & { notes?: string | null }).notes ?? ''}
-  {month}
-  on:close={() => (showPayFullModal = false)}
-  on:confirm={handlePayFullConfirm}
+  {instanceId}
+  occurrenceId={occurrence.id}
+  {itemName}
+  expectedAmount={occurrence.expected_amount}
+  expectedDate={occurrence.expected_date}
+  existingNotes={occurrence.notes ?? ''}
+  existingPaymentSourceId={occurrence.payment_source_id}
+  on:close={handleEditCloseModalClose}
+  on:saved={handleEditCloseModalSaved}
+  on:closed={handleEditCloseModalClosed}
 />
 
 <!-- Delete Confirmation Dialog -->
@@ -514,7 +332,7 @@
     aria-modal="true"
     tabindex="-1"
   >
-    <div class="confirm-dialog" on:click|stopPropagation>
+    <div class="confirm-dialog" on:click|stopPropagation role="presentation">
       <h3>Delete Occurrence</h3>
       <p>Are you sure you want to delete this occurrence?</p>
       <p class="confirm-warning">This action cannot be undone.</p>
@@ -531,7 +349,7 @@
 <style>
   .occurrence-row-container {
     background: var(--bg-elevated);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     transition: all 0.15s ease;
   }
 
@@ -545,227 +363,53 @@
 
   .occurrence-row {
     display: grid;
-    grid-template-columns: 45px 85px 20px 85px 70px 65px 90px 50px;
+    grid-template-columns: 50px 100px 80px 1fr auto;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    padding-left: 20px; /* Indent for sub-row appearance */
-    font-size: 0.8rem; /* Smaller font for occurrence rows */
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    padding-left: var(--space-5);
+    font-size: 0.85rem;
   }
 
   .occ-date {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 2px;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .date-value {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .closed-date {
+    font-size: 0.85rem;
+    color: var(--success);
   }
 
   .inline-note {
     margin: 0;
-    padding: 0 12px 8px 20px;
+    padding: 0 var(--space-3) var(--space-2) var(--space-5);
     font-size: 0.75rem;
     color: var(--text-secondary);
     line-height: 1.4;
     font-style: italic;
   }
 
-  .date-value {
-    background: none;
-    border: none;
-    padding: 2px 4px;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    cursor: default;
-    border-radius: 4px;
-    transition: all 0.15s;
-    text-align: center;
-  }
-
-  .date-value.editable {
-    cursor: pointer;
-  }
-
-  .date-value.editable:hover {
-    background: var(--accent-muted);
-    color: var(--accent);
-  }
-
-  .closed-date {
-    font-size: 0.8rem;
-    color: var(--success);
-    text-align: center;
-  }
-
-  .date-edit {
-    display: flex;
-    align-items: center;
-  }
-
-  .date-input {
-    width: 40px;
-    padding: 2px 4px;
-    background: var(--bg-base);
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    color: var(--text-primary);
-    font-size: 0.75rem;
-    text-align: center;
-  }
-
-  .date-input:focus {
-    outline: none;
-  }
-
-  /* Hide spinner buttons */
-  .date-input::-webkit-outer-spin-button,
-  .date-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    appearance: none;
-    margin: 0;
-  }
-  .date-input[type='number'] {
-    -moz-appearance: textfield;
-    appearance: textfield;
-  }
-
-  .badge {
-    font-size: 0.5rem;
-    padding: 1px 4px;
-    border-radius: 3px;
-    text-transform: uppercase;
-    font-weight: 600;
-  }
-
-  .adhoc-badge {
-    background: var(--purple-bg);
-    color: var(--purple);
-  }
-
-  .badges-column {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-  }
-
-  .arrow {
-    color: var(--border-default);
-    font-size: 0.7rem;
-    text-align: center;
-  }
-
   .amount-column {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
-  .amount-label {
-    font-size: 0.5rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    display: flex;
     align-items: center;
-    gap: 3px;
-  }
-
-  .payment-count {
-    color: var(--warning);
+    justify-content: flex-end;
   }
 
   .amount-value {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-primary);
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: default;
   }
 
-  .amount-value.clickable {
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-
-  .amount-value.clickable:hover:not(.disabled) {
-    color: var(--accent);
-    text-decoration: underline;
-  }
-
-  .amount-value.clickable.disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  .amount-value.amber {
-    color: var(--warning);
-  }
-
-  .amount-value.remaining {
-    color: var(--text-secondary);
-  }
-
-  .amount-value.remaining.zero {
+  .amount-value.closed {
     color: var(--success);
-  }
-
-  /* Yellow/amber highlight for editable values */
-  .amount-value.editable-highlight {
-    background: var(--warning-bg);
-    border: 1px solid var(--warning-border);
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  .amount-value.editable-highlight:hover:not(.disabled) {
-    background: var(--warning-bg);
-    border-color: var(--warning);
-    color: var(--warning);
-  }
-
-  .add-payment-link {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-size: 0.7rem;
-    padding: 0;
-    cursor: pointer;
-    text-decoration: underline;
-    transition: opacity 0.2s;
-  }
-
-  .add-payment-link:hover {
-    opacity: 0.8;
-  }
-
-  .inline-edit {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .inline-edit .prefix {
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-  }
-
-  .inline-edit input {
-    width: 55px;
-    padding: 2px 4px;
-    background: var(--bg-base);
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    color: var(--text-primary);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-align: right;
-  }
-
-  .inline-edit input:focus {
-    outline: none;
   }
 
   .status-column {
@@ -774,10 +418,12 @@
   }
 
   .status-badge {
-    font-size: 0.55rem;
-    padding: 2px 6px;
-    border-radius: 8px;
+    font-size: 0.65rem;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
     font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .closed-badge {
@@ -785,28 +431,24 @@
     color: var(--success);
   }
 
-  .partial-badge {
-    background: var(--warning-bg);
-    color: var(--warning);
-  }
-
   .open-badge {
-    background: var(--bg-elevated);
+    background: var(--bg-surface);
     color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
   }
 
   .action-buttons {
     display: flex;
-    gap: 4px;
-    justify-content: flex-start;
+    gap: var(--space-2);
+    justify-content: flex-end;
   }
 
   .action-btn {
-    height: 24px;
+    height: 26px;
     box-sizing: border-box;
-    padding: 0 8px;
-    border-radius: 4px;
-    font-size: 0.65rem;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
@@ -817,24 +459,14 @@
     border: 1px solid transparent;
   }
 
-  .action-btn.pay-full {
+  .action-btn.edit {
     background: var(--accent);
     border-color: var(--accent);
     color: var(--text-inverse);
   }
 
-  .action-btn.pay-full:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .action-btn.close {
-    background: transparent;
-    border-color: var(--success);
-    color: var(--success);
-  }
-
-  .action-btn.close:hover:not(:disabled) {
-    background: var(--success-bg);
+  .action-btn.edit:hover:not(:disabled) {
+    background: var(--accent-hover);
   }
 
   .action-btn.reopen {
@@ -853,14 +485,18 @@
     cursor: not-allowed;
   }
 
-  /* Delete icon button */
-  .action-btn-icon {
+  /* Overflow menu */
+  .overflow-menu-container {
+    position: relative;
+  }
+
+  .overflow-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
     border: none;
     background: transparent;
     color: var(--text-tertiary);
@@ -868,24 +504,72 @@
     transition: all 0.15s ease;
   }
 
-  .action-btn-icon:hover:not(:disabled) {
-    background: var(--error-bg);
+  .overflow-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  .overflow-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .overflow-menu {
+    position: fixed;
+    min-width: 140px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-medium);
+    z-index: 1000;
+    overflow: hidden;
+  }
+
+  .overflow-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .overflow-menu-item:hover {
+    background: var(--bg-hover);
+  }
+
+  .overflow-menu-item.danger {
     color: var(--error);
   }
 
-  .action-btn-icon.edit:hover:not(:disabled) {
-    background: var(--accent-muted);
-    color: var(--accent);
+  .overflow-menu-item.danger:hover {
+    background: var(--error-bg);
   }
 
-  .action-btn-icon.delete:hover:not(:disabled) {
-    background: var(--error);
-    color: var(--text-inverse);
+  .badges-column {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
   }
 
-  .action-btn-icon:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+  .badge {
+    font-size: 0.55rem;
+    padding: 2px var(--space-1);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .adhoc-badge {
+    background: var(--purple-bg);
+    color: var(--purple);
   }
 
   /* Confirmation dialog */
@@ -902,20 +586,20 @@
   .confirm-dialog {
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
     max-width: 360px;
     width: 90%;
   }
 
   .confirm-dialog h3 {
-    margin: 0 0 12px;
+    margin: 0 0 var(--space-3);
     font-size: 1rem;
     color: var(--text-primary);
   }
 
   .confirm-dialog p {
-    margin: 0 0 6px;
+    margin: 0 0 var(--space-2);
     color: var(--text-secondary);
     font-size: 0.85rem;
   }
@@ -923,19 +607,19 @@
   .confirm-warning {
     color: var(--error) !important;
     font-size: 0.75rem !important;
-    margin-bottom: 16px !important;
+    margin-bottom: var(--space-4) !important;
   }
 
   .confirm-actions {
     display: flex;
-    gap: 10px;
+    gap: var(--space-3);
     justify-content: flex-end;
   }
 
   .confirm-btn {
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 0.8rem;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -969,31 +653,12 @@
 
   @media (max-width: 640px) {
     .occurrence-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .occ-date {
-      min-width: 100%;
-    }
-
-    .amount-column {
-      min-width: auto;
-      flex: 1;
-    }
-
-    .arrow {
-      display: none;
-    }
-
-    .action-buttons {
-      width: 100%;
-      justify-content: flex-start;
+      grid-template-columns: 50px 1fr 70px auto;
+      gap: var(--space-2);
     }
 
     .badges-column {
-      width: 100%;
+      display: none;
     }
   }
 </style>

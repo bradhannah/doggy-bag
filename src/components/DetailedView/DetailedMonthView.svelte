@@ -8,9 +8,10 @@
   } from '../../stores/detailed-month';
   import CategorySection from './CategorySection.svelte';
   import SummarySidebar from './SummarySidebar.svelte';
+  import AdHocForm from './AdHocForm.svelte';
   import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
   import FilterBar from './FilterBar.svelte';
-  import SectionStatsHeader from './SectionStatsHeader.svelte';
+
   import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
   import {
@@ -26,6 +27,10 @@
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
 
   export let month: string;
+
+  // AdHocForm state (for Quick Add from sidebar)
+  let showAdHocForm = false;
+  let adHocFormType: 'bill' | 'income' = 'bill';
 
   // Scroll position preservation
   let savedScrollY: number | null = null;
@@ -157,6 +162,16 @@
   // Calculate total items for empty state checks
   $: totalBills = sortedBillSections.reduce((sum, section) => sum + section.items.length, 0);
   $: totalIncomes = sortedIncomeSections.reduce((sum, section) => sum + section.items.length, 0);
+
+  // Calculate closed items for section header status
+  $: closedBills = sortedBillSections.reduce(
+    (sum, section) => sum + section.items.filter((item) => item.is_closed).length,
+    0
+  );
+  $: closedIncomes = sortedIncomeSections.reduce(
+    (sum, section) => sum + section.items.filter((item) => item.is_closed).length,
+    0
+  );
 
   // Separate active vs completed sections (always sorted: active first, completed last)
   $: activeBillSections = sortedBillSections.filter((s) => !isSectionComplete(s));
@@ -442,6 +457,17 @@
       });
     });
   }
+
+  // Handle Quick Add from sidebar
+  function handleOpenAdHocForm(event: CustomEvent<{ type: 'bill' | 'income' }>) {
+    adHocFormType = event.detail.type;
+    showAdHocForm = true;
+  }
+
+  function handleAdHocCreated() {
+    showAdHocForm = false;
+    refreshData();
+  }
 </script>
 
 <div class="detailed-view" class:compact={$compactMode}>
@@ -492,6 +518,7 @@
           {month}
           readOnly={$monthIsReadOnly}
           on:refresh={refreshData}
+          on:openAdHocForm={handleOpenAdHocForm}
         />
 
         <!-- Right: Main Content -->
@@ -529,15 +556,10 @@
               <section class="section bills-section">
                 <div class="section-header">
                   <h2>Bills</h2>
+                  {#if totalBills > 0}
+                    <span class="section-status">{totalBills - closedBills}/{totalBills} Left</span>
+                  {/if}
                 </div>
-
-                {#if totalBills > 0}
-                  <SectionStatsHeader
-                    sections={sortedBillSections}
-                    tally={$detailedMonthData.tallies.totalExpenses}
-                    type="bills"
-                  />
-                {/if}
 
                 {#if totalBills === 0}
                   <p class="empty-text">No bill categories. Add categories in Setup.</p>
@@ -586,15 +608,10 @@
               <section class="section income-section">
                 <div class="section-header">
                   <h2>Income</h2>
+                  {#if totalIncomes > 0}
+                    <span class="section-status">{closedIncomes}/{totalIncomes} Received</span>
+                  {/if}
                 </div>
-
-                {#if totalIncomes > 0}
-                  <SectionStatsHeader
-                    sections={sortedIncomeSections}
-                    tally={$detailedMonthData.tallies.totalIncome}
-                    type="income"
-                  />
-                {/if}
 
                 {#if totalIncomes === 0}
                   <p class="empty-text">No income categories. Add categories in Setup.</p>
@@ -645,6 +662,15 @@
     {/if}
   </div>
 </div>
+
+<!-- Quick Add Modal (from sidebar) -->
+<AdHocForm
+  bind:open={showAdHocForm}
+  {month}
+  type={adHocFormType}
+  on:created={handleAdHocCreated}
+  on:close={() => (showAdHocForm = false)}
+/>
 
 <style>
   .detailed-view {
@@ -790,6 +816,13 @@
     color: var(--text-primary);
   }
 
+  .section-status {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
   .loading-state,
   .error-state {
     text-align: center;
@@ -908,6 +941,10 @@
 
   .detailed-view.compact .section-header h2 {
     font-size: 1rem;
+  }
+
+  .detailed-view.compact .section-status {
+    font-size: 0.75rem;
   }
 
   .detailed-view.compact .empty-text {

@@ -9,7 +9,6 @@ import {
   isExtraOccurrenceMonth,
   getTypicalOccurrenceCount,
   sumOccurrenceExpectedAmounts,
-  sumOccurrencePayments,
   areAllOccurrencesClosed,
   createAdhocOccurrence,
   resequenceOccurrences,
@@ -163,7 +162,6 @@ describe('Occurrence Utilities', () => {
       expect(occurrences[0].expected_amount).toBe(10000);
       expect(occurrences[0].sequence).toBe(1);
       expect(occurrences[0].is_closed).toBe(false);
-      expect(occurrences[0].payments).toEqual([]);
       expect(occurrences[0].is_adhoc).toBe(false);
     });
 
@@ -227,31 +225,6 @@ describe('Occurrence Utilities', () => {
     });
   });
 
-  describe('sumOccurrencePayments', () => {
-    test('sums all payments across occurrences', () => {
-      const occurrences: Occurrence[] = [
-        createTestOccurrence({
-          payments: [
-            { id: '1', amount: 5000, date: '2025-01-01', created_at: '' },
-            { id: '2', amount: 3000, date: '2025-01-02', created_at: '' },
-          ],
-        }),
-        createTestOccurrence({
-          payments: [{ id: '3', amount: 10000, date: '2025-01-15', created_at: '' }],
-        }),
-      ];
-      expect(sumOccurrencePayments(occurrences)).toBe(18000);
-    });
-
-    test('returns 0 for empty payments', () => {
-      const occurrences: Occurrence[] = [
-        createTestOccurrence({ payments: [] }),
-        createTestOccurrence({ payments: [] }),
-      ];
-      expect(sumOccurrencePayments(occurrences)).toBe(0);
-    });
-  });
-
   describe('areAllOccurrencesClosed', () => {
     test('returns true when all closed', () => {
       const occurrences: Occurrence[] = [
@@ -282,7 +255,6 @@ describe('Occurrence Utilities', () => {
       expect(occ.is_adhoc).toBe(true);
       expect(occ.is_closed).toBe(false);
       expect(occ.sequence).toBe(0);
-      expect(occ.payments).toEqual([]);
       expect(occ.id).toBeDefined();
     });
   });
@@ -314,7 +286,6 @@ function createTestOccurrence(overrides: Partial<Occurrence> = {}): Occurrence {
     expected_date: '2025-01-15',
     expected_amount: 10000,
     is_closed: false,
-    payments: [],
     is_adhoc: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

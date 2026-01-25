@@ -77,24 +77,20 @@
     }).format(dollars);
   }
 
-  // Types for items with occurrences
-  interface Payment {
-    amount: number;
-  }
-
+  // Types for items with occurrences (occurrence-only model)
   interface Occurrence {
-    payments?: Payment[];
+    expected_amount: number;
+    is_closed: boolean;
   }
 
   interface ItemWithOccurrences {
     occurrences?: Occurrence[];
   }
 
-  // Helper to sum payments from occurrences
-  function sumOccurrencePayments(item: ItemWithOccurrences): number {
+  // Helper to sum paid amounts from closed occurrences
+  function sumClosedOccurrences(item: ItemWithOccurrences): number {
     return (item.occurrences || []).reduce(
-      (oSum: number, occ: Occurrence) =>
-        oSum + (occ.payments || []).reduce((pSum: number, p: Payment) => pSum + p.amount, 0),
+      (sum: number, occ: Occurrence) => sum + (occ.is_closed ? occ.expected_amount : 0),
       0
     );
   }
@@ -118,7 +114,7 @@
     0
   );
   $: billsPaid = regularBills.reduce(
-    (sum, b) => sum + sumOccurrencePayments(b as ItemWithOccurrences),
+    (sum, b) => sum + sumClosedOccurrences(b as ItemWithOccurrences),
     0
   );
   $: billsRemaining = billsExpected - billsPaid;
@@ -128,7 +124,7 @@
     0
   );
   $: incomeReceived = $incomeInstances.reduce(
-    (sum, i) => sum + sumOccurrencePayments(i as ItemWithOccurrences),
+    (sum, i) => sum + sumClosedOccurrences(i as ItemWithOccurrences),
     0
   );
   $: incomeRemaining = incomeExpected - incomeReceived;
@@ -144,7 +140,7 @@
 
   $: ccPayoffs = payoffBills.map((bill) => {
     const expected = (bill as InstanceWithExpectedAmount).expected_amount || bill.amount || 0;
-    const paid = sumOccurrencePayments(bill as ItemWithOccurrences);
+    const paid = sumClosedOccurrences(bill as ItemWithOccurrences);
     const sourceId = (bill as InstanceWithExpectedAmount).payoff_source_id;
     const source = $paymentSources.find((ps) => ps.id === sourceId);
     return {
@@ -193,7 +189,7 @@
           ) || 0;
         const billsPd =
           data.bill_instances?.reduce(
-            (s: number, b: ItemWithOccurrences) => s + sumOccurrencePayments(b),
+            (s: number, b: ItemWithOccurrences) => s + sumClosedOccurrences(b),
             0
           ) || 0;
         const incExp =
@@ -203,7 +199,7 @@
           ) || 0;
         const incRec =
           data.income_instances?.reduce(
-            (s: number, i: ItemWithOccurrences) => s + sumOccurrencePayments(i),
+            (s: number, i: ItemWithOccurrences) => s + sumClosedOccurrences(i),
             0
           ) || 0;
 
@@ -235,7 +231,7 @@
           ) || 0;
         const billsPd =
           data.bill_instances?.reduce(
-            (s: number, b: ItemWithOccurrences) => s + sumOccurrencePayments(b),
+            (s: number, b: ItemWithOccurrences) => s + sumClosedOccurrences(b),
             0
           ) || 0;
         const incExp =
@@ -245,7 +241,7 @@
           ) || 0;
         const incRec =
           data.income_instances?.reduce(
-            (s: number, i: ItemWithOccurrences) => s + sumOccurrencePayments(i),
+            (s: number, i: ItemWithOccurrences) => s + sumClosedOccurrences(i),
             0
           ) || 0;
 

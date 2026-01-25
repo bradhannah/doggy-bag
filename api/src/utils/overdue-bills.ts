@@ -29,17 +29,13 @@ export function getOverdueBills(
     for (const occ of occurrences) {
       const dueDate = occ.expected_date;
       if (dueDate >= balanceStartDate) continue;
+      // In occurrence-only model, closed = paid
       if (occ.is_closed) continue;
 
-      const payments = occ.payments || [];
-      const paidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-      const remaining = occ.expected_amount - paidAmount;
-
-      if (remaining <= 0) continue;
-
+      // Open occurrences before balance start date are overdue
       overdueBills.push({
         name: bill.name,
-        amount: remaining,
+        amount: occ.expected_amount,
         due_date: dueDate,
       });
     }

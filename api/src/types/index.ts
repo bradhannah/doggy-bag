@@ -113,18 +113,6 @@ interface Income {
 }
 
 // ============================================================================
-// Payment (for partial payment tracking)
-// ============================================================================
-
-interface Payment {
-  id: string;
-  amount: number;
-  date: string; // ISO date (YYYY-MM-DD)
-  payment_source_id?: string; // Which account the payment came from
-  created_at: string;
-}
-
-// ============================================================================
 // Occurrence (individual payment instance within a billing period)
 // ============================================================================
 
@@ -133,10 +121,10 @@ interface Occurrence {
   sequence: number; // 1, 2, 3... for ordering within the month
   expected_date: string; // YYYY-MM-DD - calculated from day_of_month/start_date, overridable
   expected_amount: number; // Cents - can be edited independently per occurrence
-  is_closed: boolean; // Close/Open status for this occurrence
-  closed_date?: string; // When closed (YYYY-MM-DD)
+  is_closed: boolean; // Close/Open status for this occurrence (true = paid)
+  closed_date?: string; // When closed/paid (YYYY-MM-DD)
+  payment_source_id?: string; // Which account was used for payment
   notes?: string; // Optional close notes
-  payments: Payment[]; // Payments toward this specific occurrence
   is_adhoc: boolean; // True if manually added by user
   created_at: string;
   updated_at: string;
@@ -233,6 +221,7 @@ interface PaymentSource {
   is_active: boolean;
   exclude_from_leftover?: boolean; // If true, balance not included in leftover calculation
   pay_off_monthly?: boolean; // If true, auto-generate payoff bill (implies exclude_from_leftover)
+  track_payments_manually?: boolean; // If true, show payoff bill for manual payment tracking (no auto-populate)
   is_savings?: boolean; // If true, this is a savings account (mutually exclusive with is_investment and pay_off_monthly)
   is_investment?: boolean; // If true, this is an investment account (mutually exclusive with is_savings and pay_off_monthly)
   metadata?: PaymentSourceMetadata; // Optional metadata (last 4, limits, rates, etc.)
@@ -631,7 +620,6 @@ export type {
   PaymentSourceMetadata,
   Bill,
   Income,
-  Payment,
   Occurrence,
   BillInstance,
   IncomeInstance,

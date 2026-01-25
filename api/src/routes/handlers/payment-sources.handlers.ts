@@ -4,9 +4,11 @@ import {
   PaymentSourcesService,
   PaymentSourcesServiceImpl,
 } from '../../services/payment-sources-service';
+import { MonthsServiceImpl } from '../../services/months-service';
 import { formatErrorForUser } from '../../utils/errors';
 
 const paymentSourcesService: PaymentSourcesService = new PaymentSourcesServiceImpl();
+const monthsService = new MonthsServiceImpl();
 
 export function createPaymentSourcesHandlerGET() {
   return async () => {
@@ -55,6 +57,23 @@ export function createPaymentSourcesHandlerPOST() {
 
       const newSource = await paymentSourcesService.create(body);
 
+      // If this is a track_payments_manually credit card, sync it to the current month
+      if (newSource.track_payments_manually === true) {
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        try {
+          const monthExists = await monthsService.monthExists(currentMonth);
+          if (monthExists) {
+            await monthsService.syncWithDefaults(currentMonth);
+            console.log(
+              `[PaymentSourcesHandler] Synced new track_payments_manually card ${newSource.name} to ${currentMonth}`
+            );
+          }
+        } catch (syncError) {
+          // Log but don't fail the request - the card was created successfully
+          console.warn(`[PaymentSourcesHandler] Failed to sync to current month:`, syncError);
+        }
+      }
+
       return new Response(JSON.stringify(newSource), {
         headers: { 'Content-Type': 'application/json' },
         status: 201,
@@ -94,6 +113,10 @@ export function createPaymentSourcesHandlerPUT() {
         );
       }
 
+      // Get the old source to check if track_payments_manually changed
+      const oldSource = await paymentSourcesService.getById(id);
+      const wasTrackManually = oldSource?.track_payments_manually === true;
+
       const body = await request.json();
       const updatedSource = await paymentSourcesService.update(id, body);
 
@@ -107,6 +130,23 @@ export function createPaymentSourcesHandlerPUT() {
             status: 404,
           }
         );
+      }
+
+      // If track_payments_manually was just enabled, sync to current month
+      if (!wasTrackManually && updatedSource.track_payments_manually === true) {
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        try {
+          const monthExists = await monthsService.monthExists(currentMonth);
+          if (monthExists) {
+            await monthsService.syncWithDefaults(currentMonth);
+            console.log(
+              `[PaymentSourcesHandler] Synced updated track_payments_manually card ${updatedSource.name} to ${currentMonth}`
+            );
+          }
+        } catch (syncError) {
+          // Log but don't fail the request - the card was updated successfully
+          console.warn(`[PaymentSourcesHandler] Failed to sync to current month:`, syncError);
+        }
       }
 
       return new Response(JSON.stringify(updatedSource), {

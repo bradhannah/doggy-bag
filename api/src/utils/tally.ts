@@ -1,27 +1,43 @@
 // Tally Utilities for 002-detailed-monthly-view
 // Calculate section tallies for bills and income
+// Updated for occurrence-only model (no payments)
 
-import type { BillInstance, IncomeInstance, SectionTally } from '../types';
-import { sumOccurrencePayments } from './occurrences';
+import type { BillInstance, IncomeInstance, Occurrence, SectionTally } from '../types';
+
+/**
+ * Calculate the paid amount from occurrences using the occurrence-only model
+ * Paid amount = sum of expected_amount for all CLOSED occurrences
+ *
+ * @param occurrences - Array of occurrences
+ * @returns Sum of expected_amount for closed occurrences
+ */
+export function sumClosedOccurrenceAmounts(occurrences: Occurrence[]): number {
+  return occurrences
+    .filter((occ) => occ.is_closed)
+    .reduce((sum, occ) => sum + occ.expected_amount, 0);
+}
 
 /**
  * Calculate the effective amount for a bill instance
- * Uses sum of payments from occurrences
+ * Uses occurrence-only model: sum of expected_amount from CLOSED occurrences
  *
  * @param bill - Bill instance
- * @returns Effective amount (what has actually been paid/entered)
+ * @returns Effective amount (what has actually been paid)
  */
 export function getEffectiveBillAmount(bill: BillInstance): number {
-  // Sum payments from all occurrences
-  if (bill.occurrences && bill.occurrences.length > 0) {
-    return sumOccurrencePayments(bill.occurrences);
+  if (!bill.occurrences || bill.occurrences.length === 0) {
+    return 0;
   }
-  return 0;
+
+  // All bills now use the same model:
+  // Closed occurrences represent completed payments
+  return sumClosedOccurrenceAmounts(bill.occurrences);
 }
 
 /**
  * Calculate the remaining amount for a bill instance
- * For open instances: expected - total paid from occurrences
+ * For regular bills: expected - total paid from occurrences
+ * For payoff bills: the open occurrence's expected_amount (represents current balance)
  * For closed instances: 0
  *
  * @param bill - Bill instance
@@ -33,7 +49,13 @@ export function getRemainingBillAmount(bill: BillInstance): number {
     return 0;
   }
 
-  // Calculate remaining from occurrences
+  // Payoff bills: remaining is the open occurrence's expected_amount
+  if (bill.is_payoff_bill && bill.occurrences) {
+    const openOcc = bill.occurrences.find((occ) => !occ.is_closed);
+    return openOcc ? openOcc.expected_amount : 0;
+  }
+
+  // Regular bills: calculate remaining from occurrences
   const totalPaid = getEffectiveBillAmount(bill);
   return Math.max(0, bill.expected_amount - totalPaid);
 }
@@ -54,17 +76,18 @@ export function calculateBillsTally(bills: BillInstance[]): SectionTally {
 
 /**
  * Calculate the effective amount for an income instance
- * Uses sum of payments from occurrences
+ * Uses occurrence-only model: sum of expected_amount from CLOSED occurrences
  *
  * @param income - Income instance
- * @returns Effective amount (what has actually been received/entered)
+ * @returns Effective amount (what has actually been received)
  */
 export function getEffectiveIncomeAmount(income: IncomeInstance): number {
-  // Sum payments from all occurrences
-  if (income.occurrences && income.occurrences.length > 0) {
-    return sumOccurrencePayments(income.occurrences);
+  if (!income.occurrences || income.occurrences.length === 0) {
+    return 0;
   }
-  return 0;
+
+  // Closed occurrences represent completed income received
+  return sumClosedOccurrenceAmounts(income.occurrences);
 }
 
 /**

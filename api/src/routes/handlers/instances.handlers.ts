@@ -1090,10 +1090,13 @@ export function createBillOccurrenceHandlerClose() {
       const payload = await request.json().catch(() => ({}));
       const closedDate = typeof payload?.closed_date === 'string' ? payload.closed_date : undefined;
       const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
+      const paymentSourceId =
+        typeof payload?.payment_source_id === 'string' ? payload.payment_source_id : undefined;
 
       const instance = await monthsService.closeBillOccurrence(month, instanceId, occurrenceId, {
         closed_date: closedDate,
         notes,
+        payment_source_id: paymentSourceId,
       });
 
       if (!instance) {
@@ -1251,10 +1254,13 @@ export function createIncomeOccurrenceHandlerClose() {
       const payload = await request.json().catch(() => ({}));
       const closedDate = typeof payload?.closed_date === 'string' ? payload.closed_date : undefined;
       const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
+      const paymentSourceId =
+        typeof payload?.payment_source_id === 'string' ? payload.payment_source_id : undefined;
 
       const instance = await monthsService.closeIncomeOccurrence(month, instanceId, occurrenceId, {
         closed_date: closedDate,
         notes,
+        payment_source_id: paymentSourceId,
       });
 
       if (!instance) {
@@ -1294,6 +1300,194 @@ export function createIncomeOccurrenceHandlerClose() {
         JSON.stringify({
           error: formatErrorForUser(error),
           message: 'Failed to close income occurrence',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}
+
+// POST /api/months/:month/bills/:instanceId/occurrences/:occurrenceId/split - Split occurrence for partial payment
+export function createBillOccurrenceHandlerSplit() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const match = url.pathname.match(
+        /\/api\/months\/(\d{4}-\d{2})\/bills\/([^/]+)\/occurrences\/([^/]+)\/split/
+      );
+      const month = match ? match[1] : null;
+      const instanceId = match ? match[2] : null;
+      const occurrenceId = match ? match[3] : null;
+
+      if (!month || !instanceId || !occurrenceId) {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Invalid URL. Expected /api/months/YYYY-MM/bills/:instanceId/occurrences/:occurrenceId/split',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const readOnlyResponse = await checkReadOnly(month);
+      if (readOnlyResponse) return readOnlyResponse;
+
+      const payload = await request.json().catch(() => ({}));
+
+      // Validate required fields
+      if (typeof payload?.paid_amount !== 'number' || payload.paid_amount <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'paid_amount is required and must be greater than 0' }),
+          { headers: { 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const closedDate = typeof payload?.closed_date === 'string' ? payload.closed_date : undefined;
+      if (!closedDate) {
+        return new Response(JSON.stringify({ error: 'closed_date is required' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 400,
+        });
+      }
+
+      const paymentSourceId =
+        typeof payload?.payment_source_id === 'string' ? payload.payment_source_id : undefined;
+      const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
+
+      const result = await monthsService.splitBillOccurrence(month, instanceId, occurrenceId, {
+        paid_amount: payload.paid_amount,
+        closed_date: closedDate,
+        payment_source_id: paymentSourceId,
+        notes,
+      });
+
+      if (!result) {
+        return new Response(JSON.stringify({ error: 'Bill occurrence not found' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 404,
+        });
+      }
+
+      const summary = await leftoverService.calculateLeftover(month);
+
+      return new Response(
+        JSON.stringify({
+          closed_occurrence: result.closedOccurrence,
+          new_occurrence: result.newOccurrence,
+          summary,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (error) {
+      console.error('[InstancesHandler] Bill Occurrence Split failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to split bill occurrence',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}
+
+// POST /api/months/:month/incomes/:instanceId/occurrences/:occurrenceId/split - Split occurrence for partial payment
+export function createIncomeOccurrenceHandlerSplit() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const match = url.pathname.match(
+        /\/api\/months\/(\d{4}-\d{2})\/incomes\/([^/]+)\/occurrences\/([^/]+)\/split/
+      );
+      const month = match ? match[1] : null;
+      const instanceId = match ? match[2] : null;
+      const occurrenceId = match ? match[3] : null;
+
+      if (!month || !instanceId || !occurrenceId) {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Invalid URL. Expected /api/months/YYYY-MM/incomes/:instanceId/occurrences/:occurrenceId/split',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const readOnlyResponse = await checkReadOnly(month);
+      if (readOnlyResponse) return readOnlyResponse;
+
+      const payload = await request.json().catch(() => ({}));
+
+      // Validate required fields
+      if (typeof payload?.paid_amount !== 'number' || payload.paid_amount <= 0) {
+        return new Response(
+          JSON.stringify({ error: 'paid_amount is required and must be greater than 0' }),
+          { headers: { 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const closedDate = typeof payload?.closed_date === 'string' ? payload.closed_date : undefined;
+      if (!closedDate) {
+        return new Response(JSON.stringify({ error: 'closed_date is required' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 400,
+        });
+      }
+
+      const paymentSourceId =
+        typeof payload?.payment_source_id === 'string' ? payload.payment_source_id : undefined;
+      const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
+
+      const result = await monthsService.splitIncomeOccurrence(month, instanceId, occurrenceId, {
+        paid_amount: payload.paid_amount,
+        closed_date: closedDate,
+        payment_source_id: paymentSourceId,
+        notes,
+      });
+
+      if (!result) {
+        return new Response(JSON.stringify({ error: 'Income occurrence not found' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 404,
+        });
+      }
+
+      const summary = await leftoverService.calculateLeftover(month);
+
+      return new Response(
+        JSON.stringify({
+          closed_occurrence: result.closedOccurrence,
+          new_occurrence: result.newOccurrence,
+          summary,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (error) {
+      console.error('[InstancesHandler] Income Occurrence Split failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to split income occurrence',
         }),
         {
           headers: { 'Content-Type': 'application/json' },
@@ -1371,234 +1565,6 @@ export function createIncomeOccurrenceHandlerReopen() {
         JSON.stringify({
           error: formatErrorForUser(error),
           message: 'Failed to reopen income occurrence',
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
-    }
-  };
-}
-
-// POST /api/months/:month/bills/:instanceId/occurrences/:occurrenceId/payments - Add payment to occurrence
-export function createBillOccurrencePaymentHandler() {
-  return async (request: Request) => {
-    try {
-      const url = new URL(request.url);
-      const match = url.pathname.match(
-        /\/api\/months\/(\d{4}-\d{2})\/bills\/([^/]+)\/occurrences\/([^/]+)\/payments/
-      );
-      const month = match ? match[1] : null;
-      const instanceId = match ? match[2] : null;
-      const occurrenceId = match ? match[3] : null;
-
-      if (!month || !instanceId || !occurrenceId) {
-        return new Response(
-          JSON.stringify({
-            error:
-              'Invalid URL. Expected /api/months/YYYY-MM/bills/:instanceId/occurrences/:occurrenceId/payments',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      const readOnlyResponse = await checkReadOnly(month);
-      if (readOnlyResponse) return readOnlyResponse;
-
-      const body = await request.json();
-
-      if (typeof body.amount !== 'number' || body.amount <= 0) {
-        return new Response(
-          JSON.stringify({
-            error: 'Amount must be a positive number in cents',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      if (!body.date) {
-        return new Response(
-          JSON.stringify({
-            error: 'Date is required (YYYY-MM-DD)',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      const payment = {
-        amount: body.amount,
-        date: body.date,
-        payment_source_id: body.payment_source_id,
-      };
-
-      const instance = await monthsService.addBillOccurrencePayment(
-        month,
-        instanceId,
-        occurrenceId,
-        payment
-      );
-
-      if (!instance) {
-        return new Response(
-          JSON.stringify({
-            error: `Bill occurrence not found`,
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 404,
-          }
-        );
-      }
-
-      const bill = instance.bill_id ? await billsService.getById(instance.bill_id) : null;
-      const enrichedInstance = {
-        ...instance,
-        name: instance.name || bill?.name || 'Unknown Bill',
-      };
-
-      const summary = await leftoverService.calculateLeftover(month);
-
-      return new Response(
-        JSON.stringify({
-          instance: enrichedInstance,
-          summary,
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 201,
-        }
-      );
-    } catch (error) {
-      console.error('[InstancesHandler] Bill Occurrence Payment failed:', error);
-
-      return new Response(
-        JSON.stringify({
-          error: formatErrorForUser(error),
-          message: 'Failed to add payment to bill occurrence',
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
-    }
-  };
-}
-
-// POST /api/months/:month/incomes/:instanceId/occurrences/:occurrenceId/payments - Add payment to occurrence
-export function createIncomeOccurrencePaymentHandler() {
-  return async (request: Request) => {
-    try {
-      const url = new URL(request.url);
-      const match = url.pathname.match(
-        /\/api\/months\/(\d{4}-\d{2})\/incomes\/([^/]+)\/occurrences\/([^/]+)\/payments/
-      );
-      const month = match ? match[1] : null;
-      const instanceId = match ? match[2] : null;
-      const occurrenceId = match ? match[3] : null;
-
-      if (!month || !instanceId || !occurrenceId) {
-        return new Response(
-          JSON.stringify({
-            error:
-              'Invalid URL. Expected /api/months/YYYY-MM/incomes/:instanceId/occurrences/:occurrenceId/payments',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      const readOnlyResponse = await checkReadOnly(month);
-      if (readOnlyResponse) return readOnlyResponse;
-
-      const body = await request.json();
-
-      if (typeof body.amount !== 'number' || body.amount <= 0) {
-        return new Response(
-          JSON.stringify({
-            error: 'Amount must be a positive number in cents',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      if (!body.date) {
-        return new Response(
-          JSON.stringify({
-            error: 'Date is required (YYYY-MM-DD)',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      const payment = {
-        amount: body.amount,
-        date: body.date,
-        payment_source_id: body.payment_source_id,
-      };
-
-      const instance = await monthsService.addIncomeOccurrencePayment(
-        month,
-        instanceId,
-        occurrenceId,
-        payment
-      );
-
-      if (!instance) {
-        return new Response(
-          JSON.stringify({
-            error: `Income occurrence not found`,
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 404,
-          }
-        );
-      }
-
-      const income = instance.income_id ? await incomesService.getById(instance.income_id) : null;
-      const enrichedInstance = {
-        ...instance,
-        name: instance.name || income?.name || 'Unknown Income',
-      };
-
-      const summary = await leftoverService.calculateLeftover(month);
-
-      return new Response(
-        JSON.stringify({
-          instance: enrichedInstance,
-          summary,
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 201,
-        }
-      );
-    } catch (error) {
-      console.error('[InstancesHandler] Income Occurrence Payment failed:', error);
-
-      return new Response(
-        JSON.stringify({
-          error: formatErrorForUser(error),
-          message: 'Failed to add payment to income occurrence',
         }),
         {
           headers: { 'Content-Type': 'application/json' },
@@ -1965,24 +1931,24 @@ export function createIncomeOccurrenceHandlerDelete() {
   };
 }
 
-// DELETE /api/months/:month/bills/:instanceId/occurrences/:occurrenceId/payments/:paymentId - Remove payment from occurrence
-export function createDeleteBillOccurrencePaymentHandler() {
+// ============================================================================
+// Payoff Bill Payment Handler (New occurrence-based approach)
+// ============================================================================
+
+// POST /api/months/:month/payoff-bills/:instanceId/pay - Record a credit card payment
+// This creates a new closed occurrence (payment chunk) instead of adding to occurrence.payments[]
+export function createPayoffBillPaymentHandler() {
   return async (request: Request) => {
     try {
       const url = new URL(request.url);
-      const match = url.pathname.match(
-        /\/api\/months\/(\d{4}-\d{2})\/bills\/([^/]+)\/occurrences\/([^/]+)\/payments\/([^/]+)/
-      );
+      const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/payoff-bills\/([^/]+)\/pay/);
       const month = match ? match[1] : null;
       const instanceId = match ? match[2] : null;
-      const occurrenceId = match ? match[3] : null;
-      const paymentId = match ? match[4] : null;
 
-      if (!month || !instanceId || !occurrenceId || !paymentId) {
+      if (!month || !instanceId) {
         return new Response(
           JSON.stringify({
-            error:
-              'Invalid URL. Expected /api/months/YYYY-MM/bills/:instanceId/occurrences/:occurrenceId/payments/:paymentId',
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/payoff-bills/:instanceId/pay',
           }),
           {
             headers: { 'Content-Type': 'application/json' },
@@ -1994,78 +1960,13 @@ export function createDeleteBillOccurrencePaymentHandler() {
       const readOnlyResponse = await checkReadOnly(month);
       if (readOnlyResponse) return readOnlyResponse;
 
-      const instance = await monthsService.removeBillOccurrencePayment(
-        month,
-        instanceId,
-        occurrenceId,
-        paymentId
-      );
+      const body = await request.json();
 
-      if (!instance) {
+      // Validate required fields
+      if (typeof body.amount !== 'number' || body.amount <= 0) {
         return new Response(
           JSON.stringify({
-            error: `Payment not found`,
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 404,
-          }
-        );
-      }
-
-      const bill = instance.bill_id ? await billsService.getById(instance.bill_id) : null;
-      const enrichedInstance = {
-        ...instance,
-        name: instance.name || bill?.name || 'Unknown Bill',
-      };
-
-      const summary = await leftoverService.calculateLeftover(month);
-
-      return new Response(
-        JSON.stringify({
-          instance: enrichedInstance,
-          summary,
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
-    } catch (error) {
-      console.error('[InstancesHandler] Bill Occurrence Payment Delete failed:', error);
-
-      return new Response(
-        JSON.stringify({
-          error: formatErrorForUser(error),
-          message: 'Failed to remove payment from bill occurrence',
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
-    }
-  };
-}
-
-// DELETE /api/months/:month/incomes/:instanceId/occurrences/:occurrenceId/payments/:paymentId - Remove payment from occurrence
-export function createDeleteIncomeOccurrencePaymentHandler() {
-  return async (request: Request) => {
-    try {
-      const url = new URL(request.url);
-      const match = url.pathname.match(
-        /\/api\/months\/(\d{4}-\d{2})\/incomes\/([^/]+)\/occurrences\/([^/]+)\/payments\/([^/]+)/
-      );
-      const month = match ? match[1] : null;
-      const instanceId = match ? match[2] : null;
-      const occurrenceId = match ? match[3] : null;
-      const paymentId = match ? match[4] : null;
-
-      if (!month || !instanceId || !occurrenceId || !paymentId) {
-        return new Response(
-          JSON.stringify({
-            error:
-              'Invalid URL. Expected /api/months/YYYY-MM/incomes/:instanceId/occurrences/:occurrenceId/payments/:paymentId',
+            error: 'Amount must be a positive number in cents',
           }),
           {
             headers: { 'Content-Type': 'application/json' },
@@ -2074,20 +1975,33 @@ export function createDeleteIncomeOccurrencePaymentHandler() {
         );
       }
 
-      const readOnlyResponse = await checkReadOnly(month);
-      if (readOnlyResponse) return readOnlyResponse;
-
-      const instance = await monthsService.removeIncomeOccurrencePayment(
-        month,
-        instanceId,
-        occurrenceId,
-        paymentId
-      );
-
-      if (!instance) {
+      if (!body.date || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
         return new Response(
           JSON.stringify({
-            error: `Payment not found`,
+            error: 'Date is required in YYYY-MM-DD format',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      // newBalance is optional - if not provided, we calculate it
+      const newBalance = typeof body.newBalance === 'number' ? body.newBalance : undefined;
+
+      const result = await monthsService.addPayoffBillPayment(
+        month,
+        instanceId,
+        body.amount,
+        body.date,
+        newBalance
+      );
+
+      if (!result) {
+        return new Response(
+          JSON.stringify({
+            error: `Payoff bill instance not found or is not a payoff bill`,
           }),
           {
             headers: { 'Content-Type': 'application/json' },
@@ -2096,31 +2010,27 @@ export function createDeleteIncomeOccurrencePaymentHandler() {
         );
       }
 
-      const income = instance.income_id ? await incomesService.getById(instance.income_id) : null;
-      const enrichedInstance = {
-        ...instance,
-        name: instance.name || income?.name || 'Unknown Income',
-      };
-
       const summary = await leftoverService.calculateLeftover(month);
 
       return new Response(
         JSON.stringify({
-          instance: enrichedInstance,
+          instance: result.instance,
+          newBalance: result.newBalance,
+          remaining: result.remaining,
           summary,
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 200,
+          status: 201,
         }
       );
     } catch (error) {
-      console.error('[InstancesHandler] Income Occurrence Payment Delete failed:', error);
+      console.error('[InstancesHandler] Payoff Bill Payment failed:', error);
 
       return new Response(
         JSON.stringify({
           error: formatErrorForUser(error),
-          message: 'Failed to remove payment from income occurrence',
+          message: 'Failed to record payoff bill payment',
         }),
         {
           headers: { 'Content-Type': 'application/json' },

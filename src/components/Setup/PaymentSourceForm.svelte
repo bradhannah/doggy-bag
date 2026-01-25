@@ -25,6 +25,7 @@
   let type: PaymentSourceType = editingItem?.type || 'bank_account';
   let excludeFromLeftover = editingItem?.exclude_from_leftover ?? false;
   let payOffMonthly = editingItem?.pay_off_monthly ?? false;
+  let trackPaymentsManually = editingItem?.track_payments_manually ?? false;
   let isSavings = editingItem?.is_savings ?? false;
 
   // Metadata form state
@@ -74,6 +75,7 @@
   $: if (!isDebt) {
     excludeFromLeftover = false;
     payOffMonthly = false;
+    trackPaymentsManually = false;
   }
 
   // When type changes to non-bank account, reset savings
@@ -89,8 +91,25 @@
     }
   }
 
-  // pay_off_monthly implies exclude_from_leftover
-  $: if (payOffMonthly) {
+  // pay_off_monthly and track_payments_manually are mutually exclusive
+  function handlePayOffMonthlyChange(checked: boolean) {
+    payOffMonthly = checked;
+    if (checked) {
+      trackPaymentsManually = false;
+      excludeFromLeftover = true;
+    }
+  }
+
+  function handleTrackPaymentsManuallyChange(checked: boolean) {
+    trackPaymentsManually = checked;
+    if (checked) {
+      payOffMonthly = false;
+      excludeFromLeftover = true;
+    }
+  }
+
+  // pay_off_monthly or track_payments_manually implies exclude_from_leftover
+  $: if (payOffMonthly || trackPaymentsManually) {
     excludeFromLeftover = true;
   }
 
@@ -108,6 +127,7 @@
     type: PaymentSourceType;
     excludeFromLeftover: boolean;
     payOffMonthly: boolean;
+    trackPaymentsManually: boolean;
     isSavings: boolean;
     lastFourDigits: string;
     creditLimit: string;
@@ -124,6 +144,7 @@
     type: editingItem?.type || 'bank_account',
     excludeFromLeftover: editingItem?.exclude_from_leftover ?? false,
     payOffMonthly: editingItem?.pay_off_monthly ?? false,
+    trackPaymentsManually: editingItem?.track_payments_manually ?? false,
     isSavings: editingItem?.is_savings ?? false,
     lastFourDigits: editingItem?.metadata?.last_four_digits || '',
     creditLimit: editingItem?.metadata?.credit_limit
@@ -147,6 +168,7 @@
       type !== initialValues.type ||
       excludeFromLeftover !== initialValues.excludeFromLeftover ||
       payOffMonthly !== initialValues.payOffMonthly ||
+      trackPaymentsManually !== initialValues.trackPaymentsManually ||
       isSavings !== initialValues.isSavings ||
       lastFourDigits !== initialValues.lastFourDigits ||
       creditLimit !== initialValues.creditLimit ||
@@ -165,6 +187,7 @@
     type = editingItem.type;
     excludeFromLeftover = editingItem.exclude_from_leftover ?? false;
     payOffMonthly = editingItem.pay_off_monthly ?? false;
+    trackPaymentsManually = editingItem.track_payments_manually ?? false;
     isSavings = editingItem.is_savings ?? false;
     // Reset metadata fields
     lastFourDigits = editingItem.metadata?.last_four_digits || '';
@@ -187,6 +210,7 @@
       type: editingItem.type,
       excludeFromLeftover: editingItem.exclude_from_leftover ?? false,
       payOffMonthly: editingItem.pay_off_monthly ?? false,
+      trackPaymentsManually: editingItem.track_payments_manually ?? false,
       isSavings: editingItem.is_savings ?? false,
       lastFourDigits: editingItem.metadata?.last_four_digits || '',
       creditLimit: editingItem.metadata?.credit_limit
@@ -270,6 +294,8 @@
           type,
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
+          track_payments_manually:
+            isDebt && !isSavingsOrInvestment ? trackPaymentsManually : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
           metadata,
         };
@@ -282,6 +308,8 @@
           type,
           exclude_from_leftover: isDebt || isSavingsOrInvestment ? excludeFromLeftover : undefined,
           pay_off_monthly: isDebt && !isSavingsOrInvestment ? payOffMonthly : undefined,
+          track_payments_manually:
+            isDebt && !isSavingsOrInvestment ? trackPaymentsManually : undefined,
           is_savings: isBankAccount ? isSavings : undefined,
           metadata,
         };
@@ -352,11 +380,33 @@
     <div class="debt-options">
       <div class="checkbox-group">
         <label class="checkbox-label">
-          <input type="checkbox" bind:checked={payOffMonthly} disabled={saving} />
+          <input
+            type="checkbox"
+            checked={payOffMonthly}
+            on:change={(e) => handlePayOffMonthlyChange(e.currentTarget.checked)}
+            disabled={saving}
+          />
           <span class="checkbox-text">
             <strong>Pay Off Monthly</strong>
             <span class="checkbox-description"
-              >Auto-generate a payoff bill for this account each month</span
+              >Auto-generate a payoff bill when you enter the balance</span
+            >
+          </span>
+        </label>
+      </div>
+
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            checked={trackPaymentsManually}
+            on:change={(e) => handleTrackPaymentsManuallyChange(e.currentTarget.checked)}
+            disabled={saving}
+          />
+          <span class="checkbox-text">
+            <strong>Track Payments Manually</strong>
+            <span class="checkbox-description"
+              >Show a payoff bill each month for recording payments (no auto-populate)</span
             >
           </span>
         </label>
@@ -367,7 +417,7 @@
           <input
             type="checkbox"
             bind:checked={excludeFromLeftover}
-            disabled={saving || payOffMonthly}
+            disabled={saving || payOffMonthly || trackPaymentsManually}
           />
           <span class="checkbox-text">
             <strong>Exclude from Leftover</strong>
@@ -376,8 +426,8 @@
             >
           </span>
         </label>
-        {#if payOffMonthly}
-          <div class="help-text locked">Automatically enabled with "Pay Off Monthly"</div>
+        {#if payOffMonthly || trackPaymentsManually}
+          <div class="help-text locked">Automatically enabled with payment tracking options</div>
         {/if}
       </div>
     </div>

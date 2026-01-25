@@ -32,6 +32,7 @@ export interface CreatePaymentSourceRequest {
   is_active?: boolean;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
+  track_payments_manually?: boolean;
 }
 
 export interface UpdatePaymentSourceRequest {
@@ -40,6 +41,7 @@ export interface UpdatePaymentSourceRequest {
   is_active?: boolean;
   exclude_from_leftover?: boolean;
   pay_off_monthly?: boolean;
+  track_payments_manually?: boolean;
 }
 
 // ============================================================================

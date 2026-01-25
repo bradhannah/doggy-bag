@@ -4,15 +4,123 @@
  */
 
 export interface paths {
-  '/payment-sources': {
+  '/api/settings': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
+    /**
+     * Get settings
+     * @description Get current application settings
+     */
+    get: operations['GetSettings'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/settings/data-directory': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get data directory
+     * @description Get current data directory configuration
+     */
+    get: operations['GetDataDirectory'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/settings/validate-directory': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Validate directory
+     * @description Validate a directory for use as data storage
+     */
+    post: operations['ValidateDirectory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/settings/migrate-data': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Migrate data
+     * @description Migrate data to a new directory
+     */
+    post: operations['MigrateData'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/settings/switch-directory': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Switch directory
+     * @description Switch to a different data directory
+     */
+    post: operations['SwitchDirectory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/payment-sources': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List all payment sources
+     * @description Get all payment sources
+     */
     get: operations['GetPaymentSources'];
     put?: never;
+    /**
+     * Create a payment source
+     * @description Create a new payment source
+     */
     post: operations['CreatePaymentSource'];
     delete?: never;
     options?: never;
@@ -20,15 +128,271 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/incomes': {
+  '/api/payment-sources/{id}': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
+    get?: never;
+    /**
+     * Update a payment source
+     * @description Update an existing payment source
+     */
+    put: operations['UpdatePaymentSource'];
+    post?: never;
+    /**
+     * Delete a payment source
+     * @description Delete a payment source
+     */
+    delete: operations['DeletePaymentSource'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List months
+     * @description List all available months
+     */
+    get: operations['ListMonths'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get month data
+     * @description Get monthly data for a specific month
+     */
+    get: operations['GetMonth'];
+    put?: never;
+    post?: never;
+    /**
+     * Delete month
+     * @description Delete a month
+     */
+    delete: operations['DeleteMonth'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/detailed/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get detailed month view
+     * @description Get detailed view for a month (used by the main UI)
+     */
+    get: operations['GetDetailedMonth'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/summary/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get month summary
+     * @description Get month summary (income, expenses, leftover)
+     */
+    get: operations['GetMonthSummary'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/exists/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Check month exists
+     * @description Check if a month exists
+     */
+    get: operations['MonthExists'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/manage': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get manage info
+     * @description Get month management info
+     */
+    get: operations['GetManageInfo'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/generate/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Generate month
+     * @description Generate a new month from bill/income templates
+     */
+    post: operations['GenerateMonth'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/create/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create month
+     * @description Create a month (same as generate)
+     */
+    post: operations['CreateMonth'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/sync/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Sync month
+     * @description Sync month with current bill/income templates
+     */
+    post: operations['SyncMonth'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/lock/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Lock/unlock month
+     * @description Lock or unlock a month
+     */
+    post: operations['LockMonth'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/months/bank-balances/{month}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Update bank balances
+     * @description Update bank balances for a month
+     */
+    put: operations['UpdateBankBalances'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/incomes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List all incomes
+     * @description Get all income definitions
+     */
     get: operations['GetIncomes'];
     put?: never;
+    /**
+     * Create an income
+     * @description Create a new income definition
+     */
     post: operations['CreateIncome'];
     delete?: never;
     options?: never;
@@ -36,13 +400,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/health': {
+  '/api/incomes/{id}': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
+    get?: never;
+    /**
+     * Update an income
+     * @description Update an existing income definition
+     */
+    put: operations['UpdateIncome'];
+    post?: never;
+    /**
+     * Delete an income
+     * @description Delete an income definition
+     */
+    delete: operations['DeleteIncome'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/health': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Health check
+     * @description Check API health status
+     */
     get: operations['GetHealth'];
     put?: never;
     post?: never;
@@ -52,16 +444,160 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/bills': {
+  '/api/categories': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
+    /**
+     * List all categories
+     * @description Get all categories
+     */
+    get: operations['GetCategories'];
+    put?: never;
+    /**
+     * Create a category
+     * @description Create a new category
+     */
+    post: operations['CreateCategory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/categories/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Update a category
+     * @description Update an existing category
+     */
+    put: operations['UpdateCategory'];
+    post?: never;
+    /**
+     * Delete a category
+     * @description Delete a category
+     */
+    delete: operations['DeleteCategory'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/categories/reorder': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Reorder categories
+     * @description Reorder categories
+     */
+    put: operations['ReorderCategories'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/bills': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List all bills
+     * @description Get all bill definitions
+     */
     get: operations['GetBills'];
     put?: never;
+    /**
+     * Create a bill
+     * @description Create a new bill definition
+     */
     post: operations['CreateBill'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/bills/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Update a bill
+     * @description Update an existing bill definition
+     */
+    put: operations['UpdateBill'];
+    post?: never;
+    /**
+     * Delete a bill
+     * @description Delete a bill definition
+     */
+    delete: operations['DeleteBill'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/backup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export backup
+     * @description Export all data as a backup file
+     */
+    get: operations['ExportBackup'];
+    put?: never;
+    /**
+     * Restore backup
+     * @description Restore data from a backup file
+     */
+    post: operations['RestoreBackup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/backup/validate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Validate backup
+     * @description Validate a backup file without restoring
+     */
+    post: operations['ValidateBackup'];
     delete?: never;
     options?: never;
     head?: never;
@@ -72,9 +608,594 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** @description Current settings response from the API. */
+    SettingsResponse: {
+      /** @description Current data directory path */
+      dataDirectory: string;
+      /** @description Whether running in development mode */
+      isDevelopment: boolean;
+      /** @description Application version */
+      version: string;
+    };
+    /** @description Data directory response from the API. */
+    DataDirectoryResponse: {
+      /** @description Current data directory path */
+      path: string;
+      /** @description Entities subdirectory path */
+      entitiesDir: string;
+      /** @description Months subdirectory path */
+      monthsDir: string;
+      /** @description Whether running in development mode */
+      isDevelopment: boolean;
+      /** @description Whether the directory is writable */
+      isWritable: boolean;
+    };
+    /** @description Result of validating a directory for use as data storage. */
+    DirectoryValidation: {
+      /** @description Whether the directory can be used */
+      isValid: boolean;
+      /** @description Whether the directory exists */
+      exists: boolean;
+      /** @description Whether the directory is writable */
+      isWritable: boolean;
+      /** @description Whether data already exists at this location */
+      hasExistingData: boolean;
+      /** @description List of existing data files found */
+      existingFiles: string[];
+      /** @description Error message if not valid */
+      error?: string;
+    };
+    ValidateDirectoryRequest: {
+      path: string;
+    };
+    /** @description Result of a data migration operation. */
+    MigrationResult: {
+      /** @description Whether the migration succeeded */
+      success: boolean;
+      /**
+       * Format: double
+       * @description Number of entity files copied
+       */
+      entityFilesCopied: number;
+      /**
+       * Format: double
+       * @description Number of month files copied
+       */
+      monthFilesCopied: number;
+      /** @description List of files that were copied */
+      filesCopied: string[];
+      /** @description Error message if failed */
+      error?: string;
+      /** @description Source directory */
+      sourceDir: string;
+      /** @description Destination directory */
+      destDir: string;
+    };
+    ApiError: {
+      error: string;
+      message: string;
+      details?: string[];
+    };
+    MigrateDataRequest: {
+      sourceDir: string;
+      destDir: string;
+      /** @enum {string} */
+      mode: 'copy' | 'fresh' | 'use_existing';
+    };
+    SwitchDirectoryRequest: {
+      newDirectory: string;
+    };
+    /** @enum {string} */
+    PaymentSourceType: 'bank_account' | 'credit_card' | 'line_of_credit' | 'cash' | 'investment';
+    /**
+     * @description PaymentSourceMetadata - Metadata fields for Payment Sources
+     *     Fields are conditional based on payment source type:
+     *     - last_four_digits: All types
+     *     - credit_limit: credit_card, line_of_credit
+     *     - interest_rate: All types
+     *     - interest_rate_cash_advance: credit_card only
+     *     - is_variable_rate: line_of_credit, savings, investment
+     *     - statement_day: credit_card, line_of_credit
+     *     - account_url: All types
+     *     - notes: All types
+     */
+    PaymentSourceMetadata: {
+      last_four_digits?: string;
+      /** Format: double */
+      credit_limit?: number;
+      /** Format: double */
+      interest_rate?: number;
+      /** Format: double */
+      interest_rate_cash_advance?: number;
+      is_variable_rate?: boolean;
+      /** Format: double */
+      statement_day?: number;
+      account_url?: string;
+      notes?: string;
+    };
+    PaymentSource: {
+      id: string;
+      name: string;
+      type: components['schemas']['PaymentSourceType'];
+      is_active: boolean;
+      exclude_from_leftover?: boolean;
+      pay_off_monthly?: boolean;
+      track_payments_manually?: boolean;
+      is_savings?: boolean;
+      is_investment?: boolean;
+      metadata?: components['schemas']['PaymentSourceMetadata'];
+      created_at: string;
+      updated_at: string;
+    };
+    CreatePaymentSourceRequest: {
+      name: string;
+      type: components['schemas']['PaymentSourceType'];
+      is_active?: boolean;
+      exclude_from_leftover?: boolean;
+      pay_off_monthly?: boolean;
+      track_payments_manually?: boolean;
+    };
+    UpdatePaymentSourceRequest: {
+      name?: string;
+      type?: components['schemas']['PaymentSourceType'];
+      is_active?: boolean;
+      exclude_from_leftover?: boolean;
+      pay_off_monthly?: boolean;
+      track_payments_manually?: boolean;
+    };
+    MonthListItem: {
+      month: string;
+      exists: boolean;
+      isLocked: boolean;
+    };
+    Occurrence: {
+      id: string;
+      /** Format: double */
+      sequence: number;
+      expected_date: string;
+      /** Format: double */
+      expected_amount: number;
+      is_closed: boolean;
+      closed_date?: string;
+      payment_source_id?: string;
+      notes?: string;
+      is_adhoc: boolean;
+      created_at: string;
+      updated_at: string;
+    };
+    /**
+     * @description EntityMetadata - Common metadata fields for Bills and Incomes
+     *     This is copied to monthly instances as a point-in-time snapshot
+     */
+    EntityMetadata: {
+      bank_transaction_name?: string;
+      account_number?: string;
+      account_url?: string;
+      notes?: string;
+    };
+    BillInstance: {
+      id: string;
+      bill_id: string | null;
+      month: string;
+      billing_period: string;
+      /** Format: double */
+      expected_amount: number;
+      occurrences: components['schemas']['Occurrence'][];
+      is_default: boolean;
+      is_closed: boolean;
+      is_adhoc: boolean;
+      is_payoff_bill?: boolean;
+      payoff_source_id?: string;
+      goal_id?: string;
+      closed_date?: string;
+      name?: string;
+      category_id?: string;
+      payment_source_id?: string;
+      metadata?: components['schemas']['EntityMetadata'];
+      created_at: string;
+      updated_at: string;
+    };
+    IncomeInstance: {
+      id: string;
+      income_id: string | null;
+      month: string;
+      billing_period: string;
+      /** Format: double */
+      expected_amount: number;
+      occurrences: components['schemas']['Occurrence'][];
+      is_default: boolean;
+      is_closed: boolean;
+      is_adhoc: boolean;
+      closed_date?: string;
+      name?: string;
+      category_id?: string;
+      payment_source_id?: string;
+      metadata?: components['schemas']['EntityMetadata'];
+      created_at: string;
+      updated_at: string;
+    };
+    VariableExpense: {
+      id: string;
+      name: string;
+      /** Format: double */
+      amount: number;
+      payment_source_id: string;
+      month: string;
+      created_at: string;
+      updated_at: string;
+    };
+    FreeFlowingExpense: {
+      id: string;
+      name: string;
+      /** Format: double */
+      amount: number;
+      payment_source_id: string;
+      month: string;
+      created_at: string;
+      updated_at: string;
+    };
+    /** @description Construct a type with a set of properties K of type T */
+    'Record_string.number_': {
+      [key: string]: number;
+    };
+    MonthlyData: {
+      month: string;
+      bill_instances: components['schemas']['BillInstance'][];
+      income_instances: components['schemas']['IncomeInstance'][];
+      variable_expenses: components['schemas']['VariableExpense'][];
+      free_flowing_expenses: components['schemas']['FreeFlowingExpense'][];
+      bank_balances: components['schemas']['Record_string.number_'];
+      savings_balances_start?: components['schemas']['Record_string.number_'];
+      savings_balances_end?: components['schemas']['Record_string.number_'];
+      savings_contributions?: components['schemas']['Record_string.number_'];
+      is_read_only: boolean;
+      created_at: string;
+      updated_at: string;
+    };
+    /** @enum {string} */
+    CategoryType: 'bill' | 'income' | 'variable' | 'savings_goal';
+    /** @enum {string} */
+    PaymentMethod: 'auto' | 'manual';
+    BillInstanceDetailed: {
+      id: string;
+      bill_id: string | null;
+      name: string;
+      billing_period: string;
+      /** Format: double */
+      expected_amount: number;
+      /** Format: double */
+      actual_amount: number;
+      occurrences: components['schemas']['Occurrence'][];
+      /** Format: double */
+      occurrence_count: number;
+      is_extra_occurrence_month: boolean;
+      /** Format: double */
+      total_paid: number;
+      /** Format: double */
+      remaining: number;
+      is_closed: boolean;
+      is_adhoc: boolean;
+      is_payoff_bill: boolean;
+      payoff_source_id?: string;
+      closed_date: string | null;
+      is_overdue: boolean;
+      /** Format: double */
+      days_overdue: number | null;
+      payment_source: {
+        name: string;
+        id: string;
+      } | null;
+      category_id: string;
+      payment_method?: components['schemas']['PaymentMethod'];
+      metadata?: components['schemas']['EntityMetadata'];
+    };
+    IncomeInstanceDetailed: {
+      id: string;
+      income_id: string | null;
+      name: string;
+      billing_period: string;
+      /** Format: double */
+      expected_amount: number;
+      /** Format: double */
+      actual_amount: number;
+      occurrences: components['schemas']['Occurrence'][];
+      /** Format: double */
+      occurrence_count: number;
+      is_extra_occurrence_month: boolean;
+      /** Format: double */
+      total_received: number;
+      /** Format: double */
+      remaining: number;
+      is_closed: boolean;
+      is_adhoc: boolean;
+      closed_date: string | null;
+      is_overdue: boolean;
+      payment_source: {
+        name: string;
+        id: string;
+      } | null;
+      category_id: string;
+      metadata?: components['schemas']['EntityMetadata'];
+    };
+    CategorySection: {
+      category: {
+        type?: components['schemas']['CategoryType'];
+        /** Format: double */
+        sort_order: number;
+        color: string;
+        name: string;
+        id: string;
+      };
+      items:
+        | components['schemas']['BillInstanceDetailed'][]
+        | components['schemas']['IncomeInstanceDetailed'][];
+      subtotal: {
+        /** Format: double */
+        actual: number;
+        /** Format: double */
+        expected: number;
+      };
+    };
+    SectionTally: {
+      /** Format: double */
+      expected: number;
+      /** Format: double */
+      actual: number;
+      /** Format: double */
+      remaining: number;
+    };
+    LeftoverBreakdown: {
+      /** Format: double */
+      bankBalances: number;
+      /** Format: double */
+      remainingIncome: number;
+      /** Format: double */
+      remainingExpenses: number;
+      /** Format: double */
+      leftover: number;
+      isValid: boolean;
+      hasActuals?: boolean;
+      missingBalances?: string[];
+      errorMessage?: string;
+    };
+    PayoffSummary: {
+      paymentSourceId: string;
+      paymentSourceName: string;
+      /** Format: double */
+      balance: number;
+      /** Format: double */
+      paid: number;
+      /** Format: double */
+      remaining: number;
+    };
+    DetailedMonthResponse: {
+      month: string;
+      billSections: components['schemas']['CategorySection'][];
+      incomeSections: components['schemas']['CategorySection'][];
+      overdue_bills: {
+        due_date: string;
+        /** Format: double */
+        amount: number;
+        name: string;
+      }[];
+      tallies: {
+        totalIncome: components['schemas']['SectionTally'];
+        adhocIncome: components['schemas']['SectionTally'];
+        income: components['schemas']['SectionTally'];
+        totalExpenses: components['schemas']['SectionTally'];
+        ccPayoffs: components['schemas']['SectionTally'];
+        adhocBills: components['schemas']['SectionTally'];
+        bills: components['schemas']['SectionTally'];
+      };
+      /** Format: double */
+      leftover: number;
+      leftoverBreakdown: components['schemas']['LeftoverBreakdown'];
+      payoffSummaries: components['schemas']['PayoffSummary'][];
+      bankBalances: components['schemas']['Record_string.number_'];
+      lastUpdated: string;
+    };
+    MonthSummary: {
+      month: string;
+      /** Format: double */
+      totalIncome: number;
+      /** Format: double */
+      totalExpenses: number;
+      /** Format: double */
+      leftover: number;
+      isLocked: boolean;
+    };
+    MonthExistsResponse: {
+      exists: boolean;
+      isLocked: boolean;
+    };
+    GenerateMonthRequest: {
+      /** @description Force regeneration even if month exists */
+      force?: boolean;
+    };
+    LockMonthRequest: {
+      /** @description Lock (true) or unlock (false) the month */
+      lock: boolean;
+    };
+    UpdateBankBalancesRequest: {
+      /** @description Map of payment source ID to balance in cents */
+      balances: components['schemas']['Record_string.number_'];
+    };
+    /** @enum {string} */
+    BillingPeriod: 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
+    Income: {
+      id: string;
+      name: string;
+      /** Format: double */
+      amount: number;
+      billing_period: components['schemas']['BillingPeriod'];
+      start_date?: string;
+      /** Format: double */
+      day_of_month?: number;
+      /** Format: double */
+      recurrence_week?: number;
+      /** Format: double */
+      recurrence_day?: number;
+      payment_source_id: string;
+      category_id: string;
+      payment_method?: components['schemas']['PaymentMethod'];
+      metadata?: components['schemas']['EntityMetadata'];
+      goal_id?: string;
+      is_active: boolean;
+      created_at: string;
+      updated_at: string;
+    };
+    CreateIncomeRequest: {
+      name: string;
+      /** Format: double */
+      amount: number;
+      billing_period: components['schemas']['BillingPeriod'];
+      start_date?: string;
+      /** Format: double */
+      day_of_month?: number;
+      /** Format: double */
+      recurrence_week?: number;
+      /** Format: double */
+      recurrence_day?: number;
+      payment_source_id: string;
+      category_id?: string;
+      is_active?: boolean;
+    };
+    UpdateIncomeRequest: {
+      name?: string;
+      /** Format: double */
+      amount?: number;
+      billing_period?: components['schemas']['BillingPeriod'];
+      start_date?: string;
+      /** Format: double */
+      day_of_month?: number;
+      /** Format: double */
+      recurrence_week?: number;
+      /** Format: double */
+      recurrence_day?: number;
+      payment_source_id?: string;
+      category_id?: string;
+      is_active?: boolean;
+    };
     HealthResponse: {
       status: string;
       timestamp: string;
+      version?: string;
+    };
+    Category: {
+      id: string;
+      name: string;
+      is_predefined: boolean;
+      /** Format: double */
+      sort_order: number;
+      color: string;
+      type: components['schemas']['CategoryType'];
+      created_at: string;
+      updated_at: string;
+    };
+    CreateCategoryRequest: {
+      name: string;
+      type: components['schemas']['CategoryType'];
+      color?: string;
+      /** Format: double */
+      sort_order?: number;
+    };
+    UpdateCategoryRequest: {
+      name?: string;
+      type?: components['schemas']['CategoryType'];
+      color?: string;
+      /** Format: double */
+      sort_order?: number;
+    };
+    ReorderCategoriesRequest: {
+      /** @description Array of category IDs in desired order */
+      order: string[];
+    };
+    Bill: {
+      id: string;
+      name: string;
+      /** Format: double */
+      amount: number;
+      billing_period: components['schemas']['BillingPeriod'];
+      start_date?: string;
+      /** Format: double */
+      day_of_month?: number;
+      /** Format: double */
+      recurrence_week?: number;
+      /** Format: double */
+      recurrence_day?: number;
+      payment_source_id: string;
+      category_id: string;
+      payment_method?: components['schemas']['PaymentMethod'];
+      metadata?: components['schemas']['EntityMetadata'];
+      goal_id?: string;
+      is_active: boolean;
+      created_at: string;
+      updated_at: string;
+    };
+    CreateBillRequest: {
+      name: string;
+      /** Format: double */
+      amount: number;
+      billing_period: components['schemas']['BillingPeriod'];
+      start_date?: string;
+      /** Format: double */
+      day_of_month?: number;
+      /** Format: double */
+      recurrence_week?: number;
+      /** Format: double */
+      recurrence_day?: number;
+      payment_source_id: string;
+      category_id?: string;
+      is_active?: boolean;
+    };
+    UpdateBillRequest: {
+      name?: string;
+      /** Format: double */
+      amount?: number;
+      billing_period?: components['schemas']['BillingPeriod'];
+      start_date?: string;
+      /** Format: double */
+      day_of_month?: number;
+      /** Format: double */
+      recurrence_week?: number;
+      /** Format: double */
+      recurrence_day?: number;
+      payment_source_id?: string;
+      category_id?: string;
+      is_active?: boolean;
+    };
+    BackupFileData: {
+      export_date: string;
+      bills: components['schemas']['Bill'][];
+      incomes: components['schemas']['Income'][];
+      payment_sources: components['schemas']['PaymentSource'][];
+      categories: components['schemas']['Category'][];
+      months: components['schemas']['MonthlyData'][];
+    };
+    RestoreBackupRequest: {
+      /** @description Base64 encoded backup file content or JSON object */
+      data: unknown;
+    };
+    ValidateBackupResponse: {
+      isValid: boolean;
+      errors: string[];
+      warnings: string[];
+      summary?: {
+        /** Format: double */
+        months: number;
+        /** Format: double */
+        categories: number;
+        /** Format: double */
+        paymentSources: number;
+        /** Format: double */
+        incomes: number;
+        /** Format: double */
+        bills: number;
+      };
+    };
+    ValidateBackupRequest: {
+      /** @description Backup data to validate */
+      data: unknown;
     };
   };
   responses: never;
@@ -85,6 +1206,139 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  GetSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SettingsResponse'];
+        };
+      };
+    };
+  };
+  GetDataDirectory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DataDirectoryResponse'];
+        };
+      };
+    };
+  };
+  ValidateDirectory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ValidateDirectoryRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DirectoryValidation'];
+        };
+      };
+    };
+  };
+  MigrateData: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MigrateDataRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MigrationResult'];
+        };
+      };
+      /** @description Migration failed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  SwitchDirectory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SwitchDirectoryRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
+            success: boolean;
+          };
+        };
+      };
+      /** @description Switch failed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
   GetPaymentSources: {
     parameters: {
       query?: never;
@@ -94,25 +1348,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Ok */
+      /** @description OK */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            data: unknown[];
-            message: string;
-            status: string;
-          };
+          'application/json': components['schemas']['PaymentSource'][];
         };
-      };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
       };
     };
   };
@@ -123,40 +1366,455 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
-    responses: {
-      /** @description Ok */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            message: string;
-            status: string;
-          };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePaymentSourceRequest'];
       };
+    };
+    responses: {
       /** @description Created */
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['PaymentSource'];
+        };
       };
       /** @description Bad Request */
       400: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
       };
-      /** @description Not Implemented */
-      501: {
+    };
+  };
+  UpdatePaymentSource: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdatePaymentSourceRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PaymentSource'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  DeletePaymentSource: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  ListMonths: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthListItem'][];
+        };
+      };
+    };
+  };
+  GetMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthlyData'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  DeleteMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  GetDetailedMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DetailedMonthResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  GetMonthSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthSummary'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  MonthExists: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthExistsResponse'];
+        };
+      };
+    };
+  };
+  GetManageInfo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            months: components['schemas']['MonthListItem'][];
+          };
+        };
+      };
+    };
+  };
+  GenerateMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['GenerateMonthRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthlyData'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  CreateMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthlyData'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  SyncMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthlyData'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  LockMonth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LockMonthRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthlyData'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  UpdateBankBalances: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        month: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateBankBalancesRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MonthlyData'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
       };
     };
   };
@@ -169,25 +1827,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Ok */
+      /** @description OK */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            data: unknown[];
-            message: string;
-            status: string;
-          };
+          'application/json': components['schemas']['Income'][];
         };
-      };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
       };
     };
   };
@@ -198,40 +1845,102 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
-    responses: {
-      /** @description Ok */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            message: string;
-            status: string;
-          };
-        };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateIncomeRequest'];
       };
+    };
+    responses: {
       /** @description Created */
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['Income'];
+        };
       };
       /** @description Bad Request */
       400: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
       };
-      /** @description Not Implemented */
-      501: {
+    };
+  };
+  UpdateIncome: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateIncomeRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Income'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  DeleteIncome: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
       };
     };
   };
@@ -255,6 +1964,165 @@ export interface operations {
       };
     };
   };
+  GetCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Category'][];
+        };
+      };
+    };
+  };
+  CreateCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateCategoryRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Category'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  UpdateCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateCategoryRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Category'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  DeleteCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  ReorderCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReorderCategoriesRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Category'][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
   GetBills: {
     parameters: {
       query?: never;
@@ -264,25 +2132,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Ok */
+      /** @description OK */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': {
-            data: unknown[];
-            message: string;
-            status: string;
-          };
+          'application/json': components['schemas']['Bill'][];
         };
-      };
-      /** @description Not Implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
       };
     };
   };
@@ -293,9 +2150,139 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateBillRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Bill'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  UpdateBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateBillRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Bill'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  DeleteBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
     requestBody?: never;
     responses: {
-      /** @description Ok */
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  ExportBackup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BackupFileData'];
+        };
+      };
+    };
+  };
+  RestoreBackup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RestoreBackupRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
       200: {
         headers: {
           [name: string]: unknown;
@@ -303,30 +2290,42 @@ export interface operations {
         content: {
           'application/json': {
             message: string;
-            status: string;
+            success: boolean;
           };
         };
       };
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
+      /** @description Invalid backup data */
       400: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
       };
-      /** @description Not Implemented */
-      501: {
+    };
+  };
+  ValidateBackup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ValidateBackupRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ValidateBackupResponse'];
+        };
       };
     };
   };

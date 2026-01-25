@@ -1,14 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type {
-    BillInstanceDetailed,
-    IncomeInstanceDetailed,
-    Occurrence,
-  } from '../../stores/detailed-month';
+  import type { BillInstanceDetailed, IncomeInstanceDetailed } from '../../stores/detailed-month';
+  import { detailedMonth } from '../../stores/detailed-month';
+  import { paymentSources } from '../../stores/payment-sources';
   import OccurrenceRow from './OccurrenceRow.svelte';
-  import TransactionsDrawer from './TransactionsDrawer.svelte';
   import ItemDetailsDrawer from './ItemDetailsDrawer.svelte';
-  import CloseTransactionModal from './CloseTransactionModal.svelte';
+  import PayCreditCardModal from './PayCreditCardModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
 
@@ -22,11 +19,31 @@
   // Check if this is a payoff bill (only relevant for bills)
   $: isPayoffBill = type === 'bill' && (item as BillInstanceDetailed).is_payoff_bill === true;
 
-  let showTransactionsDrawer = false;
+  // Payoff bill specific state
+  let showPayCCModal = false;
+
+  // Payoff bill specific data
+  $: billItem = item as BillInstanceDetailed;
+  $: payoffSourceId = billItem.payoff_source_id || billItem.payment_source?.id || '';
+  $: payoffSource = $paymentSources.find((ps) => ps.id === payoffSourceId);
+  $: payoffSourceName = payoffSource?.name || billItem.payment_source?.name || 'Credit Card';
+
+  // Get current CC balance from bankBalances in the store
+  $: payoffCurrentBalance =
+    isPayoffBill && payoffSourceId
+      ? ($detailedMonth?.data?.bankBalances?.[payoffSourceId] ?? 0)
+      : 0;
+
+  // Closed occurrences represent completed payments (for payoff bills)
+  $: closedPayoffChunks = isPayoffBill ? occurrences.filter((o) => o.is_closed) : [];
+
+  // Sum of all closed payment chunks
+  $: payoffPaidSoFar = closedPayoffChunks.reduce((sum, o) => sum + o.expected_amount, 0);
+
+  // Remaining = current balance (negative for CC) - already paid
+  $: payoffRemaining = Math.max(0, Math.abs(payoffCurrentBalance) - payoffPaidSoFar);
+
   let showDetailsDrawer = false;
-  let showCloseModal = false;
-  let closeDate = '';
-  let selectedOccurrence: Occurrence | null = null;
   let addingOccurrence = false;
   let saving = false;
 
@@ -61,61 +78,14 @@
   $: occurrenceCount = item.occurrence_count || occurrences.length;
   $: isExtraOccurrenceMonth = item.is_extra_occurrence_month;
   $: totalExpected = occurrences.reduce((sum, occ) => sum + occ.expected_amount, 0);
+  // In the occurrence-only model, closed occurrences represent paid amounts
   $: totalPaid = occurrences.reduce(
-    (sum, occ) => sum + occ.payments.reduce((ps, p) => ps + p.amount, 0),
+    (sum, occ) => sum + (occ.is_closed ? occ.expected_amount : 0),
     0
   );
   $: closedCount = occurrences.filter((occ) => occ.is_closed).length;
   $: allClosed = closedCount === occurrences.length && occurrences.length > 0;
   $: isClosed = (item as unknown as { is_closed?: boolean }).is_closed ?? allClosed;
-
-  // Handle occurrence payment drawer
-  function handleOpenPayments(event: CustomEvent<{ occurrence: Occurrence }>) {
-    selectedOccurrence = event.detail.occurrence;
-    showTransactionsDrawer = true;
-  }
-
-  function handleTransactionsUpdated() {
-    // Optimistic updates are now handled in the drawer, so we don't need to refresh
-    // for regular payment add/delete operations. The store is updated immediately.
-    // Keep drawer open so user can continue managing payments
-  }
-
-  function handleTransactionsRequestClose(
-    event: CustomEvent<{ paymentDate: string; notes: string }>
-  ) {
-    // Open CloseTransactionModal when user clicks "Add & Close" or "Close Without Adding"
-    closeDate = event.detail.paymentDate || new Date().toISOString().split('T')[0];
-    showCloseModal = true;
-  }
-
-  async function handleCloseConfirm(event: CustomEvent<{ closedDate: string; notes: string }>) {
-    if (saving || !selectedOccurrence) return;
-    saving = true;
-
-    try {
-      await apiClient.post(
-        `/api/months/${month}/${type}s/${item.id}/occurrences/${selectedOccurrence.id}/close`,
-        {
-          closed_date: event.detail.closedDate,
-          notes: event.detail.notes,
-        }
-      );
-      success('Closed');
-      dispatch('refresh');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to close');
-    } finally {
-      saving = false;
-      showCloseModal = false;
-      showTransactionsDrawer = false;
-      selectedOccurrence = null;
-    }
-  }
-
-  function handleNotesUpdated() {
-    dispatch('refresh');
-  }
 
   function handleOccurrenceUpdated() {
     dispatch('refresh');
@@ -152,31 +122,84 @@
   <div class="card-header">
     <div class="header-info">
       <span class="item-name" class:closed-text={isClosed}>
+        {#if !readOnly && !isPayoffBill}
+          <button
+            class="add-occurrence-icon"
+            on:click={handleAddOccurrence}
+            disabled={addingOccurrence}
+            title="Add occurrence"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        {/if}
         <button class="name-link" on:click={openDetailsDrawer} title="View details">
           {item.name}
         </button>
-        <span class="billing-badge">{formatBillingPeriod(item.billing_period)}</span>
+        {#if isPayoffBill}
+          <span class="billing-badge payoff">Payoff</span>
+        {:else}
+          <span class="billing-badge">{formatBillingPeriod(item.billing_period)}</span>
+        {/if}
       </span>
       <span class="occurrence-summary">
-        {occurrenceCount}
-        {type === 'bill' ? 'payment' : 'receipt'}{occurrenceCount !== 1 ? 's' : ''}
-        {#if closedCount > 0}
-          <span class="closed-count">({closedCount}/{occurrenceCount} closed)</span>
+        {#if isPayoffBill}
+          {closedPayoffChunks.length} payment{closedPayoffChunks.length !== 1 ? 's' : ''} recorded
+        {:else}
+          {occurrenceCount}
+          {type === 'bill' ? 'payment' : 'receipt'}{occurrenceCount !== 1 ? 's' : ''}
+          {#if closedCount > 0}
+            <span class="closed-count">({closedCount}/{occurrenceCount} closed)</span>
+          {/if}
         {/if}
       </span>
     </div>
 
     <div class="header-totals">
-      <div class="total-column">
-        <span class="total-label">Total Expected</span>
-        <span class="total-value">{formatCurrency(totalExpected)}</span>
-      </div>
-      <div class="total-column">
-        <span class="total-label">Total {type === 'bill' ? 'Paid' : 'Received'}</span>
-        <span class="total-value" class:amber={totalPaid !== totalExpected && totalPaid > 0}>
-          {totalPaid > 0 ? formatCurrency(totalPaid) : '-'}
-        </span>
-      </div>
+      {#if isPayoffBill}
+        <!-- Payoff bill header: show Balance, Paid So Far, Remaining + Pay button -->
+        <div class="total-column">
+          <span class="total-label">Balance</span>
+          <span class="total-value debt">{formatCurrency(Math.abs(payoffCurrentBalance))}</span>
+        </div>
+        <div class="total-column">
+          <span class="total-label">Paid So Far</span>
+          <span class="total-value" class:positive={payoffPaidSoFar > 0}>
+            {payoffPaidSoFar > 0 ? formatCurrency(payoffPaidSoFar) : '-'}
+          </span>
+        </div>
+        <div class="total-column">
+          <span class="total-label">Remaining</span>
+          <span class="total-value" class:zero={payoffRemaining === 0}>
+            {formatCurrency(payoffRemaining)}
+          </span>
+        </div>
+        {#if !readOnly}
+          <button class="pay-btn" on:click={() => (showPayCCModal = true)} title="Record a payment">
+            Pay
+          </button>
+        {/if}
+      {:else}
+        <div class="total-column">
+          <span class="total-label">Total Expected</span>
+          <span class="total-value">{formatCurrency(totalExpected)}</span>
+        </div>
+        <div class="total-column">
+          <span class="total-label">Total {type === 'bill' ? 'Paid' : 'Received'}</span>
+          <span class="total-value" class:amber={totalPaid !== totalExpected && totalPaid > 0}>
+            {totalPaid > 0 ? formatCurrency(totalPaid) : '-'}
+          </span>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -199,62 +222,32 @@
         {occurrence}
         {month}
         instanceId={item.id}
+        itemName={item.name}
         {type}
         {readOnly}
         {isPayoffBill}
         on:updated={handleOccurrenceUpdated}
-        on:openPayments={handleOpenPayments}
       />
     {/each}
   </div>
-
-  <!-- Add Occurrence Button (hidden for payoff bills since they're auto-generated) -->
-  {#if !readOnly && !isPayoffBill}
-    <div class="card-footer">
-      <button class="add-occurrence-btn" on:click={handleAddOccurrence} disabled={addingOccurrence}>
-        + Add Occurrence
-      </button>
-    </div>
-  {/if}
 </div>
-
-<!-- Transactions Drawer for selected occurrence -->
-{#if selectedOccurrence}
-  <TransactionsDrawer
-    bind:open={showTransactionsDrawer}
-    {month}
-    instanceId={item.id}
-    instanceName="{item.name} - {new Date(
-      selectedOccurrence.expected_date + 'T00:00:00'
-    ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}"
-    expectedAmount={selectedOccurrence.expected_amount}
-    transactionList={selectedOccurrence.payments || []}
-    isClosed={selectedOccurrence.is_closed}
-    type={type === 'bill' ? 'bill' : 'income'}
-    occurrenceId={selectedOccurrence.id}
-    occurrenceNotes={(selectedOccurrence as Occurrence & { notes?: string | null }).notes ?? ''}
-    {isPayoffBill}
-    on:updated={handleTransactionsUpdated}
-    on:notesUpdated={handleNotesUpdated}
-    on:requestClose={handleTransactionsRequestClose}
-  />
-
-  <CloseTransactionModal
-    open={showCloseModal}
-    {type}
-    itemName="{item.name} - {new Date(
-      selectedOccurrence.expected_date + 'T00:00:00'
-    ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}"
-    initialDate={closeDate}
-    initialNotes={(selectedOccurrence as Occurrence & { notes?: string | null }).notes ?? ''}
-    {month}
-    on:close={() => (showCloseModal = false)}
-    on:confirm={handleCloseConfirm}
-  />
-{/if}
 
 <!-- Item Details Drawer -->
 <ItemDetailsDrawer bind:open={showDetailsDrawer} {item} {type} />
+
+<!-- Pay Credit Card Modal (for payoff bills) -->
+{#if isPayoffBill}
+  <PayCreditCardModal
+    bind:open={showPayCCModal}
+    {month}
+    instanceId={item.id}
+    cardName={payoffSourceName}
+    currentBalance={Math.abs(payoffCurrentBalance)}
+    paidSoFar={payoffPaidSoFar}
+    remaining={payoffRemaining}
+    on:updated={() => dispatch('refresh')}
+  />
+{/if}
 
 <style>
   .occurrence-card {
@@ -291,6 +284,33 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .add-occurrence-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border-default);
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .add-occurrence-icon:hover:not(:disabled) {
+    border-color: var(--accent);
+    border-style: solid;
+    color: var(--accent);
+    background: var(--accent-muted);
+  }
+
+  .add-occurrence-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .name-link {
@@ -372,6 +392,44 @@
     color: var(--warning);
   }
 
+  .total-value.debt {
+    color: var(--error);
+  }
+
+  .total-value.positive {
+    color: var(--success);
+  }
+
+  .total-value.zero {
+    color: var(--success);
+  }
+
+  .billing-badge.payoff {
+    background: var(--purple-bg);
+    color: var(--purple);
+  }
+
+  .pay-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: var(--purple);
+    border: none;
+    color: var(--text-inverse);
+  }
+
+  .pay-btn:hover:not(:disabled) {
+    background: var(--purple-hover);
+  }
+
+  .pay-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   .extra-banner {
     display: flex;
     align-items: center;
@@ -397,33 +455,6 @@
     flex-direction: column;
     gap: 2px;
     padding: 8px;
-  }
-
-  .card-footer {
-    padding: 8px 16px 12px;
-    border-top: 1px solid var(--border-default);
-  }
-
-  .add-occurrence-btn {
-    background: transparent;
-    border: 1px dashed var(--border-default);
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .add-occurrence-btn:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-muted);
-  }
-
-  .add-occurrence-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   @media (max-width: 640px) {

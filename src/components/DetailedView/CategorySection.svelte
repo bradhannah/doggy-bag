@@ -6,8 +6,6 @@
     IncomeInstanceDetailed,
     Occurrence,
   } from '../../stores/detailed-month';
-  import BillRow from './BillRow.svelte';
-  import IncomeRow from './IncomeRow.svelte';
   import OccurrenceCard from './OccurrenceCard.svelte';
   import AdHocForm from './AdHocForm.svelte';
 
@@ -31,20 +29,6 @@
       currency: 'USD',
       minimumFractionDigits: 2,
     }).format(dollars);
-  }
-
-  // Type guards
-  function isBillInstance(
-    item: BillInstanceDetailed | IncomeInstanceDetailed
-  ): item is BillInstanceDetailed {
-    return 'bill_id' in item;
-  }
-
-  // Check if item has multiple occurrences
-  // Show as OccurrenceCard if there are multiple occurrences (regardless of billing period)
-  // This handles: bi-weekly, weekly, AND monthly items with manually-added occurrences
-  function hasMultipleOccurrences(item: BillInstanceDetailed | IncomeInstanceDetailed): boolean {
-    return item.occurrences && item.occurrences.length > 1;
   }
 
   // Count total occurrences and closed occurrences for stats
@@ -184,40 +168,13 @@
 
     <div class="category-items">
       {#each section.items as item (item.id)}
-        {#if hasMultipleOccurrences(item)}
-          <!-- Multi-occurrence items (bi-weekly, weekly) use OccurrenceCard -->
-          <OccurrenceCard
-            {item}
-            type={type === 'bills' ? 'bill' : 'income'}
-            {month}
-            {readOnly}
-            on:refresh={handleRefresh}
-          />
-        {:else if type === 'bills' && isBillInstance(item)}
-          <!-- Regular monthly bills use BillRow -->
-          <BillRow
-            bill={item}
-            {month}
-            {compactMode}
-            {readOnly}
-            categoryName={section.category.name}
-            on:refresh={handleRefresh}
-            on:reopened
-            on:closed
-          />
-        {:else if type === 'income' && !isBillInstance(item)}
-          <!-- Regular monthly incomes use IncomeRow -->
-          <IncomeRow
-            income={item}
-            {month}
-            {compactMode}
-            {readOnly}
-            categoryName={section.category.name}
-            on:refresh={handleRefresh}
-            on:reopened
-            on:closed
-          />
-        {/if}
+        <OccurrenceCard
+          {item}
+          type={type === 'bills' ? 'bill' : 'income'}
+          {month}
+          {readOnly}
+          on:refresh={handleRefresh}
+        />
       {/each}
     </div>
   </div>
@@ -239,10 +196,10 @@
   }
 
   /* Complete/empty category state: use muted colors instead of opacity
-     (opacity creates a stacking context which breaks position:fixed drawers inside).
+     (opacity creates a stacking context which breaks position:fixed modals).
      Only the header gets opacity - the items section is not dimmed because
-     BillRow/IncomeRow/OccurrenceCard contain position:fixed drawers that would
-     be trapped in the stacking context. Each row handles its own "closed" styling. */
+     OccurrenceRow contains modals that would be trapped in the stacking context.
+     Each row handles its own "closed" styling. */
   .category-section.complete .category-header {
     opacity: 0.6;
   }

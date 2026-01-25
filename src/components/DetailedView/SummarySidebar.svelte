@@ -466,6 +466,43 @@
       </div>
     {/if}
   </div>
+
+  <!-- Box 4: Quick Add -->
+  {#if !readOnly}
+    <div class="sidebar-box quick-add-box">
+      <h3 class="box-title">Quick Add</h3>
+      <div class="quick-add-buttons">
+        <button
+          class="quick-add-btn expense"
+          on:click={() => dispatch('openAdHocForm', { type: 'bill' })}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 5v14m-7-7h14"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          Add Expense
+        </button>
+        <button
+          class="quick-add-btn income"
+          on:click={() => dispatch('openAdHocForm', { type: 'income' })}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 5v14m-7-7h14"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          Add Income
+        </button>
+      </div>
+    </div>
+  {/if}
 </aside>
 
 <style>
@@ -891,5 +928,53 @@
 
   .summary-sidebar::-webkit-scrollbar-thumb:hover {
     background: var(--border-hover);
+  }
+
+  /* Quick Add Box */
+  .quick-add-box {
+    background: var(--bg-surface);
+  }
+
+  .quick-add-buttons {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .quick-add-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .quick-add-btn.expense {
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error);
+  }
+
+  .quick-add-btn.expense:hover {
+    background: var(--error);
+    border-color: var(--error);
+    color: var(--text-inverse);
+  }
+
+  .quick-add-btn.income {
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+  }
+
+  .quick-add-btn.income:hover {
+    background: var(--success);
+    border-color: var(--success);
+    color: var(--text-inverse);
   }
 </style>

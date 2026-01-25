@@ -6,7 +6,7 @@ import { MonthsServiceImpl } from '../../services/months-service';
 import { AdhocServiceImpl } from '../../services/adhoc-service';
 import { CategoriesServiceImpl } from '../../services/categories-service';
 import { formatErrorForUser } from '../../utils/errors';
-import { sumOccurrencePayments } from '../../utils/occurrences';
+import { sumClosedOccurrenceAmounts } from '../../utils/tally';
 import type { SavingsGoalStatus, GoalTemperature } from '../../types';
 
 const savingsGoalsService: SavingsGoalsService = new SavingsGoalsServiceImpl();
@@ -22,7 +22,7 @@ interface SavingsGoalWithCalculations {
   target_amount: number;
   current_amount: number;
   saved_amount: number; // Calculated from closed bill occurrences
-  target_date: string;
+  target_date?: string;
   linked_account_id: string;
   status: SavingsGoalStatus;
   previous_status?: 'bought' | 'abandoned'; // Status before archiving
@@ -70,9 +70,9 @@ async function calculateSavedAmount(goalId: string): Promise<number> {
 
         if (!isLinkedViaBill && !isLinkedDirectly) continue;
 
-        // Sum payments from all occurrences (closed or open)
+        // Sum payments from all closed occurrences
         if (billInstance.occurrences && billInstance.occurrences.length > 0) {
-          totalSaved += sumOccurrencePayments(billInstance.occurrences);
+          totalSaved += sumClosedOccurrenceAmounts(billInstance.occurrences);
         }
       }
     }
@@ -1076,19 +1076,17 @@ export function createSavingsGoalsPaymentsHandler() {
 
           // Process each occurrence
           for (const occurrence of billInstance.occurrences || []) {
-            // Collect actual payments made
-            for (const payment of occurrence.payments || []) {
+            // In occurrence-only model, closed occurrences represent completed payments
+            if (occurrence.is_closed) {
               rawPayments.push({
-                id: payment.id,
-                date: payment.date,
+                id: occurrence.id,
+                date: occurrence.closed_date || occurrence.expected_date,
                 description,
-                amount: payment.amount,
+                amount: occurrence.expected_amount,
                 status: 'completed',
               });
-            }
-
-            // If occurrence is not closed and in the future, it's upcoming
-            if (!occurrence.is_closed && occurrence.expected_date > today) {
+            } else if (occurrence.expected_date > today) {
+              // Open occurrence in the future is upcoming
               rawPayments.push({
                 id: `upcoming-${occurrence.id}`,
                 date: occurrence.expected_date,

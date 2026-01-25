@@ -425,7 +425,7 @@ describe('PaymentSourcesService', () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        'Savings and investment accounts cannot have pay_off_monthly enabled'
+        'Savings and investment accounts cannot have payment tracking enabled'
       );
     });
 
@@ -438,7 +438,7 @@ describe('PaymentSourcesService', () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        'Savings and investment accounts cannot have pay_off_monthly enabled'
+        'Savings and investment accounts cannot have payment tracking enabled'
       );
     });
 
