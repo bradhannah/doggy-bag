@@ -265,8 +265,14 @@ export class MonthsServiceImpl implements MonthsService {
       });
 
       // Ensure occurrences are never empty
+      // Exception: payoff bills for track_payments_manually cards should start with zero occurrences
       const fallbackDate = `${month}-01`;
       const normalizedBillInstances = migratedBillInstances.map((instance) => {
+        // Skip fallback for payoff bills - they intentionally have zero occurrences
+        // (user adds payments manually for track_payments_manually cards)
+        if (instance.is_payoff_bill) {
+          return instance;
+        }
         const ensured = ensureOccurrenceFallback(instance.occurrences, fallbackDate, 0);
         if (ensured !== instance.occurrences) {
           needsSave = true;
@@ -772,15 +778,10 @@ export class MonthsServiceImpl implements MonthsService {
           const newBalance = balances[bi.payoff_source_id];
           if (newBalance !== undefined) {
             // NEW: Occurrence-based reconciliation for payoff bills
-            // Never modify or delete closed occurrences - they are historical payment records
-            const expectedAmount = Math.abs(newBalance);
-
-            // Calculate how much has been paid (sum of closed occurrences)
-            const closedOccurrences = bi.occurrences.filter((o) => o.is_closed);
-            const paidSoFar = closedOccurrences.reduce((sum, o) => sum + o.expected_amount, 0);
-
-            // Calculate remaining based on new balance - what's been paid
-            const remaining = Math.max(0, expectedAmount - paidSoFar);
+            // The newBalance IS the current remaining debt on the card.
+            // Closed occurrences are historical payment records - we don't subtract them
+            // because the bank balance already reflects those payments.
+            const remaining = Math.abs(newBalance);
 
             // Find the open occurrence (should be at most one)
             const openOccurrenceIndex = bi.occurrences.findIndex((o) => !o.is_closed);
@@ -826,13 +827,12 @@ export class MonthsServiceImpl implements MonthsService {
 
             data.bill_instances[i] = {
               ...bi,
-              expected_amount: expectedAmount, // Total owed = card balance
+              expected_amount: remaining, // Total remaining = card balance
               updated_at: now,
             };
 
             console.log(
-              `[MonthsService] Reconciled payoff bill ${bi.id}: balance=$${(expectedAmount / 100).toFixed(2)}, ` +
-                `paid=$${(paidSoFar / 100).toFixed(2)}, remaining=$${(remaining / 100).toFixed(2)}`
+              `[MonthsService] Reconciled payoff bill ${bi.id}: remaining=$${(remaining / 100).toFixed(2)}`
             );
           }
         }
@@ -1486,6 +1486,40 @@ export class MonthsServiceImpl implements MonthsService {
         console.log(
           `[MonthsService] Skipping payoff bill generation for ${month} until balances are entered`
         );
+      }
+
+      // Generate payoff bills for track_payments_manually cards immediately (with zero occurrences)
+      const manualTrackSources = paymentSources.filter(
+        (ps) => ps.track_payments_manually === true && ps.is_active
+      );
+
+      if (manualTrackSources.length > 0) {
+        const payoffCategory = await this.categoriesService.ensurePayoffCategory();
+
+        for (const source of manualTrackSources) {
+          billInstances.push({
+            id: crypto.randomUUID(),
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: 0, // No pre-calculated amount
+            occurrences: [], // Zero occurrences - user adds payments manually
+            is_default: true,
+            is_closed: false,
+            is_adhoc: false,
+            is_payoff_bill: true,
+            payoff_source_id: source.id,
+            name: `${source.name} Payments`,
+            category_id: payoffCategory.id,
+            payment_source_id: source.id,
+            created_at: nowIso,
+            updated_at: nowIso,
+          });
+
+          console.log(
+            `[MonthsService] Created manual payment tracking bill for ${source.name} in ${month}`
+          );
+        }
       }
 
       // Generate income instances from active incomes
