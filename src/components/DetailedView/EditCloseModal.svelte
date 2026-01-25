@@ -2,7 +2,6 @@
   /**
    * EditCloseModal - Unified modal for editing and closing occurrences
    *
-   * Combines editing fields with close options, replacing the complex TransactionsDrawer.
    * Users can edit amount/date, then choose how to close - or save changes without closing.
    */
   import { createEventDispatcher } from 'svelte';

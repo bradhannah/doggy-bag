@@ -3,15 +3,6 @@ import { writable, derived } from 'svelte/store';
 import { apiClient } from '../lib/api/client';
 import type { EntityMetadata } from './bills';
 
-// DEPRECATED: Payment interface kept for backward compatibility with TransactionsDrawer
-// In the occurrence-only model, payments are no longer separate entities.
-// Will be removed when TransactionsDrawer is replaced with EditCloseModal.
-export interface Payment {
-  id: string;
-  amount: number;
-  date: string;
-}
-
 // Occurrence - individual payment instance within a billing period
 // In the occurrence-only model, closing an occurrence = payment recorded
 export interface Occurrence {
