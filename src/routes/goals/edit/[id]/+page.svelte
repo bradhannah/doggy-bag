@@ -68,16 +68,17 @@
   let linkedAccountId = '';
   let notes = '';
   let isOpenEnded = false; // No target date - indefinite saving
+  let hasTargetAmount = true; // Whether goal has a specific target amount
 
   // Get payment sources for account selection
   $: bankAccounts = $paymentSources.filter(
     (ps) => ps.type === 'bank_account' || ps.type === 'cash'
   );
 
-  // Form validation - target date not required for open-ended goals
+  // Form validation - target date and target amount optional based on settings
   $: isValid =
     name.trim() !== '' &&
-    parseFloat(targetAmountDollars) > 0 &&
+    (hasTargetAmount ? parseFloat(targetAmountDollars) > 0 : true) &&
     (isOpenEnded || targetDate !== '') &&
     linkedAccountId !== '';
 
@@ -85,7 +86,9 @@
   $: hasChanges =
     goal !== null &&
     (name !== goal.name ||
-      Math.round(parseFloat(targetAmountDollars) * 100) !== goal.target_amount ||
+      hasTargetAmount !== (goal.target_amount != null) ||
+      (hasTargetAmount &&
+        Math.round(parseFloat(targetAmountDollars) * 100) !== goal.target_amount) ||
       targetDate !== (goal.target_date || '') ||
       isOpenEnded !== !goal.target_date ||
       linkedAccountId !== goal.linked_account_id ||
@@ -264,7 +267,8 @@
 
       // Populate form fields
       name = goal.name;
-      targetAmountDollars = (goal.target_amount / 100).toFixed(2);
+      hasTargetAmount = goal.target_amount != null;
+      targetAmountDollars = hasTargetAmount ? (goal.target_amount! / 100).toFixed(2) : '';
       targetDate = goal.target_date || '';
       isOpenEnded = !goal.target_date;
       linkedAccountId = goal.linked_account_id;
@@ -292,8 +296,8 @@
     try {
       const updates: SavingsGoalUpdate = {
         name: name.trim(),
-        target_amount: Math.round(parseFloat(targetAmountDollars) * 100),
-        target_date: isOpenEnded ? null : targetDate,
+        target_amount: hasTargetAmount ? Math.round(parseFloat(targetAmountDollars) * 100) : null, // null to clear target amount (undefined would be stripped by JSON.stringify)
+        target_date: isOpenEnded ? null : targetDate || null,
         linked_account_id: linkedAccountId,
         notes: notes.trim() || undefined,
       };
@@ -567,7 +571,11 @@
     <div class="status-banner {getStatusClass(goal.status)}">
       <span class="status-label">{getStatusLabel(goal.status)}</span>
       <span class="status-progress">
-        {formatCurrency(goal.saved_amount)} of {formatCurrency(goal.target_amount)} saved ({goal.progress_percentage}%)
+        {#if goal.target_amount != null}
+          {formatCurrency(goal.saved_amount)} of {formatCurrency(goal.target_amount)} saved ({goal.progress_percentage}%)
+        {:else}
+          {formatCurrency(goal.saved_amount)} saved
+        {/if}
       </span>
     </div>
 
@@ -590,18 +598,32 @@
         <div class="form-row">
           <div class="form-field">
             <label for="targetAmount">Target Amount</label>
-            <div class="input-with-prefix">
-              <span class="prefix">$</span>
+            <label class="checkbox-field target-amount-toggle">
               <input
-                type="number"
-                id="targetAmount"
-                bind:value={targetAmountDollars}
-                placeholder="0.00"
-                min="0.01"
-                step="0.01"
+                type="checkbox"
+                bind:checked={hasTargetAmount}
                 disabled={goal.status === 'bought' || goal.status === 'abandoned'}
               />
-            </div>
+              <span>I have a specific target amount</span>
+            </label>
+            {#if hasTargetAmount}
+              <div class="input-with-prefix">
+                <span class="prefix">$</span>
+                <input
+                  type="number"
+                  id="targetAmount"
+                  bind:value={targetAmountDollars}
+                  placeholder="0.00"
+                  min="0.01"
+                  step="0.01"
+                  disabled={goal.status === 'bought' || goal.status === 'abandoned'}
+                />
+              </div>
+            {:else}
+              <p class="no-target-hint">
+                Great for open-ended goals like emergency funds or rainy day savings.
+              </p>
+            {/if}
           </div>
 
           <div class="form-field">
@@ -1044,9 +1066,13 @@
         </p>
         {#if goal}
           <p class="modal-info">
-            You've saved {formatCurrency(goal.saved_amount)} of your {formatCurrency(
-              goal.target_amount
-            )} target.
+            {#if goal.target_amount != null}
+              You've saved {formatCurrency(goal.saved_amount)} of your {formatCurrency(
+                goal.target_amount
+              )} target.
+            {:else}
+              You've saved {formatCurrency(goal.saved_amount)} total.
+            {/if}
           </p>
         {/if}
         <div class="modal-actions">
@@ -1458,6 +1484,25 @@
 
   .open-ended-checkbox span {
     color: var(--text-secondary);
+  }
+
+  .target-amount-toggle {
+    margin-bottom: var(--space-2);
+    font-size: 0.875rem;
+  }
+
+  .target-amount-toggle span {
+    color: var(--text-secondary);
+  }
+
+  .no-target-hint {
+    margin: var(--space-2) 0 0 0;
+    padding: var(--space-3);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    font-style: italic;
   }
 
   /* Schedule Option Box (shared styling for both options) */

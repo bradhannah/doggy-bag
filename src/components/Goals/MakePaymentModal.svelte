@@ -98,7 +98,11 @@
     <div class="progress-preview">
       <span class="preview-label">After this payment:</span>
       <span class="preview-value">
-        {formatCurrency(goal.saved_amount + amountCents)} of {formatCurrency(goal.target_amount)}
+        {#if goal.target_amount != null}
+          {formatCurrency(goal.saved_amount + amountCents)} of {formatCurrency(goal.target_amount)}
+        {:else}
+          {formatCurrency(goal.saved_amount + amountCents)} saved
+        {/if}
       </span>
     </div>
 

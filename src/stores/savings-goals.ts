@@ -14,7 +14,7 @@ export type GoalTemperature = 'green' | 'yellow' | 'red';
 export interface SavingsGoal {
   id: string;
   name: string;
-  target_amount: number; // Cents
+  target_amount?: number; // Cents (optional for open-ended goals without a target)
   current_amount: number; // Cents (legacy, use saved_amount instead)
   saved_amount: number; // Cents - calculated from closed bill occurrences
   target_date?: string; // YYYY-MM-DD (optional for open-ended goals)
@@ -34,7 +34,7 @@ export interface SavingsGoal {
 
 export interface SavingsGoalData {
   name: string;
-  target_amount: number;
+  target_amount?: number; // Optional for open-ended goals without a target
   target_date?: string; // Optional for open-ended goals
   linked_account_id: string;
   status?: SavingsGoalStatus;
@@ -43,7 +43,7 @@ export interface SavingsGoalData {
 
 export interface SavingsGoalUpdate {
   name?: string;
-  target_amount?: number;
+  target_amount?: number | null; // null to clear the target amount
   target_date?: string | null; // null to clear the target date
   linked_account_id?: string;
   notes?: string;
@@ -123,9 +123,9 @@ export const totalSavedAmount = derived(activeGoals, (goals) =>
   goals.reduce((sum, g) => sum + g.saved_amount, 0)
 );
 
-/** Total target amount across all active goals */
+/** Total target amount across all active goals (only counts goals with targets) */
 export const totalTargetAmount = derived(activeGoals, (goals) =>
-  goals.reduce((sum, g) => sum + g.target_amount, 0)
+  goals.reduce((sum, g) => sum + (g.target_amount ?? 0), 0)
 );
 
 /** Count of goals that need attention (yellow or red temperature) */
@@ -470,6 +470,9 @@ export function getStatusLabel(status: SavingsGoalStatus): string {
  */
 export function formatGoalProgress(goal: SavingsGoal): string {
   const saved = (goal.saved_amount / 100).toFixed(2);
+  if (goal.target_amount == null) {
+    return `$${saved} saved`;
+  }
   const target = (goal.target_amount / 100).toFixed(2);
   return `$${saved} / $${target} (${goal.progress_percentage}%)`;
 }

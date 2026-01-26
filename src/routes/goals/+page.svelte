@@ -97,7 +97,7 @@
         const activeBill = bills.find((b) => b.is_active);
 
         if (activeBill) {
-          const remainingAmount = goal.target_amount - (goal.saved_amount || 0);
+          const remainingAmount = (goal.target_amount ?? 0) - (goal.saved_amount || 0);
           const paymentsLeft =
             remainingAmount > 0 ? Math.ceil(remainingAmount / activeBill.amount) : 0;
 
@@ -438,19 +438,28 @@
 
           <!-- Progress section -->
           <div class="progress-section">
-            <div class="progress-bar-container">
-              <div
-                class="progress-bar"
-                style="width: {Math.min(
-                  goal.progress_percentage || 0,
-                  100
-                )}%; background-color: {getTemperatureColor(goal.temperature)}"
-              ></div>
-            </div>
-            <div class="progress-text">
-              <span class="saved-amount">{formatCurrency(goal.saved_amount)}</span>
-              <span class="target-amount">of {formatCurrency(goal.target_amount)}</span>
-            </div>
+            {#if goal.target_amount != null}
+              <!-- Goals with target amount: show progress bar -->
+              <div class="progress-bar-container">
+                <div
+                  class="progress-bar"
+                  style="width: {Math.min(
+                    goal.progress_percentage || 0,
+                    100
+                  )}%; background-color: {getTemperatureColor(goal.temperature)}"
+                ></div>
+              </div>
+              <div class="progress-text">
+                <span class="saved-amount">{formatCurrency(goal.saved_amount)}</span>
+                <span class="target-amount">of {formatCurrency(goal.target_amount)}</span>
+              </div>
+            {:else}
+              <!-- Goals without target amount: show total saved -->
+              <div class="open-ended-progress">
+                <span class="saved-amount-large">{formatCurrency(goal.saved_amount)}</span>
+                <span class="saved-label">saved</span>
+              </div>
+            {/if}
             {#if goal.status === 'saving' && !scheduleSummaries.has(goal.id)}
               <a href="/goals/edit/{goal.id}" class="no-payments-hint">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -700,9 +709,13 @@
           Congratulations! Are you ready to mark <strong>"{confirmModal.goal.name}"</strong> as complete?
         </p>
         <p class="modal-info">
-          You've saved {formatCurrency(confirmModal.goal.saved_amount)} of your {formatCurrency(
-            confirmModal.goal.target_amount
-          )} target.
+          {#if confirmModal.goal.target_amount != null}
+            You've saved {formatCurrency(confirmModal.goal.saved_amount)} of your {formatCurrency(
+              confirmModal.goal.target_amount
+            )} target.
+          {:else}
+            You've saved {formatCurrency(confirmModal.goal.saved_amount)} total.
+          {/if}
         </p>
         <div class="modal-actions">
           <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
@@ -1184,6 +1197,24 @@
   }
 
   .target-amount {
+    color: var(--text-secondary);
+  }
+
+  .open-ended-progress {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
+  }
+
+  .saved-amount-large {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--success);
+  }
+
+  .saved-label {
+    font-size: 0.875rem;
     color: var(--text-secondary);
   }
 

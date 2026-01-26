@@ -100,20 +100,36 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         return null;
       }
 
+      // Handle null values - convert to undefined for optional fields
+      // This allows clients to explicitly clear fields by sending null
+      // We need to set undefined explicitly (not just delete) to override existing values
+      const processedUpdates: Record<string, unknown> = { ...updates };
+      if (updates.target_amount === null) {
+        processedUpdates.target_amount = undefined;
+      }
+      if (updates.target_date === null) {
+        processedUpdates.target_date = undefined;
+      }
+
       const updatedGoal = {
         ...goals[index],
-        ...updates,
+        ...processedUpdates,
         updated_at: new Date().toISOString(),
       };
 
-      const validation = this.validate(updatedGoal);
+      // Remove undefined values from the final object to keep it clean
+      const cleanedGoal = Object.fromEntries(
+        Object.entries(updatedGoal).filter(([, v]) => v !== undefined)
+      ) as typeof updatedGoal;
+
+      const validation = this.validate(cleanedGoal);
       if (!validation.isValid) {
         throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
       }
 
-      goals[index] = updatedGoal;
+      goals[index] = cleanedGoal;
       await this.storage.writeJSON(this.STORAGE_PATH, goals);
-      return updatedGoal;
+      return cleanedGoal;
     } catch (error) {
       console.error('[SavingsGoalsService] Failed to update savings goal:', error);
       throw error;
@@ -138,7 +154,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
       errors.push('Name is required');
     }
 
-    if (data.target_amount !== undefined && data.target_amount <= 0) {
+    if (data.target_amount != null && data.target_amount <= 0) {
       errors.push('Target amount must be greater than 0');
     }
 
@@ -380,6 +396,11 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
    * @returns Temperature indicator
    */
   public calculateTemperature(goal: SavingsGoal, savedAmount: number): GoalTemperature {
+    // Goals without a target amount are always green (no progress to measure)
+    if (goal.target_amount == null) {
+      return 'green';
+    }
+
     // Open-ended goals (no target date) are always green
     if (!goal.target_date) {
       return 'green';
@@ -418,6 +439,11 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
    * @returns Expected amount saved in cents
    */
   public getExpectedSavedAmount(goal: SavingsGoal, asOfDate?: Date): number {
+    // Goals without a target amount have no expected amount
+    if (goal.target_amount == null) {
+      return 0;
+    }
+
     // Open-ended goals have no expected amount based on time
     if (!goal.target_date) {
       return 0;

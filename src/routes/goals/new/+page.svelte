@@ -13,6 +13,7 @@
   let linkedAccountId = '';
   let notes = '';
   let isOpenEnded = false; // No target date - indefinite saving
+  let hasTargetAmount = true; // Whether user has a specific target amount in mind
 
   let saving = false;
   let creatingBill = false;
@@ -23,6 +24,10 @@
   let showScheduleForm = false;
   let scheduleStartDate = new Date().toISOString().split('T')[0];
   let includeCurrentMonth = true;
+
+  // Custom amount schedule for open-ended goals
+  let customAmountDollars = '';
+  let customFrequency: 'weekly' | 'bi_weekly' | 'monthly' = 'monthly';
 
   // Success modal state
   let successModal: {
@@ -38,10 +43,10 @@
     (ps) => ps.type === 'bank_account' || ps.type === 'cash'
   );
 
-  // Form validation - target date not required for open-ended goals
+  // Form validation - target date and target amount are optional for open-ended goals
   $: isValid =
     name.trim() !== '' &&
-    parseFloat(targetAmountDollars) > 0 &&
+    (hasTargetAmount ? parseFloat(targetAmountDollars) > 0 : true) &&
     (isOpenEnded || targetDate !== '') &&
     linkedAccountId !== '';
 
@@ -145,8 +150,10 @@
     try {
       const data: SavingsGoalData = {
         name: name.trim(),
-        target_amount: Math.round(parseFloat(targetAmountDollars) * 100), // Convert to cents
-        target_date: isOpenEnded ? undefined : targetDate,
+        target_amount: hasTargetAmount
+          ? Math.round(parseFloat(targetAmountDollars) * 100)
+          : undefined, // Convert to cents, or undefined for no-target goals
+        target_date: isOpenEnded ? undefined : targetDate || undefined,
         linked_account_id: linkedAccountId,
         notes: notes.trim() || undefined,
       };
@@ -159,7 +166,14 @@
       let billAmount = 0;
       let billFrequency = '';
 
-      if (selectedSchedule && createdGoal?.id) {
+      // Check if we have a schedule to create:
+      // - For targeted goals: selectedSchedule is set
+      // - For open-ended goals: customAmountDollars is filled in and showScheduleForm is true
+      const hasTargetedSchedule = selectedSchedule && !isOpenEnded;
+      const hasOpenEndedSchedule =
+        isOpenEnded && showScheduleForm && parseFloat(customAmountDollars) > 0;
+
+      if ((hasTargetedSchedule || hasOpenEndedSchedule) && createdGoal?.id) {
         creatingBill = true;
         try {
           // Get or create the Savings Goals category
@@ -179,7 +193,20 @@
             let billingPeriod: 'weekly' | 'bi_weekly' | 'monthly';
             let dayOfMonth: number | undefined;
 
-            if (selectedSchedule === 'weekly') {
+            if (hasOpenEndedSchedule) {
+              // Open-ended goal with custom schedule
+              amount = Math.round(parseFloat(customAmountDollars) * 100);
+              billingPeriod = customFrequency;
+              billFrequency =
+                customFrequency === 'weekly'
+                  ? 'Weekly'
+                  : customFrequency === 'bi_weekly'
+                    ? 'Every 2 Weeks'
+                    : 'Monthly';
+              if (customFrequency === 'monthly' && scheduleStartDate) {
+                dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
+              }
+            } else if (selectedSchedule === 'weekly') {
               amount = weeklyPayment;
               billingPeriod = 'weekly';
               billFrequency = 'Weekly';
@@ -304,17 +331,27 @@
       <div class="form-row">
         <div class="form-field">
           <label for="targetAmount">Target Amount</label>
-          <div class="input-with-prefix">
-            <span class="prefix">$</span>
-            <input
-              type="number"
-              id="targetAmount"
-              bind:value={targetAmountDollars}
-              placeholder="0.00"
-              min="0.01"
-              step="0.01"
-            />
-          </div>
+          <label class="checkbox-field target-amount-toggle">
+            <input type="checkbox" bind:checked={hasTargetAmount} />
+            <span>I have a specific target amount</span>
+          </label>
+          {#if hasTargetAmount}
+            <div class="input-with-prefix">
+              <span class="prefix">$</span>
+              <input
+                type="number"
+                id="targetAmount"
+                bind:value={targetAmountDollars}
+                placeholder="0.00"
+                min="0.01"
+                step="0.01"
+              />
+            </div>
+          {:else}
+            <p class="no-target-hint">
+              Great for open-ended goals like emergency funds or rainy day savings.
+            </p>
+          {/if}
         </div>
 
         <div class="form-field">
@@ -513,6 +550,95 @@
                 <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
               </svg>
               Add Payment Schedule
+            </button>
+            <p class="schedule-optional-hint">
+              You can always add or modify a schedule later from the goal's edit page.
+            </p>
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Payment Schedule Section for Open-Ended Goals -->
+    {#if isOpenEnded}
+      <div class="form-section schedule-section">
+        <h2>Payment Schedule (Optional)</h2>
+
+        {#if showScheduleForm}
+          <!-- Custom Amount Schedule Form for Open-Ended Goals -->
+          <div class="schedule-form">
+            <p class="schedule-intro">Set up a recurring contribution for your open-ended goal:</p>
+
+            <div class="form-field">
+              <label for="customScheduleStartDate">Start Date</label>
+              <input
+                type="date"
+                id="customScheduleStartDate"
+                bind:value={scheduleStartDate}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <span class="field-hint">First contribution will be on this date</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="customAmount">Contribution Amount</label>
+                <div class="input-with-prefix">
+                  <span class="prefix">$</span>
+                  <input
+                    type="number"
+                    id="customAmount"
+                    bind:value={customAmountDollars}
+                    placeholder="0.00"
+                    min="0.01"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="customFrequency">Frequency</label>
+                <select id="customFrequency" bind:value={customFrequency}>
+                  <option value="weekly">Weekly</option>
+                  <option value="bi_weekly">Every 2 Weeks</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+            </div>
+
+            {#if parseFloat(customAmountDollars) > 0}
+              <p class="schedule-selected-note">
+                A recurring contribution of <strong
+                  >{formatCurrency(Math.round(parseFloat(customAmountDollars) * 100))}</strong
+                >
+                ({customFrequency === 'bi_weekly' ? 'every 2 weeks' : customFrequency}) will be
+                created when you save this goal.
+              </p>
+            {/if}
+
+            <button
+              type="button"
+              class="btn-text"
+              on:click={() => {
+                showScheduleForm = false;
+                customAmountDollars = '';
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        {:else}
+          <!-- Add Schedule Button for Open-Ended Goals -->
+          <div class="no-schedule">
+            <p class="no-schedule-text">
+              Set up recurring contributions to build your savings steadily.
+            </p>
+            <button type="button" class="btn-accent" on:click={() => (showScheduleForm = true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              Add Contribution Schedule
             </button>
             <p class="schedule-optional-hint">
               You can always add or modify a schedule later from the goal's edit page.
@@ -782,6 +908,25 @@
 
   .open-ended-checkbox span {
     color: var(--text-secondary);
+  }
+
+  .target-amount-toggle {
+    margin-bottom: var(--space-2);
+    font-size: 0.875rem;
+  }
+
+  .target-amount-toggle span {
+    color: var(--text-secondary);
+  }
+
+  .no-target-hint {
+    margin: var(--space-2) 0 0 0;
+    padding: var(--space-3);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    font-style: italic;
   }
 
   .schedule-selected-note {

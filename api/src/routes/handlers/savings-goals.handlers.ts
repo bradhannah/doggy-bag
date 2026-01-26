@@ -19,7 +19,7 @@ const categoriesService = new CategoriesServiceImpl();
 interface SavingsGoalWithCalculations {
   id: string;
   name: string;
-  target_amount: number;
+  target_amount?: number; // Optional for open-ended goals without a specific target
   current_amount: number;
   saved_amount: number; // Calculated from closed bill occurrences
   target_date?: string;
@@ -98,7 +98,7 @@ async function enhanceGoalWithCalculations(
   const temperature = savingsGoalsService.calculateTemperature(goal, savedAmount);
   const expectedAmount = savingsGoalsService.getExpectedSavedAmount(goal);
   const progressPercentage =
-    goal.target_amount > 0
+    goal.target_amount != null && goal.target_amount > 0
       ? Math.min(100, Math.round((savedAmount / goal.target_amount) * 100))
       : 0;
 
@@ -1100,13 +1100,13 @@ export function createSavingsGoalsPaymentsHandler() {
       }
 
       // Project future scheduled payments until goal is complete
-      // Find recurring bills linked to this goal and project their future payments
+      // Only makes sense for goals with a target amount
       const totalSaved = rawPayments
         .filter((p) => p.status === 'completed')
         .reduce((sum, p) => sum + p.amount, 0);
-      const remaining = goal.target_amount - totalSaved;
+      const remaining = goal.target_amount != null ? goal.target_amount - totalSaved : 0;
 
-      if (remaining > 0 && linkedBills.length > 0) {
+      if (remaining > 0 && linkedBills.length > 0 && goal.target_amount != null) {
         // Get the primary linked bill for projections (use the first active one)
         const activeBill = linkedBills.find((b) => b.is_active);
         if (activeBill) {
@@ -1126,7 +1126,11 @@ export function createSavingsGoalsPaymentsHandler() {
           let projectionCount = 0;
           const maxProjections = 36;
 
-          while (projectedBalance < goal.target_amount && projectionCount < maxProjections) {
+          while (
+            goal.target_amount != null &&
+            projectedBalance < goal.target_amount &&
+            projectionCount < maxProjections
+          ) {
             // Calculate next payment date based on billing period
             const nextDate = getNextPaymentDate(lastDate, activeBill.billing_period);
             projectedBalance += paymentAmount;
@@ -1163,12 +1167,16 @@ export function createSavingsGoalsPaymentsHandler() {
         .filter((p) => p.status === 'completed')
         .reduce((sum, p) => sum + p.amount, 0);
       const progressPercentage =
-        goal.target_amount > 0
+        goal.target_amount != null && goal.target_amount > 0
           ? Math.min(100, Math.round((totalCompleted / goal.target_amount) * 100))
           : 0;
 
       // Find projected completion date (first payment where balance >= target)
-      const completionPayment = payments.find((p) => p.balance >= goal.target_amount);
+      // Only for goals with a target amount
+      const completionPayment =
+        goal.target_amount != null
+          ? payments.find((p) => p.balance >= goal.target_amount!)
+          : undefined;
       const projectedCompletionDate = completionPayment?.date || null;
 
       return new Response(
@@ -1178,7 +1186,8 @@ export function createSavingsGoalsPaymentsHandler() {
           payments,
           summary: {
             total_saved: totalCompleted,
-            total_remaining: Math.max(0, goal.target_amount - totalCompleted),
+            total_remaining:
+              goal.target_amount != null ? Math.max(0, goal.target_amount - totalCompleted) : 0,
             progress_percentage: progressPercentage,
             projected_completion_date: projectedCompletionDate,
           },

@@ -252,7 +252,7 @@ type GoalTemperature = 'green' | 'yellow' | 'red';
 interface SavingsGoal {
   id: string;
   name: string;
-  target_amount: number; // Cents
+  target_amount?: number; // Cents (optional for open-ended goals without a specific target)
   current_amount: number; // Cents (calculated dynamically from closed occurrences)
   target_date?: string; // YYYY-MM-DD (optional for open-ended goals)
   linked_account_id: string; // Reference to PaymentSource (savings account)

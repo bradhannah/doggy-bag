@@ -186,6 +186,147 @@ describe('SavingsGoalsService', () => {
       const updated = await service.update('non-existent', { name: 'Test' });
       expect(updated).toBeNull();
     });
+
+    test('should update goal name only', async () => {
+      const original = await service.getById('goal-winter-tires-001');
+      const updated = await service.update('goal-winter-tires-001', {
+        name: 'New Name Only',
+      });
+
+      expect(updated?.name).toBe('New Name Only');
+      expect(updated?.target_amount).toBe(original?.target_amount);
+      expect(updated?.target_date).toBe(original?.target_date);
+      expect(updated?.linked_account_id).toBe(original?.linked_account_id);
+    });
+
+    test('should update target_amount', async () => {
+      const updated = await service.update('goal-winter-tires-001', {
+        target_amount: 100000,
+      });
+
+      expect(updated?.target_amount).toBe(100000);
+    });
+
+    test('should clear target_amount when null is passed', async () => {
+      // First verify the goal has a target_amount
+      const original = await service.getById('goal-winter-tires-001');
+      expect(original?.target_amount).toBe(80000);
+
+      // Update with null to clear it
+      const updated = await service.update('goal-winter-tires-001', {
+        target_amount: null as unknown as number, // Simulate null from JSON
+      });
+
+      expect(updated?.target_amount).toBeUndefined();
+    });
+
+    test('should update target_date', async () => {
+      const updated = await service.update('goal-winter-tires-001', {
+        target_date: '2027-01-01',
+      });
+
+      expect(updated?.target_date).toBe('2027-01-01');
+    });
+
+    test('should clear target_date when null is passed', async () => {
+      const original = await service.getById('goal-winter-tires-001');
+      expect(original?.target_date).toBe('2026-10-01');
+
+      const updated = await service.update('goal-winter-tires-001', {
+        target_date: null as unknown as string,
+      });
+
+      expect(updated?.target_date).toBeUndefined();
+    });
+
+    test('should update linked_account_id', async () => {
+      const updated = await service.update('goal-winter-tires-001', {
+        linked_account_id: 'ps-checking-001',
+      });
+
+      expect(updated?.linked_account_id).toBe('ps-checking-001');
+    });
+
+    test('should update notes', async () => {
+      const updated = await service.update('goal-winter-tires-001', {
+        notes: 'Updated notes for winter tires',
+      });
+
+      expect(updated?.notes).toBe('Updated notes for winter tires');
+    });
+
+    test('should update multiple fields at once', async () => {
+      const updated = await service.update('goal-winter-tires-001', {
+        name: 'All Season Tires',
+        target_amount: 120000,
+        target_date: '2027-06-01',
+        notes: 'Changed my mind',
+      });
+
+      expect(updated?.name).toBe('All Season Tires');
+      expect(updated?.target_amount).toBe(120000);
+      expect(updated?.target_date).toBe('2027-06-01');
+      expect(updated?.notes).toBe('Changed my mind');
+    });
+
+    test('should convert goal from targeted to open-ended', async () => {
+      // Clear both target_amount and target_date
+      const updated = await service.update('goal-winter-tires-001', {
+        target_amount: null as unknown as number,
+        target_date: null as unknown as string,
+      });
+
+      expect(updated?.target_amount).toBeUndefined();
+      expect(updated?.target_date).toBeUndefined();
+      // Other fields should be preserved
+      expect(updated?.name).toBe('Winter Tires');
+      expect(updated?.linked_account_id).toBe('ps-savings-001');
+    });
+
+    test('should convert goal from open-ended to targeted', async () => {
+      // First make it open-ended
+      await service.update('goal-winter-tires-001', {
+        target_amount: null as unknown as number,
+        target_date: null as unknown as string,
+      });
+
+      // Now add target back
+      const updated = await service.update('goal-winter-tires-001', {
+        target_amount: 50000,
+        target_date: '2027-12-01',
+      });
+
+      expect(updated?.target_amount).toBe(50000);
+      expect(updated?.target_date).toBe('2027-12-01');
+    });
+
+    test('should update updated_at timestamp', async () => {
+      const original = await service.getById('goal-winter-tires-001');
+      const originalUpdatedAt = original?.updated_at;
+
+      // Wait a tiny bit to ensure timestamp differs
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const updated = await service.update('goal-winter-tires-001', {
+        name: 'Timestamp Test',
+      });
+
+      expect(updated?.updated_at).not.toBe(originalUpdatedAt);
+    });
+
+    test('should persist changes to storage', async () => {
+      await service.update('goal-winter-tires-001', {
+        name: 'Persisted Name',
+        target_amount: 55000,
+      });
+
+      // Create new service instance to verify persistence
+      const newService = new SavingsGoalsServiceImpl();
+      const reloaded = await newService.getById('goal-winter-tires-001');
+
+      expect(reloaded?.name).toBe('Persisted Name');
+      expect(reloaded?.target_amount).toBe(55000);
+    });
   });
 
   describe('delete', () => {
@@ -359,7 +500,7 @@ describe('SavingsGoalsService', () => {
       };
 
       const expected = service.getExpectedSavedAmount(goal);
-      expect(expected).toBe(goal.target_amount);
+      expect(expected).toBe(goal.target_amount!);
     });
 
     test('should return 0 when current date is before creation', () => {
