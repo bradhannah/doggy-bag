@@ -12,8 +12,19 @@
   export let submission: ClaimSubmission;
   export let claimId: string;
   export let readonly = false;
+  export let highlight = false;
 
   const dispatch = createEventDispatcher<{ updated: void; deleted: void }>();
+
+  // Scroll into view when highlighted (navigating from budget view)
+  let cardElement: HTMLDivElement | undefined;
+  $: if (highlight && cardElement) {
+    // Small delay to ensure the element is rendered and positioned
+    const element = cardElement;
+    setTimeout(() => {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }
 
   // Awaiting previous submissions should be read-only
   $: isAwaitingPrevious = submission.status === 'awaiting_previous';
@@ -272,7 +283,12 @@
   }
 </script>
 
-<div class="submission-card" class:awaiting={submission.status === 'awaiting_previous'}>
+<div
+  bind:this={cardElement}
+  class="submission-card"
+  class:awaiting={submission.status === 'awaiting_previous'}
+  class:highlight
+>
   <div class="submission-header">
     <div class="plan-info">
       <span class="plan-name">{submission.plan_snapshot.name}</span>
@@ -515,6 +531,27 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     padding: var(--space-3);
+  }
+
+  .submission-card.highlight {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-muted);
+    animation: highlight-fade 2s ease-out forwards;
+  }
+
+  @keyframes highlight-fade {
+    0% {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-muted);
+    }
+    70% {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-muted);
+    }
+    100% {
+      border-color: var(--border-subtle);
+      box-shadow: none;
+    }
   }
 
   .submission-header {

@@ -2,8 +2,10 @@
   /**
    * InsuranceClaimsPage - Main page component for insurance claims management
    * Layout: Left panel (claims list) + Right panel (claim detail or form)
+   * Supports both regular claims and expected expenses
    */
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import type { InsuranceClaim } from '../../types/insurance';
   import {
     loadInsuranceClaims,
@@ -17,16 +19,24 @@
   import ClaimsList from './ClaimsList.svelte';
   import ClaimDetail from './ClaimDetail.svelte';
   import ClaimForm from './ClaimForm.svelte';
+  import ExpectedExpenseForm from './ExpectedExpenseForm.svelte';
+  import ConvertToClaimModal from './ConvertToClaimModal.svelte';
   import Drawer from '../shared/Drawer.svelte';
 
   // Page state
   let selectedClaim: InsuranceClaim | null = null;
+  let highlightSubmissionId: string | null = null;
   let showNewClaimDrawer = false;
   let showEditClaimDrawer = false;
+  let showNewExpectedDrawer = false;
+  let showEditExpectedDrawer = false;
+  let showConvertModal = false;
+  let convertingClaim: InsuranceClaim | null = null;
   let editingClaim: InsuranceClaim | null = null;
   let claimFormComponent: ClaimForm;
+  let expectedFormComponent: ExpectedExpenseForm;
 
-  // Load all data on mount
+  // Load all data on mount, and auto-select claim if URL param present
   onMount(async () => {
     await Promise.all([
       loadInsurancePlans(),
@@ -34,10 +44,25 @@
       loadInsuranceClaims(),
       loadClaimsSummary(),
     ]);
+
+    // Check for claim ID in URL query params
+    const claimId = $page.url.searchParams.get('claim');
+    const submissionId = $page.url.searchParams.get('submission');
+    if (claimId) {
+      const claim = await getClaimById(claimId);
+      if (claim) {
+        selectedClaim = claim;
+        // If a specific submission was requested, highlight it
+        if (submissionId) {
+          highlightSubmissionId = submissionId;
+        }
+      }
+    }
   });
 
   function handleSelectClaim(event: CustomEvent<InsuranceClaim>) {
     selectedClaim = event.detail;
+    highlightSubmissionId = null; // Clear highlight when selecting a different claim
   }
 
   function handleCreateClaim() {
@@ -48,13 +73,24 @@
   function handleEditClaim() {
     if (selectedClaim) {
       editingClaim = selectedClaim;
-      showEditClaimDrawer = true;
+      if (selectedClaim.status === 'expected') {
+        showEditExpectedDrawer = true;
+      } else {
+        showEditClaimDrawer = true;
+      }
     }
+  }
+
+  function handleCreateExpected() {
+    editingClaim = null;
+    showNewExpectedDrawer = true;
   }
 
   async function handleClaimSaved() {
     showNewClaimDrawer = false;
     showEditClaimDrawer = false;
+    showNewExpectedDrawer = false;
+    showEditExpectedDrawer = false;
     await loadInsuranceClaims();
     await loadClaimsSummary();
 
@@ -71,6 +107,8 @@
   function handleClaimFormCancel() {
     showNewClaimDrawer = false;
     showEditClaimDrawer = false;
+    showNewExpectedDrawer = false;
+    showEditExpectedDrawer = false;
     editingClaim = null;
   }
 
@@ -78,6 +116,26 @@
     selectedClaim = null;
     await loadInsuranceClaims();
     await loadClaimsSummary();
+  }
+
+  function handleConvertClaim() {
+    if (selectedClaim && selectedClaim.status === 'expected') {
+      convertingClaim = selectedClaim;
+      showConvertModal = true;
+    }
+  }
+
+  async function handleClaimConverted() {
+    showConvertModal = false;
+    convertingClaim = null;
+    selectedClaim = null;
+    await loadInsuranceClaims();
+    await loadClaimsSummary();
+  }
+
+  function closeConvertModal() {
+    showConvertModal = false;
+    convertingClaim = null;
   }
 
   async function handleClaimUpdated() {
@@ -122,7 +180,12 @@
   <div class="main-content" class:with-detail={selectedClaim}>
     <!-- Claims List Panel -->
     <div class="list-panel">
-      <ClaimsList {selectedClaim} on:select={handleSelectClaim} on:create={handleCreateClaim} />
+      <ClaimsList
+        {selectedClaim}
+        on:select={handleSelectClaim}
+        on:create={handleCreateClaim}
+        on:createExpected={handleCreateExpected}
+      />
     </div>
 
     <!-- Detail Panel (shown when a claim is selected) -->
@@ -145,8 +208,10 @@
             claim={selectedClaim}
             onEdit={handleEditClaim}
             onClose={closeDetail}
+            {highlightSubmissionId}
             on:deleted={handleClaimDeleted}
             on:updated={handleClaimUpdated}
+            on:convert={handleConvertClaim}
           />
         </div>
       </div>
@@ -185,6 +250,48 @@
     onCancel={handleClaimFormCancel}
   />
 </Drawer>
+
+<!-- New Expected Expense Drawer -->
+<Drawer
+  isOpen={showNewExpectedDrawer}
+  title="Schedule Expected Expense"
+  onClose={handleClaimFormCancel}
+  isDirty={() => expectedFormComponent?.isDirty() ?? false}
+  onSave={() => expectedFormComponent?.handleSubmit()}
+>
+  <ExpectedExpenseForm
+    bind:this={expectedFormComponent}
+    editingItem={null}
+    onSave={handleClaimSaved}
+    onCancel={handleClaimFormCancel}
+  />
+</Drawer>
+
+<!-- Edit Expected Expense Drawer -->
+<Drawer
+  isOpen={showEditExpectedDrawer}
+  title="Edit Expected Expense"
+  onClose={handleClaimFormCancel}
+  isDirty={() => expectedFormComponent?.isDirty() ?? false}
+  onSave={() => expectedFormComponent?.handleSubmit()}
+>
+  <ExpectedExpenseForm
+    bind:this={expectedFormComponent}
+    editingItem={editingClaim}
+    onSave={handleClaimSaved}
+    onCancel={handleClaimFormCancel}
+  />
+</Drawer>
+
+<!-- Convert to Claim Modal -->
+{#if showConvertModal && convertingClaim}
+  <ConvertToClaimModal
+    claim={convertingClaim}
+    open={showConvertModal}
+    onClose={closeConvertModal}
+    on:converted={handleClaimConverted}
+  />
+{/if}
 
 <style>
   .insurance-page {

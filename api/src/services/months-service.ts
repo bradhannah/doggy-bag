@@ -5,11 +5,13 @@ import { BillsServiceImpl } from './bills-service';
 import { IncomesServiceImpl } from './incomes-service';
 import { CategoriesServiceImpl } from './categories-service';
 import { PaymentSourcesServiceImpl } from './payment-sources-service';
+import { InsuranceClaimsServiceImpl } from './insurance-claims-service';
 import type { StorageService } from './storage';
 import type { BillsService } from './bills-service';
 import type { IncomesService } from './incomes-service';
 import type { CategoriesService } from './categories-service';
 import type { PaymentSourcesService } from './payment-sources-service';
+import type { InsuranceClaimsService } from './insurance-claims-service';
 import type {
   MonthlyData,
   BillInstance,
@@ -17,6 +19,7 @@ import type {
   VariableExpense,
   FreeFlowingExpense,
   Occurrence,
+  InsuranceClaim,
 } from '../types';
 import { calculateActualMonthlyAmount } from '../utils/billing-period';
 import {
@@ -226,6 +229,7 @@ export class MonthsServiceImpl implements MonthsService {
   private incomesService: IncomesService;
   private categoriesService: CategoriesService;
   private paymentSourcesService: PaymentSourcesService;
+  private insuranceClaimsService: InsuranceClaimsService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
@@ -233,6 +237,7 @@ export class MonthsServiceImpl implements MonthsService {
     this.incomesService = new IncomesServiceImpl();
     this.categoriesService = new CategoriesServiceImpl();
     this.paymentSourcesService = new PaymentSourcesServiceImpl();
+    this.insuranceClaimsService = new InsuranceClaimsServiceImpl();
   }
 
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
@@ -315,6 +320,13 @@ export class MonthsServiceImpl implements MonthsService {
       if (needsSave) {
         await this.storage.writeJSON(`data/months/${month}.json`, data);
         console.log(`[MonthsService] Migrated instances for ${month} to new schema`);
+      }
+
+      // Inject virtual insurance entries (not persisted, generated on-the-fly)
+      const virtualEntries = await this.generateVirtualInsuranceEntries(month);
+      if (virtualEntries.billInstances.length > 0 || virtualEntries.incomeInstances.length > 0) {
+        data.bill_instances = [...data.bill_instances, ...virtualEntries.billInstances];
+        data.income_instances = [...data.income_instances, ...virtualEntries.incomeInstances];
       }
 
       return data;
@@ -2484,6 +2496,228 @@ export class MonthsServiceImpl implements MonthsService {
     } catch (error) {
       console.error('[MonthsService] Failed to split income occurrence:', error);
       throw error;
+    }
+  }
+
+  // ============================================================================
+  // Virtual Insurance Entry Generation
+  // ============================================================================
+
+  /**
+   * Generate virtual BillInstance and IncomeInstance entries from insurance claims.
+   * These are NOT persisted - they are generated on-the-fly when loading month data.
+   *
+   * For Expected claims (is_expected: true):
+   * - 1 virtual BillInstance: amount = expected_cost
+   * - 1 virtual IncomeInstance: amount = expected_reimbursement
+   *
+   * For Actual claims (is_expected: false):
+   * - 1 virtual BillInstance: amount = total_amount
+   * - 1 virtual IncomeInstance per claim: with N occurrences (one per submission)
+   *
+   * Naming convention:
+   * - Format: "#{claim_number} {category} - {provider}"
+   * - Example: "#1 Dental - Dr. Smith"
+   */
+  private async generateVirtualInsuranceEntries(month: string): Promise<{
+    billInstances: BillInstance[];
+    incomeInstances: IncomeInstance[];
+  }> {
+    try {
+      const claims = await this.insuranceClaimsService.getClaimsForMonth(month);
+      const billInstances: BillInstance[] = [];
+      const incomeInstances: IncomeInstance[] = [];
+
+      for (const claim of claims) {
+        // Naming: "#{claim_number} {category} - {provider}" for actual claims
+        // For expected claims (claim_number=0), just use "{category} - {provider}"
+        const claimPrefix = claim.claim_number > 0 ? `#${claim.claim_number} ` : '';
+        const claimLabel = claim.provider_name
+          ? `${claimPrefix}${claim.category_name} - ${claim.provider_name}`
+          : `${claimPrefix}${claim.category_name}`;
+
+        if (claim.is_expected) {
+          // Expected claim: single bill and single reimbursement income
+          const expectedCost = claim.expected_cost ?? 0;
+          const expectedReimbursement = claim.expected_reimbursement ?? 0;
+
+          // Virtual bill instance for the expected expense
+          billInstances.push({
+            id: `virtual-bill-${claim.id}`,
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: expectedCost,
+            occurrences: [
+              {
+                id: `virtual-occ-bill-${claim.id}`,
+                sequence: 1,
+                expected_date: claim.service_date,
+                expected_amount: expectedCost,
+                is_closed: false,
+                is_adhoc: false,
+                created_at: claim.created_at,
+                updated_at: claim.updated_at,
+              },
+            ],
+            is_default: false,
+            is_closed: false,
+            is_adhoc: true,
+            is_insurance_expense: true,
+            is_expected_claim: true,
+            is_virtual: true,
+            claim_id: claim.id,
+            name: claimLabel,
+            category_id: claim.category_id,
+            payment_source_id: claim.payment_source_id,
+            created_at: claim.created_at,
+            updated_at: claim.updated_at,
+          });
+
+          // Virtual income instance for the expected reimbursement
+          if (expectedReimbursement > 0) {
+            incomeInstances.push({
+              id: `virtual-income-${claim.id}`,
+              income_id: null,
+              month,
+              billing_period: 'monthly',
+              expected_amount: expectedReimbursement,
+              occurrences: [
+                {
+                  id: `virtual-occ-income-${claim.id}`,
+                  sequence: 1,
+                  expected_date: claim.service_date,
+                  expected_amount: expectedReimbursement,
+                  is_closed: false,
+                  is_adhoc: false,
+                  created_at: claim.created_at,
+                  updated_at: claim.updated_at,
+                  // Occurrence-level linking for navigation
+                  claim_id: claim.id,
+                },
+              ],
+              is_default: false,
+              is_closed: false,
+              is_adhoc: true,
+              is_insurance_reimbursement: true,
+              is_expected_claim: true,
+              is_virtual: true,
+              claim_id: claim.id,
+              name: claimLabel,
+              created_at: claim.created_at,
+              updated_at: claim.updated_at,
+            });
+          }
+        } else {
+          // Actual claim: bill for total_amount, one income per claim with N occurrences
+          billInstances.push({
+            id: `virtual-bill-${claim.id}`,
+            bill_id: null,
+            month,
+            billing_period: 'monthly',
+            expected_amount: claim.total_amount,
+            occurrences: [
+              {
+                id: `virtual-occ-bill-${claim.id}`,
+                sequence: 1,
+                expected_date: claim.service_date,
+                expected_amount: claim.total_amount,
+                is_closed: claim.status === 'closed',
+                closed_date: claim.status === 'closed' ? claim.service_date : undefined,
+                is_adhoc: false,
+                created_at: claim.created_at,
+                updated_at: claim.updated_at,
+              },
+            ],
+            is_default: false,
+            is_closed: claim.status === 'closed',
+            is_adhoc: true,
+            is_insurance_expense: true,
+            is_expected_claim: false,
+            is_virtual: true,
+            claim_id: claim.id,
+            name: claimLabel,
+            category_id: claim.category_id,
+            payment_source_id: claim.payment_source_id,
+            created_at: claim.created_at,
+            updated_at: claim.updated_at,
+          });
+
+          // Build occurrences for this claim's submissions
+          const submissionOccurrences: Array<{
+            id: string;
+            sequence: number;
+            expected_date: string;
+            expected_amount: number;
+            is_closed: boolean;
+            closed_date?: string;
+            is_adhoc: boolean;
+            created_at: string;
+            updated_at: string;
+            plan_name: string;
+            claim_id: string;
+            claim_submission_id: string;
+          }> = [];
+
+          let sequenceCounter = 0;
+          for (const submission of claim.submissions) {
+            const reimbursedAmount = submission.amount_reimbursed ?? 0;
+            const planName = submission.plan_snapshot?.name ?? 'Insurance';
+            const isClosed = submission.status === 'approved' || submission.status === 'denied';
+
+            sequenceCounter++;
+            submissionOccurrences.push({
+              id: `virtual-occ-income-${claim.id}-${submission.id}`,
+              sequence: sequenceCounter,
+              expected_date:
+                submission.date_resolved ?? submission.date_submitted ?? claim.service_date,
+              expected_amount: reimbursedAmount,
+              is_closed: isClosed,
+              closed_date: isClosed ? submission.date_resolved : undefined,
+              is_adhoc: false,
+              created_at: claim.created_at,
+              updated_at: claim.updated_at,
+              // Occurrence-level fields for navigation and display
+              plan_name: planName,
+              claim_id: claim.id,
+              claim_submission_id: submission.id,
+            });
+          }
+
+          // Create income instance for this claim if it has submissions
+          if (submissionOccurrences.length > 0) {
+            const totalExpectedAmount = submissionOccurrences.reduce(
+              (sum, occ) => sum + occ.expected_amount,
+              0
+            );
+            const allClosed = submissionOccurrences.every((occ) => occ.is_closed);
+
+            incomeInstances.push({
+              id: `virtual-income-${claim.id}`,
+              income_id: null,
+              month,
+              billing_period: 'monthly',
+              expected_amount: totalExpectedAmount,
+              occurrences: submissionOccurrences,
+              is_default: false,
+              is_closed: allClosed,
+              is_adhoc: true,
+              is_insurance_reimbursement: true,
+              is_expected_claim: false,
+              is_virtual: true,
+              claim_id: claim.id,
+              name: claimLabel,
+              created_at: claim.created_at,
+              updated_at: claim.updated_at,
+            });
+          }
+        }
+      }
+
+      return { billInstances, incomeInstances };
+    } catch (error) {
+      console.error('[MonthsService] Failed to generate virtual insurance entries:', error);
+      return { billInstances: [], incomeInstances: [] };
     }
   }
 }

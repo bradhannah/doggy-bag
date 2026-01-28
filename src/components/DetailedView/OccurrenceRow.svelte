@@ -8,6 +8,7 @@
    * - No separate payments array
    */
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { goto } from '$app/navigation';
   import type { Occurrence } from '../../stores/detailed-month';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
@@ -20,6 +21,13 @@
   export let type: 'bill' | 'income' = 'bill';
   export let readOnly: boolean = false;
   export let isPayoffBill: boolean = false;
+  export let isVirtualInsurance: boolean = false;
+
+  // Protected items: payoff bills and virtual insurance items
+  $: isProtected = isPayoffBill || isVirtualInsurance;
+
+  // Check if this is a clickable insurance occurrence (has claim linking at occurrence level)
+  $: isClickableInsuranceOccurrence = isVirtualInsurance && occurrence.claim_id;
 
   const dispatch = createEventDispatcher();
 
@@ -30,6 +38,20 @@
   let overflowMenuRef: HTMLDivElement | null = null;
   let overflowBtnRef: HTMLButtonElement | null = null;
   let menuPosition = { top: 0, left: 0 };
+
+  // Navigate to insurance claim when clicking on a virtual insurance occurrence
+  function handleOccurrenceClick() {
+    if (!isClickableInsuranceOccurrence) return;
+
+    const claimId = occurrence.claim_id;
+    const submissionId = occurrence.claim_submission_id;
+
+    if (submissionId) {
+      goto(`/insurance?claim=${claimId}&submission=${submissionId}`);
+    } else if (claimId) {
+      goto(`/insurance?claim=${claimId}`);
+    }
+  }
 
   function formatCurrency(cents: number): string {
     const dollars = cents / 100;
@@ -103,6 +125,8 @@
   function confirmDelete() {
     if (readOnly) return;
     // Allow deletion for payoff bills (any occurrence) or adhoc occurrences for regular bills
+    // Virtual insurance items cannot be deleted
+    if (isVirtualInsurance) return;
     if (!isPayoffBill && !occurrence.is_adhoc) return;
     showDeleteConfirm = true;
   }
@@ -128,8 +152,8 @@
   }
 
   // Determine if delete is available
-  // Can delete: ad-hoc occurrences only (NOT payoff bills - those are auto-managed)
-  $: canDelete = !readOnly && !isPayoffBill && occurrence.is_adhoc;
+  // Can delete: ad-hoc occurrences only (NOT payoff bills or virtual insurance - those are auto-managed)
+  $: canDelete = !readOnly && !isProtected && occurrence.is_adhoc;
 
   // Overflow menu click-outside handler
   function handleClickOutside(event: MouseEvent) {
@@ -180,6 +204,13 @@
   class="occurrence-row-container"
   class:closed={occurrence.is_closed}
   class:adhoc={occurrence.is_adhoc}
+  class:clickable={isClickableInsuranceOccurrence}
+  on:click={isClickableInsuranceOccurrence ? handleOccurrenceClick : undefined}
+  on:keydown={isClickableInsuranceOccurrence
+    ? (e) => e.key === 'Enter' && handleOccurrenceClick()
+    : undefined}
+  role={isClickableInsuranceOccurrence ? 'button' : undefined}
+  tabindex={isClickableInsuranceOccurrence ? 0 : undefined}
 >
   <div class="occurrence-row">
     <!-- Date -->
@@ -213,6 +244,9 @@
 
     <!-- Badges column -->
     <div class="badges-column">
+      {#if occurrence.plan_name}
+        <span class="badge plan-badge">{occurrence.plan_name}</span>
+      {/if}
       {#if occurrence.is_adhoc}
         <span class="badge adhoc-badge">ad-hoc</span>
       {/if}
@@ -220,8 +254,8 @@
 
     <!-- Action buttons (right-aligned) -->
     <div class="action-buttons">
-      {#if isPayoffBill}
-        <!-- Payoff bill occurrences: no action buttons, state is auto-managed -->
+      {#if isProtected}
+        <!-- Protected items (payoff bills, virtual insurance): no action buttons, state is auto-managed -->
       {:else if occurrence.is_closed}
         <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
           Reopen
@@ -355,6 +389,14 @@
 
   .occurrence-row-container:hover {
     background: var(--bg-surface);
+  }
+
+  .occurrence-row-container.clickable {
+    cursor: pointer;
+  }
+
+  .occurrence-row-container.clickable:hover {
+    background: var(--bg-hover-strong);
   }
 
   .occurrence-row-container.closed {
@@ -570,6 +612,11 @@
   .adhoc-badge {
     background: var(--purple-bg);
     color: var(--purple);
+  }
+
+  .plan-badge {
+    background: var(--accent-muted);
+    color: var(--accent);
   }
 
   /* Confirmation dialog */

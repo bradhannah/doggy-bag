@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
    * ClaimsList - Filterable list of insurance claims
+   * Shows expected expenses and regular claims in a unified list with distinct styling
    */
   import type { InsuranceClaim, SubmissionStatus } from '../../types/insurance';
   import {
@@ -13,10 +14,14 @@
 
   export let selectedClaim: InsuranceClaim | null = null;
 
-  const dispatch = createEventDispatcher<{ select: InsuranceClaim; create: void }>();
+  const dispatch = createEventDispatcher<{
+    select: InsuranceClaim;
+    create: void;
+    createExpected: void;
+  }>();
 
   // Filter state - status uses display values, not internal ClaimStatus
-  type StatusFilter = 'all' | 'in_progress' | 'closed';
+  type StatusFilter = 'all' | 'expected' | 'in_progress' | 'closed';
   let filterStatus: StatusFilter = 'all';
   let filterCategory = '';
   let filterYear = '';
@@ -54,8 +59,10 @@
     loadInsuranceClaims();
   }
 
-  function getStatusColor(status: 'draft' | 'in_progress' | 'closed'): string {
+  function getStatusColor(status: 'expected' | 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
+      case 'expected':
+        return 'var(--accent)';
       case 'draft':
       case 'in_progress':
         return 'var(--warning)';
@@ -66,8 +73,10 @@
     }
   }
 
-  function getStatusLabel(status: 'draft' | 'in_progress' | 'closed'): string {
+  function getStatusLabel(status: 'expected' | 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
+      case 'expected':
+        return 'Expected';
       case 'draft':
       case 'in_progress':
         return 'In Progress';
@@ -137,28 +146,66 @@
     dispatch('create');
   }
 
+  function handleCreateExpected() {
+    dispatch('createExpected');
+  }
+
   $: hasFilters = filterStatus !== 'all' || filterCategory || filterYear;
 
   // Client-side status filtering (since backend doesn't support 'in_progress' = draft + in_progress)
   $: filteredClaims = $insuranceClaims.filter((claim) => {
     if (filterStatus === 'all') return true;
+    if (filterStatus === 'expected') {
+      return claim.status === 'expected';
+    }
     if (filterStatus === 'in_progress') {
       return claim.status === 'draft' || claim.status === 'in_progress';
     }
     return claim.status === filterStatus;
   });
+
+  // Sort claims: expected first (by date), then in_progress, then closed
+  $: sortedClaims = [...filteredClaims].sort((a, b) => {
+    // Expected claims first, sorted by service_date ascending (upcoming first)
+    if (a.status === 'expected' && b.status !== 'expected') return -1;
+    if (a.status !== 'expected' && b.status === 'expected') return 1;
+    if (a.status === 'expected' && b.status === 'expected') {
+      return new Date(a.service_date).getTime() - new Date(b.service_date).getTime();
+    }
+    // Then by service_date descending (most recent first)
+    return new Date(b.service_date).getTime() - new Date(a.service_date).getTime();
+  });
 </script>
 
 <div class="claims-list-container">
-  <!-- Header with create button -->
+  <!-- Header with create buttons -->
   <div class="list-header">
     <h2>Claims</h2>
-    <button class="btn btn-primary" on:click={handleCreate}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
-      New Claim
-    </button>
+    <div class="header-actions">
+      <button class="btn btn-secondary" on:click={handleCreateExpected}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Schedule Expected
+      </button>
+      <button class="btn btn-primary" on:click={handleCreate}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 5v14M5 12h14"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+        New Claim
+      </button>
+    </div>
   </div>
 
   <!-- Filters -->
@@ -166,6 +213,12 @@
     <div class="status-filter">
       <button class:active={filterStatus === 'all'} on:click={() => setStatusFilter('all')}>
         All
+      </button>
+      <button
+        class:active={filterStatus === 'expected'}
+        on:click={() => setStatusFilter('expected')}
+      >
+        Expected
       </button>
       <button
         class:active={filterStatus === 'in_progress'}
@@ -201,45 +254,70 @@
   <div class="claims-list">
     {#if $insuranceClaimsLoading}
       <div class="loading-state">Loading claims...</div>
-    {:else if filteredClaims.length === 0}
+    {:else if sortedClaims.length === 0}
       <div class="empty-state">
         {#if hasFilters}
           <p>No claims match your filters.</p>
           <button class="btn-link" on:click={clearFilters}>Clear filters</button>
         {:else}
           <p>No claims yet.</p>
-          <p class="hint">Create your first claim to start tracking reimbursements.</p>
+          <p class="hint">Create your first claim or schedule an expected expense.</p>
         {/if}
       </div>
     {:else}
-      {#each filteredClaims as claim (claim.id)}
+      {#each sortedClaims as claim (claim.id)}
         <button
           class="claim-card"
           class:selected={selectedClaim?.id === claim.id}
+          class:expected={claim.status === 'expected'}
           on:click={() => selectClaim(claim)}
         >
           <div class="claim-header">
             <span class="claim-title">
-              <span class="title-number">#{claim.claim_number}</span>
-              <span class="title-name">{claim.family_member_name}</span>
-              <span class="title-connector">for</span>
-              <span class="title-category"
-                >{getCategoryIcon(claim.category_id)} {claim.category_name}</span
-              >
-              <span class="title-connector">on</span>
-              <span class="title-date">{formatDate(claim.service_date)}</span>
+              {#if claim.status === 'expected'}
+                <span class="title-expected-icon">📅</span>
+                <span class="title-name">{claim.family_member_name}</span>
+                <span class="title-connector">for</span>
+                <span class="title-category"
+                  >{getCategoryIcon(claim.category_id)} {claim.category_name}</span
+                >
+                <span class="title-connector">on</span>
+                <span class="title-date">{formatDate(claim.service_date)}</span>
+              {:else}
+                <span class="title-number">#{claim.claim_number}</span>
+                <span class="title-name">{claim.family_member_name}</span>
+                <span class="title-connector">for</span>
+                <span class="title-category"
+                  >{getCategoryIcon(claim.category_id)} {claim.category_name}</span
+                >
+                <span class="title-connector">on</span>
+                <span class="title-date">{formatDate(claim.service_date)}</span>
+              {/if}
             </span>
             <span class="claim-status" style="color: {getStatusColor(claim.status)}">
               {getStatusLabel(claim.status)}
             </span>
           </div>
-          {#if claim.description}
+          {#if claim.provider_name && claim.status === 'expected'}
+            <div class="claim-body">
+              <span class="claim-provider">{claim.provider_name}</span>
+            </div>
+          {:else if claim.description}
             <div class="claim-body">
               <span class="claim-description">{claim.description}</span>
             </div>
           {/if}
           <div class="claim-footer">
-            {#if claim.submissions.length > 0}
+            {#if claim.status === 'expected'}
+              <!-- Expected expense shows estimated cost and reimbursement -->
+              <div class="expected-amounts">
+                <span class="expected-cost">Est: {formatCurrency(claim.expected_cost || 0)}</span>
+                <span class="expected-arrow">→</span>
+                <span class="expected-reimbursement"
+                  >{formatCurrency(claim.expected_reimbursement || 0)} back</span
+                >
+              </div>
+            {:else if claim.submissions.length > 0}
               <div class="submission-badges">
                 {#each claim.submissions as sub (sub.id)}
                   <span
@@ -252,6 +330,8 @@
                   </span>
                 {/each}
               </div>
+            {:else}
+              <div></div>
             {/if}
             <span class="claim-amount">{formatCurrency(claim.total_amount)}</span>
           </div>
@@ -281,6 +361,11 @@
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: var(--space-2);
   }
 
   .filters {
@@ -517,5 +602,65 @@
 
   .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
+  }
+
+  .btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+  }
+
+  /* Expected claim card styling - distinct appearance */
+  .claim-card.expected {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    border-style: dashed;
+  }
+
+  .claim-card.expected:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent);
+  }
+
+  .claim-card.expected.selected {
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    border-style: solid;
+  }
+
+  .title-expected-icon {
+    font-size: 1rem;
+    margin-right: 0.25em;
+  }
+
+  .claim-provider {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  .expected-amounts {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.75rem;
+  }
+
+  .expected-cost {
+    color: var(--text-secondary);
+  }
+
+  .expected-arrow {
+    color: var(--text-tertiary);
+  }
+
+  .expected-reimbursement {
+    color: var(--success);
+    font-weight: 500;
   }
 </style>

@@ -580,6 +580,41 @@
                     />
                   {/each}
 
+                  <!-- Insurance Expenses Section (before completed bills) -->
+                  {#if $detailedMonthData.insuranceExpenseSection && $detailedMonthData.insuranceExpenseSection.items.length > 0}
+                    <div class="insurance-divider">
+                      <svg
+                        class="insurance-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Insurance Expenses</span>
+                    </div>
+                    <CategorySection
+                      section={$detailedMonthData.insuranceExpenseSection}
+                      type="bills"
+                      {month}
+                      compactMode={$compactMode}
+                      readOnly={true}
+                      hiddenCount={0}
+                      collapsed={false}
+                      isInsuranceSection={true}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/if}
+
                   <!-- Divider + Completed categories -->
                   {#if filteredCompletedBillSections.length > 0}
                     <div class="completed-divider">
@@ -631,6 +666,41 @@
                       on:closed={handleClosed}
                     />
                   {/each}
+
+                  <!-- Insurance Reimbursements Section (before completed income) -->
+                  {#if $detailedMonthData.insuranceReimbursementSection && $detailedMonthData.insuranceReimbursementSection.items.length > 0}
+                    <div class="insurance-divider">
+                      <svg
+                        class="insurance-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Insurance Reimbursements</span>
+                    </div>
+                    <CategorySection
+                      section={$detailedMonthData.insuranceReimbursementSection}
+                      type="income"
+                      {month}
+                      compactMode={$compactMode}
+                      readOnly={true}
+                      hiddenCount={0}
+                      collapsed={false}
+                      isInsuranceSection={true}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/if}
 
                   <!-- Divider + Completed categories -->
                   {#if filteredCompletedIncomeSections.length > 0}
@@ -880,6 +950,38 @@
   .detailed-view.compact .completed-divider {
     margin: var(--space-2) 0;
     font-size: 0.6rem;
+  }
+
+  /* Insurance section divider */
+  .insurance-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-5) 0 var(--space-3) 0;
+    color: var(--purple);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .insurance-divider::before,
+  .insurance-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--purple-border);
+  }
+
+  .insurance-divider .insurance-icon {
+    flex-shrink: 0;
+    color: var(--purple);
+  }
+
+  /* Compact mode for insurance divider */
+  .detailed-view.compact .insurance-divider {
+    margin: var(--space-3) 0 var(--space-2) 0;
+    font-size: 0.65rem;
   }
 
   /* Read-only banner styles */

@@ -128,6 +128,10 @@ interface Occurrence {
   is_adhoc: boolean; // True if manually added by user
   created_at: string;
   updated_at: string;
+  // Virtual insurance occurrence fields (for reimbursement submissions)
+  plan_name?: string; // Insurance plan name (e.g., "Canada Life AWS")
+  claim_id?: string; // Link to InsuranceClaim
+  claim_submission_id?: string; // Link to specific ClaimSubmission
 }
 
 // ============================================================================
@@ -147,6 +151,11 @@ interface BillInstance {
   is_payoff_bill?: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
   goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
+  // Insurance expected expense linking (protected like payoff bills)
+  claim_id?: string; // Link to InsuranceClaim for expected expenses
+  is_insurance_expense?: boolean; // True if auto-generated from expected insurance expense
+  is_expected_claim?: boolean; // True if from expected claim vs actual claim
+  is_virtual?: boolean; // True if dynamically generated (not persisted) - e.g., insurance entries
   closed_date?: string; // ISO date when fully closed (YYYY-MM-DD)
   name?: string; // For ad-hoc items (bill_id is null)
   category_id?: string; // For ad-hoc items (no bill reference)
@@ -166,6 +175,12 @@ interface IncomeInstance {
   is_default: boolean;
   is_closed: boolean; // True when ALL occurrences are closed
   is_adhoc: boolean; // True for one-time ad-hoc items
+  // Insurance reimbursement linking (protected like payoff bills)
+  claim_id?: string; // Link to InsuranceClaim for expected reimbursements
+  claim_submission_id?: string; // Link to specific ClaimSubmission (after conversion)
+  is_insurance_reimbursement?: boolean; // True if auto-generated from expected insurance expense
+  is_expected_claim?: boolean; // True if from expected claim vs actual claim
+  is_virtual?: boolean; // True if dynamically generated (not persisted) - e.g., insurance entries
   closed_date?: string; // ISO date when fully closed (YYYY-MM-DD)
   name?: string; // For ad-hoc items (income_id is null)
   category_id?: string; // For ad-hoc items (no income reference)
@@ -283,7 +298,7 @@ interface FamilyMember {
 // Insurance Entity Interfaces
 // ============================================================================
 
-type ClaimStatus = 'draft' | 'in_progress' | 'closed';
+type ClaimStatus = 'expected' | 'draft' | 'in_progress' | 'closed';
 type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
 type DocumentType = 'receipt' | 'eob' | 'other';
 
@@ -360,9 +375,16 @@ interface InsuranceClaim {
   provider_name?: string; // Service provider (e.g., "Dr. Smith Dental")
   service_date: string; // When the service occurred (ISO date)
   total_amount: number; // Original invoice amount in cents
-  status: ClaimStatus; // Auto-calculated: draft / in_progress / closed
+  status: ClaimStatus; // Auto-calculated: expected / draft / in_progress / closed
   documents: ClaimDocument[]; // Array of attached documents
   submissions: ClaimSubmission[]; // Array of plan submissions
+  // Expected expense fields (for scheduling future appointments)
+  is_expected: boolean; // True until converted to actual claim
+  expected_cost?: number; // Original estimated cost in cents (preserved after conversion)
+  expected_reimbursement?: number; // Original estimated reimbursement in cents (preserved after conversion)
+  scheduled_at?: string; // When user created this expected expense (ISO timestamp)
+  converted_from_expected_at?: string; // When converted to actual claim (ISO timestamp)
+  payment_source_id?: string; // Payment source for expense (used for virtual bill generation)
   created_at: string;
   updated_at: string;
 }
@@ -453,6 +475,12 @@ interface BillInstanceDetailed {
   is_adhoc: boolean;
   is_payoff_bill: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
+  // Insurance-related fields (for virtual insurance entries)
+  is_virtual?: boolean; // True if dynamically generated (not persisted)
+  is_insurance_expense?: boolean; // True if auto-generated from insurance claim
+  is_expected_claim?: boolean; // True if from expected claim vs actual claim
+  claim_id?: string; // Link to InsuranceClaim
+  due_date?: string | null; // Expected due date
   closed_date: string | null; // ISO date when closed
   is_overdue: boolean;
   days_overdue: number | null;
@@ -479,6 +507,13 @@ interface IncomeInstanceDetailed {
   remaining: number; // expected - total_received
   is_closed: boolean; // True = no more transactions expected
   is_adhoc: boolean;
+  // Insurance-related fields (for virtual insurance entries)
+  is_virtual?: boolean; // True if dynamically generated (not persisted)
+  is_insurance_reimbursement?: boolean; // True if auto-generated from insurance claim
+  is_expected_claim?: boolean; // True if from expected claim vs actual claim
+  claim_id?: string; // Link to InsuranceClaim
+  claim_submission_id?: string; // Link to specific ClaimSubmission
+  due_date?: string | null; // Expected due date
   closed_date: string | null; // ISO date when closed
   is_overdue: boolean;
   payment_source: {
@@ -531,14 +566,18 @@ interface DetailedMonthResponse {
     bills: SectionTally; // Regular bills (with expected amounts)
     adhocBills: SectionTally; // Ad-hoc bills (actual only)
     ccPayoffs: SectionTally; // Credit card payoff bills
+    insuranceExpenses: SectionTally; // Virtual insurance expense bills
     totalExpenses: SectionTally; // Combined total
     income: SectionTally; // Regular income
     adhocIncome: SectionTally; // Ad-hoc income
+    insuranceReimbursements: SectionTally; // Virtual insurance reimbursement income
     totalIncome: SectionTally; // Combined total
   };
   leftover: number;
   leftoverBreakdown: LeftoverBreakdown;
   payoffSummaries: PayoffSummary[]; // Summary of each CC payoff status
+  insuranceExpenseSection: CategorySection | null; // Insurance expenses section
+  insuranceReimbursementSection: CategorySection | null; // Insurance reimbursements section
   bankBalances: Record<string, number>;
   lastUpdated: string;
 }

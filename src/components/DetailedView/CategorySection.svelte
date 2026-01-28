@@ -16,6 +16,7 @@
   export let readOnly: boolean = false;
   export let hiddenCount: number = 0; // Number of hidden closed items (for partial categories)
   export let collapsed: boolean = false; // Show collapsed single-line view (for completed categories)
+  export let isInsuranceSection: boolean = false; // True for insurance sections (hides ad-hoc button)
 
   const dispatch = createEventDispatcher();
 
@@ -111,14 +112,16 @@
         {statsLabel}
       </span>
     {/if}
-    <button
-      class="add-adhoc-btn"
-      on:click={openAdHocForm}
-      title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
-      disabled={readOnly}
-    >
-      +
-    </button>
+    {#if !isInsuranceSection}
+      <button
+        class="add-adhoc-btn"
+        on:click={openAdHocForm}
+        title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
+        disabled={readOnly}
+      >
+        +
+      </button>
+    {/if}
   </div>
 {:else}
   <!-- Expanded view -->
@@ -142,14 +145,16 @@
             {statsLabel}
           </span>
         {/if}
-        <button
-          class="add-adhoc-btn"
-          on:click={openAdHocForm}
-          title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
-          disabled={readOnly}
-        >
-          +
-        </button>
+        {#if !isInsuranceSection}
+          <button
+            class="add-adhoc-btn"
+            on:click={openAdHocForm}
+            title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
+            disabled={readOnly}
+          >
+            +
+          </button>
+        {/if}
       </div>
 
       <div class="category-subtotal">

@@ -91,6 +91,13 @@ const DEFAULT_BILL_CATEGORIES = [
     type: 'bill' as CategoryType,
     is_predefined: true,
   },
+  {
+    name: 'Insurance Expense',
+    sort_order: 10,
+    color: '#14b8a6',
+    type: 'bill' as CategoryType,
+    is_predefined: true,
+  },
 ];
 
 // Default income categories (NEW for 002-detailed-monthly-view)
@@ -134,6 +141,13 @@ const DEFAULT_INCOME_CATEGORIES = [
     name: 'Ad-hoc',
     sort_order: 5,
     color: '#ec4899',
+    type: 'income' as CategoryType,
+    is_predefined: true,
+  },
+  {
+    name: 'Insurance Reimbursement',
+    sort_order: 6,
+    color: '#14b8a6',
     type: 'income' as CategoryType,
     is_predefined: true,
   },

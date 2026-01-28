@@ -97,6 +97,36 @@ export interface InsuranceClaimsService {
     >
   ): Promise<ClaimSubmission | null>;
   deleteSubmission(claimId: string, submissionId: string): Promise<void>;
+
+  // Expected Expenses (scheduled future insurance appointments)
+  // Budget entries are virtual - injected by MonthsService, not stored
+  getClaimsForMonth(month: string): Promise<InsuranceClaim[]>;
+  createExpectedExpense(data: {
+    family_member_id: string;
+    category_id: string;
+    provider_name?: string;
+    appointment_date: string; // When the service will occur (YYYY-MM-DD)
+    expected_cost: number; // Estimated cost in cents
+    expected_reimbursement: number; // Estimated reimbursement in cents
+    payment_source_id: string; // Payment source for virtual bill
+  }): Promise<InsuranceClaim>;
+  updateExpectedExpense(
+    id: string,
+    updates: {
+      family_member_id?: string;
+      category_id?: string;
+      provider_name?: string;
+      appointment_date?: string;
+      expected_cost?: number;
+      expected_reimbursement?: number;
+      payment_source_id?: string;
+    }
+  ): Promise<InsuranceClaim | null>;
+  cancelExpectedExpense(id: string): Promise<void>;
+  convertExpectedToClaim(
+    id: string,
+    data: { actual_cost: number; update_bill_amount?: boolean }
+  ): Promise<InsuranceClaim>;
 }
 
 export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
@@ -294,6 +324,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         status: 'draft',
         documents: [],
         submissions,
+        is_expected: false, // Regular claims are not expected expenses
         created_at: now,
         updated_at: now,
       };
@@ -859,6 +890,304 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       console.log('[InsuranceClaimsService] Deleted submission from claim #', claim.claim_number);
     } catch (error) {
       console.error('[InsuranceClaimsService] Failed to delete submission:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // Expected Expense Methods
+  // Budget entries (bill/income) are VIRTUAL - they are injected by MonthsService
+  // when loading month data, based on claims in that month. No physical instances
+  // are created or stored.
+  // ============================================================================
+
+  /**
+   * Get all claims for a specific month (used by MonthsService to inject virtual entries)
+   */
+  public async getClaimsForMonth(month: string): Promise<InsuranceClaim[]> {
+    try {
+      const claims = await this.getAllRaw();
+      return claims.filter((claim) => {
+        const claimMonth = claim.service_date.substring(0, 7);
+        return claimMonth === month;
+      });
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to get claims for month:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create an expected insurance expense (virtual - no physical bill/income instances)
+   */
+  public async createExpectedExpense(data: {
+    family_member_id: string;
+    category_id: string;
+    provider_name?: string;
+    appointment_date: string;
+    expected_cost: number;
+    expected_reimbursement: number;
+    payment_source_id: string;
+  }): Promise<InsuranceClaim> {
+    try {
+      // Validate
+      if (!data.family_member_id) throw new Error('Family member is required');
+      if (!data.category_id) throw new Error('Category is required');
+      if (!data.appointment_date) throw new Error('Appointment date is required');
+      if (data.expected_cost === undefined || data.expected_cost < 0) {
+        throw new Error('Expected cost must be non-negative');
+      }
+      if (data.expected_reimbursement === undefined || data.expected_reimbursement < 0) {
+        throw new Error('Expected reimbursement must be non-negative');
+      }
+      if (!data.payment_source_id) throw new Error('Payment source is required');
+
+      // Get family member
+      const familyMember = await this.familyMembersService.getById(data.family_member_id);
+      if (!familyMember) throw new Error('Family member not found');
+
+      // Get insurance category
+      const insuranceCategory = await this.categoriesService.getById(data.category_id);
+      if (!insuranceCategory) throw new Error('Insurance category not found');
+
+      const now = new Date().toISOString();
+      const claims = await this.getAllRaw();
+
+      const newClaim: InsuranceClaim = {
+        id: crypto.randomUUID(),
+        claim_number: 0, // Expected claims don't get a claim number until converted
+        family_member_id: data.family_member_id,
+        family_member_name: familyMember.name,
+        category_id: data.category_id,
+        category_name: insuranceCategory.name,
+        provider_name: data.provider_name,
+        service_date: data.appointment_date,
+        total_amount: data.expected_cost,
+        status: 'expected',
+        documents: [],
+        submissions: [],
+        is_expected: true,
+        expected_cost: data.expected_cost,
+        expected_reimbursement: data.expected_reimbursement,
+        scheduled_at: now,
+        payment_source_id: data.payment_source_id,
+        created_at: now,
+        updated_at: now,
+      };
+
+      claims.push(newClaim);
+      await this.storage.writeJSON(STORAGE_PATH, claims);
+
+      console.log(
+        '[InsuranceClaimsService] Created expected expense for',
+        familyMember.name,
+        'on',
+        data.appointment_date
+      );
+      return newClaim;
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to create expected expense:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an expected insurance expense
+   */
+  public async updateExpectedExpense(
+    id: string,
+    updates: {
+      family_member_id?: string;
+      category_id?: string;
+      provider_name?: string;
+      appointment_date?: string;
+      expected_cost?: number;
+      expected_reimbursement?: number;
+      payment_source_id?: string;
+    }
+  ): Promise<InsuranceClaim | null> {
+    try {
+      const claims = await this.getAllRaw();
+      const index = claims.findIndex((c) => c.id === id);
+
+      if (index === -1) {
+        console.warn(`[InsuranceClaimsService] Expected expense ${id} not found`);
+        return null;
+      }
+
+      const claim = claims[index];
+      if (claim.status !== 'expected' || !claim.is_expected) {
+        throw new Error('Can only update expected expenses');
+      }
+
+      const now = new Date().toISOString();
+
+      // Update denormalized names if needed
+      let familyMemberName = claim.family_member_name;
+      if (updates.family_member_id && updates.family_member_id !== claim.family_member_id) {
+        const familyMember = await this.familyMembersService.getById(updates.family_member_id);
+        if (!familyMember) throw new Error('Family member not found');
+        familyMemberName = familyMember.name;
+      }
+
+      let categoryName = claim.category_name;
+      if (updates.category_id && updates.category_id !== claim.category_id) {
+        const insuranceCategory = await this.categoriesService.getById(updates.category_id);
+        if (!insuranceCategory) throw new Error('Insurance category not found');
+        categoryName = insuranceCategory.name;
+      }
+
+      const expectedCost =
+        updates.expected_cost !== undefined ? updates.expected_cost : claim.expected_cost || 0;
+      const expectedReimbursement =
+        updates.expected_reimbursement !== undefined
+          ? updates.expected_reimbursement
+          : claim.expected_reimbursement || 0;
+
+      // Update claim
+      claims[index] = {
+        ...claim,
+        family_member_id: updates.family_member_id || claim.family_member_id,
+        family_member_name: familyMemberName,
+        category_id: updates.category_id || claim.category_id,
+        category_name: categoryName,
+        provider_name: updates.provider_name ?? claim.provider_name,
+        service_date: updates.appointment_date || claim.service_date,
+        total_amount: expectedCost,
+        expected_cost: expectedCost,
+        expected_reimbursement: expectedReimbursement,
+        payment_source_id: updates.payment_source_id || claim.payment_source_id,
+        updated_at: now,
+      };
+
+      await this.storage.writeJSON(STORAGE_PATH, claims);
+      console.log('[InsuranceClaimsService] Updated expected expense', id);
+      return claims[index];
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to update expected expense:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel an expected insurance expense (just deletes the claim - no physical instances to clean up)
+   */
+  public async cancelExpectedExpense(id: string): Promise<void> {
+    try {
+      const claims = await this.getAllRaw();
+      const claim = claims.find((c) => c.id === id);
+
+      if (!claim) {
+        throw new Error('Expected expense not found');
+      }
+
+      if (claim.status !== 'expected' || !claim.is_expected) {
+        throw new Error('Can only cancel expected expenses');
+      }
+
+      // Simply remove the claim - no physical instances to clean up (they're virtual)
+      const filtered = claims.filter((c) => c.id !== id);
+      await this.storage.writeJSON(STORAGE_PATH, filtered);
+
+      console.log('[InsuranceClaimsService] Cancelled expected expense', id);
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to cancel expected expense:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Convert an expected expense to an actual claim
+   * Creates submissions for each of the family member's plans
+   */
+  public async convertExpectedToClaim(
+    id: string,
+    data: { actual_cost: number; update_bill_amount?: boolean }
+  ): Promise<InsuranceClaim> {
+    try {
+      const claims = await this.getAllRaw();
+      const index = claims.findIndex((c) => c.id === id);
+
+      if (index === -1) {
+        throw new Error('Expected expense not found');
+      }
+
+      const claim = claims[index];
+      if (claim.status !== 'expected' || !claim.is_expected) {
+        throw new Error('Can only convert expected expenses');
+      }
+
+      if (data.actual_cost < 0) {
+        throw new Error('Actual cost must be non-negative');
+      }
+
+      const now = new Date().toISOString();
+
+      // Get next claim number
+      const claimNumber = await this.getNextClaimNumber();
+
+      // Get family member for submissions
+      const familyMember = await this.familyMembersService.getById(claim.family_member_id);
+      if (!familyMember) throw new Error('Family member not found');
+
+      // Auto-generate draft submissions based on family member's plans
+      // Each submission becomes a potential income source when reimbursed
+      const submissions: ClaimSubmission[] = [];
+      const memberPlans = familyMember.plans || [];
+
+      for (let i = 0; i < memberPlans.length; i++) {
+        const planId = memberPlans[i];
+        const plan = await this.plansService.getById(planId);
+
+        if (!plan || !plan.is_active) continue;
+
+        const planSnapshot: PlanSnapshot = {
+          name: plan.name,
+          provider_name: plan.provider_name,
+          policy_number: plan.policy_number,
+          member_id: plan.member_id,
+          owner: plan.owner,
+          portal_url: plan.portal_url,
+        };
+
+        const status: SubmissionStatus = submissions.length === 0 ? 'draft' : 'awaiting_previous';
+
+        submissions.push({
+          id: crypto.randomUUID(),
+          plan_id: planId,
+          plan_snapshot: planSnapshot,
+          status,
+          // First submission gets full amount, subsequent ones start at $0 (placeholder)
+          amount_claimed: status === 'awaiting_previous' ? 0 : data.actual_cost,
+          // amount_reimbursed starts undefined (not yet reimbursed)
+          documents_sent: [],
+        });
+      }
+
+      // Update the claim
+      claims[index] = {
+        ...claim,
+        claim_number: claimNumber,
+        total_amount: data.actual_cost,
+        status: 'draft',
+        is_expected: false,
+        converted_from_expected_at: now,
+        submissions,
+        updated_at: now,
+      };
+
+      await this.storage.writeJSON(STORAGE_PATH, claims);
+
+      console.log(
+        '[InsuranceClaimsService] Converted expected expense to claim #',
+        claimNumber,
+        'with',
+        submissions.length,
+        'submissions'
+      );
+      return claims[index];
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to convert expected expense:', error);
       throw error;
     }
   }

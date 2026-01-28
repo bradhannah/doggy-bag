@@ -1,7 +1,7 @@
 // Insurance Entity Types for Frontend
 // These types mirror the backend types in api/src/types/index.ts
 
-export type ClaimStatus = 'draft' | 'in_progress' | 'closed';
+export type ClaimStatus = 'expected' | 'draft' | 'in_progress' | 'closed';
 export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
 export type DocumentType = 'receipt' | 'eob' | 'other';
 
@@ -88,6 +88,13 @@ export interface InsuranceClaim {
   status: ClaimStatus;
   documents: ClaimDocument[];
   submissions: ClaimSubmission[];
+  // Expected expense fields (for scheduling future appointments)
+  is_expected: boolean;
+  expected_cost?: number;
+  expected_reimbursement?: number;
+  scheduled_at?: string;
+  converted_from_expected_at?: string;
+  payment_source_id?: string;
   created_at: string;
   updated_at: string;
 }

@@ -18,6 +18,10 @@ export interface BillInstance {
   is_closed?: boolean;
   is_adhoc?: boolean;
   goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
+  // Insurance expected expense linking
+  claim_id?: string; // Link to InsuranceClaim for expected expenses
+  is_insurance_expense?: boolean; // True if auto-generated from expected insurance expense
+  is_virtual?: boolean; // True if dynamically generated (not persisted) - e.g., insurance entries
   name: string;
   billing_period: string;
   created_at: string;
@@ -33,6 +37,11 @@ export interface IncomeInstance {
   occurrences?: Array<{ payments?: Array<{ amount: number }> }>;
   is_default: boolean;
   is_closed?: boolean;
+  // Insurance reimbursement linking
+  claim_id?: string; // Link to InsuranceClaim for expected reimbursements
+  claim_submission_id?: string; // Link to specific ClaimSubmission (after conversion)
+  is_insurance_reimbursement?: boolean; // True if auto-generated from expected insurance expense
+  is_virtual?: boolean; // True if dynamically generated (not persisted) - e.g., insurance entries
   name: string;
   billing_period: string;
   created_at: string;

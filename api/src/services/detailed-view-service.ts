@@ -98,10 +98,26 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       month
     );
 
-    // Group by category
-    const billSections = this.groupBillsByCategory(detailedBillInstances, billCategories, billsMap);
+    // Separate virtual insurance items from regular items
+    // Insurance items have their own dedicated sections and shouldn't appear in category groupings
+    const insuranceBillInstances = detailedBillInstances.filter(
+      (bi) => bi.is_virtual === true && bi.is_insurance_expense === true
+    );
+    const regularBillInstances = detailedBillInstances.filter(
+      (bi) => !(bi.is_virtual === true && bi.is_insurance_expense === true)
+    );
+
+    const insuranceIncomeInstances = detailedIncomeInstances.filter(
+      (ii) => ii.is_virtual === true && ii.is_insurance_reimbursement === true
+    );
+    const regularIncomeInstances = detailedIncomeInstances.filter(
+      (ii) => !(ii.is_virtual === true && ii.is_insurance_reimbursement === true)
+    );
+
+    // Group regular items by category (excluding insurance items)
+    const billSections = this.groupBillsByCategory(regularBillInstances, billCategories, billsMap);
     const incomeSections = this.groupIncomesByCategory(
-      detailedIncomeInstances,
+      regularIncomeInstances,
       incomeCategories,
       incomesMap
     );
@@ -122,15 +138,81 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     };
     ccPayoffsTally.remaining = ccPayoffsTally.expected - ccPayoffsTally.actual;
 
-    // Total expenses includes bills + adhoc + CC payoffs
+    // Calculate Insurance Expenses tally (virtual insurance bill instances)
+    const insuranceExpensesTally: SectionTally = {
+      expected: insuranceBillInstances.reduce((sum, bi) => sum + (bi.expected_amount || 0), 0),
+      actual: insuranceBillInstances.reduce(
+        (sum, bi) => sum + sumClosedOccurrenceAmounts(bi.occurrences || []),
+        0
+      ),
+      remaining: 0,
+    };
+    insuranceExpensesTally.remaining =
+      insuranceExpensesTally.expected - insuranceExpensesTally.actual;
+
+    // Calculate Insurance Reimbursements tally (virtual insurance income instances)
+    const insuranceReimbursementsTally: SectionTally = {
+      expected: insuranceIncomeInstances.reduce((sum, ii) => sum + (ii.expected_amount || 0), 0),
+      actual: insuranceIncomeInstances.reduce(
+        (sum, ii) => sum + sumClosedOccurrenceAmounts(ii.occurrences || []),
+        0
+      ),
+      remaining: 0,
+    };
+    insuranceReimbursementsTally.remaining =
+      insuranceReimbursementsTally.expected - insuranceReimbursementsTally.actual;
+
+    // Build insurance expense section (if any insurance expenses exist)
+    const insuranceExpenseSection: CategorySection | null =
+      insuranceBillInstances.length > 0
+        ? {
+            category: {
+              id: '__insurance_expenses__',
+              name: 'Insurance Expenses',
+              color: '#8b5cf6', // Purple
+              sort_order: 9999,
+              type: 'bill',
+            },
+            items: this.sortBillInstances(insuranceBillInstances),
+            subtotal: {
+              expected: insuranceExpensesTally.expected,
+              actual: insuranceExpensesTally.actual,
+            },
+          }
+        : null;
+
+    // Build insurance reimbursement section (if any insurance reimbursements exist)
+    const insuranceReimbursementSection: CategorySection | null =
+      insuranceIncomeInstances.length > 0
+        ? {
+            category: {
+              id: '__insurance_reimbursements__',
+              name: 'Insurance Reimbursements',
+              color: '#8b5cf6', // Purple
+              sort_order: 9999,
+              type: 'income',
+            },
+            items: this.sortIncomeInstances(insuranceIncomeInstances),
+            subtotal: {
+              expected: insuranceReimbursementsTally.expected,
+              actual: insuranceReimbursementsTally.actual,
+            },
+          }
+        : null;
+
+    // Total expenses includes bills + adhoc + CC payoffs + insurance expenses
     const totalExpensesTally = combineTallies(
-      combineTallies(billsTally, adhocBillsTally),
-      ccPayoffsTally
+      combineTallies(combineTallies(billsTally, adhocBillsTally), ccPayoffsTally),
+      insuranceExpensesTally
     );
 
     const incomeTally = calculateRegularIncomeTally(monthlyData.income_instances);
     const adhocIncomeTally = calculateAdhocIncomeTally(monthlyData.income_instances);
-    const totalIncomeTally = combineTallies(incomeTally, adhocIncomeTally);
+    // Total income includes regular + adhoc + insurance reimbursements
+    const totalIncomeTally = combineTallies(
+      combineTallies(incomeTally, adhocIncomeTally),
+      insuranceReimbursementsTally
+    );
 
     // Calculate leftover using unified calculation (pass payment sources to filter excluded accounts)
     const leftoverResult = calculateUnifiedLeftover(monthlyData, paymentSources);
@@ -161,9 +243,11 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         bills: billsTally,
         adhocBills: adhocBillsTally,
         ccPayoffs: ccPayoffsTally,
+        insuranceExpenses: insuranceExpensesTally,
         totalExpenses: totalExpensesTally,
         income: incomeTally,
         adhocIncome: adhocIncomeTally,
+        insuranceReimbursements: insuranceReimbursementsTally,
         totalIncome: totalIncomeTally,
       },
       leftover: leftoverResult.leftover,
@@ -180,6 +264,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       },
       overdue_bills: overdueBills,
       payoffSummaries,
+      insuranceExpenseSection,
+      insuranceReimbursementSection,
       bankBalances: monthlyData.bank_balances,
       lastUpdated: monthlyData.updated_at,
     };
@@ -234,6 +320,11 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         is_adhoc: instance.is_adhoc,
         is_payoff_bill: instance.is_payoff_bill ?? false,
         payoff_source_id: instance.payoff_source_id,
+        // Insurance-related flags (for virtual insurance entries)
+        is_virtual: instance.is_virtual,
+        is_insurance_expense: instance.is_insurance_expense,
+        is_expected_claim: instance.is_expected_claim,
+        claim_id: instance.claim_id,
         due_date: dueDate,
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,
@@ -292,6 +383,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         remaining,
         is_closed: instance.is_closed,
         is_adhoc: instance.is_adhoc,
+        // Insurance-related flags (for virtual insurance entries)
+        is_virtual: instance.is_virtual,
+        is_insurance_reimbursement: instance.is_insurance_reimbursement,
+        is_expected_claim: instance.is_expected_claim,
+        claim_id: instance.claim_id,
+        claim_submission_id: instance.claim_submission_id,
         due_date: dueDate,
         closed_date: instance.closed_date ?? null,
         is_overdue: overdueStatus,

@@ -147,6 +147,10 @@ import {
   createClaimSubmissionPOSTHandler,
   createClaimSubmissionPUTHandler,
   createClaimSubmissionDELETEHandler,
+  createExpectedExpenseHandler,
+  updateExpectedExpenseHandler,
+  cancelExpectedExpenseHandler,
+  convertExpectedToClaimHandler,
 } from './handlers/insurance-claims.handlers';
 
 import {
@@ -402,6 +406,23 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
       handler: createClaimSubmissionDELETEHandler(),
       hasPathParam: true,
     },
+  },
+  // Insurance Claims - expected expense routes (must come before generic claims routes)
+  {
+    path: '/api/insurance-claims/expected',
+    definition: { method: 'POST', handler: createExpectedExpenseHandler() },
+  },
+  {
+    path: '/api/insurance-claims/expected',
+    definition: { method: 'PUT', handler: updateExpectedExpenseHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims/expected',
+    definition: { method: 'DELETE', handler: cancelExpectedExpenseHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims/convert',
+    definition: { method: 'POST', handler: convertExpectedToClaimHandler(), hasPathParam: true },
   },
   // Insurance Claims - main CRUD
   {

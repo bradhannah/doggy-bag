@@ -48,6 +48,9 @@ export const insuranceClaimsLoading = derived(store, (s) => s.loading);
 export const insuranceClaimsError = derived(store, (s) => s.error);
 
 // Status-filtered derived stores
+export const expectedClaims = derived(insuranceClaims, (claims) =>
+  claims.filter((c) => c.status === 'expected')
+);
 export const draftClaims = derived(insuranceClaims, (claims) =>
   claims.filter((c) => c.status === 'draft')
 );
@@ -56,6 +59,9 @@ export const inProgressClaims = derived(insuranceClaims, (claims) =>
 );
 export const closedClaims = derived(insuranceClaims, (claims) =>
   claims.filter((c) => c.status === 'closed')
+);
+export const activeClaims = derived(insuranceClaims, (claims) =>
+  claims.filter((c) => c.status !== 'closed')
 );
 
 // ============================================================================
@@ -69,6 +75,17 @@ export interface ClaimData {
   total_amount: number;
   description?: string;
   provider_name?: string;
+}
+
+// Data for creating expected insurance expenses
+export interface ExpectedExpenseData {
+  family_member_id: string;
+  category_id: string;
+  provider_name?: string;
+  appointment_date: string; // When the service will occur
+  expected_cost: number; // Estimated cost in cents
+  expected_reimbursement: number; // Estimated reimbursement in cents
+  payment_source_id: string; // Where to create the bill
 }
 
 export async function loadInsuranceClaims(filters?: ClaimFilters) {
@@ -161,6 +178,120 @@ export async function deleteClaim(id: string) {
     await loadClaimsSummary();
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to delete insurance claim');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
+// ============================================================================
+// Expected Expenses (scheduled future insurance appointments)
+// ============================================================================
+
+export async function createExpectedExpense(data: ExpectedExpenseData): Promise<InsuranceClaim> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(apiUrl('/api/insurance-claims/expected'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create expected expense');
+    }
+
+    const expectedClaim = (await response.json()) as InsuranceClaim;
+    await loadInsuranceClaims();
+    await loadClaimsSummary();
+    return expectedClaim;
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to create expected expense');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
+export async function updateExpectedExpense(
+  id: string,
+  updates: Partial<ExpectedExpenseData>
+): Promise<InsuranceClaim> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(apiUrl(`/api/insurance-claims/${id}/expected`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update expected expense');
+    }
+
+    const updated = (await response.json()) as InsuranceClaim;
+    await loadInsuranceClaims();
+    return updated;
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to update expected expense');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
+export async function cancelExpectedExpense(id: string): Promise<void> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(apiUrl(`/api/insurance-claims/${id}/expected`), {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to cancel expected expense');
+    }
+
+    await loadInsuranceClaims();
+    await loadClaimsSummary();
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to cancel expected expense');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
+export interface ConvertToClaimData {
+  actual_cost: number; // Actual cost in cents
+  update_bill_amount?: boolean; // Update the linked bill amount to match
+}
+
+export async function convertExpectedToClaim(
+  id: string,
+  data: ConvertToClaimData
+): Promise<InsuranceClaim> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(apiUrl(`/api/insurance-claims/${id}/convert`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to convert expected expense to claim');
+    }
+
+    const claim = (await response.json()) as InsuranceClaim;
+    await loadInsuranceClaims();
+    await loadClaimsSummary();
+    return claim;
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to convert expected expense to claim');
     store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }

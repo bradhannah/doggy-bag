@@ -2,7 +2,7 @@
   /**
    * ClaimDetail - Detailed view of a single claim with submissions and documents
    */
-  import type { InsuranceClaim } from '../../types/insurance';
+  import type { InsuranceClaim, ClaimStatus } from '../../types/insurance';
   import {
     deleteClaim,
     createSubmission,
@@ -20,8 +20,9 @@
   export let claim: InsuranceClaim;
   export let onEdit: () => void = () => {};
   export let onClose: () => void = () => {};
+  export let highlightSubmissionId: string | null = null;
 
-  const dispatch = createEventDispatcher<{ deleted: void; updated: void }>();
+  const dispatch = createEventDispatcher<{ deleted: void; updated: void; convert: void }>();
 
   let showNewSubmissionForm = false;
   let newSubmissionPlanId = '';
@@ -30,8 +31,10 @@
   let showDeleteConfirm = false;
   let deleting = false;
 
-  function getStatusColor(status: 'draft' | 'in_progress' | 'closed'): string {
+  function getStatusColor(status: ClaimStatus): string {
     switch (status) {
+      case 'expected':
+        return 'var(--accent)';
       case 'draft':
       case 'in_progress':
         return 'var(--warning)';
@@ -42,8 +45,10 @@
     }
   }
 
-  function getStatusLabel(status: 'draft' | 'in_progress' | 'closed'): string {
+  function getStatusLabel(status: ClaimStatus): string {
     switch (status) {
+      case 'expected':
+        return 'Expected';
       case 'draft':
       case 'in_progress':
         return 'In Progress';
@@ -164,6 +169,20 @@
       </span>
     </div>
     <div class="header-actions">
+      {#if claim.status === 'expected'}
+        <button class="btn btn-primary btn-sm" on:click={() => dispatch('convert')}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M5 13l4 4L19 7"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Convert to Claim
+        </button>
+      {/if}
       <button class="btn btn-secondary btn-sm" on:click={onEdit}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
           <path
@@ -312,6 +331,7 @@
           <SubmissionCard
             {submission}
             claimId={claim.id}
+            highlight={submission.id === highlightSubmissionId}
             on:updated={handleSubmissionUpdate}
             on:deleted={handleSubmissionUpdate}
           />
@@ -379,6 +399,7 @@
   .header-actions {
     display: flex;
     gap: var(--space-2);
+    flex-wrap: wrap;
   }
 
   .claim-info {

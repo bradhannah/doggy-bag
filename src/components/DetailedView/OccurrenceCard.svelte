@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { goto } from '$app/navigation';
   import type { BillInstanceDetailed, IncomeInstanceDetailed } from '../../stores/detailed-month';
   import { detailedMonth } from '../../stores/detailed-month';
   import { paymentSources } from '../../stores/payment-sources';
@@ -18,6 +19,21 @@
 
   // Check if this is a payoff bill (only relevant for bills)
   $: isPayoffBill = type === 'bill' && (item as BillInstanceDetailed).is_payoff_bill === true;
+
+  // Check if this is a virtual insurance item (protected like payoff bills)
+  $: isVirtualInsurance =
+    item.is_virtual === true &&
+    ((type === 'bill' && (item as BillInstanceDetailed).is_insurance_expense === true) ||
+      (type === 'income' && (item as IncomeInstanceDetailed).is_insurance_reimbursement === true));
+
+  // Check if this is an expected claim (for badge display)
+  $: isExpectedClaim =
+    isVirtualInsurance &&
+    ((type === 'bill' && (item as BillInstanceDetailed).is_expected_claim === true) ||
+      (type === 'income' && (item as IncomeInstanceDetailed).is_expected_claim === true));
+
+  // Protected items: cannot add occurrences, edit, or delete
+  $: isProtected = isPayoffBill || isVirtualInsurance;
 
   // Payoff bill specific state
   let showPayCCModal = false;
@@ -49,6 +65,16 @@
 
   function openDetailsDrawer() {
     showDetailsDrawer = true;
+  }
+
+  // Navigate to insurance claim when clicking on an insurance item
+  function handleItemClick() {
+    if (isVirtualInsurance && item.claim_id) {
+      // Navigate to the insurance claim
+      goto(`/insurance?claim=${item.claim_id}`);
+    } else {
+      openDetailsDrawer();
+    }
   }
 
   function formatCurrency(cents: number): string {
@@ -122,7 +148,7 @@
   <div class="card-header">
     <div class="header-info">
       <span class="item-name" class:closed-text={isClosed}>
-        {#if !readOnly && !isPayoffBill}
+        {#if !readOnly && !isProtected}
           <button
             class="add-occurrence-icon"
             on:click={handleAddOccurrence}
@@ -142,11 +168,30 @@
             </svg>
           </button>
         {/if}
-        <button class="name-link" on:click={openDetailsDrawer} title="View details">
+        <button
+          class="name-link"
+          class:insurance-link={isVirtualInsurance}
+          on:click={handleItemClick}
+          title={isVirtualInsurance ? 'View insurance claim' : 'View details'}
+        >
           {item.name}
         </button>
         {#if isPayoffBill}
           <span class="billing-badge payoff">Payoff</span>
+        {:else if isVirtualInsurance}
+          <span class="billing-badge insurance" title="Insurance - managed from Insurance section">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            {isExpectedClaim ? 'Expected' : 'Actual'}
+          </span>
         {:else}
           <span class="billing-badge">{formatBillingPeriod(item.billing_period)}</span>
         {/if}
@@ -226,6 +271,7 @@
         {type}
         {readOnly}
         {isPayoffBill}
+        {isVirtualInsurance}
         on:updated={handleOccurrenceUpdated}
       />
     {/each}
@@ -339,6 +385,14 @@
     text-decoration: underline line-through;
   }
 
+  .name-link.insurance-link {
+    color: var(--purple);
+  }
+
+  .name-link.insurance-link:hover {
+    color: var(--purple-hover);
+  }
+
   .closed-text {
     text-decoration: line-through;
     opacity: 0.6;
@@ -407,6 +461,18 @@
   .billing-badge.payoff {
     background: var(--purple-bg);
     color: var(--purple);
+  }
+
+  .billing-badge.insurance {
+    background: var(--purple-bg);
+    color: var(--purple);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .billing-badge.insurance svg {
+    flex-shrink: 0;
   }
 
   .pay-btn {

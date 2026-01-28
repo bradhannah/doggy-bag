@@ -659,3 +659,258 @@ export function createClaimSubmissionDELETEHandler() {
     }
   };
 }
+
+// ============================================================================
+// Expected Expense Handlers
+// ============================================================================
+
+export function createExpectedExpenseHandler() {
+  return async (request: Request) => {
+    try {
+      const body = await request.json();
+
+      // Validate required fields
+      if (!body.family_member_id) {
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: ['Family member is required'],
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      if (!body.category_id) {
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: ['Insurance category is required'],
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      if (!body.appointment_date) {
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: ['Appointment date is required'],
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      if (!body.payment_source_id) {
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: ['Payment source is required'],
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const expectedClaim = await claimsService.createExpectedExpense({
+        family_member_id: body.family_member_id,
+        category_id: body.category_id,
+        provider_name: body.provider_name,
+        appointment_date: body.appointment_date,
+        expected_cost: body.expected_cost || 0,
+        expected_reimbursement: body.expected_reimbursement || 0,
+        payment_source_id: body.payment_source_id,
+      });
+
+      return new Response(JSON.stringify(expectedClaim), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 201,
+      });
+    } catch (error) {
+      console.error('[InsuranceClaimsHandler] Create expected expense failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to create expected expense',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}
+
+export function updateExpectedExpenseHandler() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      // Path: /api/insurance-claims/{id}/expected
+      const claimIdIndex = pathParts.indexOf('insurance-claims') + 1;
+      const id = pathParts[claimIdIndex];
+
+      if (!id) {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing claim ID',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const body = await request.json();
+      const updated = await claimsService.updateExpectedExpense(id, body);
+
+      if (!updated) {
+        return new Response(
+          JSON.stringify({
+            error: 'Expected expense not found',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
+      }
+
+      return new Response(JSON.stringify(updated), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (error) {
+      console.error('[InsuranceClaimsHandler] Update expected expense failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update expected expense',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}
+
+export function cancelExpectedExpenseHandler() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      // Path: /api/insurance-claims/{id}/expected
+      const claimIdIndex = pathParts.indexOf('insurance-claims') + 1;
+      const id = pathParts[claimIdIndex];
+
+      if (!id) {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing claim ID',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      await claimsService.cancelExpectedExpense(id);
+
+      return new Response(null, {
+        status: 204,
+      });
+    } catch (error) {
+      console.error('[InsuranceClaimsHandler] Cancel expected expense failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to cancel expected expense',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}
+
+export function convertExpectedToClaimHandler() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      // Path: /api/insurance-claims/{id}/convert
+      const claimIdIndex = pathParts.indexOf('insurance-claims') + 1;
+      const id = pathParts[claimIdIndex];
+
+      if (!id) {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing claim ID',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const body = await request.json();
+
+      if (body.actual_cost === undefined || body.actual_cost === null) {
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: ['Actual cost is required'],
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const claim = await claimsService.convertExpectedToClaim(id, {
+        actual_cost: body.actual_cost,
+        update_bill_amount: body.update_bill_amount,
+      });
+
+      return new Response(JSON.stringify(claim), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (error) {
+      console.error('[InsuranceClaimsHandler] Convert expected expense failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to convert expected expense to claim',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}

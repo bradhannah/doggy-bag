@@ -17,6 +17,10 @@ export interface Occurrence {
   is_adhoc: boolean; // True if manually added by user
   created_at: string;
   updated_at: string;
+  // Virtual insurance occurrence fields (for reimbursement submissions)
+  plan_name?: string; // Insurance plan name (e.g., "Canada Life AWS")
+  claim_id?: string; // Link to InsuranceClaim
+  claim_submission_id?: string; // Link to specific ClaimSubmission
 }
 
 export type BillingPeriod = 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
@@ -38,6 +42,11 @@ export interface BillInstanceDetailed {
   is_payoff_bill: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
   goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
+  // Insurance expected expense linking
+  claim_id?: string; // Link to InsuranceClaim for expected expenses
+  is_insurance_expense?: boolean; // True if auto-generated from expected insurance expense
+  is_expected_claim?: boolean; // True if from expected claim vs actual claim
+  is_virtual?: boolean; // True if dynamically generated (not persisted) - e.g., insurance entries
   due_date: string | null; // DEPRECATED: use occurrence expected_date
   closed_date: string | null;
   is_overdue: boolean;
@@ -65,6 +74,12 @@ export interface IncomeInstanceDetailed {
   remaining: number;
   is_closed: boolean;
   is_adhoc: boolean;
+  // Insurance reimbursement linking
+  claim_id?: string; // Link to InsuranceClaim for expected reimbursements
+  claim_submission_id?: string; // Link to specific ClaimSubmission (after conversion)
+  is_insurance_reimbursement?: boolean; // True if auto-generated from expected insurance expense
+  is_expected_claim?: boolean; // True if from expected claim vs actual claim
+  is_virtual?: boolean; // True if dynamically generated (not persisted) - e.g., insurance entries
   due_date: string | null; // DEPRECATED: use occurrence expected_date
   closed_date: string | null;
   is_overdue: boolean;
@@ -124,15 +139,19 @@ export interface DetailedMonthData {
     bills: SectionTally; // Regular bills (with expected amounts)
     adhocBills: SectionTally; // Ad-hoc bills (actual only)
     ccPayoffs: SectionTally; // Credit card payoff bills
+    insuranceExpenses: SectionTally; // Virtual insurance expense bills
     totalExpenses: SectionTally; // Combined total
     income: SectionTally; // Regular income
     adhocIncome: SectionTally; // Ad-hoc income
+    insuranceReimbursements: SectionTally; // Virtual insurance reimbursement income
     totalIncome: SectionTally; // Combined total
   };
   leftover: number;
   leftoverBreakdown: LeftoverBreakdown;
   overdue_bills: { name: string; amount: number; due_date: string }[];
   payoffSummaries: PayoffSummary[]; // Summary of each CC payoff status
+  insuranceExpenseSection: CategorySection | null; // Insurance expenses section
+  insuranceReimbursementSection: CategorySection | null; // Insurance reimbursements section
   bankBalances: Record<string, number>;
   lastUpdated: string;
 }
