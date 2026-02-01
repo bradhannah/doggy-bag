@@ -806,7 +806,7 @@ dependencies = [
 
 [[package]]
 name = "doggybag"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "dirs 5.0.1",
  "reqwest",
