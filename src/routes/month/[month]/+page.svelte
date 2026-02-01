@@ -40,7 +40,6 @@
     showRefresh={true}
     showWidthToggle={true}
     showColumnToggle={true}
-    showCompactToggle={true}
     showHidePaid={true}
     showSyncMetadata={true}
     {isSyncingMetadata}

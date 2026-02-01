@@ -330,6 +330,39 @@ describe('Bills Store', () => {
         const utilities = grouped.find((g) => g.category?.id === 'cat-1');
         expect(utilities?.subtotal).toBe(150 + 217);
       });
+
+      it('treats bills with orphaned category IDs as needing category assignment', () => {
+        // Add a bill with a category ID that doesn't exist in the categories store
+        const billsWithOrphan: Bill[] = [
+          ...sampleBills,
+          {
+            id: 'bill-orphan',
+            name: 'Orphan Bill',
+            amount: 50,
+            billing_period: 'monthly',
+            day_of_month: 10,
+            payment_source_id: 'ps-1',
+            category_id: 'deleted-category-id', // This category doesn't exist
+            is_active: true,
+            created_at: '2025-01-01T00:00:00Z',
+            updated_at: '2025-01-01T00:00:00Z',
+          },
+        ];
+        billsStore.set({ bills: billsWithOrphan, loading: false, error: null });
+
+        const grouped = get(billsByCategory);
+        const needsCategory = grouped.find((g) => g.category?.id === '__orphaned__');
+
+        // The orphan bill should be in the "Needs Category" group
+        expect(needsCategory).toBeDefined();
+        expect(needsCategory?.category?.name).toBe('Needs Category');
+        expect(needsCategory?.bills.map((b) => b.name)).toContain('Orphan Bill');
+      });
+
+      // Note: Bills with savings_goal type categories are tested via the mock setup.
+      // The mock includes only 'bill' type categories, but the orphan detection uses
+      // allValidCategoryIds which includes ALL category types. A more comprehensive
+      // test would require a dynamic mock that can include savings_goal categories.
     });
   });
 });

@@ -173,14 +173,23 @@ export interface BillCategoryGroup {
 export const billsByCategory = derived(
   [activeBillsWithContribution, categories],
   ([$bills, $categories]): BillCategoryGroup[] => {
-    // Get bill categories sorted by sort_order
+    // Get bill categories sorted by sort_order (for grouping)
     const billCats = $categories
       .filter((c) => c.type === 'bill')
       .sort((a, b) => a.sort_order - b.sort_order);
 
+    // Get savings goal categories (bills can reference these too)
+    const savingsGoalCats = $categories
+      .filter((c) => c.type === 'savings_goal')
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    // Build a set of ALL valid category IDs for orphan detection
+    // (includes both bill and savings_goal types)
+    const allValidCategoryIds = new Set($categories.map((c) => c.id));
+
     const grouped: BillCategoryGroup[] = [];
 
-    // Uncategorized first - always show (even if empty)
+    // Bills with no category_id (truly uncategorized)
     const uncategorized = $bills.filter((b) => !b.category_id);
     grouped.push({
       category: null,
@@ -188,8 +197,38 @@ export const billsByCategory = derived(
       subtotal: uncategorized.reduce((sum, b) => sum + b.monthlyContribution, 0),
     });
 
-    // Then each category in sort_order
+    // Bills with orphaned category references (category was deleted)
+    // These get a special pseudo-category so they're visible in Manage view
+    const orphaned = $bills.filter((b) => b.category_id && !allValidCategoryIds.has(b.category_id));
+    if (orphaned.length > 0) {
+      grouped.push({
+        category: {
+          id: '__orphaned__',
+          name: 'Needs Category',
+          type: 'bill',
+          color: '#ef4444', // Red to draw attention
+          sort_order: -999,
+          is_predefined: true,
+          created_at: '',
+          updated_at: '',
+        },
+        bills: orphaned,
+        subtotal: orphaned.reduce((sum, b) => sum + b.monthlyContribution, 0),
+      });
+    }
+
+    // Then each bill category in sort_order
     for (const cat of billCats) {
+      const catBills = $bills.filter((b) => b.category_id === cat.id);
+      grouped.push({
+        category: cat,
+        bills: catBills,
+        subtotal: catBills.reduce((sum, b) => sum + b.monthlyContribution, 0),
+      });
+    }
+
+    // Then each savings goal category (bills linked to savings goals)
+    for (const cat of savingsGoalCats) {
       const catBills = $bills.filter((b) => b.category_id === cat.id);
       grouped.push({
         category: cat,

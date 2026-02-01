@@ -173,42 +173,6 @@ function createFilterScopeStore() {
 
 export const filterScope = createFilterScopeStore();
 
-// Compact mode store with localStorage persistence
-function getStoredCompactMode(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem('doggybag-compact-mode') === 'true';
-}
-
-function createCompactModeStore() {
-  const { subscribe, set, update } = writable<boolean>(false);
-
-  // Initialize from localStorage on client side
-  if (typeof window !== 'undefined') {
-    set(getStoredCompactMode());
-  }
-
-  return {
-    subscribe,
-    toggle: () => {
-      update((current) => {
-        const next = !current;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('doggybag-compact-mode', String(next));
-        }
-        return next;
-      });
-    },
-    set: (value: boolean) => {
-      set(value);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('doggybag-compact-mode', String(value));
-      }
-    },
-  };
-}
-
-export const compactMode = createCompactModeStore();
-
 // Hide paid items mode store with localStorage persistence
 function getStoredHidePaidItems(): boolean {
   if (typeof window === 'undefined') return false;

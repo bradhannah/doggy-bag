@@ -687,13 +687,34 @@
                 </div>
                 <p class="schedule-name">{activeBill.name}</p>
               </div>
-              <button
-                type="button"
-                class="btn-danger-outline"
-                on:click={() => (confirmModal = { type: 'remove-schedule', billId: activeBill.id })}
-              >
-                Remove Schedule
-              </button>
+              <div class="schedule-actions">
+                <a
+                  href="/setup?tab=bills&edit={activeBill.id}"
+                  class="btn-secondary-outline"
+                  title="Edit bill details in Manage"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Edit Bill
+                </a>
+                <button
+                  type="button"
+                  class="btn-danger-outline"
+                  on:click={() =>
+                    (confirmModal = { type: 'remove-schedule', billId: activeBill.id })}
+                >
+                  Remove Schedule
+                </button>
+              </div>
             </div>
           {:else if showScheduleForm}
             <!-- Schedule Creation Form -->
@@ -1442,6 +1463,34 @@
     margin: 0;
     font-size: 0.875rem;
     color: var(--text-secondary);
+  }
+
+  .schedule-actions {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+  }
+
+  .btn-secondary-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-secondary-outline:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-muted);
   }
 
   .schedule-form {

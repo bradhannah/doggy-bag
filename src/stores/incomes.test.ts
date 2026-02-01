@@ -330,6 +330,34 @@ describe('Incomes Store', () => {
         const primary = grouped.find((g) => g.category?.id === 'cat-1');
         expect(primary?.subtotal).toBe(5000 + 4333);
       });
+
+      it('treats incomes with orphaned category IDs as needing category assignment', () => {
+        // Add an income with a category ID that doesn't exist in the categories store
+        const incomesWithOrphan: Income[] = [
+          ...sampleIncomes,
+          {
+            id: 'income-orphan',
+            name: 'Orphan Income',
+            amount: 500,
+            billing_period: 'monthly',
+            day_of_month: 10,
+            payment_source_id: 'ps-1',
+            category_id: 'deleted-category-id', // This category doesn't exist
+            is_active: true,
+            created_at: '2025-01-01T00:00:00Z',
+            updated_at: '2025-01-01T00:00:00Z',
+          },
+        ];
+        incomesStore.set({ incomes: incomesWithOrphan, loading: false, error: null });
+
+        const grouped = get(incomesByCategory);
+        const needsCategory = grouped.find((g) => g.category?.id === '__orphaned__');
+
+        // The orphan income should be in the "Needs Category" group
+        expect(needsCategory).toBeDefined();
+        expect(needsCategory?.category?.name).toBe('Needs Category');
+        expect(needsCategory?.incomes.map((i) => i.name)).toContain('Orphan Income');
+      });
     });
   });
 });

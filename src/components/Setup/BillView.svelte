@@ -7,11 +7,15 @@
    * @prop onClose - Callback to close the drawer
    */
   import { paymentSourcesStore } from '../../stores/payment-sources';
+  import { savingsGoals } from '../../stores/savings-goals';
   import type { Bill } from '../../stores/bills';
 
   export let item: Bill;
   export let onEdit: () => void = () => {};
   export let onClose: () => void = () => {};
+
+  // Find the linked savings goal if this bill has a goal_id
+  $: linkedGoal = item.goal_id ? $savingsGoals.find((g) => g.id === item.goal_id) : null;
 
   function formatAmount(cents: number): string {
     return '$' + (cents / 100).toFixed(2);
@@ -71,6 +75,38 @@
     <span class="field-label">Payment Source</span>
     <div class="view-value">{getPaymentSourceName(item.payment_source_id)}</div>
   </div>
+
+  {#if linkedGoal}
+    <div class="view-field savings-goal-link">
+      <span class="field-label">Linked Savings Goal</span>
+      <a href="/goals/edit/{linkedGoal.id}" class="goal-link">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+        {linkedGoal.name}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          class="arrow"
+        >
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </a>
+      <span class="goal-hint">This bill is auto-managed by the savings goal</span>
+    </div>
+  {/if}
 
   <div class="view-field">
     <span class="field-label">Created</span>
@@ -161,5 +197,42 @@
 
   .btn-secondary:hover {
     background: var(--bg-hover);
+  }
+
+  .savings-goal-link {
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+  }
+
+  .goal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 0;
+  }
+
+  .goal-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  .goal-link .arrow {
+    opacity: 0.6;
+  }
+
+  .goal-link:hover .arrow {
+    opacity: 1;
+  }
+
+  .goal-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
   }
 </style>

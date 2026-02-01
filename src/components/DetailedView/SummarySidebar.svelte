@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
   import type { PaymentSource } from '../../stores/payment-sources';
   import { isDebtAccount, formatBalanceForDisplay } from '../../stores/payment-sources';
   import { apiUrl } from '$lib/api/client';
@@ -54,6 +54,7 @@
   let editingBalanceValue: string = '';
   let editingIsDebtAccount: boolean = false;
   let savingBalance = false;
+  let balanceInputEl: HTMLInputElement | null = null;
 
   function formatCurrency(cents: number): string {
     const dollars = Math.abs(cents) / 100;
@@ -102,7 +103,7 @@
   }
 
   // Start editing a balance (works for both asset and debt accounts)
-  function startEditingBalance(source: PaymentSource) {
+  async function startEditingBalance(source: PaymentSource) {
     if (readOnly || !month) return;
     editingBalanceId = source.id;
     // For display, get the absolute value in dollars
@@ -110,6 +111,11 @@
     editingBalanceValue = (Math.abs(displayBalance) / 100).toFixed(2);
     // Store whether we're editing a debt account
     editingIsDebtAccount = isDebtAccount(source.type);
+
+    // Wait for DOM to update, then focus and select for immediate typing
+    await tick();
+    balanceInputEl?.focus();
+    balanceInputEl?.select();
   }
 
   // Cancel editing
@@ -213,6 +219,7 @@
                   step="0.01"
                   min="0"
                   class="balance-input"
+                  bind:this={balanceInputEl}
                   bind:value={editingBalanceValue}
                   on:keydown={handleBalanceKeydown}
                   disabled={savingBalance}
@@ -322,6 +329,7 @@
                     step="0.01"
                     min="0"
                     class="balance-input"
+                    bind:this={balanceInputEl}
                     bind:value={editingBalanceValue}
                     on:keydown={handleBalanceKeydown}
                     disabled={savingBalance}

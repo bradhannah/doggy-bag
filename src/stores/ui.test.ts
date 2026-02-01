@@ -10,7 +10,6 @@ import {
   goToMonth,
   goToCurrentMonth,
   widthMode,
-  compactMode,
   hidePaidItems,
   uiState,
   toggleSidebar,
@@ -153,36 +152,6 @@ describe('UI Store', () => {
       widthMode.set('medium');
       widthMode.cycle();
       expect(localStorageMock.getItem('doggybag-width-mode')).toBe('wide');
-    });
-  });
-
-  describe('compactMode store', () => {
-    it('defaults to false', () => {
-      expect(get(compactMode)).toBe(false);
-    });
-
-    it('toggles on and off', () => {
-      compactMode.toggle();
-      expect(get(compactMode)).toBe(true);
-
-      compactMode.toggle();
-      expect(get(compactMode)).toBe(false);
-    });
-
-    it('can set directly', () => {
-      compactMode.set(true);
-      expect(get(compactMode)).toBe(true);
-
-      compactMode.set(false);
-      expect(get(compactMode)).toBe(false);
-    });
-
-    it('persists to localStorage', () => {
-      compactMode.set(true);
-      expect(localStorageMock.getItem('doggybag-compact-mode')).toBe('true');
-
-      compactMode.set(false);
-      expect(localStorageMock.getItem('doggybag-compact-mode')).toBe('false');
     });
   });
 

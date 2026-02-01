@@ -291,26 +291,10 @@
               role="menu"
               style="top: {menuPosition.top}px; left: {menuPosition.left}px;"
             >
-              <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                View Details
-              </button>
-              {#if canDelete}
-                <button
-                  class="overflow-menu-item danger"
-                  on:click={handleDeleteFromMenu}
-                  role="menuitem"
-                >
+              {#if isPayoffBill}
+                <span class="overflow-menu-empty">No actions available</span>
+              {:else}
+                <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
                   <svg
                     width="14"
                     height="14"
@@ -319,13 +303,33 @@
                     stroke="currentColor"
                     stroke-width="2"
                   >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path
-                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                    />
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
-                  Delete
+                  View Details
                 </button>
+                {#if canDelete}
+                  <button
+                    class="overflow-menu-item danger"
+                    on:click={handleDeleteFromMenu}
+                    role="menuitem"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      />
+                    </svg>
+                    Delete
+                  </button>
+                {/if}
               {/if}
             </div>
           {/if}
@@ -408,7 +412,7 @@
     grid-template-columns: 50px 100px 80px 1fr auto;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
+    padding: 3px var(--space-3);
     padding-left: var(--space-5);
     font-size: 0.85rem;
   }
@@ -592,6 +596,15 @@
 
   .overflow-menu-item.danger:hover {
     background: var(--error-bg);
+  }
+
+  .overflow-menu-empty {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    font-style: italic;
+    white-space: nowrap;
   }
 
   .badges-column {

@@ -8,7 +8,6 @@
     goToCurrentMonth,
     getCurrentMonth,
     widthMode,
-    compactMode,
     hidePaidItems,
     columnMode,
   } from '../stores/ui';
@@ -21,7 +20,6 @@
   export let showRefresh: boolean = false;
   export let showWidthToggle: boolean = false;
   export let showColumnToggle: boolean = false;
-  export let showCompactToggle: boolean = false;
   export let showHidePaid: boolean = false;
   export let showSyncMetadata: boolean = false;
   export let isSyncingMetadata: boolean = false;
@@ -69,12 +67,7 @@
   }
 
   $: hasControls =
-    showRefresh ||
-    showWidthToggle ||
-    showColumnToggle ||
-    showCompactToggle ||
-    showHidePaid ||
-    showSyncMetadata;
+    showRefresh || showWidthToggle || showColumnToggle || showHidePaid || showSyncMetadata;
 </script>
 
 <div class="month-picker-header">
@@ -191,35 +184,6 @@
               : '1 column (click for 2 columns)'}
           >
             <span class="column-number">{$columnMode === '2-col' ? '2' : '1'}</span>
-          </button>
-        {/if}
-
-        {#if showCompactToggle}
-          <!-- Compact toggle -->
-          <button
-            class="control-btn"
-            on:click={() => compactMode.toggle()}
-            title={$compactMode ? 'Normal view' : 'Compact view'}
-          >
-            {#if $compactMode}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 8h16M4 16h16"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            {:else}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 6h16M4 12h16M4 18h16"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            {/if}
           </button>
         {/if}
 

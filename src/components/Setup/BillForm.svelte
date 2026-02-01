@@ -9,6 +9,7 @@
   import { createBill, updateBill } from '../../stores/bills';
   import { paymentSourcesStore } from '../../stores/payment-sources';
   import { billCategories, loadCategories } from '../../stores/categories';
+  import { savingsGoals } from '../../stores/savings-goals';
   import { success, error as showError } from '../../stores/toast';
   import type { Bill, BillData, EntityMetadata } from '../../stores/bills';
   import { onMount } from 'svelte';
@@ -16,6 +17,11 @@
   export let editingItem: Bill | null = null;
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
+
+  // Find the linked savings goal if this bill has a goal_id
+  $: linkedGoal = editingItem?.goal_id
+    ? $savingsGoals.find((g) => g.id === editingItem?.goal_id)
+    : null;
 
   // Form state - amount is stored in dollars for user input
   let name = editingItem?.name || '';
@@ -267,6 +273,38 @@
 <form class="entity-form" on:submit|preventDefault={handleSubmit}>
   {#if !hasPaymentSources}
     <div class="warning-message">You need to add at least one payment source first.</div>
+  {/if}
+
+  {#if linkedGoal}
+    <div class="goal-link-notice">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+      <div class="goal-link-content">
+        <span class="goal-link-label">Linked to Savings Goal:</span>
+        <a href="/goals/edit/{linkedGoal.id}" class="goal-link">
+          {linkedGoal.name}
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
   {/if}
 
   {#if error}
@@ -528,6 +566,47 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--warning);
+  }
+
+  .goal-link-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    border-radius: 6px;
+    padding: 12px;
+    color: var(--accent);
+  }
+
+  .goal-link-notice > svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .goal-link-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .goal-link-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .goal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .goal-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
   }
 
   .form-group {

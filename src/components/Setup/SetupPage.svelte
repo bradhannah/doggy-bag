@@ -111,6 +111,11 @@
     | 'insurance-plans'
     | 'insurance-categories'
     | 'family';
+
+  // Props for deep linking (e.g., /setup?tab=bills&edit=<id>)
+  export let initialTab: string | null = null;
+  export let initialEditId: string | null = null;
+
   let activeTab: TabId = 'months';
 
   // ============ Months Tab State ============
@@ -231,7 +236,67 @@
       loadInsuranceCategories(),
       loadFamilyMembers(),
     ]);
+
+    // Handle deep linking from URL params
+    if (initialTab && isValidTab(initialTab)) {
+      activeTab = initialTab;
+
+      // If an edit ID was provided, find and open the item
+      if (initialEditId) {
+        await handleInitialEdit(initialTab, initialEditId);
+      }
+    }
   });
+
+  // Check if tab is valid
+  function isValidTab(tab: string): tab is TabId {
+    const validTabs: TabId[] = [
+      'months',
+      'payment-sources',
+      'bills',
+      'incomes',
+      'categories',
+      'insurance-plans',
+      'insurance-categories',
+      'family',
+    ];
+    return validTabs.includes(tab as TabId);
+  }
+
+  // Handle initial edit from URL params
+  async function handleInitialEdit(tab: string, editId: string) {
+    switch (tab) {
+      case 'bills': {
+        const bill = $billsStore.bills.find((b) => b.id === editId);
+        if (bill) {
+          openEditDrawer(bill);
+        }
+        break;
+      }
+      case 'incomes': {
+        const income = $incomesStore.incomes.find((i) => i.id === editId);
+        if (income) {
+          openEditDrawer(income);
+        }
+        break;
+      }
+      case 'payment-sources': {
+        const ps = $paymentSourcesStore.paymentSources.find((p) => p.id === editId);
+        if (ps) {
+          openEditDrawer(ps);
+        }
+        break;
+      }
+      case 'categories': {
+        const cat = $categoriesStore.categories.find((c) => c.id === editId);
+        if (cat) {
+          openEditDrawer(cat);
+        }
+        break;
+      }
+      // Add other tabs as needed
+    }
+  }
 
   // ============ Months Tab Functions ============
   async function loadMonths() {

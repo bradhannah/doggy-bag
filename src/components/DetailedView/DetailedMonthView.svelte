@@ -14,14 +14,7 @@
 
   import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import {
-    widthMode,
-    compactMode,
-    hidePaidItems,
-    goToMonth,
-    columnMode,
-    filterScope,
-  } from '../../stores/ui';
+  import { widthMode, hidePaidItems, goToMonth, columnMode, filterScope } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { filterSectionsByQuery } from '../../lib/filter-sections';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
@@ -470,7 +463,7 @@
   }
 </script>
 
-<div class="detailed-view" class:compact={$compactMode}>
+<div class="detailed-view">
   <div
     class="content-wrapper"
     class:medium={$widthMode === 'medium'}
@@ -570,7 +563,6 @@
                       {section}
                       type="bills"
                       {month}
-                      compactMode={$compactMode}
                       readOnly={$monthIsReadOnly}
                       hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
                       collapsed={false}
@@ -604,7 +596,6 @@
                       section={$detailedMonthData.insuranceExpenseSection}
                       type="bills"
                       {month}
-                      compactMode={$compactMode}
                       readOnly={true}
                       hiddenCount={0}
                       collapsed={false}
@@ -626,7 +617,6 @@
                         {section}
                         type="bills"
                         {month}
-                        compactMode={$compactMode}
                         readOnly={$monthIsReadOnly}
                         hiddenCount={0}
                         collapsed={$hidePaidItems}
@@ -657,7 +647,6 @@
                       {section}
                       type="income"
                       {month}
-                      compactMode={$compactMode}
                       readOnly={$monthIsReadOnly}
                       hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
                       collapsed={false}
@@ -691,7 +680,6 @@
                       section={$detailedMonthData.insuranceReimbursementSection}
                       type="income"
                       {month}
-                      compactMode={$compactMode}
                       readOnly={true}
                       hiddenCount={0}
                       collapsed={false}
@@ -713,7 +701,6 @@
                         {section}
                         type="income"
                         {month}
-                        compactMode={$compactMode}
                         readOnly={$monthIsReadOnly}
                         hiddenCount={0}
                         collapsed={$hidePaidItems}
@@ -946,12 +933,6 @@
     background: var(--border-default);
   }
 
-  /* Compact mode for divider */
-  .detailed-view.compact .completed-divider {
-    margin: var(--space-2) 0;
-    font-size: 0.6rem;
-  }
-
   /* Insurance section divider */
   .insurance-divider {
     display: flex;
@@ -976,12 +957,6 @@
   .insurance-divider .insurance-icon {
     flex-shrink: 0;
     color: var(--purple);
-  }
-
-  /* Compact mode for insurance divider */
-  .detailed-view.compact .insurance-divider {
-    margin: var(--space-3) 0 var(--space-2) 0;
-    font-size: 0.65rem;
   }
 
   /* Read-only banner styles */
@@ -1017,41 +992,6 @@
   /* Note: Container queries were removed because container-type breaks position:fixed
      for child elements (drawers). Layout is now controlled by the widthMode store
      which applies .medium or .wide classes directly. */
-
-  /* Compact mode styles */
-  .detailed-view.compact {
-    padding: var(--space-3);
-  }
-
-  .detailed-view.compact .detailed-layout {
-    gap: var(--space-4);
-  }
-
-  .detailed-view.compact .sections-container {
-    gap: var(--space-4);
-  }
-
-  .detailed-view.compact .section {
-    padding: var(--space-3);
-    border-radius: var(--radius-lg);
-  }
-
-  .detailed-view.compact .section-header {
-    margin-bottom: var(--space-3);
-    gap: var(--space-2);
-  }
-
-  .detailed-view.compact .section-header h2 {
-    font-size: 1rem;
-  }
-
-  .detailed-view.compact .section-status {
-    font-size: 0.75rem;
-  }
-
-  .detailed-view.compact .empty-text {
-    padding: var(--section-gap) var(--space-3);
-  }
 
   /* Mobile responsive */
   @media (max-width: 768px) {

@@ -12,7 +12,6 @@
   export let section: CategorySectionType;
   export let type: 'bills' | 'income' = 'bills';
   export let month: string = '';
-  export let compactMode: boolean = false;
   export let readOnly: boolean = false;
   export let hiddenCount: number = 0; // Number of hidden closed items (for partial categories)
   export let collapsed: boolean = false; // Show collapsed single-line view (for completed categories)
@@ -77,6 +76,7 @@
   }
 
   $: headerBgColor = hexToRgba(section.category.color, 0.08);
+  $: containerBgColor = hexToRgba(section.category.color, 0.04);
 
   function handleRefresh() {
     dispatch('refresh');
@@ -96,7 +96,6 @@
   <!-- Collapsed single-line view for completed categories -->
   <div
     class="category-collapsed"
-    class:compact={compactMode}
     style="border-left-color: {section.category.color}; background: {headerBgColor}"
   >
     <span class="collapse-chevron">▸</span>
@@ -125,11 +124,12 @@
   </div>
 {:else}
   <!-- Expanded view -->
-  <div class="category-section" class:compact={compactMode} class:complete={isComplete}>
-    <div
-      class="category-header"
-      style="border-left-color: {section.category.color}; background: {headerBgColor}"
-    >
+  <div
+    class="category-section"
+    class:complete={isComplete}
+    style="background: {containerBgColor}; border-left-color: {section.category.color}"
+  >
+    <div class="category-header" style="background: {headerBgColor}">
       <div class="category-title">
         <span class="category-color" style="background-color: {section.category.color}"></span>
         <h4 class:crossed-out={isComplete}>{section.category.name}</h4>
@@ -197,7 +197,10 @@
 
 <style>
   .category-section {
-    margin-bottom: 24px;
+    margin-bottom: var(--space-3);
+    border-radius: var(--radius-lg);
+    border-left: 4px solid var(--border-default);
+    padding: var(--space-2);
   }
 
   /* Complete/empty category state: use muted colors instead of opacity
@@ -223,37 +226,36 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    border-radius: 8px;
-    border-left: 4px solid var(--border-default);
-    margin-bottom: 8px;
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-1);
   }
 
   .category-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
   }
 
   .category-color {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 3px;
     flex-shrink: 0;
   }
 
   .category-title h4 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-primary);
   }
 
   .occurrence-stats {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 500;
     color: var(--text-secondary);
-    padding: 2px 8px;
+    padding: 1px 6px;
     background: var(--bg-elevated);
     border-radius: 10px;
   }
@@ -264,20 +266,20 @@
   }
 
   .add-adhoc-btn {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border-radius: 4px;
     border: 1px dashed var(--border-default);
     background: transparent;
     color: var(--text-secondary);
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    margin-left: 4px;
+    margin-left: var(--space-1);
   }
 
   .add-adhoc-btn:hover {
@@ -288,7 +290,7 @@
 
   .category-subtotal {
     display: flex;
-    gap: 20px;
+    gap: var(--space-5);
   }
 
   .subtotal-item {
@@ -299,14 +301,14 @@
   }
 
   .subtotal-label {
-    font-size: 0.625rem;
+    font-size: 0.55rem;
     color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .subtotal-value {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-primary);
   }
@@ -318,64 +320,20 @@
   .category-items {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding-left: 8px;
+    gap: 2px;
   }
 
   @media (max-width: 640px) {
     .category-header {
       flex-direction: column;
       align-items: flex-start;
-      gap: 12px;
+      gap: var(--space-3);
     }
 
     .category-subtotal {
       width: 100%;
       justify-content: space-between;
     }
-  }
-
-  /* Compact mode styles */
-  .category-section.compact {
-    margin-bottom: 12px;
-  }
-
-  .category-section.compact .category-header {
-    padding: 8px 10px;
-    margin-bottom: 4px;
-  }
-
-  .category-section.compact .category-title h4 {
-    font-size: 0.9rem;
-  }
-
-  .category-section.compact .category-color {
-    width: 10px;
-    height: 10px;
-  }
-
-  .category-section.compact .occurrence-stats {
-    font-size: 0.65rem;
-    padding: 1px 6px;
-  }
-
-  .category-section.compact .add-adhoc-btn {
-    width: 18px;
-    height: 18px;
-    font-size: 0.85rem;
-  }
-
-  .category-section.compact .subtotal-label {
-    font-size: 0.55rem;
-  }
-
-  .category-section.compact .subtotal-value {
-    font-size: 0.8rem;
-  }
-
-  .category-section.compact .category-items {
-    gap: 2px;
-    padding-left: 6px;
   }
 
   /* Hidden count badge for partially complete categories */
@@ -392,11 +350,11 @@
   .category-collapsed {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border-radius: 8px;
+    gap: var(--space-2);
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-md);
     border-left: 4px solid var(--border-default);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-1);
     opacity: 0.7;
     transition: opacity 0.2s;
   }
@@ -407,14 +365,14 @@
 
   .collapse-chevron {
     color: var(--text-tertiary);
-    font-size: 0.8rem;
-    width: 12px;
+    font-size: 0.7rem;
+    width: 10px;
     flex-shrink: 0;
   }
 
   .category-collapsed .category-color {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 3px;
     flex-shrink: 0;
   }
@@ -422,45 +380,45 @@
   .category-collapsed .category-name {
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 
   .category-collapsed .checkmark {
     color: var(--success);
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
 
   .category-collapsed .item-count {
     color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     margin-left: auto;
   }
 
   .category-collapsed .occurrence-stats {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 500;
     color: var(--success);
-    padding: 2px 8px;
+    padding: 1px 6px;
     background: var(--success-bg);
     border-radius: 10px;
   }
 
   .category-collapsed .add-adhoc-btn {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border-radius: 4px;
     border: 1px dashed var(--border-default);
     background: transparent;
     color: var(--text-secondary);
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    margin-left: 8px;
+    margin-left: var(--space-2);
     /* Counteract parent opacity */
     opacity: 1.43;
   }
@@ -469,45 +427,5 @@
     border-color: var(--accent);
     color: var(--accent);
     background: var(--accent-muted);
-  }
-
-  /* Compact mode for collapsed categories */
-  .category-collapsed.compact {
-    padding: 6px 10px;
-    gap: 8px;
-    margin-bottom: 4px;
-  }
-
-  .category-collapsed.compact .collapse-chevron {
-    font-size: 0.7rem;
-    width: 10px;
-  }
-
-  .category-collapsed.compact .category-color {
-    width: 10px;
-    height: 10px;
-  }
-
-  .category-collapsed.compact .category-name {
-    font-size: 0.85rem;
-  }
-
-  .category-collapsed.compact .checkmark {
-    font-size: 0.8rem;
-  }
-
-  .category-collapsed.compact .item-count {
-    font-size: 0.7rem;
-  }
-
-  .category-collapsed.compact .occurrence-stats {
-    font-size: 0.65rem;
-    padding: 1px 6px;
-  }
-
-  .category-collapsed.compact .add-adhoc-btn {
-    width: 18px;
-    height: 18px;
-    font-size: 0.85rem;
   }
 </style>

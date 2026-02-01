@@ -322,6 +322,21 @@ export class MonthsServiceImpl implements MonthsService {
         console.log(`[MonthsService] Migrated instances for ${month} to new schema`);
       }
 
+      // Clean up any virtual entries that were accidentally persisted (bug fix)
+      // Virtual entries should never be in the JSON file - they are generated on-the-fly
+      const persistedVirtualBills = data.bill_instances.filter((bi) => bi.is_virtual);
+      const persistedVirtualIncomes = data.income_instances.filter((ii) => ii.is_virtual);
+      if (persistedVirtualBills.length > 0 || persistedVirtualIncomes.length > 0) {
+        console.log(
+          `[MonthsService] Cleaning up ${persistedVirtualBills.length} virtual bills and ` +
+            `${persistedVirtualIncomes.length} virtual incomes from ${month}`
+        );
+        data.bill_instances = data.bill_instances.filter((bi) => !bi.is_virtual);
+        data.income_instances = data.income_instances.filter((ii) => !ii.is_virtual);
+        // Save cleaned data
+        await this.storage.writeJSON(`data/months/${month}.json`, data);
+      }
+
       // Inject virtual insurance entries (not persisted, generated on-the-fly)
       const virtualEntries = await this.generateVirtualInsuranceEntries(month);
       if (virtualEntries.billInstances.length > 0 || virtualEntries.incomeInstances.length > 0) {
@@ -954,7 +969,14 @@ export class MonthsServiceImpl implements MonthsService {
 
   public async saveMonthlyData(month: string, data: MonthlyData): Promise<void> {
     try {
-      await this.storage.writeJSON(`data/months/${month}.json`, data);
+      // Filter out virtual entries before saving - they are generated on-the-fly from insurance claims
+      // and should never be persisted to the JSON file
+      const dataToSave: MonthlyData = {
+        ...data,
+        bill_instances: data.bill_instances.filter((bi) => !bi.is_virtual),
+        income_instances: data.income_instances.filter((ii) => !ii.is_virtual),
+      };
+      await this.storage.writeJSON(`data/months/${month}.json`, dataToSave);
       console.log(`[MonthsService] Saved monthly data for ${month}`);
     } catch (error) {
       console.error('[MonthsService] Failed to save monthly data:', error);
@@ -2622,15 +2644,20 @@ export class MonthsServiceImpl implements MonthsService {
                 sequence: 1,
                 expected_date: claim.service_date,
                 expected_amount: claim.total_amount,
-                is_closed: claim.status === 'closed',
-                closed_date: claim.status === 'closed' ? claim.service_date : undefined,
+                // Bill is paid once we start submitting to insurers (in_progress or closed)
+                is_closed: claim.status === 'in_progress' || claim.status === 'closed',
+                closed_date:
+                  claim.status === 'in_progress' || claim.status === 'closed'
+                    ? claim.service_date
+                    : undefined,
                 is_adhoc: false,
                 created_at: claim.created_at,
                 updated_at: claim.updated_at,
               },
             ],
             is_default: false,
-            is_closed: claim.status === 'closed',
+            // Bill instance is paid once we start submitting to insurers
+            is_closed: claim.status === 'in_progress' || claim.status === 'closed',
             is_adhoc: true,
             is_insurance_expense: true,
             is_expected_claim: false,

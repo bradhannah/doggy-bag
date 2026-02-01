@@ -169,15 +169,41 @@ export const incomesByCategory = derived(
       .filter((c) => c.type === 'income')
       .sort((a, b) => a.sort_order - b.sort_order);
 
+    // Build a set of ALL valid category IDs for orphan detection
+    // (includes all category types, not just 'income')
+    const allValidCategoryIds = new Set($categories.map((c) => c.id));
+
     const grouped: IncomeCategoryGroup[] = [];
 
-    // Uncategorized first - always show (even if empty)
+    // Incomes with no category_id (truly uncategorized)
     const uncategorized = $incomes.filter((i) => !i.category_id);
     grouped.push({
       category: null,
       incomes: uncategorized,
       subtotal: uncategorized.reduce((sum, i) => sum + i.monthlyContribution, 0),
     });
+
+    // Incomes with orphaned category references (category was deleted)
+    // These get a special pseudo-category so they're visible in Manage view
+    const orphaned = $incomes.filter(
+      (i) => i.category_id && !allValidCategoryIds.has(i.category_id)
+    );
+    if (orphaned.length > 0) {
+      grouped.push({
+        category: {
+          id: '__orphaned__',
+          name: 'Needs Category',
+          type: 'income',
+          color: '#ef4444', // Red to draw attention
+          sort_order: -999,
+          is_predefined: true,
+          created_at: '',
+          updated_at: '',
+        },
+        incomes: orphaned,
+        subtotal: orphaned.reduce((sum, i) => sum + i.monthlyContribution, 0),
+      });
+    }
 
     // Then each category in sort_order
     for (const cat of incomeCats) {

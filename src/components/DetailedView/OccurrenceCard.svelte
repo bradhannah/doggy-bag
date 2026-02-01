@@ -520,7 +520,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 8px;
+    padding: 3px;
   }
 
   @media (max-width: 640px) {
