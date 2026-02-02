@@ -6,12 +6,14 @@ import { IncomesServiceImpl } from './incomes-service';
 import { CategoriesServiceImpl } from './categories-service';
 import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import { InsuranceClaimsServiceImpl } from './insurance-claims-service';
+import { TodoInstancesServiceImpl } from './todo-instances-service';
 import type { StorageService } from './storage';
 import type { BillsService } from './bills-service';
 import type { IncomesService } from './incomes-service';
 import type { CategoriesService } from './categories-service';
 import type { PaymentSourcesService } from './payment-sources-service';
 import type { InsuranceClaimsService } from './insurance-claims-service';
+import type { TodoInstancesService } from './todo-instances-service';
 import type {
   MonthlyData,
   BillInstance,
@@ -230,6 +232,7 @@ export class MonthsServiceImpl implements MonthsService {
   private categoriesService: CategoriesService;
   private paymentSourcesService: PaymentSourcesService;
   private insuranceClaimsService: InsuranceClaimsService;
+  private todoInstancesService: TodoInstancesService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
@@ -238,6 +241,7 @@ export class MonthsServiceImpl implements MonthsService {
     this.categoriesService = new CategoriesServiceImpl();
     this.paymentSourcesService = new PaymentSourcesServiceImpl();
     this.insuranceClaimsService = new InsuranceClaimsServiceImpl();
+    this.todoInstancesService = new TodoInstancesServiceImpl();
   }
 
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
@@ -515,6 +519,9 @@ export class MonthsServiceImpl implements MonthsService {
         });
       }
 
+      // Generate todo instances from active todos
+      const todoInstances = await this.todoInstancesService.generateInstancesForMonth(month);
+
       const monthlyData: MonthlyData = {
         month,
         bill_instances: billInstances,
@@ -522,6 +529,7 @@ export class MonthsServiceImpl implements MonthsService {
         variable_expenses: [],
         free_flowing_expenses: [],
         bank_balances: {},
+        todo_instances: todoInstances,
         is_read_only: false,
         created_at: now,
         updated_at: now,
@@ -684,7 +692,12 @@ export class MonthsServiceImpl implements MonthsService {
         );
       }
 
-      return existingData;
+      // Sync todo instances (adds missing instances without overwriting existing ones)
+      await this.todoInstancesService.syncInstancesForMonth(month);
+
+      // Re-fetch after todo sync to get the updated data
+      const updatedData = await this.getMonthlyData(month);
+      return updatedData || existingData;
     } catch (error) {
       console.error('[MonthsService] Failed to sync monthly data:', error);
       throw error;

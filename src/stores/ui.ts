@@ -215,6 +215,49 @@ export const wideMode = {
   toggle: widthMode.cycle,
 };
 
+// Calendar size store with localStorage persistence
+// Supports 3 levels: small (compact), medium, large (full details)
+export type CalendarSize = 'small' | 'medium' | 'large';
+
+function getStoredCalendarSize(): CalendarSize {
+  if (typeof window === 'undefined') return 'small';
+  const stored = localStorage.getItem('doggybag-calendar-size');
+  if (stored === 'small' || stored === 'medium' || stored === 'large') return stored;
+  return 'small';
+}
+
+function createCalendarSizeStore() {
+  const { subscribe, set, update } = writable<CalendarSize>('small');
+
+  // Initialize from localStorage on client side
+  if (typeof window !== 'undefined') {
+    set(getStoredCalendarSize());
+  }
+
+  return {
+    subscribe,
+    // Cycle through modes: small -> medium -> large -> small
+    cycle: () => {
+      update((current) => {
+        const nextSize: CalendarSize =
+          current === 'small' ? 'medium' : current === 'medium' ? 'large' : 'small';
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('doggybag-calendar-size', nextSize);
+        }
+        return nextSize;
+      });
+    },
+    set: (value: CalendarSize) => {
+      set(value);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('doggybag-calendar-size', value);
+      }
+    },
+  };
+}
+
+export const calendarSize = createCalendarSizeStore();
+
 // Column mode store with localStorage persistence
 // Supports 2 modes: '1-col' (stacked), '2-col' (side by side)
 export type ColumnMode = '1-col' | '2-col';

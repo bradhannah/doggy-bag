@@ -75,6 +75,10 @@
   import FamilyMemberForm from './FamilyMemberForm.svelte';
   import FamilyMemberView from './FamilyMemberView.svelte';
   import FamilyMembersList from './FamilyMembersList.svelte';
+  import TodosList from './TodosList.svelte';
+  import TodoForm from './TodoForm.svelte';
+  import TodoView from './TodoView.svelte';
+  import TodoDeleteDialog from './TodoDeleteDialog.svelte';
 
   // Types
   import type { PaymentSource } from '../../stores/payment-sources';
@@ -82,6 +86,13 @@
   import type { Income } from '../../stores/incomes';
   import type { Category } from '../../stores/categories';
   import type { InsurancePlan, InsuranceCategory, FamilyMember } from '../../types/insurance';
+  import {
+    todos,
+    loadTodos,
+    deleteTodo,
+    type Todo,
+    type DeleteTodoOption,
+  } from '../../stores/todos';
 
   // ============ Months Tab Types ============
   interface MonthSummary {
@@ -110,7 +121,8 @@
     | 'categories'
     | 'insurance-plans'
     | 'insurance-categories'
-    | 'family';
+    | 'family'
+    | 'todos';
 
   // Props for deep linking (e.g., /setup?tab=bills&edit=<id>)
   export let initialTab: string | null = null;
@@ -146,6 +158,11 @@
   let editingInsurancePlan: InsurancePlan | null = null;
   let editingInsuranceCategory: InsuranceCategory | null = null;
   let editingFamilyMember: FamilyMember | null = null;
+
+  // Todos use Modal instead of Drawer (per spec)
+  let showTodoModal = false;
+  let todoModalMode: 'add' | 'edit' | 'view' = 'add';
+  let selectedTodo: Todo | null = null;
 
   // Form refs for dirty tracking
   let billFormRef: BillForm | null = null;
@@ -212,6 +229,10 @@
   let showDeleteConfirm = false;
   let itemToDelete: { id: string; name: string } | null = null;
 
+  // Todo delete dialog state
+  let showTodoDeleteDialog = false;
+  let todoToDelete: Todo | null = null;
+
   // Tab definitions
   const tabs: { id: TabId; label: string }[] = [
     { id: 'months', label: 'Months' },
@@ -222,6 +243,7 @@
     { id: 'insurance-plans', label: 'Insurance Plans' },
     { id: 'insurance-categories', label: 'Insurance Categories' },
     { id: 'family', label: 'Family' },
+    { id: 'todos', label: 'Todos' },
   ];
 
   // Load all data on mount
@@ -235,6 +257,7 @@
       loadInsurancePlans(),
       loadInsuranceCategories(),
       loadFamilyMembers(),
+      loadTodos(),
     ]);
 
     // Handle deep linking from URL params
@@ -259,6 +282,7 @@
       'insurance-plans',
       'insurance-categories',
       'family',
+      'todos',
     ];
     return validTabs.includes(tab as TabId);
   }
@@ -446,6 +470,8 @@
         return 'Insurance Category';
       case 'family':
         return 'Family Member';
+      case 'todos':
+        return 'Todo';
     }
   }
 
@@ -616,6 +642,10 @@
           await deleteFamilyMember(id);
           success('Family member deleted');
           break;
+        case 'todos':
+          await deleteTodo(id);
+          success('Todo deleted');
+          break;
       }
       showDeleteConfirm = false;
       itemToDelete = null;
@@ -627,6 +657,15 @@
   }
 
   function confirmDelete(item: { id: string; name: string }) {
+    // For todos, use the specialized delete dialog
+    if (activeTab === 'todos') {
+      const todo = $todos.find((t) => t.id === item.id);
+      if (todo) {
+        todoToDelete = todo;
+        showTodoDeleteDialog = true;
+      }
+      return;
+    }
     itemToDelete = item;
     showDeleteConfirm = true;
   }
@@ -634,6 +673,26 @@
   function cancelDelete() {
     showDeleteConfirm = false;
     itemToDelete = null;
+  }
+
+  function cancelTodoDelete() {
+    showTodoDeleteDialog = false;
+    todoToDelete = null;
+  }
+
+  async function handleConfirmTodoDelete(option: DeleteTodoOption) {
+    if (!todoToDelete) return;
+
+    try {
+      await deleteTodo(todoToDelete.id, option);
+      success('Todo deleted');
+      showTodoDeleteDialog = false;
+      todoToDelete = null;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Delete failed';
+      showError(msg);
+      console.error('Delete failed:', e);
+    }
   }
 
   async function handleConfirmDelete() {
@@ -649,6 +708,49 @@
   function getPaymentSourceName(id: string): string {
     const ps = $paymentSourcesStore.paymentSources.find((p) => p.id === id);
     return ps?.name || 'Unknown';
+  }
+
+  // ============ Todos Modal Handlers ============
+  function openAddTodoModal() {
+    selectedTodo = null;
+    todoModalMode = 'add';
+    showTodoModal = true;
+  }
+
+  function openViewTodoModal(todo: Todo) {
+    selectedTodo = todo;
+    todoModalMode = 'view';
+    showTodoModal = true;
+  }
+
+  function openEditTodoModal(todo: Todo) {
+    selectedTodo = todo;
+    todoModalMode = 'edit';
+    showTodoModal = true;
+  }
+
+  function switchTodoToEdit() {
+    todoModalMode = 'edit';
+  }
+
+  function closeTodoModal() {
+    showTodoModal = false;
+    selectedTodo = null;
+  }
+
+  function handleTodoSave() {
+    closeTodoModal();
+  }
+
+  async function handleDeleteTodo(todo: Todo) {
+    try {
+      await deleteTodo(todo.id);
+      success('Todo deleted');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Delete failed';
+      showError(msg);
+      console.error('Delete failed:', e);
+    }
   }
 </script>
 
@@ -782,10 +884,17 @@
                 {$insuranceCategories.length}
               {:else if activeTab === 'family'}
                 {$familyMembers.length}
+              {:else if activeTab === 'todos'}
+                {$todos.length}
               {/if})
             </span>
           </h2>
-          <button class="btn btn-primary" on:click={openAddDrawer}> + Add New </button>
+          <button
+            class="btn btn-primary"
+            on:click={activeTab === 'todos' ? openAddTodoModal : openAddDrawer}
+          >
+            + Add New
+          </button>
         </div>
 
         <!-- Entity List -->
@@ -894,6 +1003,20 @@
                 onDelete={(member) => confirmDelete({ id: member.id, name: member.name })}
               />
             {/if}
+          {:else if activeTab === 'todos'}
+            {#if $todos.length === 0}
+              <div class="empty-state">
+                <p>No todo templates yet.</p>
+                <p class="hint">Add your first todo to track recurring tasks and reminders.</p>
+              </div>
+            {:else}
+              <TodosList
+                todos={$todos}
+                onView={openViewTodoModal}
+                onEdit={openEditTodoModal}
+                onDelete={(todo) => confirmDelete({ id: todo.id, name: todo.title })}
+              />
+            {/if}
           {/if}
         </div>
       {/if}
@@ -998,6 +1121,15 @@
     on:cancel={cancelDelete}
   />
 
+  <!-- Todo Delete Confirmation Dialog -->
+  <TodoDeleteDialog
+    open={showTodoDeleteDialog}
+    todoTitle={todoToDelete?.title || ''}
+    isRecurring={todoToDelete?.recurrence !== 'none'}
+    onConfirm={handleConfirmTodoDelete}
+    onCancel={cancelTodoDelete}
+  />
+
   <!-- Month Action Confirmation Dialog -->
   <ConfirmDialog
     open={showMonthConfirm}
@@ -1007,6 +1139,23 @@
     on:confirm={handleMonthConfirm}
     on:cancel={handleMonthCancel}
   />
+
+  <!-- Todo Modals (Todos tab uses Modal instead of Drawer) -->
+  {#if todoModalMode === 'view'}
+    <TodoView
+      open={showTodoModal}
+      item={selectedTodo}
+      onEdit={switchTodoToEdit}
+      onClose={closeTodoModal}
+    />
+  {:else}
+    <TodoForm
+      open={showTodoModal}
+      editingItem={todoModalMode === 'edit' ? selectedTodo : null}
+      onSave={handleTodoSave}
+      onClose={closeTodoModal}
+    />
+  {/if}
 </div>
 
 <style>

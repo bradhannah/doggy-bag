@@ -25,6 +25,10 @@
   $: isProjectionsActive = currentPath.startsWith('/projections');
   // Check if we're on the goals page
   $: isGoalsActive = currentPath.startsWith('/goals');
+  // Check if we're on the todos page
+  $: isTodosActive = currentPath.startsWith('/todos');
+  // Check if we're on the calendar page
+  $: isCalendarActive = currentPath.startsWith('/calendar');
 
   // Check if in Tauri environment (for zoom controls)
   const inTauri = isTauri();
@@ -109,6 +113,27 @@
       </a>
     </li>
     <li>
+      <a href="/todos" class="nav-item" class:active={isTodosActive} title="Todos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M9 11L12 14L22 4"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span>Todos</span>
+      </a>
+    </li>
+    <li>
       <a href="/savings" class="nav-item" class:active={isSavingsActive} title="Savings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <text
@@ -178,6 +203,19 @@
           <circle cx="19" cy="9" r="1" fill="currentColor" />
         </svg>
         <span>Projections</span>
+      </a>
+    </li>
+    <li>
+      <a href="/calendar" class="nav-item" class:active={isCalendarActive} title="Calendar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
+          <rect x="7" y="14" width="3" height="3" rx="0.5" fill="currentColor" />
+          <rect x="14" y="14" width="3" height="3" rx="0.5" fill="currentColor" />
+        </svg>
+        <span>Calendar</span>
       </a>
     </li>
   </ul>

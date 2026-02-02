@@ -264,6 +264,14 @@ type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned' | 'archive
 // Temperature indicator for goal progress tracking
 type GoalTemperature = 'green' | 'yellow' | 'red';
 
+// ============================================================================
+// Todo Types
+// ============================================================================
+
+type TodoStatus = 'pending' | 'completed';
+
+type TodoRecurrence = 'none' | 'weekly' | 'bi_weekly' | 'monthly';
+
 interface SavingsGoal {
   id: string;
   name: string;
@@ -277,6 +285,47 @@ interface SavingsGoal {
   completed_at?: string; // ISO timestamp when goal was bought/abandoned
   archived_at?: string; // ISO timestamp when goal was archived
   notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
+// Todo Entity Interfaces
+// ============================================================================
+
+/**
+ * Todo - A recurring or one-time task to be completed
+ * Think of this as the "template" for todos, similar to Bill/Income
+ */
+interface Todo {
+  id: string;
+  title: string;
+  notes?: string;
+  due_date?: string; // YYYY-MM-DD - required for one-time todos, optional for recurring (uses start_date or day_of_month)
+  status: TodoStatus;
+  completed_at?: string; // ISO timestamp when completed (for one-time todos)
+  recurrence: TodoRecurrence; // 'none' for one-time, or weekly/bi_weekly/monthly
+  start_date?: string; // YYYY-MM-DD - required for weekly/bi_weekly (first occurrence date)
+  day_of_month?: number; // 1-31 - for monthly recurrence
+  is_active: boolean; // Whether to generate instances (can deactivate recurring todos)
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * TodoInstance - A specific occurrence of a todo within a month
+ * Generated from recurring Todo entities or created ad-hoc
+ */
+interface TodoInstance {
+  id: string;
+  todo_id: string | null; // Reference to parent Todo, null for ad-hoc
+  month: string; // YYYY-MM format
+  title: string;
+  notes?: string;
+  due_date: string; // YYYY-MM-DD - the specific due date for this instance
+  status: TodoStatus;
+  completed_at?: string; // ISO timestamp when this instance was completed
+  is_adhoc: boolean; // True if manually added for this month only
   created_at: string;
   updated_at: string;
 }
@@ -416,6 +465,7 @@ interface MonthlyData {
   income_instances: IncomeInstance[];
   variable_expenses: VariableExpense[];
   free_flowing_expenses: FreeFlowingExpense[];
+  todo_instances?: TodoInstance[]; // Todo instances for this month
   bank_balances: Record<string, number>;
   savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
   savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
@@ -655,6 +705,8 @@ export type {
   DocumentType,
   SavingsGoalStatus,
   GoalTemperature,
+  TodoStatus,
+  TodoRecurrence,
   EntityMetadata,
   PaymentSourceMetadata,
   Bill,
@@ -668,6 +720,8 @@ export type {
   PaymentSource,
   Category,
   SavingsGoal,
+  Todo,
+  TodoInstance,
   FamilyMember,
   InsurancePlan,
   InsuranceCategory,

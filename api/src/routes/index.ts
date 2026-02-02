@@ -180,6 +180,29 @@ import {
 
 import { createProjectionsHandlerGET } from './handlers/projections.handlers';
 
+import {
+  createTodosHandlerGET,
+  createTodosHandlerPOST,
+  createTodosHandlerPUT,
+  createTodosHandlerDELETE,
+  createTodosCompleteHandler,
+  createTodosReopenHandler,
+  createTodosActivateHandler,
+  createTodosDeactivateHandler,
+} from './handlers/todos.handlers';
+
+import {
+  createTodoInstancesHandlerGET,
+  createTodoInstancesHandlerPOST,
+  createTodoInstancesHandlerPUT,
+  createTodoInstancesHandlerDELETE,
+  createTodoInstancesCompleteHandler,
+  createTodoInstancesReopenHandler,
+  createTodoInstancesSyncHandler,
+} from './handlers/todo-instances.handlers';
+
+import { createCalendarHandlerGET } from './handlers/calendar.handlers';
+
 // Route definition type
 interface RouteDefinition {
   method: string;
@@ -534,6 +557,43 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     definition: { method: 'GET', handler: createProjectionsHandlerGET(), hasPathParam: true },
   },
 
+  // Calendar
+  {
+    path: '/api/calendar',
+    definition: { method: 'GET', handler: createCalendarHandlerGET(), hasPathParam: true },
+  },
+
+  // Todos - action routes must come before generic routes
+  {
+    path: '/api/todos/complete',
+    definition: { method: 'POST', handler: createTodosCompleteHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/todos/reopen',
+    definition: { method: 'POST', handler: createTodosReopenHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/todos/activate',
+    definition: { method: 'POST', handler: createTodosActivateHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/todos/deactivate',
+    definition: { method: 'POST', handler: createTodosDeactivateHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/todos',
+    definition: { method: 'GET', handler: createTodosHandlerGET(), hasPathParam: true },
+  },
+  { path: '/api/todos', definition: { method: 'POST', handler: createTodosHandlerPOST() } },
+  {
+    path: '/api/todos',
+    definition: { method: 'PUT', handler: createTodosHandlerPUT(), hasPathParam: true },
+  },
+  {
+    path: '/api/todos',
+    definition: { method: 'DELETE', handler: createTodosHandlerDELETE(), hasPathParam: true },
+  },
+
   // Payment Sources - savings endpoint must come before generic payment-sources routes
   {
     path: '/api/payment-sources/savings',
@@ -850,6 +910,48 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/months/expenses',
     definition: { method: 'DELETE', handler: createExpensesHandlerDELETE(), hasPathParam: true },
+  },
+
+  // Todo Instances (month-scoped) - sync and action routes first
+  {
+    path: '/api/months/todos/sync',
+    definition: { method: 'POST', handler: createTodoInstancesSyncHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/todos/complete',
+    definition: {
+      method: 'POST',
+      handler: createTodoInstancesCompleteHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/months/todos/reopen',
+    definition: {
+      method: 'POST',
+      handler: createTodoInstancesReopenHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
+    path: '/api/months/todos',
+    definition: { method: 'GET', handler: createTodoInstancesHandlerGET(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/todos',
+    definition: { method: 'POST', handler: createTodoInstancesHandlerPOST(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/todos',
+    definition: { method: 'PUT', handler: createTodoInstancesHandlerPUT(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/todos',
+    definition: {
+      method: 'DELETE',
+      handler: createTodoInstancesHandlerDELETE(),
+      hasPathParam: true,
+    },
   },
 
   // Month DELETE must come after other /api/months/* routes
