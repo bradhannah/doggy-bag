@@ -7,7 +7,7 @@
    * - The expected_amount becomes the paid amount when closed
    * - No separate payments array
    */
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import type { Occurrence } from '../../stores/detailed-month';
   import { apiClient } from '../../lib/api/client';
@@ -32,6 +32,13 @@
   const dispatch = createEventDispatcher();
 
   let saving = false;
+
+  // Inline date editing state
+  let editingDate = false;
+  let editingDateValue = '';
+  let savingDate = false;
+  let dateInputEl: HTMLInputElement | null = null;
+  let dateEditError = '';
   let showDeleteConfirm = false;
   let showEditCloseModal = false;
   let showOverflowMenu = false;
@@ -80,6 +87,105 @@
         return 'rd';
       default:
         return 'th';
+    }
+  }
+
+  /**
+   * Get the maximum valid day for a given month string (YYYY-MM)
+   */
+  function getMaxDayForMonth(monthStr: string): number {
+    const [year, monthNum] = monthStr.split('-').map(Number);
+    // Day 0 of next month gives us last day of current month
+    return new Date(year, monthNum, 0).getDate();
+  }
+
+  // Check if date editing is allowed (not closed, not read-only, not protected)
+  $: canEditDate = !occurrence.is_closed && !readOnly && !isProtected;
+
+  /**
+   * Start inline date editing
+   */
+  async function startEditingDate() {
+    if (!canEditDate || savingDate) return;
+
+    // Extract current day from expected_date (YYYY-MM-DD)
+    const currentDay = parseInt(occurrence.expected_date.split('-')[2], 10);
+    editingDateValue = String(currentDay);
+    dateEditError = '';
+    editingDate = true;
+
+    await tick();
+    dateInputEl?.focus();
+    dateInputEl?.select();
+  }
+
+  /**
+   * Cancel date editing without saving
+   */
+  function cancelEditingDate() {
+    editingDate = false;
+    editingDateValue = '';
+    dateEditError = '';
+  }
+
+  /**
+   * Handle keydown events in the date input
+   */
+  function handleDateKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveDate();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelEditingDate();
+    }
+  }
+
+  /**
+   * Validate and save the new date
+   */
+  async function saveDate() {
+    if (savingDate) return;
+
+    const newDay = parseInt(editingDateValue, 10);
+    const maxDay = getMaxDayForMonth(month);
+
+    // Validate
+    if (isNaN(newDay) || newDay < 1) {
+      dateEditError = 'Enter a valid day (1-' + maxDay + ')';
+      return;
+    }
+
+    if (newDay > maxDay) {
+      dateEditError = `Max ${maxDay} for this month`;
+      return;
+    }
+
+    // Build new date string
+    const paddedDay = String(newDay).padStart(2, '0');
+    const newExpectedDate = `${month}-${paddedDay}`;
+
+    // Skip save if date hasn't changed
+    if (newExpectedDate === occurrence.expected_date) {
+      cancelEditingDate();
+      return;
+    }
+
+    savingDate = true;
+    dateEditError = '';
+
+    try {
+      await apiClient.put(apiBase, '', {
+        expected_date: newExpectedDate,
+      });
+      success('Date updated');
+      editingDate = false;
+      editingDateValue = '';
+      dispatch('updated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to update date');
+    } finally {
+      savingDate = false;
     }
   }
 
@@ -217,6 +323,32 @@
     <div class="occ-date">
       {#if occurrence.is_closed && occurrence.closed_date}
         <span class="closed-date">{formatDayOfMonth(occurrence.closed_date)}</span>
+      {:else if editingDate}
+        <div class="date-edit">
+          <input
+            type="number"
+            bind:this={dateInputEl}
+            bind:value={editingDateValue}
+            on:keydown={handleDateKeydown}
+            on:blur={saveDate}
+            min="1"
+            max={getMaxDayForMonth(month)}
+            disabled={savingDate}
+            class="date-input"
+            class:has-error={dateEditError}
+          />
+          {#if dateEditError}
+            <span class="date-edit-error">{dateEditError}</span>
+          {/if}
+        </div>
+      {:else if canEditDate}
+        <button
+          class="date-value editable"
+          on:click|stopPropagation={startEditingDate}
+          disabled={savingDate}
+        >
+          {formatDayOfMonth(occurrence.expected_date)}
+        </button>
       {:else}
         <span class="date-value">{formatDayOfMonth(occurrence.expected_date)}</span>
       {/if}
@@ -431,6 +563,78 @@
   .closed-date {
     font-size: 0.85rem;
     color: var(--success);
+  }
+
+  /* Editable date styles */
+  .date-value.editable {
+    background: transparent;
+    border: none;
+    padding: 2px var(--space-1);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: inherit;
+    transition: background 0.15s ease;
+  }
+
+  .date-value.editable:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .date-value.editable:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .date-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .date-input {
+    width: 44px;
+    padding: 2px var(--space-1);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-family: inherit;
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+
+  .date-input::-webkit-outer-spin-button,
+  .date-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .date-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-muted);
+  }
+
+  .date-input.has-error {
+    border-color: var(--error);
+  }
+
+  .date-input.has-error:focus {
+    box-shadow: 0 0 0 2px var(--error-bg);
+  }
+
+  .date-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .date-edit-error {
+    font-size: 0.65rem;
+    color: var(--error);
+    white-space: nowrap;
   }
 
   .inline-note {
