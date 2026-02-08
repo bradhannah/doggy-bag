@@ -3,6 +3,7 @@
   import type { IncomeInstance } from '../../stores/months';
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
+  import { formatCurrency, parseDollarsToCents } from '$lib/utils/format';
 
   export let incomes: IncomeInstance[] = [];
   export let month: string;
@@ -16,20 +17,6 @@
   let editAmount = '';
   let saving = false;
   let error = '';
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
-
-  function parseDollarsToCents(value: string): number {
-    const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
-    return isNaN(dollars) ? 0 : Math.round(dollars * 100);
-  }
 
   function startEdit(income: IncomeInstance) {
     editingId = income.id;

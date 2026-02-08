@@ -1,18 +1,10 @@
 <script lang="ts">
   import type { SectionTally } from '../../stores/detailed-month';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let tally: SectionTally;
   export let type: 'bills' | 'income' = 'bills';
   export let label: string = '';
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
 </script>
 
 <div class="section-tally" class:income={type === 'income'} class:bills={type === 'bills'}>

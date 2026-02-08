@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Todo } from '../../stores/todos';
   import { getRecurrenceLabel } from '../../stores/todos';
+  import { formatDate } from '$lib/utils/format';
   import NotesModal from '../shared/NotesModal.svelte';
 
   export let todos: Todo[];
@@ -23,20 +24,10 @@
     showNotesModal = false;
   }
 
-  function formatDate(dateStr: string | undefined): string {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }
-
   // Get display date based on recurrence type
   function getDisplayDate(todo: Todo): string {
     if (todo.recurrence === 'none') {
-      return formatDate(todo.due_date);
+      return todo.due_date ? formatDate(todo.due_date) : '-';
     } else if (todo.recurrence === 'monthly' && todo.day_of_month) {
       return `Day ${todo.day_of_month}`;
     } else if (todo.start_date) {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { BillCategoryGroup, BillWithContribution } from '../../stores/bills';
   import NotesModal from '../shared/NotesModal.svelte';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let billsByCategory: BillCategoryGroup[];
   export let totalFixedCosts: number;
@@ -63,10 +64,6 @@
       semi_annually: 'semi-annual',
     };
     return map[period] || period;
-  }
-
-  function formatCurrency(cents: number): string {
-    return '$' + (cents / 100).toFixed(2);
   }
 
   function getCategoryName(group: BillCategoryGroup): string {

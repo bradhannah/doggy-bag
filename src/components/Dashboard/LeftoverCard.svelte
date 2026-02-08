@@ -1,16 +1,8 @@
 <script lang="ts">
+  import { formatCurrency } from '$lib/utils/format';
+
   export let leftover: number = 0;
   export let loading: boolean = false;
-
-  // Format amount in cents to dollars
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
 
   $: isPositive = leftover >= 0;
   $: formattedAmount = formatCurrency(Math.abs(leftover));

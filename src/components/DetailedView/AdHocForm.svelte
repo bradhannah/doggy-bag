@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import { apiClient } from '$lib/api/client';
+  import { parseDollarsToCents } from '$lib/utils/format';
   import { categories, loadCategories } from '../../stores/categories';
   import { bills, loadBills, type Bill } from '../../stores/bills';
   import { incomes, loadIncomes, type Income } from '../../stores/incomes';
@@ -190,11 +191,6 @@
     const [year, monthNum] = monthStr.split('-').map(Number);
     const lastDay = new Date(year, monthNum, 0).getDate();
     return `${monthStr}-${String(lastDay).padStart(2, '0')}`;
-  }
-
-  function parseDollarsToCents(value: string): number {
-    const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
-    return isNaN(dollars) ? 0 : Math.round(dollars * 100);
   }
 
   function handleClose() {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import { apiClient } from '$lib/api/client';
+  import { parseDollarsToCents } from '$lib/utils/format';
   import { categories, loadCategories } from '../../stores/categories';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
@@ -56,11 +57,6 @@
       paymentSourceId = activePaymentSources[0].id;
     }
   });
-
-  function parseDollarsToCents(value: string): number {
-    const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
-    return isNaN(dollars) ? 0 : Math.round(dollars * 100);
-  }
 
   function handleClose() {
     open = false;

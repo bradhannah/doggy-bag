@@ -14,6 +14,7 @@
   import { success, error as showError } from '../../stores/toast';
   import type { InsuranceClaim } from '../../types/insurance';
   import { onMount } from 'svelte';
+  import { dollarsToCents } from '$lib/utils/format';
 
   // Props
   export let editingItem: InsuranceClaim | null = null;
@@ -51,11 +52,6 @@
   $: availablePaymentSources = $paymentSources.filter(
     (ps) => ps.is_active && !ps.is_savings && !ps.is_investment
   );
-
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
-  }
 
   // Reset form when editingItem changes
   $: if (editingItem) {

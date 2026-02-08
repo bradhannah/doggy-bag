@@ -9,6 +9,7 @@
   import PayCreditCardModal from './PayCreditCardModal.svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let item: BillInstanceDetailed | IncomeInstanceDetailed;
   export let type: 'bill' | 'income' = 'bill';
@@ -75,15 +76,6 @@
     } else {
       openDetailsDrawer();
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
   }
 
   function formatBillingPeriod(period: string): string {

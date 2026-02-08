@@ -8,14 +8,11 @@
    */
   import type { PaymentSource } from '../../stores/payment-sources';
   import { getTypeDisplayName, getTypeIcon } from '../../stores/payment-sources';
+  import { formatDate } from '$lib/utils/format';
 
   export let item: PaymentSource;
   export let onEdit: () => void = () => {};
   export let onClose: () => void = () => {};
-
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString();
-  }
 </script>
 
 <div class="entity-view">

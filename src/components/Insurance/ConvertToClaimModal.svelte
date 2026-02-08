@@ -13,6 +13,7 @@
   import { success, error as showError } from '../../stores/toast';
   import type { InsuranceClaim } from '../../types/insurance';
   import Modal from '../shared/Modal.svelte';
+  import { formatCurrency, formatDate } from '$lib/utils/format';
 
   export let claim: InsuranceClaim;
   export let onClose: () => void;
@@ -50,22 +51,6 @@
     } finally {
       submitting = false;
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
-  }
-
-  function formatDate(dateStr: string): string {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
   }
 </script>
 

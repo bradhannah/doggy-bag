@@ -23,6 +23,7 @@
     type SavingsGoal,
   } from '../../stores/savings-goals';
   import { success, error as showError } from '../../stores/toast';
+  import { formatCurrency, formatDate } from '$lib/utils/format';
   import { type Bill } from '../../stores/bills';
   import MakePaymentModal from '../../components/Goals/MakePaymentModal.svelte';
   import ViewPaymentsModal from '../../components/Goals/ViewPaymentsModal.svelte';
@@ -122,28 +123,6 @@
     }
     // Trigger reactivity
     scheduleSummaries = new Map(scheduleSummaries);
-  }
-
-  function formatCurrency(cents: number): string {
-    // Handle NaN, undefined, null gracefully
-    if (cents === undefined || cents === null || isNaN(cents)) {
-      return '$0';
-    }
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  }
-
-  function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   }
 
   function getDaysRemaining(targetDate: string): number {

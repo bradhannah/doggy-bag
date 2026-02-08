@@ -4,6 +4,7 @@
   import { isDebtAccount, formatBalanceForDisplay } from '../../stores/payment-sources';
   import { apiUrl } from '$lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import { formatCurrency } from '$lib/utils/format';
 
   const dispatch = createEventDispatcher();
 
@@ -55,16 +56,6 @@
   let editingIsDebtAccount: boolean = false;
   let savingBalance = false;
   let balanceInputEl: HTMLInputElement | null = null;
-
-  function formatCurrency(cents: number): string {
-    const dollars = Math.abs(cents) / 100;
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-    return cents < 0 ? '-' + formatted : formatted;
-  }
 
   function formatCurrencyWithSign(cents: number): string {
     const prefix = cents >= 0 ? '+' : '';

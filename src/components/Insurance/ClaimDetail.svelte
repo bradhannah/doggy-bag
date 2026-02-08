@@ -16,6 +16,7 @@
   import SubmissionCard from './SubmissionCard.svelte';
   import DocumentUpload from './DocumentUpload.svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
+  import { formatCurrency, formatDate, dollarsToCents } from '$lib/utils/format';
 
   export let claim: InsuranceClaim;
   export let onEdit: () => void = () => {};
@@ -57,27 +58,6 @@
       default:
         return status;
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    return (
-      '$' +
-      (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    );
-  }
-
-  function formatDate(dateString: string): string {
-    // Append T00:00:00 to prevent UTC interpretation that shifts dates
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
-
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   function handleDelete() {

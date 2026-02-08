@@ -7,14 +7,11 @@
    * @prop onClose - Callback to close the drawer
    */
   import type { Category } from '../../stores/categories';
+  import { formatDate } from '$lib/utils/format';
 
   export let item: Category;
   export let onEdit: () => void = () => {};
   export let onClose: () => void = () => {};
-
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString();
-  }
 </script>
 
 <div class="entity-view">

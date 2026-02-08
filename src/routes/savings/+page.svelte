@@ -8,6 +8,7 @@
   } from '../../stores/payment-sources';
   import { currentMonth } from '../../stores/ui';
   import { success, error as showError } from '../../stores/toast';
+  import { formatCurrency, dollarsToCents } from '$lib/utils/format';
   import MonthPickerHeader from '../../components/MonthPickerHeader.svelte';
   import MonthNotCreated from '../../components/MonthNotCreated.svelte';
 
@@ -141,21 +142,6 @@
 
   function centsToDollars(cents: number): string {
     return (cents / 100).toFixed(2);
-  }
-
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
-  }
-
-  function formatCurrency(cents: number): string {
-    const dollars = Math.abs(cents) / 100;
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-    return cents < 0 ? '-' + formatted : formatted;
   }
 
   function formatPercent(change: number, start: number): string {

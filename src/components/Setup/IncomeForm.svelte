@@ -8,6 +8,7 @@
    */
   import { createIncome, updateIncome } from '../../stores/incomes';
   import { paymentSourcesStore } from '../../stores/payment-sources';
+  import { dollarsToCents } from '$lib/utils/format';
   import { incomeCategories, loadCategories } from '../../stores/categories';
   import { success, error as showError } from '../../stores/toast';
   import type { Income, IncomeData } from '../../stores/incomes';
@@ -153,12 +154,6 @@
       account_url: editingItem.metadata?.account_url || '',
       notes: editingItem.metadata?.notes || '',
     };
-  }
-
-  // Convert dollars to cents
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   export async function handleSubmit() {

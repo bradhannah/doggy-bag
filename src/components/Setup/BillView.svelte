@@ -9,6 +9,7 @@
   import { paymentSourcesStore } from '../../stores/payment-sources';
   import { savingsGoals } from '../../stores/savings-goals';
   import type { Bill } from '../../stores/bills';
+  import { formatDate } from '$lib/utils/format';
 
   export let item: Bill;
   export let onEdit: () => void = () => {};
@@ -34,10 +35,6 @@
       default:
         return period;
     }
-  }
-
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString();
   }
 
   function getPaymentSourceName(id: string): string {

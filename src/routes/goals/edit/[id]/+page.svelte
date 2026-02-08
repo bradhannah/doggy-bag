@@ -15,6 +15,7 @@
   import { createBill, type Bill } from '../../../../stores/bills';
   import { success, error as showError } from '../../../../stores/toast';
   import { apiClient } from '$lib/api/client';
+  import { formatCurrency } from '$lib/utils/format';
 
   // Get goal ID from URL
   $: goalId = ($page.params as { id: string }).id;
@@ -488,14 +489,6 @@
 
   function closeBillSuccessModal() {
     billSuccessModal = null;
-  }
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
   }
 
   function getScheduleSummary(bill: Bill): string {

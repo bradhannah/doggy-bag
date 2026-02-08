@@ -48,6 +48,11 @@ export function getFirstDayOfMonth(): string {
 }
 
 /**
+ * Alias for parseDollarsToCents — used by some components
+ */
+export const dollarsToCents = parseDollarsToCents;
+
+/**
  * Formats a date string or Date object into a localized display string
  * @param date - ISO date string (YYYY-MM-DD) or Date object
  */

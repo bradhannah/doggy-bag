@@ -10,6 +10,7 @@
   import { success, error as showError } from '../../stores/toast';
   import { apiClient } from '../../lib/api/client';
   import SplitConfirmModal from './SplitConfirmModal.svelte';
+  import { formatCurrency, parseDollarsToCents } from '$lib/utils/format';
 
   export let open = false;
   export let type: 'bill' | 'income' = 'bill';
@@ -103,19 +104,6 @@
     requestAnimationFrame(() => {
       daySelectEl?.focus();
     });
-  }
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
-  }
-
-  function parseDollarsToCents(value: string): number {
-    const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
-    return isNaN(dollars) ? 0 : Math.round(dollars * 100);
   }
 
   function handleClose() {

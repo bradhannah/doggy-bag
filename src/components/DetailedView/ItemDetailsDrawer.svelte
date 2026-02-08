@@ -23,6 +23,7 @@
     type IncomeInstanceDetailed,
     type Occurrence,
   } from '../../stores/detailed-month';
+  import { formatCurrency, formatDate } from '$lib/utils/format';
 
   export let open = false;
   export let type: 'bill' | 'income' = 'bill';
@@ -74,21 +75,6 @@
     return sum;
   }, 0);
   $: totalRemaining = Math.max(0, totalExpected - totalPaid);
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
-
-  function formatDate(dateStr: string | null): string {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
 
   function formatShortDate(dateStr: string | null): string {
     if (!dateStr) return '-';
@@ -203,7 +189,7 @@
             {#if dueDate}
               <div class="detail-row">
                 <span class="detail-label">Due Date</span>
-                <span class="detail-value">{formatDate(dueDate)}</span>
+                <span class="detail-value">{formatDate(dueDate ?? '')}</span>
               </div>
             {/if}
             <div class="detail-row">
@@ -212,7 +198,7 @@
                 {#if totalOccurrences > 1}
                   {isClosed ? 'Closed' : 'Open'} ({closedCount} of {totalOccurrences} closed)
                 {:else if isClosed}
-                  Closed {closedDate ? `on ${formatDate(closedDate)}` : ''}
+                  Closed {closedDate ? `on ${formatDate(closedDate ?? '')}` : ''}
                 {:else}
                   Open
                 {/if}

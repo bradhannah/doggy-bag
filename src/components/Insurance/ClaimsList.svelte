@@ -11,6 +11,7 @@
   } from '../../stores/insurance-claims';
   import { activeCategories } from '../../stores/insurance-categories';
   import { createEventDispatcher } from 'svelte';
+  import { formatCurrency, formatDate } from '$lib/utils/format';
 
   export let selectedClaim: InsuranceClaim | null = null;
 
@@ -85,22 +86,6 @@
       default:
         return status;
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    return (
-      '$' +
-      (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    );
-  }
-
-  function formatDate(dateString: string): string {
-    // Append T00:00:00 to prevent UTC interpretation that shifts dates
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   }
 
   function getCategoryIcon(categoryId: string): string {

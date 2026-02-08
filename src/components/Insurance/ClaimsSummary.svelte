@@ -6,13 +6,7 @@
   import { claimsSummary } from '../../stores/insurance-claims';
   import { activePlans } from '../../stores/insurance-plans';
   import { activeCategories } from '../../stores/insurance-categories';
-
-  function formatCurrency(cents: number): string {
-    return (
-      '$' +
-      (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    );
-  }
+  import { formatCurrency } from '$lib/utils/format';
 </script>
 
 {#if $claimsSummary}

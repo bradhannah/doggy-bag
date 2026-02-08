@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { TodoInstance } from '../../stores/todo-instances';
   import { isOverdue } from '../../stores/todo-instances';
+  import { formatDate } from '$lib/utils/format';
 
   export let instance: TodoInstance;
   export let onComplete: (instance: TodoInstance) => void;
@@ -23,14 +24,6 @@
     if (onDelete) {
       onDelete(instance);
     }
-  }
-
-  function formatDate(dateStr: string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
   }
 
   function formatCompletedAt(isoStr: string): string {

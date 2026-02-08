@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { formatCurrency } from '$lib/utils/format';
+
   type OverdueBillItem = {
     name: string;
     amount: number;
@@ -8,13 +10,6 @@
   export let overdueBills: OverdueBillItem[] = [];
   export let heading = 'Overdue Bills';
   export let description = "These items are past due and deducted from today's starting balance:";
-
-  function formatCurrency(cents: number) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(cents / 100);
-  }
 
   function formatDueDate(dueDate?: string | null) {
     return dueDate ?? 'Unknown';

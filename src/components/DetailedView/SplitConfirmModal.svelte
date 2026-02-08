@@ -8,6 +8,7 @@
    */
   import { createEventDispatcher } from 'svelte';
   import Modal from '../shared/Modal.svelte';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let open = false;
   export let paidAmount = 0; // cents
@@ -17,14 +18,6 @@
     confirm: void;
     cancel: void;
   }>();
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
-  }
 
   function handleConfirm() {
     dispatch('confirm');

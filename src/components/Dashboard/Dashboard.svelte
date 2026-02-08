@@ -19,6 +19,7 @@
   } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import { apiUrl } from '$lib/api/client';
+  import { formatCurrency } from '$lib/utils/format';
   import { onMount } from 'svelte';
   import MonthNotCreated from '../MonthNotCreated.svelte';
 
@@ -64,17 +65,6 @@
     const [year, monthNum] = monthStr.split('-');
     const date = new Date(parseInt(year), parseInt(monthNum) - 1);
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  }
-
-  // Format currency
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(dollars);
   }
 
   // Types for items with occurrences (occurrence-only model)

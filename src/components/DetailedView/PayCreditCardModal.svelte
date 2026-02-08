@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
+  import { formatCurrency, parseDollarsToCents } from '$lib/utils/format';
 
   export let open = false;
   export let month: string;
@@ -43,20 +44,6 @@
 
   // Validate form
   $: isValid = paymentAmountCents > 0 && paymentDay !== '';
-
-  function parseDollarsToCents(value: string): number {
-    const dollars = parseFloat(value.replace(/[^0-9.-]/g, ''));
-    return isNaN(dollars) ? 0 : Math.round(dollars * 100);
-  }
-
-  function formatCurrency(cents: number): string {
-    const dollars = Math.abs(cents) / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
 
   function formatDebtCurrency(cents: number): string {
     const dollars = Math.abs(cents) / 100;

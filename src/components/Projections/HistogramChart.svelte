@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { ProjectionResponse } from '../../types/projections';
+  import { formatCurrency, formatDate } from '$lib/utils/format';
 
   type ProjectionDay = ProjectionResponse['days'][number];
 
@@ -138,18 +139,6 @@
   function handleChartClick() {
     if (hoveredIndex === null) return;
     dispatch('select', { day: data.days[hoveredIndex] });
-  }
-
-  function formatCurrency(cents: number) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(cents / 100);
-  }
-
-  function formatDate(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 </script>
 

@@ -12,6 +12,7 @@
   import { savingsGoals } from '../../stores/savings-goals';
   import { success, error as showError } from '../../stores/toast';
   import type { Bill, BillData, EntityMetadata } from '../../stores/bills';
+  import { dollarsToCents } from '$lib/utils/format';
   import { onMount } from 'svelte';
 
   export let editingItem: Bill | null = null;
@@ -156,12 +157,6 @@
       account_url: editingItem.metadata?.account_url || '',
       notes: editingItem.metadata?.notes || '',
     };
-  }
-
-  // Convert dollars to cents
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   // Preview amount in formatted dollars (used in future version for real-time preview)

@@ -13,6 +13,7 @@
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import EditCloseModal from './EditCloseModal.svelte';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let occurrence: Occurrence;
   export let month: string;
@@ -58,15 +59,6 @@
     } else if (claimId) {
       goto(`/insurance?claim=${claimId}`);
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
   }
 
   function formatDayOfMonth(dateStr: string | null): string {

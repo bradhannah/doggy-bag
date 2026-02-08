@@ -8,6 +8,7 @@
   } from '../../stores/detailed-month';
   import OccurrenceCard from './OccurrenceCard.svelte';
   import AdHocForm from './AdHocForm.svelte';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let section: CategorySectionType;
   export let type: 'bills' | 'income' = 'bills';
@@ -21,15 +22,6 @@
 
   // Ad-hoc form state
   let showAdHocForm = false;
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
 
   // Count total occurrences and closed occurrences for stats
   function countOccurrences(items: (BillInstanceDetailed | IncomeInstanceDetailed)[]): {

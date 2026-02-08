@@ -1,18 +1,10 @@
 <script lang="ts">
+  import { formatCurrency } from '$lib/utils/format';
+
   export let totalIncome: number = 0;
   export let totalExpenses: number = 0;
   export let netWorth: number = 0;
   export let loading: boolean = false;
-
-  // Format amount in cents to dollars
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
 </script>
 
 <div class="summary-grid">

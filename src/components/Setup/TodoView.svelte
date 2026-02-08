@@ -9,21 +9,12 @@
    */
   import Modal from '../shared/Modal.svelte';
   import { getRecurrenceLabel, type Todo } from '../../stores/todos';
+  import { formatDate } from '$lib/utils/format';
 
   export let open = false;
   export let item: Todo | null = null;
   export let onEdit: () => void = () => {};
   export let onClose: () => void = () => {};
-
-  function formatDate(dateStr: string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
 
   function formatTimestamp(isoStr: string): string {
     const date = new Date(isoStr);

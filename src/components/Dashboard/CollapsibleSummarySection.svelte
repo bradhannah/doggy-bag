@@ -8,6 +8,7 @@
    * @prop type - 'income' | 'bills' | 'expenses' for styling
    * @prop expanded - Whether section is expanded (default: false)
    */
+  import { formatCurrency } from '$lib/utils/format';
 
   export let title: string = '';
   export let items: Array<{
@@ -33,16 +34,6 @@
 
   // For display in collapsed header
   $: displayTotal = type === 'expenses' ? totalActual : totalExpected;
-
-  // Format currency
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-  }
 
   // Get type-specific colors
   $: valueClass = type === 'income' ? 'income' : 'expense';

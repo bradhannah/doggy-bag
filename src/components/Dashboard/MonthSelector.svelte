@@ -9,6 +9,7 @@
     goToMonth,
   } from '../../stores/ui';
   import { apiUrl } from '../../lib/api/client';
+  import { formatCurrency } from '$lib/utils/format';
 
   interface MonthSummary {
     month: string;
@@ -52,16 +53,6 @@
     const [year, m] = month.split('-').map(Number);
     const date = new Date(year, m - 1, 1);
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  }
-
-  function formatCurrency(cents: number): string {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(dollars);
   }
 
   function selectMonth(month: string) {

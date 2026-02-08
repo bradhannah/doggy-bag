@@ -3,6 +3,7 @@
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import { isDebtAccount, type PaymentSourceType } from '../../stores/payment-sources';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let open = false;
   export let month: string;
@@ -19,23 +20,6 @@
   // Calculate new balance after payment
   // For debt accounts: payment reduces debt (subtracts from balance)
   $: newBalance = currentBalance - paymentAmount;
-
-  // Format cents to dollars for display
-  function formatCurrency(cents: number): string {
-    const dollars = Math.abs(cents) / 100;
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-
-    // For debt accounts, show as negative when there's debt owed
-    if (isDebtAccount(paymentSourceType)) {
-      if (cents > 0) return `-${formatted}`; // Debt owed
-      if (cents < 0) return `+${formatted}`; // Credit/overpayment
-    }
-    return formatted;
-  }
 
   function formatPositiveCurrency(cents: number): string {
     const dollars = cents / 100;

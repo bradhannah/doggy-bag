@@ -4,6 +4,7 @@
   import { success, error as showError } from '../../stores/toast';
   import type { SavingsGoal } from '../../stores/savings-goals';
   import Modal from '../shared/Modal.svelte';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let goal: SavingsGoal;
   export let onClose: () => void;
@@ -47,14 +48,6 @@
     } finally {
       submitting = false;
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
   }
 </script>
 

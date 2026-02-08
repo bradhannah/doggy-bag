@@ -8,6 +8,7 @@
   import type { ProjectionResponse } from '../../types/projections';
   import HistogramChart from './HistogramChart.svelte';
   import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
+  import { formatCurrency } from '$lib/utils/format';
 
   const today = new Date();
   let currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
@@ -40,13 +41,6 @@
     return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
       adjustedDate
     );
-  }
-
-  function formatCurrency(cents: number) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(cents / 100);
   }
 
   const todayStr = new Date().toISOString().split('T')[0];

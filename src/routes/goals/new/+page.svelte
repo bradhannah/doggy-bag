@@ -6,6 +6,7 @@
   import { createBill } from '../../../stores/bills';
   import { apiClient } from '$lib/api/client';
   import { success, error as showError } from '../../../stores/toast';
+  import { formatCurrency } from '$lib/utils/format';
 
   let name = '';
   let targetAmountDollars = '';
@@ -128,14 +129,6 @@
     const months =
       (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
     return Math.max(0, months);
-  }
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
   }
 
   onMount(async () => {

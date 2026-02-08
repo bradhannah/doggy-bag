@@ -8,6 +8,7 @@
   import { isTauri } from '../../stores/settings';
   import { createEventDispatcher } from 'svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
+  import { formatCurrency, formatDate, dollarsToCents } from '$lib/utils/format';
 
   export let submission: ClaimSubmission;
   export let claimId: string;
@@ -79,27 +80,6 @@
       default:
         return status;
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    return (
-      '$' +
-      (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    );
-  }
-
-  function formatDate(dateString: string): string {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  }
-
-  function dollarsToCents(dollars: string): number {
-    const parsed = parseFloat(dollars.replace(/[^0-9.-]/g, ''));
-    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
   }
 
   function getTodayDate(): string {

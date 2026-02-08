@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { apiClient } from '$lib/api/client';
   import type { SavingsGoal } from '../../stores/savings-goals';
+  import { formatCurrency, formatDate } from '$lib/utils/format';
 
   export let goal: SavingsGoal;
   export let onClose: () => void;
@@ -50,22 +51,6 @@
     } finally {
       loading = false;
     }
-  }
-
-  function formatCurrency(cents: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(cents / 100);
-  }
-
-  function formatDate(dateString: string): string {
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
   }
 
   function formatDateWithYear(dateString: string): string {

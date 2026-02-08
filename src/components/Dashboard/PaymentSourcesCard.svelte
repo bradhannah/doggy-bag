@@ -15,6 +15,7 @@
   import { createEventDispatcher } from 'svelte';
   import type { PaymentSource } from '../../stores/payment-sources';
   import { isDebtAccount, formatBalanceForDisplay } from '../../stores/payment-sources';
+  import { formatCurrency } from '$lib/utils/format';
 
   export let paymentSources: PaymentSource[] = [];
   export let bankBalances: Record<string, number> = {};
@@ -50,17 +51,6 @@
   $: totalAssets = assetAccounts.reduce((sum, ps) => sum + ps.effectiveBalance, 0);
   $: totalDebt = debtAccounts.reduce((sum, ps) => sum + ps.effectiveBalance, 0);
   $: netWorth = totalAssets - totalDebt;
-
-  // Format amount in cents to dollars (handles negative values)
-  function formatCurrency(cents: number): string {
-    const dollars = Math.abs(cents) / 100;
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(dollars);
-    return cents < 0 ? '-' + formatted : formatted;
-  }
 
   // Parse currency input to cents
   function parseCurrency(value: string): number {

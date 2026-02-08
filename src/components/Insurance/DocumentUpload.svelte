@@ -8,6 +8,7 @@
   import { createEventDispatcher } from 'svelte';
   import DocumentUploadModal from './DocumentUploadModal.svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
+  import { formatDate } from '$lib/utils/format';
 
   export let claimId: string;
   export let documents: ClaimDocument[] = [];
@@ -36,14 +37,6 @@
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  }
-
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   }
 
   function promptDelete(doc: ClaimDocument) {
