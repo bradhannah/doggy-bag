@@ -7,7 +7,7 @@ import { AdhocServiceImpl } from '../../services/adhoc-service';
 import { CategoriesServiceImpl } from '../../services/categories-service';
 import { formatErrorForUser } from '../../utils/errors';
 import { sumClosedOccurrenceAmounts } from '../../utils/tally';
-import type { SavingsGoalStatus, GoalTemperature } from '../../types';
+import type { SavingsGoalStatus, GoalTemperature, MonthlyData } from '../../types';
 
 const savingsGoalsService: SavingsGoalsService = new SavingsGoalsServiceImpl();
 const billsService = new BillsServiceImpl();
@@ -39,26 +39,23 @@ interface SavingsGoalWithCalculations {
 
 /**
  * Calculate saved amount from closed bill occurrences linked to a goal.
+ * Accepts pre-loaded month data to avoid redundant file reads.
  * This sums up:
  * 1. Payments from bill instances where the parent Bill's goal_id matches (scheduled payments)
  * 2. Payments from ad-hoc bill instances where the BillInstance's goal_id matches (one-time contributions)
  */
-async function calculateSavedAmount(goalId: string): Promise<number> {
+async function calculateSavedAmount(goalId: string, allMonthData?: MonthlyData[]): Promise<number> {
   try {
     // Get all bills linked to this goal (for scheduled payments)
     const linkedBills = await billsService.getByGoalId(goalId);
     const linkedBillIds = new Set(linkedBills.map((b) => b.id));
 
-    // Get all months
-    const allMonths = await monthsService.getAllMonths();
+    // Use pre-loaded data or load all months in one pass
+    const months = allMonthData ?? (await monthsService.getAllMonthlyData());
 
     let totalSaved = 0;
 
-    // For each month, sum up payments from bill instances linked to this goal
-    for (const monthSummary of allMonths) {
-      if (!monthSummary.exists) continue;
-
-      const monthData = await monthsService.getMonthlyData(monthSummary.month);
+    for (const monthData of months) {
       if (!monthData?.bill_instances) continue;
 
       for (const billInstance of monthData.bill_instances) {
@@ -87,14 +84,16 @@ async function calculateSavedAmount(goalId: string): Promise<number> {
 }
 
 /**
- * Enhance a goal with calculated fields
+ * Enhance a goal with calculated fields.
+ * Accepts pre-loaded month data to avoid redundant file reads.
  */
 async function enhanceGoalWithCalculations(
-  goal: Awaited<ReturnType<typeof savingsGoalsService.getById>>
+  goal: Awaited<ReturnType<typeof savingsGoalsService.getById>>,
+  allMonthData?: MonthlyData[]
 ): Promise<SavingsGoalWithCalculations | null> {
   if (!goal) return null;
 
-  const savedAmount = await calculateSavedAmount(goal.id);
+  const savedAmount = await calculateSavedAmount(goal.id, allMonthData);
   const temperature = savingsGoalsService.calculateTemperature(goal, savedAmount);
   const expectedAmount = savingsGoalsService.getExpectedSavedAmount(goal);
   const progressPercentage =
@@ -117,6 +116,9 @@ export function createSavingsGoalsHandlerGET() {
       const url = new URL(request.url);
       const pathParts = url.pathname.split('/').filter(Boolean);
 
+      // Load all month data once upfront to avoid N+1 reads
+      const allMonthData = await monthsService.getAllMonthlyData();
+
       // Check if this is a single goal request: /api/savings-goals/:id
       if (pathParts.length === 3 && pathParts[0] === 'api' && pathParts[1] === 'savings-goals') {
         const id = pathParts[2];
@@ -134,7 +136,7 @@ export function createSavingsGoalsHandlerGET() {
           );
         }
 
-        const enhancedGoal = await enhanceGoalWithCalculations(goal);
+        const enhancedGoal = await enhanceGoalWithCalculations(goal, allMonthData);
 
         return new Response(JSON.stringify(enhancedGoal), {
           headers: { 'Content-Type': 'application/json' },
@@ -152,9 +154,9 @@ export function createSavingsGoalsHandlerGET() {
         goals = await savingsGoalsService.getAll();
       }
 
-      // Enhance all goals with calculations
+      // Enhance all goals with calculations (month data loaded once, shared across all goals)
       const enhancedGoals = await Promise.all(
-        goals.map((goal) => enhanceGoalWithCalculations(goal))
+        goals.map((goal) => enhanceGoalWithCalculations(goal, allMonthData))
       );
 
       return new Response(JSON.stringify(enhancedGoals), {
@@ -1037,8 +1039,8 @@ export function createSavingsGoalsPaymentsHandler() {
       const linkedBillIds = new Set(linkedBills.map((b) => b.id));
       const billNameMap = new Map(linkedBills.map((b) => [b.id, b.name]));
 
-      // Get all months from goal creation to present
-      const allMonths = await monthsService.getAllMonths();
+      // Load all month data in one pass (avoids N+1 reads)
+      const allMonthData = await monthsService.getAllMonthlyData();
       const goalCreatedMonth = goal.created_at.substring(0, 7); // YYYY-MM
 
       interface RawPayment {
@@ -1053,12 +1055,9 @@ export function createSavingsGoalsPaymentsHandler() {
       const today = new Date().toISOString().split('T')[0];
 
       // Collect payments from all months
-      for (const monthSummary of allMonths) {
+      for (const monthData of allMonthData) {
         // Skip months before goal was created
-        if (monthSummary.month < goalCreatedMonth) continue;
-        if (!monthSummary.exists) continue;
-
-        const monthData = await monthsService.getMonthlyData(monthSummary.month);
+        if (monthData.month < goalCreatedMonth) continue;
         if (!monthData?.bill_instances) continue;
 
         for (const billInstance of monthData.bill_instances) {
@@ -1326,13 +1325,10 @@ export function createSavingsGoalsRemoveScheduleHandler() {
       });
 
       // 2. Close future unpaid occurrences in all existing months
-      const allMonths = await monthsService.getAllMonths();
+      const allMonthData = await monthsService.getAllMonthlyData();
       let closedOccurrencesCount = 0;
 
-      for (const monthSummary of allMonths) {
-        if (!monthSummary.exists) continue;
-
-        const monthData = await monthsService.getMonthlyData(monthSummary.month);
+      for (const monthData of allMonthData) {
         if (!monthData?.bill_instances) continue;
 
         let monthModified = false;
@@ -1363,12 +1359,12 @@ export function createSavingsGoalsRemoveScheduleHandler() {
         }
 
         if (monthModified) {
-          await monthsService.saveMonthlyData(monthSummary.month, monthData);
+          await monthsService.saveMonthlyData(monthData.month, monthData);
         }
       }
 
-      // Return success with updated goal
-      const enhancedGoal = await enhanceGoalWithCalculations(goal);
+      // Return success with updated goal (reuse already-loaded month data)
+      const enhancedGoal = await enhanceGoalWithCalculations(goal, allMonthData);
 
       return new Response(
         JSON.stringify({

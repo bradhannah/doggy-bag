@@ -63,6 +63,7 @@ export interface MonthSummary {
 
 export interface MonthsService {
   getMonthlyData(month: string): Promise<MonthlyData | null>;
+  getAllMonthlyData(): Promise<MonthlyData[]>;
   getAllMonths(): Promise<MonthSummary[]>;
   generateMonthlyData(month: string): Promise<MonthlyData>;
   syncMonthlyData(month: string): Promise<MonthlyData>;
@@ -355,52 +356,65 @@ export class MonthsServiceImpl implements MonthsService {
     }
   }
 
+  /**
+   * Load all month files in parallel and return full MonthlyData objects.
+   * This avoids the N+1 read pattern where callers would call getAllMonths()
+   * (which reads every file) and then re-read each file individually.
+   */
+  public async getAllMonthlyData(): Promise<MonthlyData[]> {
+    try {
+      const files = await this.storage.listFiles('data/months');
+
+      const months = files
+        .filter((f) => f.endsWith('.json') && f !== '.gitkeep')
+        .map((f) => f.replace('.json', ''));
+
+      // Read all month files in parallel instead of sequentially
+      const results = await Promise.all(months.map((month) => this.getMonthlyData(month)));
+
+      return results.filter((data): data is MonthlyData => data !== null);
+    } catch (error) {
+      console.error('[MonthsService] Failed to get all monthly data:', error);
+      return [];
+    }
+  }
+
   public async getAllMonths(): Promise<MonthSummary[]> {
     try {
-      // Use storage service to list files (respects DATA_DIR)
-      const files = await this.storage.listFiles('data/months');
+      // Load all month data in parallel (single pass)
+      const allData = await this.getAllMonthlyData();
 
       // Load payment sources once for all months
       const paymentSources = await this.paymentSourcesService.getAll();
 
-      const summaries: MonthSummary[] = [];
+      const summaries: MonthSummary[] = allData.map((data) => {
+        // Use unified leftover calculation
+        const leftoverResult = calculateUnifiedLeftover(data, paymentSources);
 
-      for (const file of files) {
-        // Skip non-JSON files and .gitkeep
-        if (!file.endsWith('.json') || file === '.gitkeep') continue;
+        // Legacy totals for backward compatibility
+        const totalIncome = data.income_instances.reduce((sum, i) => sum + i.expected_amount, 0);
+        const totalBills = data.bill_instances.reduce((sum, b) => sum + b.expected_amount, 0);
+        const totalExpenses = data.variable_expenses.reduce((sum, e) => sum + e.amount, 0);
 
-        const month = file.replace('.json', '');
-        const data = await this.getMonthlyData(month);
-
-        if (data) {
-          // Use unified leftover calculation
-          const leftoverResult = calculateUnifiedLeftover(data, paymentSources);
-
-          // Legacy totals for backward compatibility
-          const totalIncome = data.income_instances.reduce((sum, i) => sum + i.expected_amount, 0);
-          const totalBills = data.bill_instances.reduce((sum, b) => sum + b.expected_amount, 0);
-          const totalExpenses = data.variable_expenses.reduce((sum, e) => sum + e.amount, 0);
-
-          summaries.push({
-            month: data.month,
-            exists: true,
-            is_read_only: data.is_read_only ?? false,
-            created_at: data.created_at,
-            updated_at: data.updated_at,
-            // Unified leftover fields
-            leftover: leftoverResult.leftover,
-            isValid: leftoverResult.isValid,
-            errorMessage: leftoverResult.errorMessage,
-            bankBalances: leftoverResult.bankBalances,
-            remainingIncome: leftoverResult.remainingIncome,
-            remainingExpenses: leftoverResult.remainingExpenses,
-            // Legacy fields (deprecated)
-            total_income: totalIncome,
-            total_bills: totalBills,
-            total_expenses: totalExpenses,
-          });
-        }
-      }
+        return {
+          month: data.month,
+          exists: true,
+          is_read_only: data.is_read_only ?? false,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          // Unified leftover fields
+          leftover: leftoverResult.leftover,
+          isValid: leftoverResult.isValid,
+          errorMessage: leftoverResult.errorMessage,
+          bankBalances: leftoverResult.bankBalances,
+          remainingIncome: leftoverResult.remainingIncome,
+          remainingExpenses: leftoverResult.remainingExpenses,
+          // Legacy fields (deprecated)
+          total_income: totalIncome,
+          total_bills: totalBills,
+          total_expenses: totalExpenses,
+        };
+      });
 
       // Sort by month descending (newest first)
       summaries.sort((a, b) => b.month.localeCompare(a.month));
