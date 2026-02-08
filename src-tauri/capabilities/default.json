@@ -7,8 +7,6 @@
     "core:default",
     "core:webview:allow-set-webview-zoom",
     "opener:default",
-    "shell:allow-execute",
-    "shell:allow-spawn",
     {
       "identifier": "shell:allow-execute",
       "allow": [
@@ -22,7 +20,6 @@
     "store:default",
     "dialog:default",
     "dialog:allow-open",
-    "dialog:allow-save",
     "fs:default",
     "fs:allow-read-dir",
     "fs:allow-read-file",
@@ -33,7 +30,7 @@
     "fs:allow-copy-file",
     {
       "identifier": "fs:scope",
-      "allow": ["$HOME/**", "$DOCUMENT/**", "$APPCONFIG/**"]
+      "allow": ["$DOCUMENT/**", "$APPCONFIG/**"]
     },
     "window-state:default",
     "window-state:allow-restore-state",
