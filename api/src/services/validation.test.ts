@@ -695,7 +695,9 @@ describe('ValidationService', () => {
         type: 'expense' as 'bill',
       });
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain("type must be 'bill', 'income', or 'variable'");
+      expect(result.errors).toContain(
+        "type must be 'bill', 'income', 'variable', or 'savings_goal'"
+      );
     });
 
     test('accepts variable type', () => {

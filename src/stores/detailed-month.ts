@@ -1,6 +1,7 @@
 // Detailed Month Store - Manages detailed monthly view data
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '../lib/api/client';
+import { getTodayDateString } from '../lib/utils/format';
 import type { EntityMetadata } from './bills';
 
 // Occurrence - individual payment instance within a billing period
@@ -219,7 +220,7 @@ function createDetailedMonthStore() {
       update((state) => {
         if (!state.data) return state;
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDateString();
         const resolvedCloseDate = closedDate ?? today;
 
         const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
@@ -270,7 +271,7 @@ function createDetailedMonthStore() {
       update((state) => {
         if (!state.data) return state;
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDateString();
         const resolvedCloseDate = closedDate ?? today;
 
         const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {

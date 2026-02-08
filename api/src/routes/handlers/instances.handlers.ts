@@ -5,28 +5,12 @@ import { LeftoverServiceImpl } from '../../services/leftover-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
 import { formatErrorForUser } from '../../utils/errors';
+import { checkReadOnly } from './shared';
 
 const monthsService = new MonthsServiceImpl();
 const leftoverService = new LeftoverServiceImpl();
 const billsService = new BillsServiceImpl();
 const incomesService = new IncomesServiceImpl();
-
-// Helper to check if month is read-only and return 403 response if so
-async function checkReadOnly(month: string): Promise<Response | null> {
-  const isReadOnly = await monthsService.isReadOnly(month);
-  if (isReadOnly) {
-    return new Response(
-      JSON.stringify({
-        error: `Month ${month} is read-only. Unlock it to make changes.`,
-      }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 403,
-      }
-    );
-  }
-  return null;
-}
 
 // Extract month and instance ID from URL: /api/months/2025-01/bills/uuid
 function extractMonthAndId(

@@ -101,7 +101,7 @@ export function validateTheme(theme: unknown): ThemeValidationResult {
  */
 function isValidCssColor(value: string): boolean {
   // Hex colors
-  if (/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?([0-9a-fA-F]{2})?$/.test(value)) {
+  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(value)) {
     return true;
   }
 

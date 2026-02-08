@@ -79,7 +79,7 @@ export const apiClient = {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
       const message = error.message || error.error || `POST ${path} failed: ${response.statusText}`;
       const details = error.details ? `: ${error.details.join(', ')}` : '';
       throw new Error(message + details);
@@ -94,7 +94,7 @@ export const apiClient = {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
       const message =
         error.message || error.error || `PUT ${path}/${id} failed: ${response.statusText}`;
       const details = error.details ? `: ${error.details.join(', ')}` : '';

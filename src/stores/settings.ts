@@ -5,7 +5,7 @@
  * In browser (development): Uses localStorage fallback
  */
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 import { isTauri as checkIsTauri } from '@tauri-apps/api/core';
 import { createLogger } from '$lib/logger';
@@ -150,8 +150,7 @@ export async function setZoom(level: number): Promise<void> {
  * Zoom in by one step (10%)
  */
 export async function zoomIn(): Promise<void> {
-  let current = ZOOM_CONFIG.default;
-  zoomLevelWritable.subscribe((v) => (current = v))();
+  const current = get(zoomLevelWritable);
   await setZoom(current + ZOOM_CONFIG.step);
 }
 
@@ -159,8 +158,7 @@ export async function zoomIn(): Promise<void> {
  * Zoom out by one step (10%)
  */
 export async function zoomOut(): Promise<void> {
-  let current = ZOOM_CONFIG.default;
-  zoomLevelWritable.subscribe((v) => (current = v))();
+  const current = get(zoomLevelWritable);
   await setZoom(current - ZOOM_CONFIG.step);
 }
 

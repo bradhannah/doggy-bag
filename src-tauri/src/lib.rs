@@ -414,11 +414,12 @@ async fn stop_bun_sidecar(app: tauri::AppHandle) -> Result<String, String> {
                     .map_err(|e| format!("Failed to kill sidecar: {}", e))?;
             }
 
-            // Clear the PID
+            // Clear the PID and port
             {
                 let state = app.state::<Mutex<SidecarState>>();
                 let mut state_guard = state.lock().unwrap();
                 state_guard.pid = None;
+                state_guard.port = None;
             }
 
             Ok(format!("Sidecar stopped (PID: {})", pid))

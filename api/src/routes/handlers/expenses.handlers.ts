@@ -5,26 +5,10 @@ import { MonthsServiceImpl } from '../../services/months-service';
 import { LeftoverServiceImpl } from '../../services/leftover-service';
 import { formatErrorForUser } from '../../utils/errors';
 import type { VariableExpense } from '../../types';
+import { checkReadOnly } from './shared';
 
 const monthsService = new MonthsServiceImpl();
 const leftoverService = new LeftoverServiceImpl();
-
-// Helper to check if month is read-only and return 403 response if so
-async function checkReadOnly(month: string): Promise<Response | null> {
-  const isReadOnly = await monthsService.isReadOnly(month);
-  if (isReadOnly) {
-    return new Response(
-      JSON.stringify({
-        error: `Month ${month} is read-only. Unlock it to make changes.`,
-      }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 403,
-      }
-    );
-  }
-  return null;
-}
 
 // Helper to extract month from URL path
 function extractMonth(pathname: string): string | null {

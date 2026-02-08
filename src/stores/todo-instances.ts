@@ -3,6 +3,7 @@
 
 import { writable, derived, get } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
+import { getTodayDateString } from '$lib/utils/format';
 import type { TodoStatus } from './todos';
 
 // ============================================================================
@@ -89,7 +90,7 @@ export const completedInstances = derived(todoInstances, (instances) =>
 
 /** Overdue instances (pending with due_date < today) */
 export const overdueInstances = derived(todoInstances, (instances) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
   return instances
     .filter((i) => i.status === 'pending' && i.due_date < today)
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
@@ -282,7 +283,7 @@ export function getTodoInstanceById(instanceId: string): TodoInstance | undefine
  */
 export function isOverdue(instance: TodoInstance): boolean {
   if (instance.status === 'completed') return false;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
   return instance.due_date < today;
 }
 

@@ -2,7 +2,6 @@
 // Handles creation and management of one-time bills and incomes
 
 import { AdhocServiceImpl } from '../../services/adhoc-service';
-import { MonthsServiceImpl } from '../../services/months-service';
 import type {
   CreateAdhocBillRequest,
   CreateAdhocIncomeRequest,
@@ -10,26 +9,9 @@ import type {
   MakeRegularRequest,
 } from '../../services/adhoc-service';
 import { formatErrorForUser, NotFoundError, ValidationError } from '../../utils/errors';
+import { checkReadOnly } from './shared';
 
 const adhocService = new AdhocServiceImpl();
-const monthsService = new MonthsServiceImpl();
-
-// Helper to check if month is read-only and return 403 response if so
-async function checkReadOnly(month: string): Promise<Response | null> {
-  const isReadOnly = await monthsService.isReadOnly(month);
-  if (isReadOnly) {
-    return new Response(
-      JSON.stringify({
-        error: `Month ${month} is read-only. Unlock it to make changes.`,
-      }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        status: 403,
-      }
-    );
-  }
-  return null;
-}
 
 // Helper to extract params from URL path
 // /api/months/2025-01/adhoc/bills -> { month: '2025-01', instanceId: null }

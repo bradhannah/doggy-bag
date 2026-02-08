@@ -322,10 +322,10 @@ export class ValidationServiceImpl implements ValidationService {
       }
     }
 
-    // Validate type - must be 'bill', 'income', or 'variable'
+    // Validate type - must be 'bill', 'income', 'variable', or 'savings_goal'
     if (category.type !== undefined) {
-      if (!['bill', 'income', 'variable'].includes(category.type)) {
-        errors.push("type must be 'bill', 'income', or 'variable'");
+      if (!['bill', 'income', 'variable', 'savings_goal'].includes(category.type)) {
+        errors.push("type must be 'bill', 'income', 'variable', or 'savings_goal'");
       }
     }
 

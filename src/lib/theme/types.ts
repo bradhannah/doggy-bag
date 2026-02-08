@@ -40,7 +40,6 @@ export const OPTIONAL_COLOR_KEYS = [
   'text-disabled',
 
   // Border variants
-  'border-default',
   'border-hover',
   'border-focus',
   'border-subtle',
