@@ -6,7 +6,7 @@ import type { StorageService } from './storage';
 export interface AutoSaveService {
   queueSave(entityType: string, data: unknown): void;
   clearQueue(): void;
-  shutdown(): void;
+  shutdown(): Promise<void>;
 }
 
 export class AutoSaveServiceImpl implements AutoSaveService {
@@ -56,9 +56,27 @@ export class AutoSaveServiceImpl implements AutoSaveService {
     this.saveQueue.clear();
   }
 
-  public shutdown(): void {
+  public async shutdown(): Promise<void> {
     console.log('[AutoSaveService] Shutting down - flushing pending saves...');
-    this.clearQueue();
+
+    // Flush all pending saves before clearing
+    const pendingEntries = Array.from(this.saveQueue.entries());
+    for (const [entityType, { timeout }] of pendingEntries) {
+      clearTimeout(timeout);
+    }
+
+    const flushPromises = pendingEntries.map(async ([entityType, { data }]) => {
+      try {
+        await this.performSave(entityType, data);
+        console.log(`[AutoSaveService] Flushed pending save for ${entityType}`);
+      } catch (error) {
+        console.error(`[AutoSaveService] Failed to flush ${entityType} during shutdown:`, error);
+      }
+    });
+
+    await Promise.all(flushPromises);
+    this.saveQueue.clear();
+    console.log('[AutoSaveService] Shutdown complete');
   }
 
   private async performSave(entityType: string, data: unknown): Promise<void> {
