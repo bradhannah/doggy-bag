@@ -72,6 +72,7 @@ export function createBackupHandlerPOST() {
             incomes: body.incomes?.length || 0,
             payment_sources: body.payment_sources?.length || 0,
             categories: body.categories?.length || 0,
+            months: body.months?.length || 0,
           },
         }),
         {
@@ -114,6 +115,7 @@ export function createBackupHandlerValidate() {
                 incomes: body.incomes?.length || 0,
                 payment_sources: body.payment_sources?.length || 0,
                 categories: body.categories?.length || 0,
+                months: body.months?.length || 0,
                 export_date: body.export_date,
               }
             : null,

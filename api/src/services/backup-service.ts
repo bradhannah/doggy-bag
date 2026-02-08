@@ -84,7 +84,7 @@ export class BackupServiceImpl implements BackupService {
         throw new Error('Invalid backup data: ' + validation.errors.join(', '));
       }
 
-      // Restore data to actual entity files
+      // Restore entity files
       await Promise.all([
         this.storage.writeJSON('data/entities/bills.json', data.bills || []),
         this.storage.writeJSON('data/entities/incomes.json', data.incomes || []),
@@ -92,7 +92,22 @@ export class BackupServiceImpl implements BackupService {
         this.storage.writeJSON('data/entities/categories.json', data.categories || []),
       ]);
 
-      console.log('[BackupService] Import completed - restored all entities');
+      // Restore month files
+      if (data.months && data.months.length > 0) {
+        await this.storage.ensureDirectory('data/months');
+        await Promise.all(
+          data.months.map((monthData) =>
+            this.storage.writeJSON(`data/months/${monthData.month}.json`, monthData)
+          )
+        );
+        console.log(
+          `[BackupService] Import completed - restored all entities and ${data.months.length} months`
+        );
+      } else {
+        console.log(
+          '[BackupService] Import completed - restored all entities (no months in backup)'
+        );
+      }
     } catch (error) {
       console.error('[BackupService] Import failed:', error);
       throw error;
@@ -120,6 +135,12 @@ export class BackupServiceImpl implements BackupService {
 
     if (!data.categories || !Array.isArray(data.categories)) {
       errors.push('categories must be an array');
+    }
+
+    // months is optional for backward compatibility with older backups,
+    // but if present it must be an array
+    if (data.months !== undefined && !Array.isArray(data.months)) {
+      errors.push('months must be an array if provided');
     }
 
     return {
