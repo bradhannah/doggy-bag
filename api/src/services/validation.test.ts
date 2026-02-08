@@ -297,6 +297,19 @@ describe('ValidationService', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Payment source ID is required');
     });
+
+    test('rejects invalid payment_source_id format', () => {
+      const result = validation.validateBill({
+        name: 'Test',
+        amount: 10000,
+        billing_period: 'monthly',
+        day_of_month: 15,
+        payment_source_id: 'short',
+        category_id: '12345678901234567890',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Payment source ID must be a valid UUID');
+    });
   });
 
   describe('validateIncome', () => {
@@ -849,6 +862,21 @@ describe('ValidationService', () => {
     test('rejects invalid formats', () => {
       expect(validation.validateDate('2025-1-1')).toBe(false); // Not padded
       expect(validation.validateDate('not-a-date')).toBe(false);
+    });
+
+    test('rejects invalid calendar dates (date rollover)', () => {
+      expect(validation.validateDate('2025-02-30')).toBe(false); // Feb 30 doesn't exist
+      expect(validation.validateDate('2025-02-29')).toBe(false); // 2025 is not a leap year
+      expect(validation.validateDate('2025-04-31')).toBe(false); // April has 30 days
+      expect(validation.validateDate('2025-13-01')).toBe(false); // Month 13 doesn't exist
+      expect(validation.validateDate('2025-00-15')).toBe(false); // Month 0 doesn't exist
+      expect(validation.validateDate('2025-06-00')).toBe(false); // Day 0 doesn't exist
+    });
+
+    test('accepts valid edge-case calendar dates', () => {
+      expect(validation.validateDate('2025-02-28')).toBe(true); // Last day of Feb in non-leap year
+      expect(validation.validateDate('2025-01-31')).toBe(true); // Jan has 31 days
+      expect(validation.validateDate('2025-04-30')).toBe(true); // Apr has 30 days
     });
   });
 });

@@ -2,6 +2,8 @@
 
 import { StorageServiceImpl } from './storage';
 import type { StorageService } from './storage';
+import { ValidationServiceImpl } from './validation';
+import type { ValidationService } from './validation';
 import type { PaymentSource, ValidationResult } from '../types';
 
 export interface PaymentSourcesService {
@@ -21,9 +23,11 @@ export interface PaymentSourcesService {
 
 export class PaymentSourcesServiceImpl implements PaymentSourcesService {
   private storage: StorageService;
+  private validation: ValidationService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
+    this.validation = ValidationServiceImpl.getInstance();
   }
 
   public async getAll(): Promise<PaymentSource[]> {
@@ -191,91 +195,6 @@ export class PaymentSourcesServiceImpl implements PaymentSourcesService {
   }
 
   public validate(data: Partial<PaymentSource>): ValidationResult {
-    const errors: string[] = [];
-
-    if (!data.name?.trim()) {
-      errors.push('Name cannot be blank or whitespace only');
-    }
-
-    if (data.name && data.name.length > 100) {
-      errors.push('Name cannot exceed 100 characters');
-    }
-
-    if (
-      !data.type ||
-      !['bank_account', 'credit_card', 'line_of_credit', 'cash', 'investment'].includes(data.type)
-    ) {
-      errors.push(
-        'Payment source type must be bank_account, credit_card, line_of_credit, cash, or investment'
-      );
-    }
-
-    // pay_off_monthly is only valid for debt accounts (credit_card, line_of_credit)
-    if (data.pay_off_monthly === true) {
-      const debtTypes = ['credit_card', 'line_of_credit'];
-      if (data.type && !debtTypes.includes(data.type)) {
-        errors.push('pay_off_monthly can only be enabled for credit cards and lines of credit');
-      }
-    }
-
-    // track_payments_manually is only valid for debt accounts (credit_card, line_of_credit)
-    if (data.track_payments_manually === true) {
-      const debtTypes = ['credit_card', 'line_of_credit'];
-      if (data.type && !debtTypes.includes(data.type)) {
-        errors.push(
-          'track_payments_manually can only be enabled for credit cards and lines of credit'
-        );
-      }
-    }
-
-    // pay_off_monthly and track_payments_manually are mutually exclusive
-    if (data.pay_off_monthly === true && data.track_payments_manually === true) {
-      errors.push('pay_off_monthly and track_payments_manually cannot both be enabled');
-    }
-
-    // exclude_from_leftover is only valid for debt accounts (unless savings/investment)
-    if (data.exclude_from_leftover === true) {
-      const debtTypes = ['credit_card', 'line_of_credit'];
-      const isSavingsOrInvestment =
-        data.is_savings === true || data.is_investment === true || data.type === 'investment';
-      if (data.type && !debtTypes.includes(data.type) && !isSavingsOrInvestment) {
-        errors.push(
-          'exclude_from_leftover can only be enabled for credit cards, lines of credit, or savings/investment accounts'
-        );
-      }
-    }
-
-    // is_savings and is_investment are mutually exclusive
-    if (data.is_savings === true && data.is_investment === true) {
-      errors.push('An account cannot be both a savings account and an investment account');
-    }
-
-    // is_savings/is_investment are mutually exclusive with pay_off_monthly and track_payments_manually
-    if (
-      (data.is_savings === true || data.is_investment === true) &&
-      (data.pay_off_monthly === true || data.track_payments_manually === true)
-    ) {
-      errors.push('Savings and investment accounts cannot have payment tracking enabled');
-    }
-
-    // is_savings is only valid for bank_account type
-    if (data.is_savings === true && data.type && data.type !== 'bank_account') {
-      errors.push('is_savings can only be enabled for bank accounts');
-    }
-
-    // is_investment is only valid for bank_account type (investment type auto-sets this)
-    // TODO: Remove is_investment boolean validation after v0.4.0 - use type='investment' instead
-    if (
-      data.is_investment === true &&
-      data.type &&
-      !['bank_account', 'investment'].includes(data.type)
-    ) {
-      errors.push('is_investment can only be enabled for bank accounts or investment type');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return this.validation.validatePaymentSource(data);
   }
 }

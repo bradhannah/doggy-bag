@@ -107,6 +107,8 @@ export class ValidationServiceImpl implements ValidationService {
 
     if (!bill.payment_source_id) {
       errors.push('Payment source ID is required');
+    } else if (!this.validateID(bill.payment_source_id)) {
+      errors.push('Payment source ID must be a valid UUID');
     }
 
     // Validate category_id is required
@@ -407,8 +409,17 @@ export class ValidationServiceImpl implements ValidationService {
       return false;
     }
 
-    // Check if it's a valid date
-    const date = new Date(dateStr);
-    return !isNaN(date.getTime());
+    // Check if it's a valid calendar date (rejects Feb 30, Apr 31, etc.)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const parsed = new Date(dateStr);
+    if (isNaN(parsed.getTime())) {
+      return false;
+    }
+    // Verify parsed components match input to catch date rollover
+    return (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() + 1 === month &&
+      parsed.getUTCDate() === day
+    );
   }
 }

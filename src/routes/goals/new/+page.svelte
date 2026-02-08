@@ -170,92 +170,82 @@
         creatingBill = true;
         try {
           // Get or create the Savings Goals category
-          const categoryResponse = await fetch(
-            `${apiClient.getBaseUrl()}/api/categories/ensure-goals`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+          const category = await apiClient.post('/api/categories/ensure-goals', {});
+
+          // Determine amount and billing period
+          let amount: number;
+          let billingPeriod: 'weekly' | 'bi_weekly' | 'monthly';
+          let dayOfMonth: number | undefined;
+
+          if (hasOpenEndedSchedule) {
+            // Open-ended goal with custom schedule
+            amount = Math.round(parseFloat(customAmountDollars) * 100);
+            billingPeriod = customFrequency;
+            billFrequency =
+              customFrequency === 'weekly'
+                ? 'Weekly'
+                : customFrequency === 'bi_weekly'
+                  ? 'Every 2 Weeks'
+                  : 'Monthly';
+            if (customFrequency === 'monthly' && scheduleStartDate) {
+              dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
             }
-          );
-
-          if (categoryResponse.ok) {
-            const category = await categoryResponse.json();
-
-            // Determine amount and billing period
-            let amount: number;
-            let billingPeriod: 'weekly' | 'bi_weekly' | 'monthly';
-            let dayOfMonth: number | undefined;
-
-            if (hasOpenEndedSchedule) {
-              // Open-ended goal with custom schedule
-              amount = Math.round(parseFloat(customAmountDollars) * 100);
-              billingPeriod = customFrequency;
-              billFrequency =
-                customFrequency === 'weekly'
-                  ? 'Weekly'
-                  : customFrequency === 'bi_weekly'
-                    ? 'Every 2 Weeks'
-                    : 'Monthly';
-              if (customFrequency === 'monthly' && scheduleStartDate) {
-                dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
-              }
-            } else if (selectedSchedule === 'weekly') {
-              amount = weeklyPayment;
-              billingPeriod = 'weekly';
-              billFrequency = 'Weekly';
-            } else if (selectedSchedule === 'biweekly') {
-              amount = biweeklyPayment;
-              billingPeriod = 'bi_weekly';
-              billFrequency = 'Every 2 Weeks';
-            } else {
-              amount = monthlyPayment;
-              billingPeriod = 'monthly';
-              billFrequency = 'Monthly';
-              // For monthly bills, extract day of month from start date (1-31)
-              // Use split/parseInt to avoid timezone shifts
-              if (scheduleStartDate) {
-                dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
-              }
+          } else if (selectedSchedule === 'weekly') {
+            amount = weeklyPayment;
+            billingPeriod = 'weekly';
+            billFrequency = 'Weekly';
+          } else if (selectedSchedule === 'biweekly') {
+            amount = biweeklyPayment;
+            billingPeriod = 'bi_weekly';
+            billFrequency = 'Every 2 Weeks';
+          } else {
+            amount = monthlyPayment;
+            billingPeriod = 'monthly';
+            billFrequency = 'Monthly';
+            // For monthly bills, extract day of month from start date (1-31)
+            // Use split/parseInt to avoid timezone shifts
+            if (scheduleStartDate) {
+              dayOfMonth = parseInt(scheduleStartDate.split('-')[2], 10);
             }
-
-            billName = `Savings: ${name.trim()}`;
-            billAmount = amount;
-
-            await createBill({
-              name: billName,
-              amount: amount,
-              billing_period: billingPeriod,
-              start_date: scheduleStartDate,
-              day_of_month: dayOfMonth,
-              payment_source_id: linkedAccountId,
-              category_id: category.id,
-              goal_id: createdGoal.id,
-              payment_method: 'manual',
-            });
-
-            // If "include current month" is checked and start date is after today,
-            // create an immediate ad-hoc contribution for this month
-            if (includeCurrentMonth) {
-              const todayDate = new Date().toISOString().split('T')[0];
-              const startDateObj = new Date(scheduleStartDate);
-              const todayObj = new Date(todayDate);
-
-              // Only create ad-hoc if schedule starts in the future
-              if (startDateObj > todayObj) {
-                try {
-                  await apiClient.post(`/api/savings-goals/${createdGoal.id}/contribute`, {
-                    amount: amount,
-                    date: todayDate,
-                  });
-                } catch {
-                  // Ignore errors for optional current month payment
-                  console.warn('Failed to create current month contribution');
-                }
-              }
-            }
-
-            billCreated = true;
           }
+
+          billName = `Savings: ${name.trim()}`;
+          billAmount = amount;
+
+          await createBill({
+            name: billName,
+            amount: amount,
+            billing_period: billingPeriod,
+            start_date: scheduleStartDate,
+            day_of_month: dayOfMonth,
+            payment_source_id: linkedAccountId,
+            category_id: category.id,
+            goal_id: createdGoal.id,
+            payment_method: 'manual',
+          });
+
+          // If "include current month" is checked and start date is after today,
+          // create an immediate ad-hoc contribution for this month
+          if (includeCurrentMonth) {
+            const todayDate = new Date().toISOString().split('T')[0];
+            const startDateObj = new Date(scheduleStartDate);
+            const todayObj = new Date(todayDate);
+
+            // Only create ad-hoc if schedule starts in the future
+            if (startDateObj > todayObj) {
+              try {
+                await apiClient.post(`/api/savings-goals/${createdGoal.id}/contribute`, {
+                  amount: amount,
+                  date: todayDate,
+                });
+              } catch {
+                // Ignore errors for optional current month payment
+                console.warn('Failed to create current month contribution');
+              }
+            }
+          }
+
+          billCreated = true;
         } catch (billError) {
           // Bill creation failed, but goal was created - show partial success
           console.error('Failed to create bill:', billError);
