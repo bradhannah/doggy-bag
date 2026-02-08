@@ -652,9 +652,7 @@
     class="modal-overlay"
     on:click={closeSuccessModal}
     on:keydown={(e) => e.key === 'Escape' && closeSuccessModal()}
-    role="button"
-    tabindex="0"
-    aria-label="Close modal"
+    role="presentation"
   >
     <div
       class="modal-content success-modal"

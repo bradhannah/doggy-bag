@@ -1063,8 +1063,7 @@
     class="modal-overlay"
     on:click={() => (confirmModal = null)}
     on:keydown={(e) => e.key === 'Escape' && (confirmModal = null)}
-    role="button"
-    tabindex="0"
+    role="presentation"
   >
     <div
       class="modal-content"
@@ -1133,8 +1132,7 @@
     class="modal-overlay"
     on:click={closeBillSuccessModal}
     on:keydown={(e) => e.key === 'Escape' && closeBillSuccessModal()}
-    role="button"
-    tabindex="0"
+    role="presentation"
   >
     <div
       class="modal-content"

@@ -69,7 +69,7 @@
   }
 </script>
 
-<div class="modal-overlay" on:click={onClose} on:keydown={handleKeydown} role="button" tabindex="0">
+<div class="modal-overlay" on:click={onClose} on:keydown={handleKeydown} role="presentation">
   <div
     class="modal-content"
     on:click|stopPropagation

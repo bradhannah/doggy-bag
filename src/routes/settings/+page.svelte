@@ -24,6 +24,7 @@
   } from '../../stores/settings';
   import { themeMode } from '../../stores/theme';
   import type { ThemeMode as _ThemeMode } from '$lib/theme';
+  import ConfirmDialog from '../../components/shared/ConfirmDialog.svelte';
 
   // Store Tauri check result (reactive won't help since isTauri() doesn't depend on reactive values)
   const inTauri = isTauri();
@@ -47,6 +48,11 @@
   // Backup state
   let backupLoading = false;
   let fileInput: HTMLInputElement | null = null;
+
+  // Import confirmation state
+  let showImportConfirm = false;
+  let pendingImportData: Record<string, unknown> | null = null;
+  let pendingImportMessage = '';
 
   // Debug mode state
   let debugModeEnabled = false;
@@ -359,24 +365,16 @@
         return;
       }
 
-      // Confirm import
-      const confirmed = confirm(
-        `Import backup from ${data.export_date}?\n\n` +
-          `This will overwrite:\n` +
-          `- ${validationResult.summary.bills} bills\n` +
-          `- ${validationResult.summary.incomes} incomes\n` +
-          `- ${validationResult.summary.payment_sources} payment sources\n` +
-          `- ${validationResult.summary.categories} categories\n\n` +
-          `This action cannot be undone.`
-      );
-
-      if (!confirmed) return;
-
-      // Import the backup
-      await apiClient.post('/api/backup', data);
-      addToast('Backup imported successfully', 'success');
-      // Refresh the page to load new data
-      window.location.reload();
+      // Confirm import via dialog
+      pendingImportData = data;
+      pendingImportMessage =
+        `Import backup from ${data.export_date}? ` +
+        `This will overwrite: ${validationResult.summary.bills} bills, ` +
+        `${validationResult.summary.incomes} incomes, ` +
+        `${validationResult.summary.payment_sources} payment sources, ` +
+        `${validationResult.summary.categories} categories. ` +
+        `This action cannot be undone.`;
+      showImportConfirm = true;
     } catch {
       addToast('Failed to import backup: Invalid file format', 'error');
     } finally {
@@ -384,6 +382,28 @@
       // Reset file input
       input.value = '';
     }
+  }
+
+  async function confirmImportBackup() {
+    showImportConfirm = false;
+    if (!pendingImportData) return;
+
+    backupLoading = true;
+    try {
+      await apiClient.post('/api/backup', pendingImportData);
+      addToast('Backup imported successfully', 'success');
+      window.location.reload();
+    } catch {
+      addToast('Failed to import backup', 'error');
+    } finally {
+      backupLoading = false;
+      pendingImportData = null;
+    }
+  }
+
+  function cancelImportBackup() {
+    showImportConfirm = false;
+    pendingImportData = null;
   }
 
   // Go back to previous page
@@ -1165,6 +1185,17 @@
     </div>
   </div>
 {/if}
+
+<!-- Import Backup Confirmation -->
+<ConfirmDialog
+  open={showImportConfirm}
+  title="Import Backup"
+  message={pendingImportMessage}
+  confirmText="Import"
+  confirmStyle="danger"
+  on:confirm={confirmImportBackup}
+  on:cancel={cancelImportBackup}
+/>
 
 <style>
   .settings-page {

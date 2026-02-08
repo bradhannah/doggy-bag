@@ -672,8 +672,7 @@
     class="modal-overlay"
     on:click={closeConfirmModal}
     on:keydown={(e) => e.key === 'Escape' && closeConfirmModal()}
-    role="button"
-    tabindex="0"
+    role="presentation"
   >
     <div
       class="modal-content"
@@ -787,8 +786,7 @@
     class="modal-overlay"
     on:click={closeUnarchiveModal}
     on:keydown={(e) => e.key === 'Escape' && closeUnarchiveModal()}
-    role="button"
-    tabindex="0"
+    role="presentation"
   >
     <div
       class="modal-content"
