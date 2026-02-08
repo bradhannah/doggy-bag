@@ -134,7 +134,6 @@
   }
 
   // Calculate totals
-  $: _totalClaimed = claim.submissions.reduce((sum, s) => sum + s.amount_claimed, 0);
   $: totalReimbursed = claim.submissions.reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
   $: hasActivePlans = $activePlans.length > 0;
 </script>

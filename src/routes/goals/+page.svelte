@@ -74,15 +74,6 @@
     return false;
   });
 
-  // Group goals by status for display (reserved for future grouped view)
-  $: _groupedGoals = {
-    active: filteredGoals.filter((g) => g.status === 'saving'),
-    paused: filteredGoals.filter((g) => g.status === 'paused'),
-    completed: filteredGoals.filter((g) => g.status === 'bought'),
-    abandoned: filteredGoals.filter((g) => g.status === 'abandoned'),
-    archived: filteredGoals.filter((g) => g.status === 'archived'),
-  };
-
   onMount(async () => {
     await loadSavingsGoals();
     await loadScheduleSummaries();

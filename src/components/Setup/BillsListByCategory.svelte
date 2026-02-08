@@ -86,9 +86,6 @@
     return `rgba(100, 100, 100, ${alpha})`; // fallback
   }
 
-  // Total bill count (used for display but currently commented out)
-  $: _totalBills = billsByCategory.reduce((sum, group) => sum + group.bills.length, 0);
-
   // System categories that should be hidden from Manage view
   const HIDDEN_CATEGORY_NAMES = ['Uncategorized', 'Credit Card Payoffs'];
 

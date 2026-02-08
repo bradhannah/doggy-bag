@@ -86,9 +86,6 @@
     return `rgba(100, 100, 100, ${alpha})`; // fallback
   }
 
-  // Total income count (used for display but currently commented out)
-  $: _totalIncomes = incomesByCategory.reduce((sum, group) => sum + group.incomes.length, 0);
-
   // System categories that should be hidden from Manage view
   const HIDDEN_CATEGORY_NAMES = ['Uncategorized'];
 

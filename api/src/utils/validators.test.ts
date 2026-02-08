@@ -4,7 +4,6 @@ import {
   validateRequired,
   validateLength,
   validateAmount,
-  validateEmail,
   validateEnum,
   validateUUID,
   validateDate,
@@ -94,28 +93,6 @@ describe('validateAmount', () => {
 
   test('uses default field name', () => {
     expect(validateAmount(-1)).toBe('Amount must be greater than 0');
-  });
-});
-
-describe('validateEmail', () => {
-  test('returns null for valid email', () => {
-    expect(validateEmail('test@example.com', 'Email')).toBeNull();
-  });
-
-  test('returns error for email without @', () => {
-    expect(validateEmail('testexample.com', 'Email')).toBe('Email must be a valid email address');
-  });
-
-  test('returns error for email without domain', () => {
-    expect(validateEmail('test@', 'Email')).toBe('Email must be a valid email address');
-  });
-
-  test('returns error for email with spaces', () => {
-    expect(validateEmail('test @example.com', 'Email')).toBe('Email must be a valid email address');
-  });
-
-  test('uses default field name', () => {
-    expect(validateEmail('invalid')).toBe('Email must be a valid email address');
   });
 });
 

@@ -37,12 +37,17 @@ export class BackupServiceImpl implements BackupService {
     console.log('[BackupService] Exporting backup...');
 
     try {
-      const [bills, incomes, paymentSources, categories] = await Promise.all([
-        this.storage.readJSON<Bill[]>('data/entities/bills.json') || [],
-        this.storage.readJSON<Income[]>('data/entities/incomes.json') || [],
-        this.storage.readJSON<PaymentSource[]>('data/entities/payment-sources.json') || [],
-        this.storage.readJSON<Category[]>('data/entities/categories.json') || [],
+      const [billsRaw, incomesRaw, paymentSourcesRaw, categoriesRaw] = await Promise.all([
+        this.storage.readJSON<Bill[]>('data/entities/bills.json'),
+        this.storage.readJSON<Income[]>('data/entities/incomes.json'),
+        this.storage.readJSON<PaymentSource[]>('data/entities/payment-sources.json'),
+        this.storage.readJSON<Category[]>('data/entities/categories.json'),
       ]);
+
+      const bills = billsRaw || [];
+      const incomes = incomesRaw || [];
+      const paymentSources = paymentSourcesRaw || [];
+      const categories = categoriesRaw || [];
 
       // Load all month files
       const monthFiles = await this.storage.listFiles('data/months');

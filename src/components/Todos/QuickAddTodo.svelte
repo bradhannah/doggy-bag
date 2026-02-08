@@ -34,14 +34,7 @@
   $: isValid = title.trim().length > 0 && dueDate.length > 0;
 
   function handleSubmit() {
-    console.log('[QuickAddTodo] handleSubmit called', { title, dueDate, isValid });
     if (!isValid) {
-      console.warn('[QuickAddTodo] Validation failed:', {
-        title: title.trim(),
-        titleLength: title.trim().length,
-        dueDate,
-        dueDateLength: dueDate.length,
-      });
       return;
     }
 

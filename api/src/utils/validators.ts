@@ -55,16 +55,6 @@ export function validateAmount(value: number, fieldName: string = 'Amount'): str
   return null;
 }
 
-export function validateEmail(value: string, fieldName: string = 'Email'): string | null {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!emailRegex.test(value)) {
-    return `${fieldName} must be a valid email address`;
-  }
-
-  return null;
-}
-
 export function validateEnum<T extends string>(
   value: T,
   validValues: readonly T[],
