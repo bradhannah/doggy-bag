@@ -172,6 +172,64 @@ function createDetailedMonthStore() {
     currentMonth: null,
   });
 
+  // Helper: get the "paid/received" total from an item based on section type
+  type SectionType = 'bill' | 'income';
+  const getPaidAmount = (item: BillInstanceDetailed | IncomeInstanceDetailed): number =>
+    'total_paid' in item ? item.total_paid : (item as IncomeInstanceDetailed).total_received;
+
+  // Generic helper to update items within sections and recalculate subtotals
+  function updateSections(
+    sections: CategorySection[],
+    sectionType: SectionType,
+    mapFn: (
+      item: BillInstanceDetailed | IncomeInstanceDetailed
+    ) => BillInstanceDetailed | IncomeInstanceDetailed | null // null = filter out
+  ): CategorySection[] {
+    const mapped = sections.map((section) => {
+      const items = section.items as (BillInstanceDetailed | IncomeInstanceDetailed)[];
+      const newItems = items
+        .map(mapFn)
+        .filter((item): item is BillInstanceDetailed | IncomeInstanceDetailed => item !== null);
+
+      const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
+      const actual = newItems.reduce((sum, i) => sum + getPaidAmount(i), 0);
+
+      return {
+        ...section,
+        items: newItems as typeof section.items,
+        subtotal: { expected, actual },
+      };
+    });
+
+    return mapped;
+  }
+
+  // Generic helper to get the section key and apply an update
+  function updateSectionInState(
+    state: DetailedMonthState,
+    sectionType: SectionType,
+    mapFn: (
+      item: BillInstanceDetailed | IncomeInstanceDetailed
+    ) => BillInstanceDetailed | IncomeInstanceDetailed | null,
+    filterEmpty = false
+  ): DetailedMonthState {
+    if (!state.data) return state;
+
+    const sectionKey = sectionType === 'bill' ? 'billSections' : 'incomeSections';
+    let newSections = updateSections(state.data[sectionKey], sectionType, mapFn);
+    if (filterEmpty) {
+      newSections = newSections.filter((section) => section.items.length > 0);
+    }
+
+    return {
+      ...state,
+      data: {
+        ...state.data,
+        [sectionKey]: newSections,
+      },
+    };
+  }
+
   return {
     subscribe,
 
@@ -217,47 +275,23 @@ function createDetailedMonthStore() {
       totalPaid?: number,
       closedDate?: string
     ): void {
-      update((state) => {
-        if (!state.data) return state;
+      const today = getTodayDateString();
+      const resolvedCloseDate = closedDate ?? today;
 
-        const today = getTodayDateString();
-        const resolvedCloseDate = closedDate ?? today;
-
-        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
-          const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.map((item) => {
-            if (item.id === instanceId) {
-              const newTotalPaid = totalPaid !== undefined ? totalPaid : item.total_paid;
-              return {
-                ...item,
-                is_closed: isClosed,
-                closed_date: isClosed ? resolvedCloseDate : null,
-                total_paid: newTotalPaid,
-                remaining: Math.max(0, item.expected_amount - newTotalPaid),
-              };
-            }
-            return item;
-          });
-
-          // Recalculate subtotal
-          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
-          const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-
+      update((state) =>
+        updateSectionInState(state, 'bill', (item) => {
+          if (item.id !== instanceId) return item;
+          const billItem = item as BillInstanceDetailed;
+          const newTotalPaid = totalPaid !== undefined ? totalPaid : billItem.total_paid;
           return {
-            ...section,
-            items: newItems,
-            subtotal: { expected, actual },
+            ...billItem,
+            is_closed: isClosed,
+            closed_date: isClosed ? resolvedCloseDate : null,
+            total_paid: newTotalPaid,
+            remaining: Math.max(0, billItem.expected_amount - newTotalPaid),
           };
-        });
-
-        return {
-          ...state,
-          data: {
-            ...state.data,
-            billSections: newBillSections,
-          },
-        };
-      });
+        })
+      );
     },
 
     // Optimistic update for income close/reopen
@@ -268,194 +302,73 @@ function createDetailedMonthStore() {
       totalReceived?: number,
       closedDate?: string
     ): void {
-      update((state) => {
-        if (!state.data) return state;
+      const today = getTodayDateString();
+      const resolvedCloseDate = closedDate ?? today;
 
-        const today = getTodayDateString();
-        const resolvedCloseDate = closedDate ?? today;
-
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
-          const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.map((item) => {
-            if (item.id === instanceId) {
-              const newTotalReceived =
-                totalReceived !== undefined ? totalReceived : item.total_received;
-              return {
-                ...item,
-                is_closed: isClosed,
-                closed_date: isClosed ? resolvedCloseDate : null,
-                total_received: newTotalReceived,
-                remaining: Math.max(0, item.expected_amount - newTotalReceived),
-              };
-            }
-            return item;
-          });
-
-          // Recalculate subtotal
-          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
-          const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
-
+      update((state) =>
+        updateSectionInState(state, 'income', (item) => {
+          if (item.id !== instanceId) return item;
+          const incomeItem = item as IncomeInstanceDetailed;
+          const newTotalReceived =
+            totalReceived !== undefined ? totalReceived : incomeItem.total_received;
           return {
-            ...section,
-            items: newItems,
-            subtotal: { expected, actual },
+            ...incomeItem,
+            is_closed: isClosed,
+            closed_date: isClosed ? resolvedCloseDate : null,
+            total_received: newTotalReceived,
+            remaining: Math.max(0, incomeItem.expected_amount - newTotalReceived),
           };
-        });
-
-        return {
-          ...state,
-          data: {
-            ...state.data,
-            incomeSections: newIncomeSections,
-          },
-        };
-      });
+        })
+      );
     },
 
     // Optimistic update for expected amount change
     updateBillExpectedAmount(instanceId: string, newExpected: number): void {
-      update((state) => {
-        if (!state.data) return state;
-
-        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
-          const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.map((item) => {
-            if (item.id === instanceId) {
-              return {
-                ...item,
-                expected_amount: newExpected,
-                remaining: Math.max(0, newExpected - item.total_paid),
-              };
-            }
-            return item;
-          });
-
-          // Recalculate subtotal
-          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
-          const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-
+      update((state) =>
+        updateSectionInState(state, 'bill', (item) => {
+          if (item.id !== instanceId) return item;
+          const billItem = item as BillInstanceDetailed;
           return {
-            ...section,
-            items: newItems,
-            subtotal: { expected, actual },
+            ...billItem,
+            expected_amount: newExpected,
+            remaining: Math.max(0, newExpected - billItem.total_paid),
           };
-        });
-
-        return {
-          ...state,
-          data: {
-            ...state.data,
-            billSections: newBillSections,
-          },
-        };
-      });
+        })
+      );
     },
 
     // Optimistic update for income expected amount change
     updateIncomeExpectedAmount(instanceId: string, newExpected: number): void {
-      update((state) => {
-        if (!state.data) return state;
-
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
-          const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.map((item) => {
-            if (item.id === instanceId) {
-              return {
-                ...item,
-                expected_amount: newExpected,
-                remaining: Math.max(0, newExpected - item.total_received),
-              };
-            }
-            return item;
-          });
-
-          // Recalculate subtotal
-          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
-          const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
-
+      update((state) =>
+        updateSectionInState(state, 'income', (item) => {
+          if (item.id !== instanceId) return item;
+          const incomeItem = item as IncomeInstanceDetailed;
           return {
-            ...section,
-            items: newItems,
-            subtotal: { expected, actual },
+            ...incomeItem,
+            expected_amount: newExpected,
+            remaining: Math.max(0, newExpected - incomeItem.total_received),
           };
-        });
-
-        return {
-          ...state,
-          data: {
-            ...state.data,
-            incomeSections: newIncomeSections,
-          },
-        };
-      });
+        })
+      );
     },
 
     // Optimistic removal of a bill instance from the store
     removeBillInstance(instanceId: string): void {
-      update((state) => {
-        if (!state.data) return state;
-
-        const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
-          const billItems = section.items as BillInstanceDetailed[];
-          const newItems = billItems.filter((item) => item.id !== instanceId);
-
-          // Recalculate subtotal
-          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
-          const actual = newItems.reduce((sum, i) => sum + i.total_paid, 0);
-
-          return {
-            ...section,
-            items: newItems,
-            subtotal: { expected, actual },
-          };
-        });
-
-        // Filter out empty sections
-        const filteredBillSections = newBillSections.filter((section) => section.items.length > 0);
-
-        return {
-          ...state,
-          data: {
-            ...state.data,
-            billSections: filteredBillSections,
-          },
-        };
-      });
+      update((state) =>
+        updateSectionInState(state, 'bill', (item) => (item.id === instanceId ? null : item), true)
+      );
     },
 
     // Optimistic removal of an income instance from the store
     removeIncomeInstance(instanceId: string): void {
-      update((state) => {
-        if (!state.data) return state;
-
-        const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
-          const incomeItems = section.items as IncomeInstanceDetailed[];
-          const newItems = incomeItems.filter((item) => item.id !== instanceId);
-
-          // Recalculate subtotal
-          const expected = newItems.reduce((sum, i) => sum + i.expected_amount, 0);
-          const actual = newItems.reduce((sum, i) => sum + i.total_received, 0);
-
-          return {
-            ...section,
-            items: newItems,
-            subtotal: { expected, actual },
-          };
-        });
-
-        // Filter out empty sections
-        const filteredIncomeSections = newIncomeSections.filter(
-          (section) => section.items.length > 0
-        );
-
-        return {
-          ...state,
-          data: {
-            ...state.data,
-            incomeSections: filteredIncomeSections,
-          },
-        };
-      });
+      update((state) =>
+        updateSectionInState(
+          state,
+          'income',
+          (item) => (item.id === instanceId ? null : item),
+          true
+        )
+      );
     },
 
     // Optimistic update for occurrence notes (doesn't trigger full refresh)
@@ -468,67 +381,17 @@ function createDetailedMonthStore() {
       // Convert null to undefined to match Occurrence.notes type
       const normalizedNotes = notes ?? undefined;
 
-      update((state) => {
-        if (!state.data) return state;
-
-        if (type === 'bill') {
-          const newBillSections: CategorySection[] = state.data.billSections.map((section) => {
-            const billItems = section.items as BillInstanceDetailed[];
-            const newItems = billItems.map((item) => {
-              if (item.id === instanceId) {
-                return {
-                  ...item,
-                  occurrences: item.occurrences.map((occ) =>
-                    occ.id === occurrenceId ? { ...occ, notes: normalizedNotes } : occ
-                  ),
-                };
-              }
-              return item;
-            });
-
-            return {
-              ...section,
-              items: newItems,
-            };
-          });
-
+      update((state) =>
+        updateSectionInState(state, type, (item) => {
+          if (item.id !== instanceId) return item;
           return {
-            ...state,
-            data: {
-              ...state.data,
-              billSections: newBillSections,
-            },
+            ...item,
+            occurrences: item.occurrences.map((occ) =>
+              occ.id === occurrenceId ? { ...occ, notes: normalizedNotes } : occ
+            ),
           };
-        } else {
-          const newIncomeSections: CategorySection[] = state.data.incomeSections.map((section) => {
-            const incomeItems = section.items as IncomeInstanceDetailed[];
-            const newItems = incomeItems.map((item) => {
-              if (item.id === instanceId) {
-                return {
-                  ...item,
-                  occurrences: item.occurrences.map((occ) =>
-                    occ.id === occurrenceId ? { ...occ, notes: normalizedNotes } : occ
-                  ),
-                };
-              }
-              return item;
-            });
-
-            return {
-              ...section,
-              items: newItems,
-            };
-          });
-
-          return {
-            ...state,
-            data: {
-              ...state.data,
-              incomeSections: newIncomeSections,
-            },
-          };
-        }
-      });
+        })
+      );
     },
 
     clear(): void {
