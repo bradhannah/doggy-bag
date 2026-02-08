@@ -33,6 +33,7 @@ export interface StorageService {
 
 export class StorageServiceImpl implements StorageService {
   private static instance: StorageServiceImpl | null = null;
+  private writeLocks: Map<string, Promise<void>> = new Map();
 
   /**
    * Initialize the storage service with a base path.
@@ -121,6 +122,25 @@ export class StorageServiceImpl implements StorageService {
     return join(config.basePath, path);
   }
 
+  /**
+   * Serialize writes to the same file path to prevent race conditions.
+   * Each write waits for any previous write to the same file to complete.
+   */
+  private async withWriteLock(resolvedPath: string, fn: () => Promise<void>): Promise<void> {
+    const previous = this.writeLocks.get(resolvedPath) ?? Promise.resolve();
+    const current = previous.then(fn, fn); // Run fn even if previous failed
+    this.writeLocks.set(resolvedPath, current);
+
+    try {
+      await current;
+    } finally {
+      // Clean up if this is still the latest write for this path
+      if (this.writeLocks.get(resolvedPath) === current) {
+        this.writeLocks.delete(resolvedPath);
+      }
+    }
+  }
+
   public getConfig(): StorageConfig {
     return StorageServiceImpl.getConfig();
   }
@@ -139,19 +159,23 @@ export class StorageServiceImpl implements StorageService {
 
   public async writeFile<T>(path: string, data: T): Promise<void> {
     const resolvedPath = this.resolvePath(path);
-    await this.ensureDirectory(dirname(resolvedPath));
-    const content = JSON.stringify(data, null, 2);
-    await writeFile(resolvedPath, content, 'utf-8');
+    await this.withWriteLock(resolvedPath, async () => {
+      await this.ensureDirectory(dirname(resolvedPath));
+      const content = JSON.stringify(data, null, 2);
+      await writeFile(resolvedPath, content, 'utf-8');
+    });
   }
 
   public async deleteFile(path: string): Promise<void> {
     const resolvedPath = this.resolvePath(path);
-    try {
-      await unlink(resolvedPath);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[StorageService] Failed to delete file ${resolvedPath}:`, errorMessage);
-    }
+    await this.withWriteLock(resolvedPath, async () => {
+      try {
+        await unlink(resolvedPath);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[StorageService] Failed to delete file ${resolvedPath}:`, errorMessage);
+      }
+    });
   }
 
   public async fileExists(path: string): Promise<boolean> {
@@ -201,7 +225,9 @@ export class StorageServiceImpl implements StorageService {
   public async copyFile(src: string, dest: string): Promise<void> {
     const resolvedSrc = this.resolvePath(src);
     const resolvedDest = this.resolvePath(dest);
-    await this.ensureDirectory(dirname(resolvedDest));
-    await copyFile(resolvedSrc, resolvedDest);
+    await this.withWriteLock(resolvedDest, async () => {
+      await this.ensureDirectory(dirname(resolvedDest));
+      await copyFile(resolvedSrc, resolvedDest);
+    });
   }
 }

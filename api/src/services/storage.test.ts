@@ -257,6 +257,87 @@ describe('StorageService', () => {
     });
   });
 
+  describe('write locking', () => {
+    test('concurrent writes to same file are serialized', async () => {
+      const path = 'lock-test-serial.json';
+
+      // Launch two writes concurrently — second should see first's data replaced
+      const write1 = storage.writeFile(path, { step: 1 });
+      const write2 = storage.writeFile(path, { step: 2 });
+      await Promise.all([write1, write2]);
+
+      const result = await storage.readFile(path);
+      // Because writes are serialized, the second write always wins
+      expect(result).toEqual({ step: 2 });
+    });
+
+    test('concurrent writes to different files run independently', async () => {
+      const pathA = 'lock-test-a.json';
+      const pathB = 'lock-test-b.json';
+
+      await Promise.all([
+        storage.writeFile(pathA, { file: 'a' }),
+        storage.writeFile(pathB, { file: 'b' }),
+      ]);
+
+      const [resultA, resultB] = await Promise.all([
+        storage.readFile(pathA),
+        storage.readFile(pathB),
+      ]);
+      expect(resultA).toEqual({ file: 'a' });
+      expect(resultB).toEqual({ file: 'b' });
+    });
+
+    test('write lock cleans up after all writes complete', async () => {
+      const path = 'lock-cleanup.json';
+
+      await storage.writeFile(path, { cleanup: true });
+
+      // Access the private writeLocks map to verify cleanup
+      const impl = storage as unknown as { writeLocks: Map<string, Promise<void>> };
+      // After await, the lock for this path should have been cleaned up
+      expect(impl.writeLocks.size).toBe(0);
+    });
+
+    test('delete is serialized through write lock', async () => {
+      const path = 'lock-delete.json';
+
+      // Write then immediately delete concurrently
+      await storage.writeFile(path, { toDelete: true });
+      const write = storage.writeFile(path, { replaced: true });
+      const del = storage.deleteFile(path);
+      await Promise.all([write, del]);
+
+      // Delete ran after write, so file should be gone
+      const exists = await storage.fileExists(path);
+      expect(exists).toBe(false);
+    });
+
+    test('error in one write does not block subsequent writes', async () => {
+      // We can't easily force writeFile to error internally, but we can
+      // verify that after a failed delete (non-existent), writes still work
+      const path = 'lock-error-recovery.json';
+
+      await storage.deleteFile('non-existent-for-lock-test.json');
+      await storage.writeFile(path, { recovered: true });
+
+      const result = await storage.readFile(path);
+      expect(result).toEqual({ recovered: true });
+    });
+
+    test('many concurrent writes to same file all complete in order', async () => {
+      const path = 'lock-many-writes.json';
+      const count = 20;
+
+      const writes = Array.from({ length: count }, (_, i) => storage.writeFile(path, { index: i }));
+      await Promise.all(writes);
+
+      const result = await storage.readFile<{ index: number }>(path);
+      // Last write should win since they're serialized in order
+      expect(result).toEqual({ index: count - 1 });
+    });
+  });
+
   describe('path resolution', () => {
     test('handles data/ prefix paths', async () => {
       const path = 'entities/test-entity.json';
