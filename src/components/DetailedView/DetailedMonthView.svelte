@@ -239,6 +239,31 @@
     (section: unknown) => (section as IncomeSection).category.name
   ) as IncomeSection[];
 
+  // Filter insurance sections through the same filter pipeline
+  $: filteredInsuranceExpenseSection = (() => {
+    const raw = $detailedMonthData?.insuranceExpenseSection;
+    if (!raw || raw.items.length === 0) return null;
+    const filtered = filterSectionsByQuery(
+      [raw] as unknown as { items: { name?: string | null }[] }[],
+      filterQuery,
+      billScope,
+      () => 'Insurance Expenses'
+    );
+    return (filtered.length > 0 ? filtered[0] : null) as typeof raw | null;
+  })();
+
+  $: filteredInsuranceReimbursementSection = (() => {
+    const raw = $detailedMonthData?.insuranceReimbursementSection;
+    if (!raw || raw.items.length === 0) return null;
+    const filtered = filterSectionsByQuery(
+      [raw] as unknown as { items: { name?: string | null }[] }[],
+      filterQuery,
+      incomeScope,
+      () => 'Insurance Reimbursements'
+    );
+    return (filtered.length > 0 ? filtered[0] : null) as typeof raw | null;
+  })();
+
   $: billMatchCount = filteredActiveBillSections.reduce(
     (sum, section) => sum + section.items.length,
     0
@@ -255,8 +280,15 @@
     (sum, section) => sum + section.items.length,
     0
   );
+  $: insuranceExpenseMatchCount = filteredInsuranceExpenseSection?.items.length ?? 0;
+  $: insuranceReimbursementMatchCount = filteredInsuranceReimbursementSection?.items.length ?? 0;
   $: totalMatchCount =
-    billMatchCount + incomeMatchCount + completedBillMatchCount + completedIncomeMatchCount;
+    billMatchCount +
+    incomeMatchCount +
+    completedBillMatchCount +
+    completedIncomeMatchCount +
+    insuranceExpenseMatchCount +
+    insuranceReimbursementMatchCount;
   $: filterHasQuery = filterQuery.trim().length > 0;
   $: hasMatches = totalMatchCount > 0;
 
@@ -573,7 +605,7 @@
                   {/each}
 
                   <!-- Insurance Expenses Section (before completed bills) -->
-                  {#if $detailedMonthData.insuranceExpenseSection && $detailedMonthData.insuranceExpenseSection.items.length > 0}
+                  {#if filteredInsuranceExpenseSection && filteredInsuranceExpenseSection.items.length > 0}
                     <div class="insurance-divider">
                       <svg
                         class="insurance-icon"
@@ -593,7 +625,7 @@
                       <span>Insurance Expenses</span>
                     </div>
                     <CategorySection
-                      section={$detailedMonthData.insuranceExpenseSection}
+                      section={filteredInsuranceExpenseSection}
                       type="bills"
                       {month}
                       readOnly={true}
@@ -657,7 +689,7 @@
                   {/each}
 
                   <!-- Insurance Reimbursements Section (before completed income) -->
-                  {#if $detailedMonthData.insuranceReimbursementSection && $detailedMonthData.insuranceReimbursementSection.items.length > 0}
+                  {#if filteredInsuranceReimbursementSection && filteredInsuranceReimbursementSection.items.length > 0}
                     <div class="insurance-divider">
                       <svg
                         class="insurance-icon"
@@ -677,7 +709,7 @@
                       <span>Insurance Reimbursements</span>
                     </div>
                     <CategorySection
-                      section={$detailedMonthData.insuranceReimbursementSection}
+                      section={filteredInsuranceReimbursementSection}
                       type="income"
                       {month}
                       readOnly={true}

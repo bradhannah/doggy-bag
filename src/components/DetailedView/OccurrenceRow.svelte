@@ -19,6 +19,7 @@
   export let month: string;
   export let instanceId: string;
   export let itemName: string = '';
+  export let defaultPaymentSourceId: string | undefined = undefined;
   export let type: 'bill' | 'income' = 'bill';
   export let readOnly: boolean = false;
   export let isPayoffBill: boolean = false;
@@ -478,7 +479,7 @@
   expectedAmount={occurrence.expected_amount}
   expectedDate={occurrence.expected_date}
   existingNotes={occurrence.notes ?? ''}
-  existingPaymentSourceId={occurrence.payment_source_id}
+  existingPaymentSourceId={occurrence.payment_source_id ?? defaultPaymentSourceId}
   on:close={handleEditCloseModalClose}
   on:saved={handleEditCloseModalSaved}
   on:closed={handleEditCloseModalClosed}

@@ -34,9 +34,14 @@
       return;
     }
 
-    if (event.key === 'Enter' && scopeOpen) {
+    if (event.key === 'Enter') {
       event.preventDefault();
-      scopeOpen = false;
+      if (scopeOpen) {
+        scopeOpen = false;
+      } else {
+        // Close the filter bar when Enter is pressed outside scope dropdown
+        dispatch('escape');
+      }
     }
   }
 

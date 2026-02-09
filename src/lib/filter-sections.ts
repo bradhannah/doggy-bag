@@ -34,7 +34,9 @@ export function filterSectionsByQuery<T extends SectionWithItems>(
 ): T[] {
   const trimmedQuery = query.trim();
   if (!trimmedQuery) {
-    return sections;
+    // Return a shallow copy so Svelte detects a new array reference
+    // and re-renders correctly when clearing a filter query.
+    return [...sections];
   }
 
   return sections

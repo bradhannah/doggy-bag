@@ -260,6 +260,7 @@
         {month}
         instanceId={item.id}
         itemName={item.name}
+        defaultPaymentSourceId={item.payment_source?.id}
         {type}
         {readOnly}
         {isPayoffBill}
