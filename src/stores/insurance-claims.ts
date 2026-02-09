@@ -75,6 +75,7 @@ export interface ClaimData {
   total_amount: number;
   description?: string;
   provider_name?: string;
+  expected_reimbursement?: number;
 }
 
 // Data for creating expected insurance expenses
@@ -292,6 +293,36 @@ export async function convertExpectedToClaim(
     return claim;
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to convert expected expense to claim');
+    store.update((s) => ({ ...s, loading: false, error: err.message }));
+    throw err;
+  }
+}
+
+// ============================================================================
+// Bill Payment
+// ============================================================================
+
+export async function markBillPaid(id: string, paid: boolean): Promise<InsuranceClaim> {
+  store.update((s) => ({ ...s, loading: true, error: null }));
+
+  try {
+    const response = await fetch(apiUrl(`/api/insurance-claims/${id}/bill-paid`), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paid }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update bill payment status');
+    }
+
+    const claim = (await response.json()) as InsuranceClaim;
+    await loadInsuranceClaims();
+    await loadClaimsSummary();
+    return claim;
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error('Failed to update bill payment status');
     store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }

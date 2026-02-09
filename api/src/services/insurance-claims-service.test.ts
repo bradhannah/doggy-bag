@@ -1081,4 +1081,197 @@ describe('InsuranceClaimsService', () => {
       expect(updatedSub2!.amount_claimed).toBe(6000); // $100 - $40 = $60
     });
   });
+
+  // ============================================================================
+  // Bill Paid Feature (Feature 1)
+  // ============================================================================
+
+  describe('Mark Bill as Paid', () => {
+    test('should mark a claim bill as paid', async () => {
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 15000,
+      });
+
+      expect(claim.bill_paid).toBe(false);
+      expect(claim.bill_paid_date).toBeUndefined();
+
+      const updated = await service.markBillPaid(claim.id, true);
+
+      expect(updated).not.toBeNull();
+      expect(updated!.bill_paid).toBe(true);
+      expect(updated!.bill_paid_date).toBeDefined();
+      // bill_paid_date should be a YYYY-MM-DD string
+      expect(updated!.bill_paid_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    test('should unmark a claim bill as unpaid', async () => {
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 15000,
+      });
+
+      // Mark as paid first
+      await service.markBillPaid(claim.id, true);
+
+      // Then unmark
+      const updated = await service.markBillPaid(claim.id, false);
+
+      expect(updated).not.toBeNull();
+      expect(updated!.bill_paid).toBe(false);
+      expect(updated!.bill_paid_date).toBeUndefined();
+    });
+
+    test('should reject marking expected expenses as paid', async () => {
+      const expected = await service.createExpectedExpense({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        appointment_date: '2025-07-15',
+        expected_cost: 15000,
+        expected_reimbursement: 12000,
+        payment_source_id: 'some-source-id',
+      });
+
+      await expect(service.markBillPaid(expected.id, true)).rejects.toThrow(
+        'Cannot mark expected expenses as paid'
+      );
+    });
+
+    test('should return null for non-existent claim', async () => {
+      const result = await service.markBillPaid('non-existent-id', true);
+      expect(result).toBeNull();
+    });
+
+    test('should persist bill_paid across reads', async () => {
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 15000,
+      });
+
+      await service.markBillPaid(claim.id, true);
+
+      // Re-read from a fresh service instance
+      const freshService = new InsuranceClaimsServiceImpl();
+      const fetched = await freshService.getById(claim.id);
+
+      expect(fetched).not.toBeNull();
+      expect(fetched!.bill_paid).toBe(true);
+      expect(fetched!.bill_paid_date).toBeDefined();
+    });
+  });
+
+  // ============================================================================
+  // Expected Reimbursement on Claims (Feature 2)
+  // ============================================================================
+
+  describe('Expected Reimbursement', () => {
+    test('should create claim with expected_reimbursement', async () => {
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 15000,
+        expected_reimbursement: 12000,
+      });
+
+      expect(claim.expected_reimbursement).toBe(12000);
+    });
+
+    test('should create claim without expected_reimbursement', async () => {
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 15000,
+      });
+
+      // Should be undefined or falsy when not provided
+      expect(claim.expected_reimbursement).toBeFalsy();
+    });
+
+    test('should update expected_reimbursement on existing claim', async () => {
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2025-06-15',
+        total_amount: 15000,
+      });
+
+      const updated = await service.update(claim.id, {
+        expected_reimbursement: 10000,
+      });
+
+      expect(updated).not.toBeNull();
+      expect(updated!.expected_reimbursement).toBe(10000);
+    });
+
+    test('should preserve expected_reimbursement when converting expected to claim', async () => {
+      const expected = await service.createExpectedExpense({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        appointment_date: '2025-07-15',
+        expected_cost: 15000,
+        expected_reimbursement: 12000,
+        payment_source_id: 'some-source-id',
+      });
+
+      expect(expected.expected_reimbursement).toBe(12000);
+
+      const converted = await service.convertExpectedToClaim(expected.id, {
+        actual_cost: 16000,
+      });
+
+      expect(converted.expected_reimbursement).toBe(12000);
+    });
+  });
+
+  // ============================================================================
+  // Convert Expected to Claim - Bill Paid Auto-Set
+  // ============================================================================
+
+  describe('Convert Expected to Claim - Bill Paid', () => {
+    test('should auto-set bill_paid when expected expense had payment_source_id', async () => {
+      const expected = await service.createExpectedExpense({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        appointment_date: '2025-07-15',
+        expected_cost: 15000,
+        expected_reimbursement: 12000,
+        payment_source_id: 'some-source-id',
+      });
+
+      expect(expected.bill_paid).toBe(false);
+
+      const converted = await service.convertExpectedToClaim(expected.id, {
+        actual_cost: 16000,
+      });
+
+      expect(converted.bill_paid).toBe(true);
+      expect(converted.bill_paid_date).toBeDefined();
+      expect(converted.bill_paid_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(converted.status).toBe('draft');
+      expect(converted.is_expected).toBe(false);
+    });
+
+    test('should create expected expense with bill_paid false', async () => {
+      const expected = await service.createExpectedExpense({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        appointment_date: '2025-07-15',
+        expected_cost: 15000,
+        expected_reimbursement: 12000,
+        payment_source_id: 'some-source-id',
+      });
+
+      expect(expected.bill_paid).toBe(false);
+      expect(expected.is_expected).toBe(true);
+      expect(expected.status).toBe('expected');
+    });
+  });
 });

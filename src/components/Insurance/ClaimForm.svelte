@@ -21,6 +21,9 @@
   let provider_name = editingItem?.provider_name || '';
   let service_date = editingItem?.service_date || '';
   let amountDollars = editingItem ? (editingItem.total_amount / 100).toFixed(2) : '';
+  let expectedReimbursementDollars = editingItem?.expected_reimbursement
+    ? (editingItem.expected_reimbursement / 100).toFixed(2)
+    : '';
 
   let error = '';
   let saving = false;
@@ -33,6 +36,7 @@
     provider_name: string;
     service_date: string;
     amountDollars: string;
+    expectedReimbursementDollars: string;
   }
 
   let initialValues: InitialValues = {
@@ -42,6 +46,9 @@
     provider_name: editingItem?.provider_name || '',
     service_date: editingItem?.service_date || '',
     amountDollars: editingItem ? (editingItem.total_amount / 100).toFixed(2) : '',
+    expectedReimbursementDollars: editingItem?.expected_reimbursement
+      ? (editingItem.expected_reimbursement / 100).toFixed(2)
+      : '',
   };
 
   // Exported function to check if form has unsaved changes
@@ -52,7 +59,8 @@
       description !== initialValues.description ||
       provider_name !== initialValues.provider_name ||
       service_date !== initialValues.service_date ||
-      amountDollars !== initialValues.amountDollars
+      amountDollars !== initialValues.amountDollars ||
+      expectedReimbursementDollars !== initialValues.expectedReimbursementDollars
     );
   }
 
@@ -69,6 +77,9 @@
     provider_name = editingItem.provider_name || '';
     service_date = editingItem.service_date;
     amountDollars = (editingItem.total_amount / 100).toFixed(2);
+    expectedReimbursementDollars = editingItem.expected_reimbursement
+      ? (editingItem.expected_reimbursement / 100).toFixed(2)
+      : '';
     // Update initial values
     initialValues = {
       family_member_id: editingItem.family_member_id,
@@ -77,6 +88,9 @@
       provider_name: editingItem.provider_name || '',
       service_date: editingItem.service_date,
       amountDollars: (editingItem.total_amount / 100).toFixed(2),
+      expectedReimbursementDollars: editingItem.expected_reimbursement
+        ? (editingItem.expected_reimbursement / 100).toFixed(2)
+        : '',
     };
   }
 
@@ -119,6 +133,11 @@
       }
       if (provider_name.trim()) {
         claimData.provider_name = provider_name.trim();
+      }
+
+      const reimbursementCents = dollarsToCents(expectedReimbursementDollars);
+      if (reimbursementCents > 0) {
+        claimData.expected_reimbursement = reimbursementCents;
       }
 
       if (editingItem) {
@@ -211,6 +230,21 @@
       />
     </div>
     <div class="help-text">Total cost of the service/item</div>
+  </div>
+
+  <div class="form-group">
+    <label for="claim-expected-reimbursement">Expected Reimbursement</label>
+    <div class="amount-input-wrapper">
+      <span class="currency-prefix">$</span>
+      <input
+        id="claim-expected-reimbursement"
+        type="text"
+        bind:value={expectedReimbursementDollars}
+        placeholder="0.00"
+        disabled={saving || !canSubmit}
+      />
+    </div>
+    <div class="help-text">Optional: Estimated insurance payout</div>
   </div>
 
   <div class="form-group">

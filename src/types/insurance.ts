@@ -95,6 +95,9 @@ export interface InsuranceClaim {
   scheduled_at?: string;
   converted_from_expected_at?: string;
   payment_source_id?: string;
+  // Bill payment tracking (independent of submission status)
+  bill_paid: boolean;
+  bill_paid_date?: string;
   created_at: string;
   updated_at: string;
 }

@@ -42,7 +42,7 @@ export interface InsuranceClaimsService {
       InsuranceClaim,
       'family_member_id' | 'category_id' | 'service_date' | 'total_amount'
     > &
-      Partial<Pick<InsuranceClaim, 'description' | 'provider_name'>>
+      Partial<Pick<InsuranceClaim, 'description' | 'provider_name' | 'expected_reimbursement'>>
   ): Promise<InsuranceClaim>;
   update(
     id: string,
@@ -55,6 +55,7 @@ export interface InsuranceClaimsService {
         | 'provider_name'
         | 'service_date'
         | 'total_amount'
+        | 'expected_reimbursement'
       >
     >
   ): Promise<InsuranceClaim | null>;
@@ -97,6 +98,9 @@ export interface InsuranceClaimsService {
     >
   ): Promise<ClaimSubmission | null>;
   deleteSubmission(claimId: string, submissionId: string): Promise<void>;
+
+  // Bill Payment (independent of submission status)
+  markBillPaid(id: string, paid: boolean): Promise<InsuranceClaim | null>;
 
   // Expected Expenses (scheduled future insurance appointments)
   // Budget entries are virtual - injected by MonthsService, not stored
@@ -248,7 +252,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       InsuranceClaim,
       'family_member_id' | 'category_id' | 'service_date' | 'total_amount'
     > &
-      Partial<Pick<InsuranceClaim, 'description' | 'provider_name'>>
+      Partial<Pick<InsuranceClaim, 'description' | 'provider_name' | 'expected_reimbursement'>>
   ): Promise<InsuranceClaim> {
     try {
       // Validate
@@ -325,6 +329,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         documents: [],
         submissions,
         is_expected: false, // Regular claims are not expected expenses
+        expected_reimbursement: data.expected_reimbursement, // Optional estimated reimbursement
+        bill_paid: false,
         created_at: now,
         updated_at: now,
       };
@@ -357,6 +363,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         | 'provider_name'
         | 'service_date'
         | 'total_amount'
+        | 'expected_reimbursement'
       >
     >
   ): Promise<InsuranceClaim | null> {
@@ -895,6 +902,52 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   }
 
   // ============================================================================
+  // Bill Payment Methods
+  // ============================================================================
+
+  /**
+   * Mark a claim's bill as paid or unpaid (independent of submission status).
+   * This allows users to signal that the provider bill has been paid
+   * before the insurance claims process has begun.
+   */
+  public async markBillPaid(id: string, paid: boolean): Promise<InsuranceClaim | null> {
+    try {
+      const claims = await this.getAllRaw();
+      const index = claims.findIndex((c) => c.id === id);
+
+      if (index === -1) {
+        console.warn(`[InsuranceClaimsService] Claim ${id} not found`);
+        return null;
+      }
+
+      const claim = claims[index];
+
+      // Don't allow marking expected expenses as paid (they should be converted first)
+      if (claim.is_expected) {
+        throw new Error('Cannot mark expected expenses as paid - convert to claim first');
+      }
+
+      const now = new Date().toISOString();
+      claims[index] = {
+        ...claim,
+        bill_paid: paid,
+        bill_paid_date: paid ? now.split('T')[0] : undefined,
+        updated_at: now,
+      };
+
+      await this.storage.writeJSON(STORAGE_PATH, claims);
+
+      console.log(
+        `[InsuranceClaimsService] Claim #${claim.claim_number} bill marked as ${paid ? 'paid' : 'unpaid'}`
+      );
+      return claims[index];
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to mark bill paid:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
   // Expected Expense Methods
   // Budget entries (bill/income) are VIRTUAL - they are injected by MonthsService
   // when loading month data, based on claims in that month. No physical instances
@@ -971,6 +1024,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         expected_reimbursement: data.expected_reimbursement,
         scheduled_at: now,
         payment_source_id: data.payment_source_id,
+        bill_paid: false,
         created_at: now,
         updated_at: now,
       };
@@ -1165,6 +1219,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       }
 
       // Update the claim
+      // Auto-mark bill as paid if the expected expense had a payment source set
+      const autoPaid = !!claim.payment_source_id;
       claims[index] = {
         ...claim,
         claim_number: claimNumber,
@@ -1173,6 +1229,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         is_expected: false,
         converted_from_expected_at: now,
         submissions,
+        bill_paid: autoPaid,
+        bill_paid_date: autoPaid ? now.split('T')[0] : undefined,
         updated_at: now,
       };
 

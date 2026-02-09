@@ -8,6 +8,7 @@
     createSubmission,
     loadInsuranceClaims,
     loadClaimsSummary,
+    markBillPaid,
     type SubmissionData,
   } from '../../stores/insurance-claims';
   import { activePlans } from '../../stores/insurance-plans';
@@ -31,6 +32,7 @@
   let submitting = false;
   let showDeleteConfirm = false;
   let deleting = false;
+  let togglingBillPaid = false;
 
   function getStatusColor(status: ClaimStatus): string {
     switch (status) {
@@ -81,6 +83,19 @@
 
   function cancelDelete() {
     showDeleteConfirm = false;
+  }
+
+  async function toggleBillPaid() {
+    togglingBillPaid = true;
+    try {
+      await markBillPaid(claim.id, !claim.bill_paid);
+      success(claim.bill_paid ? 'Bill marked as unpaid' : 'Bill marked as paid');
+      dispatch('updated');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to update bill status');
+    } finally {
+      togglingBillPaid = false;
+    }
   }
 
   // Calculate remaining uncovered amount for new submissions
@@ -161,6 +176,38 @@
           </svg>
           Convert to Claim
         </button>
+      {:else}
+        <button
+          class="btn btn-sm"
+          class:btn-bill-paid={claim.bill_paid}
+          class:btn-secondary={!claim.bill_paid}
+          on:click={toggleBillPaid}
+          disabled={togglingBillPaid}
+        >
+          {#if claim.bill_paid}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M5 13l4 4L19 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            Bill Paid
+          {:else}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M12 6v12M6 12h12"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+            Mark Paid
+          {/if}
+        </button>
       {/if}
       <button class="btn btn-secondary btn-sm" on:click={onEdit}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -227,7 +274,7 @@
   </div>
 
   <!-- Financial Summary -->
-  <div class="financial-summary">
+  <div class="financial-summary" class:has-estimate={!!claim.expected_reimbursement}>
     <div class="summary-item">
       <span class="summary-label">Total Amount</span>
       <span class="summary-value">{formatCurrency(claim.total_amount)}</span>
@@ -242,6 +289,12 @@
         >{formatCurrency(claim.total_amount - totalReimbursed)}</span
       >
     </div>
+    {#if claim.expected_reimbursement}
+      <div class="summary-item">
+        <span class="summary-label">Expected Return</span>
+        <span class="summary-value accent">{formatCurrency(claim.expected_reimbursement)}</span>
+      </div>
+    {/if}
   </div>
 
   <!-- Submissions Section -->
@@ -422,6 +475,10 @@
     gap: var(--space-3);
   }
 
+  .financial-summary.has-estimate {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
   .summary-item {
     background: var(--bg-elevated);
     border-radius: var(--radius-sm);
@@ -450,6 +507,10 @@
 
   .summary-value.warning {
     color: var(--warning);
+  }
+
+  .summary-value.accent {
+    color: var(--accent);
   }
 
   .submissions-section {
@@ -604,5 +665,15 @@
 
   .btn-danger:hover:not(:disabled) {
     background: var(--error-hover);
+  }
+
+  .btn-bill-paid {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid var(--success-border);
+  }
+
+  .btn-bill-paid:hover:not(:disabled) {
+    background: var(--success-muted);
   }
 </style>

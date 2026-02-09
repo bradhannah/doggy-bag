@@ -2659,6 +2659,13 @@ export class MonthsServiceImpl implements MonthsService {
           }
         } else {
           // Actual claim: bill for total_amount, one income per claim with N occurrences
+          // Bill is paid if: explicitly marked as paid, OR claim is in_progress/closed (submission-driven)
+          const billIsPaid =
+            claim.bill_paid || claim.status === 'in_progress' || claim.status === 'closed';
+          const billPaidDate = claim.bill_paid
+            ? (claim.bill_paid_date ?? claim.service_date)
+            : claim.service_date;
+
           billInstances.push({
             id: `virtual-bill-${claim.id}`,
             bill_id: null,
@@ -2671,20 +2678,17 @@ export class MonthsServiceImpl implements MonthsService {
                 sequence: 1,
                 expected_date: claim.service_date,
                 expected_amount: claim.total_amount,
-                // Bill is paid once we start submitting to insurers (in_progress or closed)
-                is_closed: claim.status === 'in_progress' || claim.status === 'closed',
-                closed_date:
-                  claim.status === 'in_progress' || claim.status === 'closed'
-                    ? claim.service_date
-                    : undefined,
+                // Bill is paid once user marks it paid OR we start submitting to insurers
+                is_closed: billIsPaid,
+                closed_date: billIsPaid ? billPaidDate : undefined,
                 is_adhoc: false,
                 created_at: claim.created_at,
                 updated_at: claim.updated_at,
               },
             ],
             is_default: false,
-            // Bill instance is paid once we start submitting to insurers
-            is_closed: claim.status === 'in_progress' || claim.status === 'closed',
+            // Bill instance is paid once user marks it paid OR we start submitting to insurers
+            is_closed: billIsPaid,
             is_adhoc: true,
             is_insurance_expense: true,
             is_expected_claim: false,
@@ -2738,8 +2742,73 @@ export class MonthsServiceImpl implements MonthsService {
             });
           }
 
-          // Create income instance for this claim if it has submissions
-          if (submissionOccurrences.length > 0) {
+          // Create income instance for this claim
+          // Use actual submission data if any submissions have been resolved,
+          // otherwise fall back to expected_reimbursement if available
+          const hasAnyResolvedSubmission = claim.submissions.some(
+            (s) => s.status === 'approved' || s.status === 'denied'
+          );
+
+          if (submissionOccurrences.length > 0 && hasAnyResolvedSubmission) {
+            // Use actual submission-based income (existing behavior)
+            const totalExpectedAmount = submissionOccurrences.reduce(
+              (sum, occ) => sum + occ.expected_amount,
+              0
+            );
+            const allClosed = submissionOccurrences.every((occ) => occ.is_closed);
+
+            incomeInstances.push({
+              id: `virtual-income-${claim.id}`,
+              income_id: null,
+              month,
+              billing_period: 'monthly',
+              expected_amount: totalExpectedAmount,
+              occurrences: submissionOccurrences,
+              is_default: false,
+              is_closed: allClosed,
+              is_adhoc: true,
+              is_insurance_reimbursement: true,
+              is_expected_claim: false,
+              is_virtual: true,
+              claim_id: claim.id,
+              name: claimLabel,
+              created_at: claim.created_at,
+              updated_at: claim.updated_at,
+            });
+          } else if (claim.expected_reimbursement && claim.expected_reimbursement > 0) {
+            // No submissions resolved yet - use expected_reimbursement as estimate
+            incomeInstances.push({
+              id: `virtual-income-${claim.id}`,
+              income_id: null,
+              month,
+              billing_period: 'monthly',
+              expected_amount: claim.expected_reimbursement,
+              occurrences: [
+                {
+                  id: `virtual-occ-income-expected-${claim.id}`,
+                  sequence: 1,
+                  expected_date: claim.service_date,
+                  expected_amount: claim.expected_reimbursement,
+                  is_closed: false,
+                  is_adhoc: false,
+                  created_at: claim.created_at,
+                  updated_at: claim.updated_at,
+                  claim_id: claim.id,
+                },
+              ],
+              is_default: false,
+              is_closed: false,
+              is_adhoc: true,
+              is_insurance_reimbursement: true,
+              is_expected_claim: false,
+              is_virtual: true,
+              claim_id: claim.id,
+              name: claimLabel,
+              created_at: claim.created_at,
+              updated_at: claim.updated_at,
+            });
+          } else if (submissionOccurrences.length > 0) {
+            // Has submissions but none resolved, no expected reimbursement - show submission-based income
             const totalExpectedAmount = submissionOccurrences.reduce(
               (sum, occ) => sum + occ.expected_amount,
               0

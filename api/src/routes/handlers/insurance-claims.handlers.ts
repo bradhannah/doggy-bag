@@ -661,6 +661,81 @@ export function createClaimSubmissionDELETEHandler() {
 }
 
 // ============================================================================
+// Bill Payment Handler
+// ============================================================================
+
+export function createClaimBillPaidHandler() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      // Path: /api/insurance-claims/{id}/bill-paid
+      const claimIdIndex = pathParts.indexOf('insurance-claims') + 1;
+      const claimId = pathParts[claimIdIndex];
+
+      if (!claimId) {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing claim ID',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const body = await request.json();
+
+      if (typeof body.paid !== 'boolean') {
+        return new Response(
+          JSON.stringify({
+            error: 'Validation failed',
+            details: ['paid must be a boolean'],
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const updated = await claimsService.markBillPaid(claimId, body.paid);
+
+      if (!updated) {
+        return new Response(
+          JSON.stringify({
+            error: 'Claim not found',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
+      }
+
+      return new Response(JSON.stringify(updated), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (error) {
+      console.error('[InsuranceClaimsHandler] Bill paid PATCH failed:', error);
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to update bill payment status',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+  };
+}
+
+// ============================================================================
 // Expected Expense Handlers
 // ============================================================================
 

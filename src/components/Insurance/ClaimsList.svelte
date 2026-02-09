@@ -302,21 +302,42 @@
                   >{formatCurrency(claim.expected_reimbursement || 0)} back</span
                 >
               </div>
-            {:else if claim.submissions.length > 0}
-              <div class="submission-badges">
-                {#each claim.submissions as sub (sub.id)}
-                  <span
-                    class="submission-badge"
-                    style="color: {getSubmissionStatusColor(
-                      sub.status
-                    )}; border-color: {getSubmissionStatusColor(sub.status)}"
-                  >
-                    {getSubmissionStatusLabel(sub.status)}
-                  </span>
-                {/each}
-              </div>
             {:else}
-              <div></div>
+              <div class="claim-footer-left">
+                {#if claim.bill_paid}
+                  <span class="bill-paid-badge">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M5 13l4 4L19 7"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    Paid
+                  </span>
+                {/if}
+                {#if claim.expected_reimbursement}
+                  <span class="expected-return-badge">
+                    ~{formatCurrency(claim.expected_reimbursement)} back
+                  </span>
+                {/if}
+                {#if claim.submissions.length > 0}
+                  <div class="submission-badges">
+                    {#each claim.submissions as sub (sub.id)}
+                      <span
+                        class="submission-badge"
+                        style="color: {getSubmissionStatusColor(
+                          sub.status
+                        )}; border-color: {getSubmissionStatusColor(sub.status)}"
+                      >
+                        {getSubmissionStatusLabel(sub.status)}
+                      </span>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
             {/if}
             <span class="claim-amount">{formatCurrency(claim.total_amount)}</span>
           </div>
@@ -647,5 +668,35 @@
   .expected-reimbursement {
     color: var(--success);
     font-weight: 500;
+  }
+
+  .claim-footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .bill-paid-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--success);
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+  }
+
+  .expected-return-badge {
+    font-size: 0.625rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-muted);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
   }
 </style>

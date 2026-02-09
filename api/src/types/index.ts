@@ -434,6 +434,9 @@ interface InsuranceClaim {
   scheduled_at?: string; // When user created this expected expense (ISO timestamp)
   converted_from_expected_at?: string; // When converted to actual claim (ISO timestamp)
   payment_source_id?: string; // Payment source for expense (used for virtual bill generation)
+  // Bill payment tracking (independent of submission status)
+  bill_paid: boolean; // Whether the provider bill has been paid (can be set before claims process begins)
+  bill_paid_date?: string; // When the bill was marked as paid (ISO date)
   created_at: string;
   updated_at: string;
 }

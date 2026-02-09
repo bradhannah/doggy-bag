@@ -151,6 +151,7 @@ import {
   updateExpectedExpenseHandler,
   cancelExpectedExpenseHandler,
   convertExpectedToClaimHandler,
+  createClaimBillPaidHandler,
 } from './handlers/insurance-claims.handlers';
 
 import {
@@ -446,6 +447,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/insurance-claims/convert',
     definition: { method: 'POST', handler: convertExpectedToClaimHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/insurance-claims/bill-paid',
+    definition: { method: 'PATCH', handler: createClaimBillPaidHandler(), hasPathParam: true },
   },
   // Insurance Claims - main CRUD
   {
