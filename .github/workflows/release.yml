@@ -74,9 +74,6 @@ jobs:
         run: bun install
         working-directory: api
 
-      - name: Generate types
-        run: make types
-
       - name: Build sidecar (production)
         run: make build-sidecar
 

@@ -1,7 +1,7 @@
 # Doggy Bag Makefile
 # Makefile-based build automation for Tauri + Bun + Svelte development workflow
 
-.PHONY: help dev dev-browser build clean test lint format format-check types smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage ensure-dev-sidecar show-palette
+.PHONY: help dev dev-browser build clean test lint format format-check smoke-test install-prereqs install-dev install-all kill-dev logs-clear logs-tail prepare test-backend-coverage test-frontend-coverage test-coverage ensure-dev-sidecar show-palette
 
 # Log directory
 LOGS_DIR := logs
@@ -24,7 +24,6 @@ help: ## Show this help message
 	@echo "  make build-sidecar      Compile backend into standalone binary"
 	@echo "  make prepare-dev-sidecar  Download Bun runtime for dev mode"
 	@echo "  make clean              Remove build artifacts"
-	@echo "  make types              Generate OpenAPI spec and Svelte types"
 	@echo ""
 	@echo "Installation Targets:"
 	@echo "  make install-prereqs  Check and install prerequisites (Bun, Rust, Node.js, TypeScript)"
@@ -222,15 +221,6 @@ clean: ## Remove build artifacts and temporary files
 	@rm -rf node_modules/.vite
 	@find . -type d -name ".svelte-kit" -exec rm -rf {} \; 2>/dev/null || true
 	@echo "Clean complete"
-
-# Type generation
-types: ## Generate OpenAPI spec and Svelte types
-	@$(MAKE) check-prereqs
-	@echo "Generating OpenAPI spec from tsoa controllers..."
-	@cd api && npm run spec
-	@echo "Generating Svelte types from OpenAPI spec..."
-	@$(BUN) run scripts/generate-types.ts
-	@echo "✓ Type generation complete"
 
 # Testing
 test: ## Run all tests (Bun backend + Vitest frontend + Playwright E2E)

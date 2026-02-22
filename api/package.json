@@ -4,13 +4,7 @@
   "description": "Bun HTTP backend for doggy-bag",
   "type": "module",
   "scripts": {
-    "server": "bun run server.ts",
-    "spec": "tsoa spec",
-    "spec:watch": "tsoa spec --watch"
-  },
-  "dependencies": {
-    "@tsoa/runtime": "^7.0.0-alpha.0",
-    "tsoa": "^7.0.0-alpha.0"
+    "server": "bun run server.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.5",
