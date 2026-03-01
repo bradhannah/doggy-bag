@@ -45,6 +45,7 @@ It promotes active tracking of expenses and income, helping users stay on top of
 - Savings goals with optional targets and manual payment tracking
 - Calendar view with integrated todos
 - Dark / Light / System theme support
+- Refreshed app icon and splash screen branding
 - Configurable data directory (great for cloud sync!)
 - Export/import for manual backup
 
