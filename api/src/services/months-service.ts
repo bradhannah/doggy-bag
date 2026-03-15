@@ -2721,7 +2721,9 @@ export class MonthsServiceImpl implements MonthsService {
           for (const submission of claim.submissions) {
             const reimbursedAmount = submission.amount_reimbursed ?? 0;
             const planName = submission.plan_snapshot?.name ?? 'Insurance';
-            const isClosed = submission.status === 'approved' || submission.status === 'denied';
+            // Only 'paid' and 'denied' are truly closed (money received or not coming)
+            // 'approved' means insurer approved but money not yet received - show as expected income
+            const isClosed = submission.status === 'paid' || submission.status === 'denied';
 
             sequenceCounter++;
             submissionOccurrences.push({
@@ -2731,7 +2733,11 @@ export class MonthsServiceImpl implements MonthsService {
                 submission.date_resolved ?? submission.date_submitted ?? claim.service_date,
               expected_amount: reimbursedAmount,
               is_closed: isClosed,
-              closed_date: isClosed ? submission.date_resolved : undefined,
+              closed_date: isClosed
+                ? submission.status === 'paid'
+                  ? submission.date_paid || submission.date_resolved
+                  : submission.date_resolved
+                : undefined,
               is_adhoc: false,
               created_at: claim.created_at,
               updated_at: claim.updated_at,
@@ -2746,7 +2752,7 @@ export class MonthsServiceImpl implements MonthsService {
           // Use actual submission data if any submissions have been resolved,
           // otherwise fall back to expected_reimbursement if available
           const hasAnyResolvedSubmission = claim.submissions.some(
-            (s) => s.status === 'approved' || s.status === 'denied'
+            (s) => s.status === 'approved' || s.status === 'paid' || s.status === 'denied'
           );
 
           if (submissionOccurrences.length > 0 && hasAnyResolvedSubmission) {

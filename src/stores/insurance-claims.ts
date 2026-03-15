@@ -415,6 +415,7 @@ export interface SubmissionUpdate {
   amount_reimbursed?: number;
   date_submitted?: string;
   date_resolved?: string;
+  date_paid?: string;
   eob_document_id?: string;
   notes?: string;
 }

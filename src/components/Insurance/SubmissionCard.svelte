@@ -46,6 +46,7 @@
     : '';
   let editDateSubmitted = submission.date_submitted || '';
   let editDateResolved = submission.date_resolved || '';
+  let editDatePaid = submission.date_paid || '';
   let editNotes = submission.notes || '';
 
   function getStatusColor(status: SubmissionStatus): string {
@@ -56,6 +57,8 @@
         return 'var(--warning)';
       case 'approved':
         return 'var(--success)';
+      case 'paid':
+        return 'var(--accent)';
       case 'denied':
         return 'var(--error)';
       case 'awaiting_previous':
@@ -73,6 +76,8 @@
         return 'Pending';
       case 'approved':
         return 'Approved';
+      case 'paid':
+        return 'Paid';
       case 'denied':
         return 'Denied';
       case 'awaiting_previous':
@@ -94,6 +99,10 @@
     editDateResolved = getTodayDate();
   }
 
+  function setPaidToday() {
+    editDatePaid = getTodayDate();
+  }
+
   // When status changes to denied, clear reimbursed amount
   $: if (editStatus === 'denied') {
     editAmountReimbursed = '';
@@ -109,6 +118,7 @@
       : '';
     editDateSubmitted = submission.date_submitted || '';
     editDateResolved = submission.date_resolved || '';
+    editDatePaid = submission.date_paid || '';
     editNotes = submission.notes || '';
     editing = true;
   }
@@ -125,6 +135,7 @@
         amount_reimbursed?: number;
         date_submitted?: string;
         date_resolved?: string;
+        date_paid?: string;
         notes?: string;
       } = {
         status: editStatus,
@@ -138,6 +149,9 @@
       }
       if (editDateResolved) {
         updates.date_resolved = editDateResolved;
+      }
+      if (editDatePaid) {
+        updates.date_paid = editDatePaid;
       }
       if (editNotes.trim()) {
         updates.notes = editNotes.trim();
@@ -223,6 +237,33 @@
     }
   }
 
+  async function markPaid() {
+    saving = true;
+    try {
+      const updates: {
+        status: SubmissionStatus;
+        date_paid: string;
+        notes?: string;
+      } = {
+        status: 'paid',
+        date_paid: getTodayDate(),
+      };
+
+      if (editNotes.trim()) {
+        updates.notes = editNotes.trim();
+      }
+
+      await updateSubmission(claimId, submission.id, updates);
+      success('Submission marked as paid');
+      editing = false;
+      dispatch('updated');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to update submission');
+    } finally {
+      saving = false;
+    }
+  }
+
   function handleDelete() {
     showDeleteConfirm = true;
   }
@@ -290,6 +331,7 @@
             <option value="draft">Draft</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
+            <option value="paid">Paid</option>
             <option value="denied">Denied</option>
           </select>
         </div>
@@ -352,6 +394,28 @@
           </div>
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit-paid-{submission.id}">Date Paid</label>
+          <div class="date-input-wrapper">
+            <input
+              id="edit-paid-{submission.id}"
+              type="date"
+              bind:value={editDatePaid}
+              disabled={saving}
+            />
+            <button
+              type="button"
+              class="btn-today"
+              on:click={setPaidToday}
+              disabled={saving}
+              title="Set to today"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="form-group">
         <label for="edit-notes-{submission.id}">Notes</label>
         <textarea id="edit-notes-{submission.id}" bind:value={editNotes} rows="2" disabled={saving}
@@ -359,22 +423,33 @@
       </div>
       <div class="edit-actions">
         <div class="quick-actions">
-          <button
-            class="btn btn-success btn-sm"
-            on:click={markApproved}
-            disabled={saving}
-            title="Set status to Approved and date resolved to today"
-          >
-            Mark Approved
-          </button>
-          <button
-            class="btn btn-danger btn-sm"
-            on:click={markDenied}
-            disabled={saving}
-            title="Set status to Denied, clear reimbursement, and set date resolved to today"
-          >
-            Mark Denied
-          </button>
+          {#if submission.status === 'approved'}
+            <button
+              class="btn btn-accent btn-sm"
+              on:click={markPaid}
+              disabled={saving}
+              title="Mark as paid (reimbursement received) and set date paid to today"
+            >
+              Mark Paid
+            </button>
+          {:else}
+            <button
+              class="btn btn-success btn-sm"
+              on:click={markApproved}
+              disabled={saving}
+              title="Set status to Approved and date resolved to today"
+            >
+              Mark Approved
+            </button>
+            <button
+              class="btn btn-danger btn-sm"
+              on:click={markDenied}
+              disabled={saving}
+              title="Set status to Denied, clear reimbursement, and set date resolved to today"
+            >
+              Mark Denied
+            </button>
+          {/if}
         </div>
         <div class="standard-actions">
           <button class="btn btn-secondary btn-sm" on:click={cancelEdit} disabled={saving}>
@@ -409,6 +484,12 @@
           <div class="detail-row">
             <span class="detail-label">Resolved:</span>
             <span class="detail-value">{formatDate(submission.date_resolved)}</span>
+          </div>
+        {/if}
+        {#if submission.date_paid}
+          <div class="detail-row">
+            <span class="detail-label">Paid:</span>
+            <span class="detail-value accent">{formatDate(submission.date_paid)}</span>
           </div>
         {/if}
         {#if submission.notes}
@@ -604,6 +685,10 @@
 
   .detail-value.success {
     color: var(--success);
+  }
+
+  .detail-value.accent {
+    color: var(--accent);
   }
 
   .submission-actions {
@@ -831,6 +916,15 @@
 
   .btn-danger:hover:not(:disabled) {
     background: var(--error-hover);
+  }
+
+  .btn-accent {
+    background: var(--accent);
+    color: var(--text-inverse);
+  }
+
+  .btn-accent:hover:not(:disabled) {
+    background: var(--accent-hover);
   }
 
   /* Awaiting previous state styling */

@@ -4,6 +4,7 @@ export interface ProjectionResponse {
   start_date: string; // YYYY-MM-DD
   end_date: string; // YYYY-MM-DD
   starting_balance: number;
+  no_data?: boolean; // true when no monthly data exists for the requested month
   days: {
     date: string;
     balance: number | null;

@@ -150,7 +150,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
    * Calculate the claim status based on submission statuses:
    * - draft: No submissions OR all submissions are draft
    * - in_progress: At least one submission is pending OR has mix of draft and final
-   * - closed: ALL submissions have final answer (approved/denied) - no drafts allowed
+   * - closed: ALL submissions have final answer (approved/paid/denied) - no drafts allowed
    */
   private calculateClaimStatus(submissions: ClaimSubmission[]): ClaimStatus {
     if (submissions.length === 0) {
@@ -162,8 +162,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       return 'draft';
     }
 
-    // Final statuses are approved or denied (partial removed)
-    const finalStatuses: SubmissionStatus[] = ['approved', 'denied'];
+    // Final statuses are approved, paid, or denied
+    const finalStatuses: SubmissionStatus[] = ['approved', 'paid', 'denied'];
 
     // Check if ALL submissions have a final status (no drafts, no pending)
     const allFinal = submissions.every((s) => finalStatuses.includes(s.status));
@@ -788,6 +788,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         | 'amount_reimbursed'
         | 'date_submitted'
         | 'date_resolved'
+        | 'date_paid'
         | 'eob_document_id'
         | 'notes'
       >
@@ -818,6 +819,14 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         }
       }
 
+      // Validate paid transition: can only go to paid from approved
+      if (updates.status === 'paid') {
+        const originalStatus = claim.submissions[subIndex].status;
+        if (originalStatus !== 'approved' && originalStatus !== 'paid') {
+          throw new Error('Can only mark a submission as paid after it has been approved');
+        }
+      }
+
       const updatedSubmission: ClaimSubmission = {
         ...claim.submissions[subIndex],
         ...updates,
@@ -825,8 +834,12 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
 
       claim.submissions[subIndex] = updatedSubmission;
 
-      // Cascade logic: when a submission is approved/denied, activate the next awaiting submission
-      if (updates.status === 'approved' || updates.status === 'denied') {
+      // Cascade logic: when a submission is approved/denied/paid, activate the next awaiting submission
+      if (
+        updates.status === 'approved' ||
+        updates.status === 'denied' ||
+        updates.status === 'paid'
+      ) {
         // Find the next submission with status 'awaiting_previous' (must be after current in array order)
         const nextAwaitingIndex = claim.submissions.findIndex(
           (s, idx) => idx > subIndex && s.status === 'awaiting_previous'

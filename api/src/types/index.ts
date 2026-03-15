@@ -348,7 +348,7 @@ interface FamilyMember {
 // ============================================================================
 
 type ClaimStatus = 'expected' | 'draft' | 'in_progress' | 'closed';
-type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
+type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'paid' | 'denied' | 'awaiting_previous';
 type DocumentType = 'receipt' | 'eob' | 'other';
 
 interface InsurancePlan {
@@ -403,11 +403,12 @@ interface ClaimSubmission {
   id: string;
   plan_id: string; // Reference to InsurancePlan (for filtering)
   plan_snapshot: PlanSnapshot; // Deep copy of plan details at submission time
-  status: SubmissionStatus; // Status: draft / pending / approved / denied
+  status: SubmissionStatus; // Status: draft / pending / approved / paid / denied
   amount_claimed: number; // Amount claimed in cents
   amount_reimbursed?: number; // Amount received in cents (when resolved)
   date_submitted?: string; // When submitted to insurer (ISO date)
   date_resolved?: string; // When response received (ISO date)
+  date_paid?: string; // When reimbursement was received (ISO date)
   documents_sent: string[]; // Array of document IDs sent with this submission
   eob_document_id?: string; // Document ID of EOB received for this submission
   notes?: string; // Freeform notes
@@ -672,6 +673,7 @@ interface ProjectionResponse {
   start_date: string; // YYYY-MM-DD (Today or 1st of month)
   end_date: string; // YYYY-MM-DD
   starting_balance: number;
+  no_data?: boolean; // true when no monthly data exists for the requested month
   days: {
     date: string;
     balance: number | null;

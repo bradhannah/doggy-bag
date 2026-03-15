@@ -2,7 +2,13 @@
 // These types mirror the backend types in api/src/types/index.ts
 
 export type ClaimStatus = 'expected' | 'draft' | 'in_progress' | 'closed';
-export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'denied' | 'awaiting_previous';
+export type SubmissionStatus =
+  | 'draft'
+  | 'pending'
+  | 'approved'
+  | 'paid'
+  | 'denied'
+  | 'awaiting_previous';
 export type DocumentType = 'receipt' | 'eob' | 'other';
 
 export interface FamilyMember {
@@ -69,6 +75,7 @@ export interface ClaimSubmission {
   amount_reimbursed?: number;
   date_submitted?: string;
   date_resolved?: string;
+  date_paid?: string;
   documents_sent: string[];
   eob_document_id?: string;
   notes?: string;

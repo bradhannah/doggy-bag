@@ -96,57 +96,64 @@
   {:else if $projectionError}
     <div class="error">{$projectionError}</div>
   {:else if chartData}
-    <div class="content">
-      <OverdueBillsBanner overdueBills={chartData.overdue_bills} />
-
-      <div class="chart-section">
-        <HistogramChart
-          data={chartData}
-          {selectedDate}
-          on:select={(event) => (selectedDate = event.detail.day.date)}
-        />
+    {#if chartData.no_data}
+      <div class="no-data">
+        <p>No data for this month yet.</p>
+        <p class="hint">Create a month from the main page to see projections here.</p>
       </div>
+    {:else}
+      <div class="content">
+        <OverdueBillsBanner overdueBills={chartData.overdue_bills} />
 
-      {#if selectedDay}
-        <section class="day-details">
-          <header>
-            <div>
-              <h2>
-                {new Date(selectedDay.date).toLocaleDateString(undefined, {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </h2>
-              <p>{isSelectedPast ? 'Actuals' : 'Estimated'} for the day</p>
-            </div>
-            <div class="day-totals">
-              {#if selectedDay.income > 0}
-                <div class="income">Income: +{formatCurrency(selectedDay.income)}</div>
-              {/if}
-              {#if selectedDay.expense > 0}
-                <div class="expense">Expense: -{formatCurrency(selectedDay.expense)}</div>
-              {/if}
-              {#if selectedDay.balance !== null}
-                <div class="balance">Balance: {formatCurrency(selectedDay.balance)}</div>
-              {/if}
-            </div>
-          </header>
-          {#if selectedEvents.length > 0}
-            <ul>
-              {#each selectedEvents as event (event.name + String(event.amount) + event.type)}
-                <li>
-                  <span>{event.name}</span>
-                  <span class={event.type}>{formatCurrency(event.amount)}</span>
-                </li>
-              {/each}
-            </ul>
-          {:else}
-            <p class="empty">No {isSelectedPast ? 'actuals' : 'estimates'} for this day.</p>
-          {/if}
-        </section>
-      {/if}
-    </div>
+        <div class="chart-section">
+          <HistogramChart
+            data={chartData}
+            {selectedDate}
+            on:select={(event) => (selectedDate = event.detail.day.date)}
+          />
+        </div>
+
+        {#if selectedDay}
+          <section class="day-details">
+            <header>
+              <div>
+                <h2>
+                  {new Date(selectedDay.date).toLocaleDateString(undefined, {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </h2>
+                <p>{isSelectedPast ? 'Actuals' : 'Estimated'} for the day</p>
+              </div>
+              <div class="day-totals">
+                {#if selectedDay.income > 0}
+                  <div class="income">Income: +{formatCurrency(selectedDay.income)}</div>
+                {/if}
+                {#if selectedDay.expense > 0}
+                  <div class="expense">Expense: -{formatCurrency(selectedDay.expense)}</div>
+                {/if}
+                {#if selectedDay.balance !== null}
+                  <div class="balance">Balance: {formatCurrency(selectedDay.balance)}</div>
+                {/if}
+              </div>
+            </header>
+            {#if selectedEvents.length > 0}
+              <ul>
+                {#each selectedEvents as event (event.name + String(event.amount) + event.type)}
+                  <li>
+                    <span>{event.name}</span>
+                    <span class={event.type}>{formatCurrency(event.amount)}</span>
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <p class="empty">No {isSelectedPast ? 'actuals' : 'estimates'} for this day.</p>
+            {/if}
+          </section>
+        {/if}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -314,5 +321,20 @@
   .day-details .empty {
     margin: 0;
     color: var(--text-secondary);
+  }
+
+  .no-data {
+    text-align: center;
+    padding: var(--space-8) var(--space-4);
+    color: var(--text-secondary);
+  }
+
+  .no-data p {
+    margin: 0 0 var(--space-2) 0;
+  }
+
+  .no-data .hint {
+    font-size: 0.85em;
+    color: var(--text-tertiary);
   }
 </style>

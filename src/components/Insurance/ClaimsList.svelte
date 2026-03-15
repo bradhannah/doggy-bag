@@ -101,6 +101,8 @@
         return 'var(--warning)';
       case 'approved':
         return 'var(--success)';
+      case 'paid':
+        return 'var(--accent)';
       case 'denied':
         return 'var(--error)';
       default:
@@ -116,6 +118,8 @@
         return 'Pending';
       case 'approved':
         return 'Approved';
+      case 'paid':
+        return 'Paid';
       case 'denied':
         return 'Denied';
       default:

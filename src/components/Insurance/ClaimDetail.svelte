@@ -150,6 +150,12 @@
 
   // Calculate totals
   $: totalReimbursed = claim.submissions.reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
+  $: approvedAwaitingPayment = claim.submissions
+    .filter((s) => s.status === 'approved')
+    .reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
+  $: totalReceived = claim.submissions
+    .filter((s) => s.status === 'paid')
+    .reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
   $: hasActivePlans = $activePlans.length > 0;
 </script>
 
@@ -283,6 +289,22 @@
       <span class="summary-label">Total Reimbursed</span>
       <span class="summary-value success">{formatCurrency(totalReimbursed)}</span>
     </div>
+    {#if approvedAwaitingPayment > 0}
+      <div class="summary-item">
+        <span class="summary-label">Awaiting Payment</span>
+        <span class="summary-value" style="color: var(--warning)"
+          >{formatCurrency(approvedAwaitingPayment)}</span
+        >
+      </div>
+    {/if}
+    {#if totalReceived > 0}
+      <div class="summary-item">
+        <span class="summary-label">Received</span>
+        <span class="summary-value" style="color: var(--accent)"
+          >{formatCurrency(totalReceived)}</span
+        >
+      </div>
+    {/if}
     <div class="summary-item">
       <span class="summary-label">Out of Pocket</span>
       <span class="summary-value warning"

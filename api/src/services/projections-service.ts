@@ -33,7 +33,7 @@ export class ProjectionsServiceImpl implements ProjectionsService {
     // Determine end date (last day of month)
     const [year, monthNum] = month.split('-').map(Number);
     const lastDay = new Date(year, monthNum, 0).getDate();
-    const endDate = `${month}-${lastDay}`;
+    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
     // 2. Get Monthly Data + Payment Sources for unified leftover baseline
     const [monthlyData, paymentSources] = await Promise.all([
@@ -41,8 +41,29 @@ export class ProjectionsServiceImpl implements ProjectionsService {
       this.paymentSourcesService.getAll(),
     ]);
 
+    // If no monthly data exists, return an empty projection
     if (!monthlyData) {
-      throw new Error(`Monthly data for ${month} not found`);
+      const days: ProjectionResponse['days'] = [];
+      for (let day = 1; day <= lastDay; day++) {
+        const dateStr = `${month}-${String(day).padStart(2, '0')}`;
+        days.push({
+          date: dateStr,
+          balance: null,
+          has_balance: false,
+          income: 0,
+          expense: 0,
+          events: [],
+          is_deficit: false,
+        });
+      }
+      return {
+        start_date: displayStartDate,
+        end_date: endDate,
+        starting_balance: 0,
+        no_data: true,
+        days,
+        overdue_bills: [],
+      };
     }
 
     const leftoverResult = calculateUnifiedLeftover(monthlyData, paymentSources);
@@ -164,12 +185,13 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
     const days: ProjectionResponse['days'] = [];
 
-    const start = new Date(displayStartDate);
-    const end = new Date(endDate);
+    // Use UTC dates to avoid DST-related duplicate date issues
+    const [startYear, startMonth, startDay] = displayStartDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const startUTC = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+    const endUTC = new Date(Date.UTC(endYear, endMonth - 1, endDay));
 
-    // Loop through days
-    // Note: iterating Date object directly
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(startUTC); d <= endUTC; d.setUTCDate(d.getUTCDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
       const events = eventsByDate.get(dateStr) || [];
 

@@ -87,8 +87,8 @@
     const initialDay = parseInt(expectedDate.split('-')[2] ?? '', 10) || today.getDate();
     day = String(Math.min(initialDay, lastDay));
 
-    // Payment day defaults to today
-    paymentDay = String(Math.min(today.getDate(), maxDay));
+    // Payment day defaults to due date (capped at today so no future dates)
+    paymentDay = String(Math.min(initialDay, maxDay));
 
     // Notes
     notes = existingNotes || '';
