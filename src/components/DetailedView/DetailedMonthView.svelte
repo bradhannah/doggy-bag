@@ -11,13 +11,34 @@
   import AdHocForm from './AdHocForm.svelte';
   import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
   import FilterBar from './FilterBar.svelte';
+  import TabBar from '../shared/TabBar.svelte';
+  import DataTableView from './views/DataTableView.svelte';
 
   import MonthNotCreated from '../MonthNotCreated.svelte';
   import { success, error as showError } from '../../stores/toast';
-  import { widthMode, hidePaidItems, goToMonth, columnMode, filterScope } from '../../stores/ui';
+  import {
+    widthMode,
+    hidePaidItems,
+    goToMonth,
+    columnMode,
+    filterScope,
+    budgetTab,
+    viewMode,
+  } from '../../stores/ui';
+  import type { BudgetTab } from '../../stores/ui';
   import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
   import { filterSectionsByQuery } from '../../lib/filter-sections';
   import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
+
+  const BUDGET_TABS: { id: string; label: string }[] = [
+    { id: 'expenses', label: 'Expenses' },
+    { id: 'income', label: 'Income' },
+    { id: 'combined', label: 'Combined' },
+  ];
+
+  function handleTabChange(e: CustomEvent<string>) {
+    budgetTab.set(e.detail as BudgetTab);
+  }
 
   export let month: string;
 
@@ -500,6 +521,7 @@
     class="content-wrapper"
     class:medium={$widthMode === 'medium'}
     class:wide={$widthMode === 'wide'}
+    class:table-view={$viewMode === 'table'}
   >
     {#if $monthIsReadOnly && $monthExists}
       <div class="read-only-banner">
@@ -570,182 +592,254 @@
             description="These bills are past due and still unpaid."
           />
 
-          <div class="sections-container" class:single-column={$columnMode === '1-col'}>
-            {#if shouldShowNoMatches()}
-              <div class="no-matches">
-                <h3>No matches</h3>
-                <p>Try a different search, or press Esc to clear.</p>
-              </div>
-            {:else}
-              <!-- Bills Section -->
-              <section class="section bills-section">
-                <div class="section-header">
-                  <h2>Bills</h2>
-                  {#if totalBills > 0}
-                    <span class="section-status">{totalBills - closedBills}/{totalBills} Left</span>
-                  {/if}
-                </div>
+          <!-- Budget Tab Bar -->
+          <div class="tab-bar-row">
+            <TabBar tabs={BUDGET_TABS} active={$budgetTab} on:change={handleTabChange} />
+          </div>
 
-                {#if totalBills === 0}
-                  <p class="empty-text">No bill categories. Add categories in Setup.</p>
-                {:else}
-                  <!-- Active (incomplete) categories -->
-                  {#each filteredActiveBillSections as section (section.category.id)}
-                    <CategorySection
-                      {section}
-                      type="bills"
-                      {month}
-                      readOnly={$monthIsReadOnly}
-                      hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
-                      collapsed={false}
-                      on:refresh={refreshData}
-                      on:reopened={handleReopened}
-                      on:closed={handleClosed}
-                    />
-                  {/each}
-
-                  <!-- Insurance Expenses Section (before completed bills) -->
-                  {#if filteredInsuranceExpenseSection && filteredInsuranceExpenseSection.items.length > 0}
-                    <div class="insurance-divider">
-                      <svg
-                        class="insurance-icon"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
+          {#if shouldShowNoMatches()}
+            <div class="no-matches">
+              <h3>No matches</h3>
+              <p>Try a different search, or press Esc to clear.</p>
+            </div>
+          {:else if $viewMode === 'classic'}
+            <!-- ===== CLASSIC VIEW ===== -->
+            <div class="sections-container" class:single-column={$columnMode === '1-col'}>
+              {#if $budgetTab === 'expenses' || $budgetTab === 'combined'}
+                <!-- Bills Section -->
+                <section class="section bills-section">
+                  <div class="section-header">
+                    <h2>Bills</h2>
+                    {#if totalBills > 0}
+                      <span class="section-status"
+                        >{totalBills - closedBills}/{totalBills} Left</span
                       >
-                        <path
-                          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
-                      <span>Insurance Expenses</span>
-                    </div>
-                    <CategorySection
-                      section={filteredInsuranceExpenseSection}
-                      type="bills"
-                      {month}
-                      readOnly={true}
-                      hiddenCount={0}
-                      collapsed={false}
-                      isInsuranceSection={true}
-                      on:refresh={refreshData}
-                      on:reopened={handleReopened}
-                      on:closed={handleClosed}
-                    />
-                  {/if}
+                    {/if}
+                  </div>
 
-                  <!-- Divider + Completed categories -->
-                  {#if filteredCompletedBillSections.length > 0}
-                    <div class="completed-divider">
-                      <span>Completed</span>
-                    </div>
-
-                    {#each filteredCompletedBillSections as section (section.category.id)}
+                  {#if totalBills === 0}
+                    <p class="empty-text">No bill categories. Add categories in Setup.</p>
+                  {:else}
+                    {#each filteredActiveBillSections as section (section.category.id)}
                       <CategorySection
                         {section}
                         type="bills"
                         {month}
                         readOnly={$monthIsReadOnly}
-                        hiddenCount={0}
-                        collapsed={$hidePaidItems}
+                        hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
+                        collapsed={false}
                         on:refresh={refreshData}
                         on:reopened={handleReopened}
                         on:closed={handleClosed}
                       />
                     {/each}
-                  {/if}
-                {/if}
-              </section>
 
-              <!-- Income Section -->
-              <section class="section income-section">
-                <div class="section-header">
-                  <h2>Income</h2>
-                  {#if totalIncomes > 0}
-                    <span class="section-status">{closedIncomes}/{totalIncomes} Received</span>
-                  {/if}
-                </div>
+                    {#if filteredInsuranceExpenseSection && filteredInsuranceExpenseSection.items.length > 0}
+                      <div class="insurance-divider">
+                        <svg
+                          class="insurance-icon"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        <span>Insurance Expenses</span>
+                      </div>
+                      <CategorySection
+                        section={filteredInsuranceExpenseSection}
+                        type="bills"
+                        {month}
+                        readOnly={true}
+                        hiddenCount={0}
+                        collapsed={false}
+                        isInsuranceSection={true}
+                        on:refresh={refreshData}
+                        on:reopened={handleReopened}
+                        on:closed={handleClosed}
+                      />
+                    {/if}
 
-                {#if totalIncomes === 0}
-                  <p class="empty-text">No income categories. Add categories in Setup.</p>
-                {:else}
-                  <!-- Active (incomplete) categories -->
-                  {#each filteredActiveIncomeSections as section (section.category.id)}
-                    <CategorySection
-                      {section}
-                      type="income"
-                      {month}
-                      readOnly={$monthIsReadOnly}
-                      hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
-                      collapsed={false}
-                      on:refresh={refreshData}
-                      on:reopened={handleReopened}
-                      on:closed={handleClosed}
-                    />
-                  {/each}
+                    {#if filteredCompletedBillSections.length > 0}
+                      <div class="completed-divider">
+                        <span>Completed</span>
+                      </div>
 
-                  <!-- Insurance Reimbursements Section (before completed income) -->
-                  {#if filteredInsuranceReimbursementSection && filteredInsuranceReimbursementSection.items.length > 0}
-                    <div class="insurance-divider">
-                      <svg
-                        class="insurance-icon"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
+                      {#each filteredCompletedBillSections as section (section.category.id)}
+                        <CategorySection
+                          {section}
+                          type="bills"
+                          {month}
+                          readOnly={$monthIsReadOnly}
+                          hiddenCount={0}
+                          collapsed={$hidePaidItems}
+                          on:refresh={refreshData}
+                          on:reopened={handleReopened}
+                          on:closed={handleClosed}
                         />
-                      </svg>
-                      <span>Insurance Reimbursements</span>
-                    </div>
-                    <CategorySection
-                      section={filteredInsuranceReimbursementSection}
-                      type="income"
-                      {month}
-                      readOnly={true}
-                      hiddenCount={0}
-                      collapsed={false}
-                      isInsuranceSection={true}
-                      on:refresh={refreshData}
-                      on:reopened={handleReopened}
-                      on:closed={handleClosed}
-                    />
+                      {/each}
+                    {/if}
                   {/if}
+                </section>
+              {/if}
 
-                  <!-- Divider + Completed categories -->
-                  {#if filteredCompletedIncomeSections.length > 0}
-                    <div class="completed-divider">
-                      <span>Completed</span>
-                    </div>
+              {#if $budgetTab === 'income' || $budgetTab === 'combined'}
+                <!-- Income Section -->
+                <section class="section income-section">
+                  <div class="section-header">
+                    <h2>Income</h2>
+                    {#if totalIncomes > 0}
+                      <span class="section-status">{closedIncomes}/{totalIncomes} Received</span>
+                    {/if}
+                  </div>
 
-                    {#each filteredCompletedIncomeSections as section (section.category.id)}
+                  {#if totalIncomes === 0}
+                    <p class="empty-text">No income categories. Add categories in Setup.</p>
+                  {:else}
+                    {#each filteredActiveIncomeSections as section (section.category.id)}
                       <CategorySection
                         {section}
                         type="income"
                         {month}
                         readOnly={$monthIsReadOnly}
-                        hiddenCount={0}
-                        collapsed={$hidePaidItems}
+                        hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
+                        collapsed={false}
                         on:refresh={refreshData}
                         on:reopened={handleReopened}
                         on:closed={handleClosed}
                       />
                     {/each}
+
+                    {#if filteredInsuranceReimbursementSection && filteredInsuranceReimbursementSection.items.length > 0}
+                      <div class="insurance-divider">
+                        <svg
+                          class="insurance-icon"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                        <span>Insurance Reimbursements</span>
+                      </div>
+                      <CategorySection
+                        section={filteredInsuranceReimbursementSection}
+                        type="income"
+                        {month}
+                        readOnly={true}
+                        hiddenCount={0}
+                        collapsed={false}
+                        isInsuranceSection={true}
+                        on:refresh={refreshData}
+                        on:reopened={handleReopened}
+                        on:closed={handleClosed}
+                      />
+                    {/if}
+
+                    {#if filteredCompletedIncomeSections.length > 0}
+                      <div class="completed-divider">
+                        <span>Completed</span>
+                      </div>
+
+                      {#each filteredCompletedIncomeSections as section (section.category.id)}
+                        <CategorySection
+                          {section}
+                          type="income"
+                          {month}
+                          readOnly={$monthIsReadOnly}
+                          hiddenCount={0}
+                          collapsed={$hidePaidItems}
+                          on:refresh={refreshData}
+                          on:reopened={handleReopened}
+                          on:closed={handleClosed}
+                        />
+                      {/each}
+                    {/if}
                   {/if}
+                </section>
+              {/if}
+            </div>
+          {:else}
+            <!-- ===== ALTERNATE VIEWS (compact, accordion, table) ===== -->
+            {#key $viewMode}
+              <div class="alt-view-container">
+                {#if $budgetTab === 'expenses' || $budgetTab === 'combined'}
+                  <div class="alt-view-section">
+                    {#if $budgetTab === 'combined'}
+                      <div class="alt-section-header">
+                        <h2>Bills</h2>
+                        {#if totalBills > 0}
+                          <span class="section-status"
+                            >{totalBills - closedBills}/{totalBills} Left</span
+                          >
+                        {/if}
+                      </div>
+                    {/if}
+                    <DataTableView
+                      sections={filteredActiveBillSections}
+                      completedSections={filteredCompletedBillSections}
+                      insuranceSection={filteredInsuranceExpenseSection}
+                      hiddenCounts={billHiddenCounts}
+                      type="bills"
+                      {month}
+                      readOnly={$monthIsReadOnly}
+                      hidePaidItems={$hidePaidItems}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  </div>
                 {/if}
-              </section>
-            {/if}
-          </div>
+
+                {#if $budgetTab === 'combined'}
+                  <div class="section-type-divider">
+                    <span>Income</span>
+                  </div>
+                {/if}
+
+                {#if $budgetTab === 'income' || $budgetTab === 'combined'}
+                  <div class="alt-view-section">
+                    {#if $budgetTab === 'combined'}
+                      <div class="alt-section-header">
+                        <h2>Income</h2>
+                        {#if totalIncomes > 0}
+                          <span class="section-status">{closedIncomes}/{totalIncomes} Received</span
+                          >
+                        {/if}
+                      </div>
+                    {/if}
+                    <DataTableView
+                      sections={filteredActiveIncomeSections}
+                      completedSections={filteredCompletedIncomeSections}
+                      insuranceSection={filteredInsuranceReimbursementSection}
+                      hiddenCounts={incomeHiddenCounts}
+                      type="income"
+                      {month}
+                      readOnly={$monthIsReadOnly}
+                      hidePaidItems={$hidePaidItems}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  </div>
+                {/if}
+              </div>
+            {/key}
+          {/if}
         </div>
       </div>
     {/if}
@@ -790,6 +884,11 @@
       var(--summary-sidebar-width) + var(--space-6) + (2 * var(--panel-width-medium)) +
         var(--space-6)
     );
+  }
+
+  .content-wrapper.medium.table-view {
+    /* Table view is single-column, so narrower in medium mode */
+    width: calc(var(--summary-sidebar-width) + var(--space-6) + var(--panel-width-single-medium));
   }
 
   .content-wrapper.wide {
@@ -1049,5 +1148,61 @@
       background: transparent;
       box-shadow: none;
     }
+  }
+
+  /* Budget Tab Bar */
+  .tab-bar-row {
+    margin-bottom: var(--space-4);
+  }
+
+  /* Alternate view container (compact, accordion, table) */
+  .alt-view-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .alt-view-section {
+    background: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-default);
+    padding: var(--space-4);
+  }
+
+  .alt-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-3);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .alt-section-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* Divider between expenses and income in combined alt views */
+  .section-type-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .section-type-divider::before,
+  .section-type-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-default);
   }
 </style>

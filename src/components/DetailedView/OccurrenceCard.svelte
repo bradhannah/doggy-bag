@@ -15,6 +15,7 @@
   export let type: 'bill' | 'income' = 'bill';
   export let month: string = '';
   export let readOnly: boolean = false;
+  export let variant: 'card' | 'flat' = 'card';
 
   const dispatch = createEventDispatcher();
 
@@ -63,6 +64,9 @@
   let showDetailsDrawer = false;
   let addingOccurrence = false;
   let saving = false;
+
+  // Flat variant: occurrences expanded by default, collapsible via chevron
+  let expanded = true;
 
   function openDetailsDrawer() {
     showDetailsDrawer = true;
@@ -135,113 +139,140 @@
   }
 </script>
 
-<div class="occurrence-card" class:closed={isClosed}>
-  <!-- Card Header -->
+<div class="occurrence-card" class:closed={isClosed} class:flat={variant === 'flat'}>
+  <!-- Card Header - Single Line -->
   <div class="card-header">
-    <div class="header-info">
-      <span class="item-name" class:closed-text={isClosed}>
-        {#if !readOnly && !isProtected}
-          <button
-            class="add-occurrence-icon"
-            on:click={handleAddOccurrence}
-            disabled={addingOccurrence}
-            title="Add occurrence"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-        {/if}
+    <div class="header-left" class:closed-text={isClosed}>
+      {#if variant === 'flat'}
+        <!-- Flat variant: chevron toggle for expand/collapse -->
         <button
-          class="name-link"
-          class:insurance-link={isVirtualInsurance}
-          on:click={handleItemClick}
-          title={isVirtualInsurance ? 'View insurance claim' : 'View details'}
+          class="chevron-toggle"
+          on:click={() => (expanded = !expanded)}
+          title={expanded ? 'Collapse occurrences' : 'Expand occurrences'}
         >
-          {item.name}
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class:rotated={expanded}
+          >
+            <path d="M8 5l8 7-8 7z" />
+          </svg>
         </button>
-        {#if isPayoffBill}
-          <span class="billing-badge payoff">Payoff</span>
-        {:else if isVirtualInsurance}
-          <span class="billing-badge insurance" title="Insurance - managed from Insurance section">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            {isExpectedClaim ? 'Expected' : 'Actual'}
-          </span>
-        {:else}
-          <span class="billing-badge">{formatBillingPeriod(item.billing_period)}</span>
-        {/if}
-      </span>
-      <span class="occurrence-summary">
-        {#if isPayoffBill}
-          {closedPayoffChunks.length} payment{closedPayoffChunks.length !== 1 ? 's' : ''} recorded
-        {:else}
-          {occurrenceCount}
-          {type === 'bill' ? 'payment' : 'receipt'}{occurrenceCount !== 1 ? 's' : ''}
-          {#if closedCount > 0}
-            <span class="closed-count">({closedCount}/{occurrenceCount} closed)</span>
-          {/if}
-        {/if}
-      </span>
+      {:else if !readOnly && !isProtected}
+        <button
+          class="add-occurrence-icon"
+          on:click={handleAddOccurrence}
+          disabled={addingOccurrence}
+          title="Add occurrence"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      {/if}
+      <button
+        class="name-link"
+        class:insurance-link={isVirtualInsurance}
+        on:click={handleItemClick}
+        title={isVirtualInsurance ? 'View insurance claim' : 'View details'}
+      >
+        {item.name}
+      </button>
+      {#if isPayoffBill}
+        <span class="billing-badge payoff">Payoff</span>
+      {:else if isVirtualInsurance}
+        <span class="billing-badge insurance" title="Insurance - managed from Insurance section">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          {isExpectedClaim ? 'Expected' : 'Actual'}
+        </span>
+      {:else}
+        <span class="billing-badge">{formatBillingPeriod(item.billing_period)}</span>
+      {/if}
+      {#if isPayoffBill}
+        <span class="close-ratio">
+          {closedPayoffChunks.length}/{closedPayoffChunks.length +
+            occurrences.filter((o) => !o.is_closed).length}
+        </span>
+      {:else}
+        <span class="close-ratio" class:all-closed={allClosed}>
+          ({closedCount}/{occurrenceCount}){#if allClosed}<span class="check-mark">&#10003;</span
+            >{/if}
+        </span>
+      {/if}
     </div>
 
-    <div class="header-totals">
+    <div class="header-right">
       {#if isPayoffBill}
-        <!-- Payoff bill header: show Balance, Paid So Far, Remaining + Pay button -->
-        <div class="total-column">
-          <span class="total-label">Balance</span>
-          <span class="total-value debt">{formatCurrency(Math.abs(payoffCurrentBalance))}</span>
-        </div>
-        <div class="total-column">
-          <span class="total-label">Paid So Far</span>
-          <span class="total-value" class:positive={payoffPaidSoFar > 0}>
-            {payoffPaidSoFar > 0 ? formatCurrency(payoffPaidSoFar) : '-'}
-          </span>
-        </div>
-        <div class="total-column">
-          <span class="total-label">Remaining</span>
-          <span class="total-value" class:zero={payoffRemaining === 0}>
-            {formatCurrency(payoffRemaining)}
-          </span>
-        </div>
+        <!-- Payoff bill: Balance | Paid | Remaining inline -->
+        <span class="amount-inline debt">{formatCurrency(Math.abs(payoffCurrentBalance))}</span>
+        <span class="amount-sep">/</span>
+        <span class="amount-inline" class:positive={payoffPaidSoFar > 0}>
+          {payoffPaidSoFar > 0 ? formatCurrency(payoffPaidSoFar) : '—'}
+        </span>
+        <span class="amount-sep">/</span>
+        <span class="amount-inline" class:zero={payoffRemaining === 0}>
+          {formatCurrency(payoffRemaining)}
+        </span>
         {#if !readOnly}
           <button class="pay-btn" on:click={() => (showPayCCModal = true)} title="Record a payment">
             Pay
           </button>
         {/if}
       {:else}
-        <div class="total-column">
-          <span class="total-label">Total Expected</span>
-          <span class="total-value">{formatCurrency(totalExpected)}</span>
-        </div>
-        <div class="total-column">
-          <span class="total-label">Total {type === 'bill' ? 'Paid' : 'Received'}</span>
-          <span class="total-value" class:amber={totalPaid !== totalExpected && totalPaid > 0}>
-            {totalPaid > 0 ? formatCurrency(totalPaid) : '-'}
-          </span>
-        </div>
+        <span class="amount-inline">{formatCurrency(totalExpected)}</span>
+        <span class="amount-sep">/</span>
+        <span
+          class="amount-inline"
+          class:amber={totalPaid !== totalExpected && totalPaid > 0}
+          class:positive={totalPaid === totalExpected && totalPaid > 0}
+        >
+          {totalPaid > 0 ? formatCurrency(totalPaid) : '—'}
+        </span>
+      {/if}
+      {#if variant === 'flat' && !readOnly && !isProtected}
+        <button
+          class="add-occurrence-icon flat-add"
+          on:click={handleAddOccurrence}
+          disabled={addingOccurrence}
+          title="Add occurrence"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
       {/if}
     </div>
   </div>
 
   <!-- Extra Occurrence Banner (3-paycheck month) -->
-  {#if isExtraOccurrenceMonth}
+  {#if isExtraOccurrenceMonth && (variant === 'card' || expanded)}
     <div class="extra-banner">
       <span class="extra-icon">*</span>
       <span class="extra-text">
@@ -252,23 +283,25 @@
     </div>
   {/if}
 
-  <!-- Occurrences List -->
-  <div class="occurrences-list">
-    {#each [...occurrences].sort((a, b) => a.sequence - b.sequence) as occurrence (occurrence.id)}
-      <OccurrenceRow
-        {occurrence}
-        {month}
-        instanceId={item.id}
-        itemName={item.name}
-        defaultPaymentSourceId={item.payment_source?.id}
-        {type}
-        {readOnly}
-        {isPayoffBill}
-        {isVirtualInsurance}
-        on:updated={handleOccurrenceUpdated}
-      />
-    {/each}
-  </div>
+  <!-- Occurrences List - indented sub-items with left border -->
+  {#if variant === 'card' || expanded}
+    <div class="occurrences-list">
+      {#each [...occurrences].sort((a, b) => a.sequence - b.sequence) as occurrence (occurrence.id)}
+        <OccurrenceRow
+          {occurrence}
+          {month}
+          instanceId={item.id}
+          itemName={item.name}
+          defaultPaymentSourceId={item.payment_source?.id}
+          {type}
+          {readOnly}
+          {isPayoffBill}
+          {isVirtualInsurance}
+          on:updated={handleOccurrenceUpdated}
+        />
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <!-- Item Details Drawer -->
@@ -291,46 +324,57 @@
 <style>
   .occurrence-card {
     background: var(--bg-elevated);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-default);
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-1);
   }
 
   .occurrence-card.closed {
     background: var(--success-bg);
   }
 
+  /* ── Flat variant: strip card styling ── */
+  .occurrence-card.flat {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+
+  .occurrence-card.flat.closed {
+    background: transparent;
+  }
+
+  .occurrence-card.flat .card-header {
+    border-bottom-style: dotted;
+  }
+
+  /* ── Single-line header ── */
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
+    padding: var(--space-2) var(--space-3);
     background: var(--bg-surface);
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-subtle);
+    min-height: 0;
   }
 
-  .header-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .item-name {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--text-primary);
+  .header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
+    min-width: 0;
+    flex: 1;
   }
 
   .add-occurrence-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: var(--radius-sm);
     border: 1px dashed var(--border-default);
     background: transparent;
@@ -352,16 +396,52 @@
     cursor: not-allowed;
   }
 
+  /* ── Chevron toggle for flat variant ── */
+  .chevron-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+  }
+
+  .chevron-toggle:hover {
+    color: var(--accent);
+  }
+
+  .chevron-toggle svg {
+    transition: transform 0.15s ease;
+  }
+
+  .chevron-toggle svg.rotated {
+    transform: rotate(90deg);
+  }
+
+  .add-occurrence-icon.flat-add {
+    margin-left: var(--space-1);
+  }
+
   .name-link {
     background: none;
     border: none;
     padding: 0;
     font: inherit;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary);
     cursor: pointer;
     text-decoration: none;
     transition: color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .name-link:hover {
@@ -387,68 +467,19 @@
   }
 
   .closed-text {
-    text-decoration: line-through;
     opacity: 0.6;
   }
 
   .billing-badge {
-    font-size: 0.65rem;
-    padding: 2px 8px;
+    font-size: 0.6rem;
+    padding: 1px var(--space-2);
     border-radius: 10px;
     background: var(--accent-muted);
     color: var(--accent);
     font-weight: 500;
     text-transform: uppercase;
-  }
-
-  .occurrence-summary {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-
-  .closed-count {
-    color: var(--success);
-  }
-
-  .header-totals {
-    display: flex;
-    gap: 24px;
-  }
-
-  .total-column {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
-  .total-label {
-    font-size: 0.6rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .total-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .total-value.amber {
-    color: var(--warning);
-  }
-
-  .total-value.debt {
-    color: var(--error);
-  }
-
-  .total-value.positive {
-    color: var(--success);
-  }
-
-  .total-value.zero {
-    color: var(--success);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .billing-badge.payoff {
@@ -461,23 +492,78 @@
     color: var(--purple);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
   }
 
   .billing-badge.insurance svg {
     flex-shrink: 0;
   }
 
-  .pay-btn {
-    padding: 6px 16px;
-    border-radius: 6px;
+  .close-ratio {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .close-ratio.all-closed {
+    color: var(--success);
+  }
+
+  .check-mark {
+    margin-left: 2px;
+    color: var(--success);
+    font-weight: 700;
+  }
+
+  /* ── Right side: inline amounts ── */
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    margin-left: var(--space-3);
+  }
+
+  .amount-inline {
     font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .amount-inline.amber {
+    color: var(--warning);
+  }
+
+  .amount-inline.debt {
+    color: var(--error);
+  }
+
+  .amount-inline.positive {
+    color: var(--success);
+  }
+
+  .amount-inline.zero {
+    color: var(--success);
+  }
+
+  .amount-sep {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+
+  .pay-btn {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
     background: var(--purple);
     border: none;
     color: var(--text-inverse);
+    white-space: nowrap;
   }
 
   .pay-btn:hover:not(:disabled) {
@@ -489,43 +575,48 @@
     cursor: not-allowed;
   }
 
+  /* ── Extra occurrence banner ── */
   .extra-banner {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     background: var(--success-bg);
     border-bottom: 1px solid var(--success-border);
   }
 
   .extra-icon {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: var(--success);
   }
 
   .extra-text {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--success);
     font-weight: 500;
   }
 
+  /* ── Occurrences list with left-border sub-item hierarchy ── */
   .occurrences-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 3px;
+    gap: 0;
+    margin-left: var(--space-4);
+    padding: var(--space-1) var(--space-1) var(--space-1) 0;
+    border-left: 2px solid var(--border-subtle);
   }
 
   @media (max-width: 640px) {
     .card-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
+      gap: var(--space-2);
     }
 
-    .header-totals {
-      width: 100%;
-      justify-content: space-between;
+    .header-right {
+      margin-left: var(--space-2);
+    }
+
+    .name-link {
+      max-width: 120px;
     }
   }
 </style>

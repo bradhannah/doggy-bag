@@ -10,7 +10,9 @@
     widthMode,
     hidePaidItems,
     columnMode,
+    viewMode,
   } from '../stores/ui';
+  import type { ViewMode } from '../stores/ui';
 
   // Optional: If provided, navigation will use goto() instead of just store updates
   // This is needed for URL-based routing like /month/2025-01
@@ -22,6 +24,7 @@
   export let showColumnToggle: boolean = false;
   export let showHidePaid: boolean = false;
   export let showSyncMetadata: boolean = false;
+  export let showViewToggle: boolean = false;
   export let isSyncingMetadata: boolean = false;
   export let onRefresh: (() => void) | undefined = undefined;
   export let onSyncMetadata: (() => void) | undefined = undefined;
@@ -67,7 +70,21 @@
   }
 
   $: hasControls =
-    showRefresh || showWidthToggle || showColumnToggle || showHidePaid || showSyncMetadata;
+    showRefresh ||
+    showWidthToggle ||
+    showColumnToggle ||
+    showHidePaid ||
+    showSyncMetadata ||
+    showViewToggle;
+
+  const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+    classic: 'Classic',
+    table: 'Table',
+  };
+
+  function getNextViewMode(current: ViewMode): ViewMode {
+    return current === 'classic' ? 'table' : 'classic';
+  }
 </script>
 
 <div class="month-picker-header">
@@ -184,6 +201,75 @@
               : '1 column (click for 2 columns)'}
           >
             <span class="column-number">{$columnMode === '2-col' ? '2' : '1'}</span>
+          </button>
+        {/if}
+
+        {#if showViewToggle}
+          <!-- View mode cycle button -->
+          <button
+            class="control-btn view-mode-btn"
+            on:click={() => viewMode.cycle()}
+            title="{VIEW_MODE_LABELS[$viewMode]} view (click for {VIEW_MODE_LABELS[
+              getNextViewMode($viewMode)
+            ]})"
+          >
+            {#if $viewMode === 'classic'}
+              <!-- Grid icon -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="3"
+                  y="3"
+                  width="8"
+                  height="8"
+                  rx="1"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <rect
+                  x="13"
+                  y="3"
+                  width="8"
+                  height="8"
+                  rx="1"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <rect
+                  x="3"
+                  y="13"
+                  width="8"
+                  height="8"
+                  rx="1"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <rect
+                  x="13"
+                  y="13"
+                  width="8"
+                  height="8"
+                  rx="1"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            {:else}
+              <!-- Table icon -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path d="M3 9H21" stroke="currentColor" stroke-width="2" />
+                <path d="M3 15H21" stroke="currentColor" stroke-width="2" />
+                <path d="M9 3V21" stroke="currentColor" stroke-width="2" />
+              </svg>
+            {/if}
           </button>
         {/if}
 
@@ -433,6 +519,11 @@
     font-size: 0.875rem;
     font-weight: 700;
     line-height: 1;
+  }
+
+  /* View mode button */
+  .view-mode-btn {
+    position: relative;
   }
 
   @keyframes spin {

@@ -386,3 +386,78 @@ export function closeDrawer() {
     editingId: null,
   }));
 }
+
+// Budget tab store with localStorage persistence
+// Controls which data tab is active: expenses, income, or combined
+export type BudgetTab = 'expenses' | 'income' | 'combined';
+
+function getStoredBudgetTab(): BudgetTab {
+  if (typeof window === 'undefined') return 'combined';
+  const stored = localStorage.getItem('doggybag-budget-tab');
+  if (stored === 'expenses' || stored === 'income' || stored === 'combined') return stored;
+  return 'combined';
+}
+
+function createBudgetTabStore() {
+  const { subscribe, set } = writable<BudgetTab>('combined');
+
+  if (typeof window !== 'undefined') {
+    set(getStoredBudgetTab());
+  }
+
+  return {
+    subscribe,
+    set: (value: BudgetTab) => {
+      set(value);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('doggybag-budget-tab', value);
+      }
+    },
+  };
+}
+
+export const budgetTab = createBudgetTabStore();
+
+// View mode store with localStorage persistence
+// Controls how budget data is rendered: classic or table
+export type ViewMode = 'classic' | 'table';
+
+const VIEW_MODE_ORDER: ViewMode[] = ['classic', 'table'];
+
+function getStoredViewMode(): ViewMode {
+  if (typeof window === 'undefined') return 'classic';
+  const stored = localStorage.getItem('doggybag-view-mode');
+  if (stored === 'classic' || stored === 'table') return stored;
+  // Legacy migration: compact/accordion modes were removed
+  return 'classic';
+}
+
+function createViewModeStore() {
+  const { subscribe, set, update } = writable<ViewMode>('classic');
+
+  if (typeof window !== 'undefined') {
+    set(getStoredViewMode());
+  }
+
+  return {
+    subscribe,
+    cycle: () => {
+      update((current) => {
+        const currentIndex = VIEW_MODE_ORDER.indexOf(current);
+        const nextMode = VIEW_MODE_ORDER[(currentIndex + 1) % VIEW_MODE_ORDER.length];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('doggybag-view-mode', nextMode);
+        }
+        return nextMode;
+      });
+    },
+    set: (value: ViewMode) => {
+      set(value);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('doggybag-view-mode', value);
+      }
+    },
+  };
+}
+
+export const viewMode = createViewModeStore();

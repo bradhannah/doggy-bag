@@ -9,6 +9,7 @@
   import OccurrenceCard from './OccurrenceCard.svelte';
   import AdHocForm from './AdHocForm.svelte';
   import { formatCurrency } from '$lib/utils/format';
+  import { hexToRgba } from '$lib/utils/color';
 
   export let section: CategorySectionType;
   export let type: 'bills' | 'income' = 'bills';
@@ -54,18 +55,6 @@
   $: allClosed = section.items.length > 0 && section.items.every((item) => item.is_closed);
   $: isEmpty = section.items.length === 0;
   $: isComplete = allClosed || isEmpty;
-
-  // Generate a subtle background tint from the category color
-  function hexToRgba(hex: string, alpha: number): string {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (result) {
-      const r = parseInt(result[1], 16);
-      const g = parseInt(result[2], 16);
-      const b = parseInt(result[3], 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-    return `rgba(100, 100, 100, ${alpha})`; // fallback
-  }
 
   $: headerBgColor = hexToRgba(section.category.color, 0.08);
   $: containerBgColor = hexToRgba(section.category.color, 0.04);

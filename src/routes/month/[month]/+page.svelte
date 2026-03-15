@@ -4,8 +4,11 @@
   import DetailedMonthView from '../../../components/DetailedView/DetailedMonthView.svelte';
   import { apiClient } from '../../../lib/api/client';
   import { success, error as showError } from '../../../stores/toast';
+  import { viewMode } from '../../../stores/ui';
+  import { budgetTab } from '../../../stores/ui';
 
   $: month = $page.params.month;
+  $: showColumnToggle = $viewMode === 'classic' && $budgetTab === 'combined';
 
   let detailedView: DetailedMonthView;
   let isSyncingMetadata = false;
@@ -39,9 +42,10 @@
     basePath="/month"
     showRefresh={true}
     showWidthToggle={true}
-    showColumnToggle={true}
+    {showColumnToggle}
     showHidePaid={true}
     showSyncMetadata={true}
+    showViewToggle={true}
     {isSyncingMetadata}
     onRefresh={handleRefresh}
     onSyncMetadata={handleSyncMetadata}
