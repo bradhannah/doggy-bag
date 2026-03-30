@@ -2,6 +2,7 @@
 import { StorageServiceImpl } from './storage';
 import type { StorageService } from './storage';
 import type { SavingsGoal, SavingsGoalStatus, GoalTemperature, ValidationResult } from '../types';
+import { parseLocalDate } from '../utils/due-date';
 
 export interface SavingsGoalsService {
   getAll(): Promise<SavingsGoal[]>;
@@ -450,7 +451,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
     }
 
     const now = asOfDate || new Date();
-    const targetDate = new Date(goal.target_date);
+    const targetDate = parseLocalDate(goal.target_date);
     const createdDate = new Date(goal.created_at);
 
     // If target date is in the past, expected is the full amount

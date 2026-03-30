@@ -12,7 +12,10 @@
   // Default due date to today or first day of month if in future
   $: {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
     const monthStart = `${month}-01`;
     const monthParts = month.split('-');
     const monthDate = new Date(parseInt(monthParts[0]), parseInt(monthParts[1]) - 1, 1);

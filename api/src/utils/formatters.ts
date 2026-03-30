@@ -1,5 +1,7 @@
 // Formatters - Currency and date formatting utilities
 
+import { parseLocalDate } from './due-date';
+
 export function formatCurrency(amount: number): string {
   if (typeof amount !== 'number') {
     return '$0.00';
@@ -16,7 +18,15 @@ export function formatCentsToDollars(cents: number): string {
 }
 
 export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  // Use parseLocalDate for YYYY-MM-DD strings to avoid UTC off-by-one shift.
+  // new Date("YYYY-MM-DD") parses as UTC midnight; in western timezones, local
+  // getDate() returns the previous day.
+  const d =
+    typeof date === 'string'
+      ? /^\d{4}-\d{2}-\d{2}$/.test(date)
+        ? parseLocalDate(date)
+        : new Date(date)
+      : date;
 
   if (isNaN(d.getTime())) {
     return 'Invalid Date';

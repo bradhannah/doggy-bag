@@ -7,6 +7,7 @@ import { AdhocServiceImpl } from '../../services/adhoc-service';
 import { CategoriesServiceImpl } from '../../services/categories-service';
 import { formatErrorForUser } from '../../utils/errors';
 import { sumClosedOccurrenceAmounts } from '../../utils/tally';
+import { getTodayLocalDateString } from '../../utils/due-date';
 import type { SavingsGoalStatus, GoalTemperature, MonthlyData } from '../../types';
 
 const savingsGoalsService: SavingsGoalsService = new SavingsGoalsServiceImpl();
@@ -982,7 +983,10 @@ function getNextPaymentDate(currentDate: string, billingPeriod: string): string 
       break;
   }
 
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /**
@@ -1052,7 +1056,7 @@ export function createSavingsGoalsPaymentsHandler() {
       }
 
       const rawPayments: RawPayment[] = [];
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
 
       // Collect payments from all months
       for (const monthData of allMonthData) {
@@ -1306,7 +1310,7 @@ export function createSavingsGoalsRemoveScheduleHandler() {
         );
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const todayFormatted = new Date().toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',

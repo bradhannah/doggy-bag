@@ -15,7 +15,7 @@
   import { createBill, type Bill } from '../../../../stores/bills';
   import { success, error as showError } from '../../../../stores/toast';
   import { apiClient } from '$lib/api/client';
-  import { formatCurrency } from '$lib/utils/format';
+  import { formatCurrency, getTodayDateString, parseLocalDate } from '$lib/utils/format';
 
   // Get goal ID from URL
   $: goalId = ($page.params as { id: string }).id;
@@ -37,7 +37,7 @@
 
   // Schedule creation state
   let showScheduleForm = false;
-  let scheduleStartDate = new Date().toISOString().split('T')[0];
+  let scheduleStartDate = getTodayDateString();
   let includeCurrentMonth = true;
 
   // Custom amount state (for "Set your own amount" feature)
@@ -96,7 +96,7 @@
       (notes || '') !== (goal.notes || ''));
 
   // Calculate minimum date (today for active goals, no restriction for completed)
-  $: minDate = goal?.status === 'saving' ? new Date().toISOString().split('T')[0] : undefined;
+  $: minDate = goal?.status === 'saving' ? getTodayDateString() : undefined;
 
   // Active schedule detection
   $: activeBills = bills.filter((b) => b.is_active);
@@ -154,7 +154,7 @@
     if (amount <= 0 || remainingAmount <= 0) return null;
 
     const paymentsNeeded = Math.ceil(remainingAmount / amount);
-    const start = new Date(startDate);
+    const start = parseLocalDate(startDate);
     start.setHours(0, 0, 0, 0);
 
     let completionDate: Date;
@@ -177,7 +177,7 @@
     let monthsBehind = 0;
 
     if (goalTargetDate) {
-      const target = new Date(goalTargetDate);
+      const target = parseLocalDate(goalTargetDate);
       target.setHours(0, 0, 0, 0);
       meetsTarget = completionDate <= target;
       if (!meetsTarget) {
@@ -197,14 +197,14 @@
 
   function calculateDaysUntil(date: string): number {
     if (!date) return 0;
-    const targetTime = new Date(date).setHours(0, 0, 0, 0);
+    const targetTime = parseLocalDate(date).setHours(0, 0, 0, 0);
     const todayTime = new Date().setHours(0, 0, 0, 0);
     return Math.ceil((targetTime - todayTime) / (1000 * 60 * 60 * 24));
   }
 
   function calculateMonthsUntil(date: string): number {
     if (!date) return 0;
-    const target = new Date(date);
+    const target = parseLocalDate(date);
     const now = new Date();
     const months =
       (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
@@ -216,7 +216,7 @@
     startDate: string
   ): string {
     if (!targetDate || !startDate) return '';
-    const start = new Date(startDate);
+    const start = parseLocalDate(startDate);
     start.setHours(0, 0, 0, 0);
 
     let finalDate: Date;
@@ -368,7 +368,7 @@
 
       // If "include current month" is checked, create an immediate contribution for this month
       if (includeCurrentMonth) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDateString();
 
         try {
           await apiClient.post(`/api/savings-goals/${goal.id}/contribute`, {
@@ -405,7 +405,7 @@
             : frequency === 'bi_weekly'
               ? 'Every 2 Weeks'
               : 'Monthly',
-        startDate: formatDateShort(new Date(scheduleStartDate)),
+        startDate: formatDateShort(parseLocalDate(scheduleStartDate)),
       };
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to create payment schedule');
@@ -718,7 +718,7 @@
                   type="date"
                   id="scheduleStartDate"
                   bind:value={scheduleStartDate}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={getTodayDateString()}
                 />
                 <span class="field-hint">First payment will be on this date</span>
               </div>

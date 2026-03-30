@@ -9,6 +9,7 @@ import type { StorageService } from './storage';
 import type { InsuranceCategoriesService } from './insurance-categories-service';
 import type { InsurancePlansService } from './insurance-plans-service';
 import type { FamilyMembersService } from './family-members-service';
+import { parseLocalDate } from '../utils/due-date';
 import type {
   InsuranceClaim,
   ClaimDocument,
@@ -223,7 +224,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         }
         if (filters.year) {
           claims = claims.filter((c) => {
-            const claimYear = new Date(c.service_date).getFullYear();
+            const claimYear = parseLocalDate(c.service_date).getFullYear();
             return claimYear === filters.year;
           });
         }

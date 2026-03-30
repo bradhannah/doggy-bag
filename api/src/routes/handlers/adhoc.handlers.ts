@@ -7,6 +7,7 @@ import type {
   CreateAdhocIncomeRequest,
   UpdateAdhocRequest,
   MakeRegularRequest,
+  CopyToMonthRequest,
 } from '../../services/adhoc-service';
 import { formatErrorForUser, NotFoundError, ValidationError } from '../../utils/errors';
 import { checkReadOnly } from './shared';
@@ -17,32 +18,52 @@ const adhocService = new AdhocServiceImpl();
 // /api/months/2025-01/adhoc/bills -> { month: '2025-01', instanceId: null }
 // /api/months/2025-01/adhoc/bills/uuid -> { month: '2025-01', instanceId: 'uuid' }
 // /api/months/2025-01/adhoc/bills/uuid/make-regular -> { month: '2025-01', instanceId: 'uuid', makeRegular: true }
+// /api/months/2025-01/adhoc/bills/uuid/copy-to-month -> { month: '2025-01', instanceId: 'uuid', copyToMonth: true }
 function extractAdhocParams(url: string): {
   month: string | null;
   instanceId: string | null;
   makeRegular: boolean;
+  copyToMonth: boolean;
 } {
-  // Match make-regular pattern first
+  // Match copy-to-month pattern
+  const copyToMonthMatch = url.match(
+    /\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^/]+)\/copy-to-month/
+  );
+  if (copyToMonthMatch) {
+    return {
+      month: copyToMonthMatch[1],
+      instanceId: copyToMonthMatch[2],
+      makeRegular: false,
+      copyToMonth: true,
+    };
+  }
+
+  // Match make-regular pattern
   const makeRegularMatch = url.match(
     /\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^/]+)\/make-regular/
   );
   if (makeRegularMatch) {
-    return { month: makeRegularMatch[1], instanceId: makeRegularMatch[2], makeRegular: true };
+    return {
+      month: makeRegularMatch[1],
+      instanceId: makeRegularMatch[2],
+      makeRegular: true,
+      copyToMonth: false,
+    };
   }
 
   // Match with instance ID
   const withId = url.match(/\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)\/([^/]+)/);
   if (withId) {
-    return { month: withId[1], instanceId: withId[2], makeRegular: false };
+    return { month: withId[1], instanceId: withId[2], makeRegular: false, copyToMonth: false };
   }
 
   // Match without instance ID (for POST create)
   const withoutId = url.match(/\/api\/months\/(\d{4}-\d{2})\/adhoc\/(?:bills|incomes)/);
   if (withoutId) {
-    return { month: withoutId[1], instanceId: null, makeRegular: false };
+    return { month: withoutId[1], instanceId: null, makeRegular: false, copyToMonth: false };
   }
 
-  return { month: null, instanceId: null, makeRegular: false };
+  return { month: null, instanceId: null, makeRegular: false, copyToMonth: false };
 }
 
 // ============================================================================
@@ -607,6 +628,208 @@ export function createMakeRegularIncomeHandler() {
         JSON.stringify({
           error: formatErrorForUser(error),
           message: 'Failed to make income regular',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  };
+}
+
+// ============================================================================
+// Copy/Move to Another Month
+// ============================================================================
+
+/**
+ * POST /api/months/:month/adhoc/bills/:id/copy-to-month
+ * Copy or move an ad-hoc bill to another month
+ */
+export function createCopyBillToMonthHandler() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const { month, instanceId, copyToMonth } = extractAdhocParams(url.pathname);
+
+      if (!month || !instanceId || !copyToMonth) {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/bills/:id/copy-to-month',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      // Check if source month is read-only (for move operations)
+      // We check inside the service for moves, but check read-only for the source month here
+      const body = (await request.json()) as CopyToMonthRequest;
+
+      if (!body.target_month || !body.action) {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing required fields: target_month, action',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      if (body.action !== 'copy' && body.action !== 'move') {
+        return new Response(
+          JSON.stringify({
+            error: 'action must be "copy" or "move"',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // For move, check source month is not read-only
+      if (body.action === 'move') {
+        const readOnlyResponse = await checkReadOnly(month);
+        if (readOnlyResponse) return readOnlyResponse;
+      }
+
+      const billInstance = await adhocService.copyBillToMonth(month, instanceId, body);
+
+      const actionLabel = body.action === 'move' ? 'Moved' : 'Copied';
+      return new Response(
+        JSON.stringify({
+          billInstance,
+          message: `${actionLabel} bill to ${body.target_month}`,
+        }),
+        {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (error) {
+      console.error('[AdhocHandler] Copy bill to month error:', error);
+
+      if (error instanceof NotFoundError) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (error instanceof ValidationError) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to copy bill to month',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  };
+}
+
+/**
+ * POST /api/months/:month/adhoc/incomes/:id/copy-to-month
+ * Copy or move an ad-hoc income to another month
+ */
+export function createCopyIncomeToMonthHandler() {
+  return async (request: Request) => {
+    try {
+      const url = new URL(request.url);
+      const { month, instanceId, copyToMonth } = extractAdhocParams(url.pathname);
+
+      if (!month || !instanceId || !copyToMonth) {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL. Expected /api/months/YYYY-MM/adhoc/incomes/:id/copy-to-month',
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+
+      const body = (await request.json()) as CopyToMonthRequest;
+
+      if (!body.target_month || !body.action) {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing required fields: target_month, action',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      if (body.action !== 'copy' && body.action !== 'move') {
+        return new Response(
+          JSON.stringify({
+            error: 'action must be "copy" or "move"',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // For move, check source month is not read-only
+      if (body.action === 'move') {
+        const readOnlyResponse = await checkReadOnly(month);
+        if (readOnlyResponse) return readOnlyResponse;
+      }
+
+      const incomeInstance = await adhocService.copyIncomeToMonth(month, instanceId, body);
+
+      const actionLabel = body.action === 'move' ? 'Moved' : 'Copied';
+      return new Response(
+        JSON.stringify({
+          incomeInstance,
+          message: `${actionLabel} income to ${body.target_month}`,
+        }),
+        {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (error) {
+      console.error('[AdhocHandler] Copy income to month error:', error);
+
+      if (error instanceof NotFoundError) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (error instanceof ValidationError) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: formatErrorForUser(error),
+          message: 'Failed to copy income to month',
         }),
         {
           status: 500,

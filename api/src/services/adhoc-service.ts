@@ -19,6 +19,7 @@ import type {
   DateString,
   MonthlyData,
 } from '../types';
+import { getTodayLocalDateString } from '../utils/due-date';
 
 // Request types
 export interface CreateAdhocBillRequest {
@@ -63,6 +64,11 @@ export interface MakeRegularRequest {
   day_of_month?: number;
 }
 
+export interface CopyToMonthRequest {
+  target_month: string; // YYYY-MM
+  action: 'copy' | 'move';
+}
+
 export interface AdhocService {
   // Bills
   createAdhocBill(month: string, data: CreateAdhocBillRequest): Promise<BillInstance>;
@@ -77,6 +83,11 @@ export interface AdhocService {
     instanceId: string,
     data: MakeRegularRequest
   ): Promise<{ bill: Bill; billInstance: BillInstance }>;
+  copyBillToMonth(
+    month: string,
+    instanceId: string,
+    data: CopyToMonthRequest
+  ): Promise<BillInstance>;
 
   // Goal Contributions (one-time savings payments)
   createGoalContribution(month: string, data: CreateGoalContributionRequest): Promise<BillInstance>;
@@ -94,6 +105,11 @@ export interface AdhocService {
     instanceId: string,
     data: MakeRegularRequest
   ): Promise<{ income: Income; incomeInstance: IncomeInstance }>;
+  copyIncomeToMonth(
+    month: string,
+    instanceId: string,
+    data: CopyToMonthRequest
+  ): Promise<IncomeInstance>;
 }
 
 // Default ad-hoc category IDs (will be created if they don't exist)
@@ -354,7 +370,7 @@ export class AdhocServiceImpl implements AdhocService {
       billData.day_of_month = data.day_of_month || 1;
     } else {
       // For non-monthly, we need a start_date - use today
-      billData.start_date = new Date().toISOString().split('T')[0];
+      billData.start_date = getTodayLocalDateString();
     }
 
     const newBill = await this.billsService.create(billData);
@@ -407,7 +423,7 @@ export class AdhocServiceImpl implements AdhocService {
     }
 
     // Validate date is not in the future and is within the specified month
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayLocalDateString();
     if (data.date > today) {
       throw new Error('Payment date cannot be in the future');
     }
@@ -614,7 +630,7 @@ export class AdhocServiceImpl implements AdhocService {
       incomeData.day_of_month = data.day_of_month || 1;
     } else {
       // For non-monthly, we need a start_date - use today
-      incomeData.start_date = new Date().toISOString().split('T')[0];
+      incomeData.start_date = getTodayLocalDateString();
     }
 
     const newIncome = await this.incomesService.create(incomeData);
@@ -636,5 +652,170 @@ export class AdhocServiceImpl implements AdhocService {
       `[AdhocService] Converted ad-hoc income "${instance.name}" to regular income "${newIncome.name}"`
     );
     return { income: newIncome, incomeInstance: updatedInstance };
+  }
+
+  // ========================================================================
+  // Copy/Move to Another Month
+  // ========================================================================
+
+  /**
+   * Shift an occurrence date to the target month, clamping to the last day of the target month.
+   */
+  private shiftDateToMonth(dateStr: string, targetMonth: string): string {
+    const day = parseInt(dateStr.split('-')[2], 10);
+    const [year, monthNum] = targetMonth.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const clampedDay = Math.min(day, lastDay);
+    return `${targetMonth}-${String(clampedDay).padStart(2, '0')}`;
+  }
+
+  /**
+   * Copy (or move) an ad-hoc bill to another month.
+   * Copy: creates a new instance in the target month.
+   * Move: creates a copy then deletes the source.
+   */
+  public async copyBillToMonth(
+    month: string,
+    instanceId: string,
+    data: CopyToMonthRequest
+  ): Promise<BillInstance> {
+    const monthData = await this.monthsService.getMonthlyData(month);
+    if (!monthData) {
+      throw new Error(`Month ${month} not found`);
+    }
+
+    const instance = monthData.bill_instances.find((bi) => bi.id === instanceId);
+    if (!instance) {
+      throw new Error(`Bill instance ${instanceId} not found`);
+    }
+    if (!instance.is_adhoc) {
+      throw new Error('Can only copy/move ad-hoc items');
+    }
+    if (data.target_month === month) {
+      throw new Error('Target month must be different from source month');
+    }
+
+    // Ensure target month data exists
+    const targetMonthData = await this.ensureMonthData(data.target_month);
+
+    const now = new Date().toISOString();
+
+    // Deep copy occurrences with new IDs, reset closed state, shift dates
+    const newOccurrences: Occurrence[] = instance.occurrences.map((occ, idx) => ({
+      id: crypto.randomUUID(),
+      sequence: idx + 1,
+      expected_date: this.shiftDateToMonth(occ.expected_date, data.target_month),
+      expected_amount: occ.expected_amount,
+      is_closed: false,
+      is_adhoc: true,
+      created_at: now,
+      updated_at: now,
+    }));
+
+    const newInstance: BillInstance = {
+      id: crypto.randomUUID(),
+      bill_id: null,
+      month: data.target_month,
+      billing_period: instance.billing_period,
+      expected_amount: instance.expected_amount,
+      occurrences: newOccurrences,
+      is_default: false,
+      is_closed: false,
+      is_adhoc: true,
+      name: instance.name,
+      category_id: instance.category_id,
+      payment_source_id: instance.payment_source_id,
+      created_at: now,
+      updated_at: now,
+    };
+
+    targetMonthData.bill_instances.push(newInstance);
+    await this.monthsService.saveMonthlyData(data.target_month, targetMonthData);
+
+    // If move, delete the source
+    if (data.action === 'move') {
+      await this.deleteAdhocBill(month, instanceId);
+    }
+
+    const actionLabel = data.action === 'move' ? 'Moved' : 'Copied';
+    console.log(
+      `[AdhocService] ${actionLabel} ad-hoc bill "${instance.name}" from ${month} to ${data.target_month}`
+    );
+    return newInstance;
+  }
+
+  /**
+   * Copy (or move) an ad-hoc income to another month.
+   * Copy: creates a new instance in the target month.
+   * Move: creates a copy then deletes the source.
+   */
+  public async copyIncomeToMonth(
+    month: string,
+    instanceId: string,
+    data: CopyToMonthRequest
+  ): Promise<IncomeInstance> {
+    const monthData = await this.monthsService.getMonthlyData(month);
+    if (!monthData) {
+      throw new Error(`Month ${month} not found`);
+    }
+
+    const instance = monthData.income_instances.find((ii) => ii.id === instanceId);
+    if (!instance) {
+      throw new Error(`Income instance ${instanceId} not found`);
+    }
+    if (!instance.is_adhoc) {
+      throw new Error('Can only copy/move ad-hoc items');
+    }
+    if (data.target_month === month) {
+      throw new Error('Target month must be different from source month');
+    }
+
+    // Ensure target month data exists
+    const targetMonthData = await this.ensureMonthData(data.target_month);
+
+    const now = new Date().toISOString();
+
+    // Deep copy occurrences with new IDs, reset closed state, shift dates
+    const newOccurrences: Occurrence[] = instance.occurrences.map((occ, idx) => ({
+      id: crypto.randomUUID(),
+      sequence: idx + 1,
+      expected_date: this.shiftDateToMonth(occ.expected_date, data.target_month),
+      expected_amount: occ.expected_amount,
+      is_closed: false,
+      is_adhoc: true,
+      created_at: now,
+      updated_at: now,
+    }));
+
+    const newInstance: IncomeInstance = {
+      id: crypto.randomUUID(),
+      income_id: null,
+      month: data.target_month,
+      billing_period: instance.billing_period,
+      expected_amount: instance.expected_amount,
+      occurrences: newOccurrences,
+      is_default: false,
+      is_closed: false,
+      is_adhoc: true,
+      name: instance.name,
+      category_id: instance.category_id,
+      payment_source_id: instance.payment_source_id,
+      created_at: now,
+      updated_at: now,
+    };
+
+    targetMonthData.income_instances.push(newInstance);
+    await this.monthsService.saveMonthlyData(data.target_month, targetMonthData);
+
+    // If move, delete the source
+    if (data.action === 'move') {
+      await this.deleteAdhocIncome(month, instanceId);
+    }
+
+    const actionLabel = data.action === 'move' ? 'Moved' : 'Copied';
+    console.log(
+      `[AdhocService] ${actionLabel} ad-hoc income "${instance.name}" from ${month} to ${data.target_month}`
+    );
+    return newInstance;
   }
 }

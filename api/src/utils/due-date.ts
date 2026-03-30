@@ -2,6 +2,38 @@
 // Calculate due dates and overdue status for bills/incomes
 
 /**
+ * Parse a "YYYY-MM-DD" date string as local midnight.
+ *
+ * IMPORTANT: `new Date("YYYY-MM-DD")` is parsed as UTC midnight per the ES spec.
+ * When local-time methods (getDate, getMonth, etc.) are used on the resulting Date,
+ * timezones west of UTC will see the date shifted backward by one day.
+ *
+ * This helper splits the string and constructs via `new Date(year, month-1, day)`
+ * which always produces local midnight — no timezone shift.
+ *
+ * @param dateStr - Date in YYYY-MM-DD format
+ * @returns Date at local midnight for that calendar date
+ */
+export function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Get today's date as a "YYYY-MM-DD" string in local time.
+ *
+ * Avoids `new Date().toISOString().split('T')[0]` which returns the UTC date
+ * and can differ from the local date near midnight.
+ */
+export function getTodayLocalDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Calculate the due date for a bill/income in a specific month
  * Handles edge cases like due day 31 in short months
  *
@@ -34,8 +66,7 @@ export function isOverdue(dueDate: string | undefined, isPaid: boolean): boolean
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
+  const due = parseLocalDate(dueDate);
 
   return due.getTime() < today.getTime();
 }
@@ -53,8 +84,7 @@ export function getDaysOverdue(dueDate: string | undefined): number | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
+  const due = parseLocalDate(dueDate);
 
   const diffTime = today.getTime() - due.getTime();
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -69,7 +99,7 @@ export function getDaysOverdue(dueDate: string | undefined): number | null {
 export function formatDueDate(dueDate: string | undefined): string | null {
   if (!dueDate) return null;
 
-  const date = new Date(dueDate);
+  const date = parseLocalDate(dueDate);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -87,8 +117,7 @@ export function isDueSoon(dueDate: string | undefined, days: number = 3): boolea
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
+  const due = parseLocalDate(dueDate);
 
   const diffTime = due.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

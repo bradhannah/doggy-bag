@@ -4,7 +4,7 @@
   import { success, error as showError } from '../../stores/toast';
   import type { SavingsGoal } from '../../stores/savings-goals';
   import Modal from '../shared/Modal.svelte';
-  import { formatCurrency } from '$lib/utils/format';
+  import { formatCurrency, getTodayDateString, getFirstDayOfMonth } from '$lib/utils/format';
 
   export let goal: SavingsGoal;
   export let onClose: () => void;
@@ -13,17 +13,14 @@
   const dispatch = createEventDispatcher();
 
   let amountDollars = '';
-  let paymentDate = new Date().toISOString().split('T')[0];
+  let paymentDate = getTodayDateString();
   let submitting = false;
 
   // Calculate max date (today)
-  $: maxDate = new Date().toISOString().split('T')[0];
+  $: maxDate = getTodayDateString();
 
   // Calculate min date (first of current month)
-  $: minDate = (() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  })();
+  $: minDate = getFirstDayOfMonth();
 
   // Form validation
   $: amountCents = Math.round(parseFloat(amountDollars || '0') * 100);

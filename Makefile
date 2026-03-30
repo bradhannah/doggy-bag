@@ -232,7 +232,7 @@ test: ## Run all tests (Bun backend + Vitest frontend + Playwright E2E)
 
 test-backend: ## Run backend tests with Bun test runner
 	@echo "Running backend tests (Bun)..."
-	@cd api && $(BUN) test
+	@cd api && TZ=America/Toronto $(BUN) test
 
 test-frontend: ## Run frontend tests with Vitest
 	@echo "Running frontend tests (Vitest)..."
@@ -256,7 +256,7 @@ test-e2e: ## Run E2E tests with Playwright (requires Node.js via nvm)
 
 test-backend-coverage: ## Run backend tests with coverage (Bun native)
 	@echo "Running backend tests with coverage..."
-	@cd api && $(BUN) test --coverage
+	@cd api && TZ=America/Toronto $(BUN) test --coverage
 
 test-frontend-coverage: ## Run frontend tests with coverage (requires Node.js)
 	@echo "Running frontend tests with coverage..."
@@ -266,7 +266,7 @@ test-frontend-coverage: ## Run frontend tests with coverage (requires Node.js)
 
 test-coverage: ## Run all tests with coverage
 	@echo "=== Backend Coverage (Bun native) ==="
-	@cd api && $(BUN) test --coverage
+	@cd api && TZ=America/Toronto $(BUN) test --coverage
 	@echo ""
 	@echo "=== Frontend Coverage ==="
 	@if command -v node >/dev/null 2>&1; then \

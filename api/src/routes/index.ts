@@ -107,10 +107,12 @@ import {
   createAdhocBillHandlerPUT,
   createAdhocBillHandlerDELETE,
   createMakeRegularBillHandler,
+  createCopyBillToMonthHandler,
   createAdhocIncomeHandlerPOST,
   createAdhocIncomeHandlerPUT,
   createAdhocIncomeHandlerDELETE,
   createMakeRegularIncomeHandler,
+  createCopyIncomeToMonthHandler,
 } from './handlers/adhoc.handlers';
 
 import {
@@ -863,7 +865,11 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     },
   },
 
-  // Ad-hoc bills - make-regular must come before other adhoc routes
+  // Ad-hoc bills - copy-to-month and make-regular must come before other adhoc routes
+  {
+    path: '/api/months/adhoc/bills/copy-to-month',
+    definition: { method: 'POST', handler: createCopyBillToMonthHandler(), hasPathParam: true },
+  },
   {
     path: '/api/months/adhoc/bills/make-regular',
     definition: { method: 'POST', handler: createMakeRegularBillHandler(), hasPathParam: true },
@@ -881,7 +887,11 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
     definition: { method: 'DELETE', handler: createAdhocBillHandlerDELETE(), hasPathParam: true },
   },
 
-  // Ad-hoc incomes - make-regular must come before other adhoc routes
+  // Ad-hoc incomes - copy-to-month and make-regular must come before other adhoc routes
+  {
+    path: '/api/months/adhoc/incomes/copy-to-month',
+    definition: { method: 'POST', handler: createCopyIncomeToMonthHandler(), hasPathParam: true },
+  },
   {
     path: '/api/months/adhoc/incomes/make-regular',
     definition: { method: 'POST', handler: createMakeRegularIncomeHandler(), hasPathParam: true },

@@ -6,7 +6,7 @@
   import { createBill } from '../../../stores/bills';
   import { apiClient } from '$lib/api/client';
   import { success, error as showError } from '../../../stores/toast';
-  import { formatCurrency } from '$lib/utils/format';
+  import { formatCurrency, getTodayDateString, parseLocalDate } from '$lib/utils/format';
 
   let name = '';
   let targetAmountDollars = '';
@@ -23,7 +23,7 @@
   type ScheduleType = 'weekly' | 'biweekly' | 'monthly';
   let selectedSchedule: ScheduleType | null = null;
   let showScheduleForm = false;
-  let scheduleStartDate = new Date().toISOString().split('T')[0];
+  let scheduleStartDate = getTodayDateString();
   let includeCurrentMonth = true;
 
   // Custom amount schedule for open-ended goals
@@ -52,7 +52,7 @@
     linkedAccountId !== '';
 
   // Calculate minimum date (today)
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
 
   // Calculate payment schedule info
   $: targetAmountCents = Math.round((parseFloat(targetAmountDollars) || 0) * 100);
@@ -73,7 +73,7 @@
 
   function calculateFinalPaymentDate(schedule: 'weekly' | 'biweekly' | 'monthly'): string {
     if (!targetDate || !scheduleStartDate) return '';
-    const start = new Date(scheduleStartDate);
+    const start = parseLocalDate(scheduleStartDate);
     start.setHours(0, 0, 0, 0);
 
     let finalDate: Date;
@@ -117,14 +117,14 @@
 
   function calculateDaysUntil(date: string): number {
     if (!date) return 0;
-    const targetTime = new Date(date).setHours(0, 0, 0, 0);
+    const targetTime = parseLocalDate(date).setHours(0, 0, 0, 0);
     const todayTime = new Date().setHours(0, 0, 0, 0);
     return Math.ceil((targetTime - todayTime) / (1000 * 60 * 60 * 24));
   }
 
   function calculateMonthsUntil(date: string): number {
     if (!date) return 0;
-    const target = new Date(date);
+    const target = parseLocalDate(date);
     const now = new Date();
     const months =
       (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
@@ -227,9 +227,9 @@
           // If "include current month" is checked and start date is after today,
           // create an immediate ad-hoc contribution for this month
           if (includeCurrentMonth) {
-            const todayDate = new Date().toISOString().split('T')[0];
-            const startDateObj = new Date(scheduleStartDate);
-            const todayObj = new Date(todayDate);
+            const todayDate = getTodayDateString();
+            const startDateObj = parseLocalDate(scheduleStartDate);
+            const todayObj = parseLocalDate(todayDate);
 
             // Only create ad-hoc if schedule starts in the future
             if (startDateObj > todayObj) {
@@ -394,7 +394,7 @@
                 type="date"
                 id="scheduleStartDate"
                 bind:value={scheduleStartDate}
-                min={new Date().toISOString().split('T')[0]}
+                min={getTodayDateString()}
               />
               <span class="field-hint">First payment will be on this date</span>
             </div>
@@ -558,7 +558,7 @@
                 type="date"
                 id="customScheduleStartDate"
                 bind:value={scheduleStartDate}
-                min={new Date().toISOString().split('T')[0]}
+                min={getTodayDateString()}
               />
               <span class="field-hint">First contribution will be on this date</span>
             </div>

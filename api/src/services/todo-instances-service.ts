@@ -7,6 +7,7 @@ import type { StorageService } from './storage';
 import type { Todo, TodoInstance, TodoStatus, MonthlyData, ValidationResult } from '../types';
 import { TodosServiceImpl } from './todos-service';
 import type { TodosService } from './todos-service';
+import { parseLocalDate, getTodayLocalDateString } from '../utils/due-date';
 
 export interface TodoInstancesService {
   // Read methods
@@ -120,7 +121,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
 
   public async getOverdue(month: string, asOfDate?: string): Promise<TodoInstance[]> {
     try {
-      const today = asOfDate || new Date().toISOString().split('T')[0];
+      const today = asOfDate || getTodayLocalDateString();
       const instances = await this.getForMonth(month);
       return instances
         .filter((ti) => ti.status === 'pending' && ti.due_date < today)
@@ -263,7 +264,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
     const { includeCurrentMonth = true, includeFutureMonths = true } = options;
 
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const currentMonth = getTodayLocalDateString().slice(0, 7); // YYYY-MM
       const monthFiles = await this.storage.listFiles('data/months');
       const monthsAffected: string[] = [];
       let deletedCount = 0;
@@ -494,6 +495,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
 
   /**
    * Weekly recurrence - get all weekly dates in month
+   * Uses parseLocalDate() and setDate() arithmetic to avoid DST off-by-one errors.
    */
   private getWeeklyDatesInMonth(todo: Todo, startOfMonth: Date, endOfMonth: Date): string[] {
     // For weekly recurrence, start_date is required (enforced by validation)
@@ -502,21 +504,20 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
     if (!anchorDate) {
       return [];
     }
-    const anchor = new Date(anchorDate);
+    const anchor = parseLocalDate(anchorDate);
     const dates: string[] = [];
-    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
-    let current = new Date(anchor);
+    let current = new Date(anchor.getTime());
 
     // Move to the correct week within or before the month
     if (current > endOfMonth) {
       while (current > endOfMonth) {
-        current = new Date(current.getTime() - oneWeekMs);
+        current.setDate(current.getDate() - 7);
       }
     }
 
     while (current < startOfMonth) {
-      current = new Date(current.getTime() + oneWeekMs);
+      current.setDate(current.getDate() + 7);
     }
 
     // Collect all weekly dates within the month
@@ -524,7 +525,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
       if (current >= startOfMonth) {
         dates.push(this.formatDate(current));
       }
-      current = new Date(current.getTime() + oneWeekMs);
+      current.setDate(current.getDate() + 7);
     }
 
     return dates.sort();
@@ -532,6 +533,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
 
   /**
    * Bi-weekly recurrence - get all bi-weekly dates in month
+   * Uses parseLocalDate() and setDate() arithmetic to avoid DST off-by-one errors.
    */
   private getBiWeeklyDatesInMonth(todo: Todo, startOfMonth: Date, endOfMonth: Date): string[] {
     // For bi-weekly recurrence, start_date is required (enforced by validation)
@@ -540,21 +542,20 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
     if (!anchorDate) {
       return [];
     }
-    const anchor = new Date(anchorDate);
+    const anchor = parseLocalDate(anchorDate);
     const dates: string[] = [];
-    const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
 
-    let current = new Date(anchor);
+    let current = new Date(anchor.getTime());
 
     // Move to the correct two-week period within or before the month
     if (current > endOfMonth) {
       while (current > endOfMonth) {
-        current = new Date(current.getTime() - twoWeeksMs);
+        current.setDate(current.getDate() - 14);
       }
     }
 
     while (current < startOfMonth) {
-      current = new Date(current.getTime() + twoWeeksMs);
+      current.setDate(current.getDate() + 14);
     }
 
     // Collect all bi-weekly dates within the month
@@ -562,7 +563,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
       if (current >= startOfMonth) {
         dates.push(this.formatDate(current));
       }
-      current = new Date(current.getTime() + twoWeeksMs);
+      current.setDate(current.getDate() + 14);
     }
 
     return dates.sort();

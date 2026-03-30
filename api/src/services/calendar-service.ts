@@ -19,6 +19,7 @@ import type {
   Income,
   SavingsGoal,
 } from '../types';
+import { getTodayLocalDateString } from '../utils/due-date';
 
 // ============================================================================
 // Calendar Event Types
@@ -94,7 +95,7 @@ export class CalendarServiceImpl implements CalendarService {
     const monthlyData = await this.getMonthlyData(month);
 
     // Get today's date for overdue calculation
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayLocalDateString();
 
     if (monthlyData) {
       // Load bills and incomes for name lookups

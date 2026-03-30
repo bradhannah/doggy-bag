@@ -580,7 +580,11 @@ function getDaysInMonth(year: number, month: number): number {
 
 function getBiWeeklyDatesInMonth(startDate: string, year: number, month: number): string[] {
   const dates: string[] = [];
-  const start = new Date(startDate);
+  // Parse startDate as local midnight to avoid UTC off-by-one shift.
+  // new Date("YYYY-MM-DD") parses as UTC midnight; in western timezones, local
+  // getDate() returns the previous day.
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start = new Date(sy, sm - 1, sd);
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0);
 

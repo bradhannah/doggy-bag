@@ -36,25 +36,64 @@ describe('calculateDueDate', () => {
   });
 });
 
+/**
+ * Helper to create a MockDate class that pretends "today" is a specific date.
+ *
+ * The mock must support all Date constructor forms:
+ *   - new Date()            → returns mock "now"
+ *   - new Date(value)       → normal single-arg (timestamp or string)
+ *   - new Date(y, m, d ...) → multi-arg (year, month, day, ...)
+ *
+ * This is important because `parseLocalDate()` uses `new Date(year, month-1, day)`.
+ */
+function createMockDate(isoString: string) {
+  const RealDate = globalThis.Date;
+  const mockNow = new RealDate(isoString);
+
+  class MockDate extends RealDate {
+    constructor(...args: unknown[]) {
+      if (args.length === 0) {
+        // new Date() → return mocked "now"
+        super(mockNow.getTime());
+      } else if (args.length === 1) {
+        // new Date(value) — string, number, or Date
+        super(args[0] as string | number);
+      } else {
+        // new Date(year, month, day?, hours?, ...) — multi-arg form
+        // TypeScript super() only accepts 0 or 1 args, so we use
+        // Date.UTC to convert multi-arg to a timestamp, then adjust
+        // from UTC to local by subtracting the timezone offset.
+        const utc = RealDate.UTC(
+          args[0] as number,
+          args[1] as number,
+          (args[2] as number) ?? 1,
+          (args[3] as number) ?? 0,
+          (args[4] as number) ?? 0,
+          (args[5] as number) ?? 0,
+          (args[6] as number) ?? 0
+        );
+        // Date.UTC gives UTC millis; new Date(y,m,d) gives local millis.
+        // Offset difference = local midnight → UTC midnight.
+        const tempDate = new RealDate(utc);
+        const offsetMs = tempDate.getTimezoneOffset() * 60 * 1000;
+        super(utc + offsetMs);
+      }
+    }
+
+    static override now() {
+      return mockNow.getTime();
+    }
+  }
+
+  return MockDate as unknown as typeof Date;
+}
+
 describe('isOverdue', () => {
   let originalDate: typeof Date;
 
   beforeEach(() => {
-    // Mock Date to be 2025-01-15
     originalDate = globalThis.Date;
-    const mockDate = new Date('2025-01-15T12:00:00Z');
-
-    class MockDate extends Date {
-      constructor(value?: string | number | Date) {
-        if (value === undefined) {
-          super(mockDate.getTime());
-        } else {
-          super(value);
-        }
-      }
-    }
-
-    globalThis.Date = MockDate as typeof Date;
+    globalThis.Date = createMockDate('2025-01-15T12:00:00Z');
   });
 
   afterEach(() => {
@@ -87,19 +126,7 @@ describe('getDaysOverdue', () => {
 
   beforeEach(() => {
     originalDate = globalThis.Date;
-    const mockDate = new Date('2025-01-15T12:00:00Z');
-
-    class MockDate extends Date {
-      constructor(value?: string | number | Date) {
-        if (value === undefined) {
-          super(mockDate.getTime());
-        } else {
-          super(value);
-        }
-      }
-    }
-
-    globalThis.Date = MockDate as typeof Date;
+    globalThis.Date = createMockDate('2025-01-15T12:00:00Z');
   });
 
   afterEach(() => {
@@ -142,19 +169,7 @@ describe('isDueSoon', () => {
 
   beforeEach(() => {
     originalDate = globalThis.Date;
-    const mockDate = new Date('2025-01-15T12:00:00Z');
-
-    class MockDate extends Date {
-      constructor(value?: string | number | Date) {
-        if (value === undefined) {
-          super(mockDate.getTime());
-        } else {
-          super(value);
-        }
-      }
-    }
-
-    globalThis.Date = MockDate as typeof Date;
+    globalThis.Date = createMockDate('2025-01-15T12:00:00Z');
   });
 
   afterEach(() => {

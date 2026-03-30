@@ -1,7 +1,8 @@
 // Migration Utilities for 002-detailed-monthly-view
 // Handles backward-compatible migration of existing data to new schema
 
-import type { BillInstance, IncomeInstance, Category } from '../types';
+import type { Bill, Income, BillInstance, IncomeInstance, Category, BillingPeriod } from '../types';
+import { getOccurrenceDatesInMonth } from './occurrences';
 
 // Legacy data types for migration (data with unknown shapes from old schemas)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -256,4 +257,165 @@ export function needsCategoryMigration(category: LegacyData): boolean {
   return (
     category.sort_order === undefined || category.color === undefined || category.type === undefined
   );
+}
+
+// ============================================================================
+// Occurrence Date Migration (UTC off-by-one fix)
+//
+// Prior to this fix, `new Date("YYYY-MM-DD")` was used to parse start_date
+// strings, which produces UTC midnight. In timezones west of UTC, local-time
+// methods then shift the date back by one day, causing all recurring dates
+// (bi-weekly, weekly, semi-annual) to land on the wrong day-of-week.
+//
+// This migration recalculates expected_date on OPEN occurrences of non-monthly
+// instances using the corrected parseLocalDate() logic in occurrences.ts.
+// Closed occurrences are left untouched (their dates are historical records).
+// ============================================================================
+
+/**
+ * Migrate occurrence dates on bill instances to fix UTC off-by-one.
+ *
+ * @param instances  Bill instances from a single month
+ * @param billMap    Map of bill entities by ID (for start_date lookup)
+ * @param month      The month string (YYYY-MM)
+ * @returns { instances, changed } — the possibly-updated array and a flag
+ */
+export function migrateOccurrenceDatesBills(
+  instances: BillInstance[],
+  billMap: Map<string, Bill>,
+  month: string
+): { instances: BillInstance[]; changed: boolean } {
+  let changed = false;
+
+  const result = instances.map((inst) => {
+    // Skip monthly, ad-hoc, payoff, virtual, and fully-closed instances
+    if (
+      inst.billing_period === 'monthly' ||
+      inst.is_adhoc ||
+      inst.is_payoff_bill ||
+      inst.is_virtual ||
+      !inst.bill_id
+    ) {
+      return inst;
+    }
+
+    const bill = billMap.get(inst.bill_id);
+    if (!bill || !bill.start_date) return inst;
+
+    const updated = recalcOccurrenceDates(
+      inst.occurrences,
+      inst.billing_period as BillingPeriod,
+      bill.start_date,
+      bill.day_of_month,
+      month
+    );
+
+    if (!updated) return inst;
+
+    changed = true;
+    return {
+      ...inst,
+      occurrences: updated,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  return { instances: result, changed };
+}
+
+/**
+ * Migrate occurrence dates on income instances to fix UTC off-by-one.
+ *
+ * @param instances   Income instances from a single month
+ * @param incomeMap   Map of income entities by ID (for start_date lookup)
+ * @param month       The month string (YYYY-MM)
+ * @returns { instances, changed } — the possibly-updated array and a flag
+ */
+export function migrateOccurrenceDatesIncomes(
+  instances: IncomeInstance[],
+  incomeMap: Map<string, Income>,
+  month: string
+): { instances: IncomeInstance[]; changed: boolean } {
+  let changed = false;
+
+  const result = instances.map((inst) => {
+    // Skip monthly, ad-hoc, virtual, and fully-closed instances
+    if (inst.billing_period === 'monthly' || inst.is_adhoc || inst.is_virtual || !inst.income_id) {
+      return inst;
+    }
+
+    const income = incomeMap.get(inst.income_id);
+    if (!income || !income.start_date) return inst;
+
+    const updated = recalcOccurrenceDates(
+      inst.occurrences,
+      inst.billing_period as BillingPeriod,
+      income.start_date,
+      income.day_of_month,
+      month
+    );
+
+    if (!updated) return inst;
+
+    changed = true;
+    return {
+      ...inst,
+      occurrences: updated,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  return { instances: result, changed };
+}
+
+/**
+ * Recalculate occurrence dates for a single instance's occurrences.
+ * Returns null if no changes are needed, or the updated occurrences array.
+ *
+ * Rules:
+ * - Closed occurrences are never modified (historical records).
+ * - Ad-hoc occurrences are never modified (user-created dates).
+ * - Open non-adhoc occurrences have their expected_date corrected.
+ * - If the correct date count differs from open occurrence count, extra
+ *   correct dates are ignored (user may have manually deleted occurrences)
+ *   and extra open occurrences keep their current dates.
+ */
+function recalcOccurrenceDates(
+  occurrences: BillInstance['occurrences'],
+  billingPeriod: BillingPeriod,
+  startDate: string,
+  dayOfMonth: number | undefined,
+  month: string
+): BillInstance['occurrences'] | null {
+  // Generate the correct dates
+  const correctDates = getOccurrenceDatesInMonth(billingPeriod, startDate, dayOfMonth, month);
+
+  // Separate occurrences into frozen (closed or adhoc) and fixable (open, non-adhoc)
+  const frozen = occurrences.filter((occ) => occ.is_closed || occ.is_adhoc);
+  const fixable = occurrences.filter((occ) => !occ.is_closed && !occ.is_adhoc);
+
+  // Sort fixable by sequence to maintain ordering
+  fixable.sort((a, b) => a.sequence - b.sequence);
+
+  // Check if any date actually changed
+  let anyChanged = false;
+  const updatedFixable = fixable.map((occ, i) => {
+    if (i < correctDates.length && occ.expected_date !== correctDates[i]) {
+      anyChanged = true;
+      return {
+        ...occ,
+        expected_date: correctDates[i],
+        updated_at: new Date().toISOString(),
+      };
+    }
+    return occ;
+  });
+
+  if (!anyChanged) return null;
+
+  // Rebuild the full occurrences array: frozen first, then updated fixable,
+  // re-sorted by expected_date and re-sequenced.
+  const all = [...frozen, ...updatedFixable];
+  all.sort((a, b) => a.expected_date.localeCompare(b.expected_date));
+  return all.map((occ, i) => ({ ...occ, sequence: i + 1 }));
 }

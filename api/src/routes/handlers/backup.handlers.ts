@@ -2,6 +2,7 @@
 
 import { BackupServiceImpl } from '../../services/backup-service';
 import { getVersionService } from '../../services/version-service';
+import { getTodayLocalDateString } from '../../utils/due-date';
 import type { BackupFileData } from '../../types';
 
 const backupService = BackupServiceImpl.getInstance();
@@ -18,7 +19,7 @@ export function createBackupHandlerGET() {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Content-Disposition': `attachment; filename="doggybag-backup-${new Date().toISOString().split('T')[0]}.json"`,
+          'Content-Disposition': `attachment; filename="doggybag-backup-${getTodayLocalDateString()}.json"`,
         },
       });
     } catch (error) {

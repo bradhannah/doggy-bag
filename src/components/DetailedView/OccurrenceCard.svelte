@@ -297,6 +297,7 @@
           {readOnly}
           {isPayoffBill}
           {isVirtualInsurance}
+          instanceIsAdhoc={item.is_adhoc}
           on:updated={handleOccurrenceUpdated}
         />
       {/each}

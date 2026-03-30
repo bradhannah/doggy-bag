@@ -23,7 +23,7 @@
     type SavingsGoal,
   } from '../../stores/savings-goals';
   import { success, error as showError } from '../../stores/toast';
-  import { formatCurrency, formatDate } from '$lib/utils/format';
+  import { formatCurrency, formatDate, parseLocalDate } from '$lib/utils/format';
   import { type Bill } from '../../stores/bills';
   import MakePaymentModal from '../../components/Goals/MakePaymentModal.svelte';
   import ViewPaymentsModal from '../../components/Goals/ViewPaymentsModal.svelte';
@@ -117,7 +117,7 @@
   }
 
   function getDaysRemaining(targetDate: string): number {
-    const targetTime = new Date(targetDate).setHours(0, 0, 0, 0);
+    const targetTime = parseLocalDate(targetDate).setHours(0, 0, 0, 0);
     const todayTime = new Date().setHours(0, 0, 0, 0);
     return Math.ceil((targetTime - todayTime) / (1000 * 60 * 60 * 24));
   }

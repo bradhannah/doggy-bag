@@ -6,6 +6,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Category, MonthlyData, SavingsGoal } from '../types';
+import { getTodayLocalDateString } from '../utils/due-date';
 
 describe('AdhocService', () => {
   let service: AdhocServiceImpl;
@@ -107,7 +108,7 @@ describe('AdhocService', () => {
 
   describe('createGoalContribution', () => {
     test('should create a goal contribution with payment', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       const contribution = await service.createGoalContribution(currentMonth, {
@@ -136,7 +137,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution without goal_id', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       await expect(
@@ -152,7 +153,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution without goal_name', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       await expect(
@@ -168,7 +169,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution with zero amount', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       await expect(
@@ -184,7 +185,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution with negative amount', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       await expect(
@@ -200,7 +201,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution without category_id', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       await expect(
@@ -216,7 +217,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution without payment_source_id', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       await expect(
@@ -265,7 +266,7 @@ describe('AdhocService', () => {
     });
 
     test('should reject contribution with date in different month', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const differentMonth = '2025-06'; // A month in the past
 
       await expect(

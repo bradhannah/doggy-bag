@@ -56,7 +56,8 @@ describe('formatCentsToDollars', () => {
 
 describe('formatDate', () => {
   test('formats Date object', () => {
-    const date = new Date('2025-01-15');
+    // Use new Date(y, m-1, d) to avoid UTC off-by-one from new Date("YYYY-MM-DD")
+    const date = new Date(2025, 0, 15);
     expect(formatDate(date)).toBe('01/15/2025');
   });
 

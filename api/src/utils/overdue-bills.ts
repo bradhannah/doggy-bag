@@ -1,4 +1,5 @@
 import type { BillInstanceDetailed } from '../types';
+import { getTodayLocalDateString } from './due-date';
 
 export type OverdueBillItem = {
   name: string;
@@ -17,7 +18,7 @@ export function getProjectionBalanceStartDate(month: string, todayStr: string): 
 export function getOverdueBills(
   bills: BillInstanceDetailed[],
   month: string,
-  todayStr = new Date().toISOString().split('T')[0]
+  todayStr = getTodayLocalDateString()
 ): OverdueBillItem[] {
   const balanceStartDate = getProjectionBalanceStartDate(month, todayStr);
 

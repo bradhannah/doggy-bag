@@ -1,5 +1,7 @@
 // Billing Period Calculator - Calculate monthly contribution based on billing frequency
 
+import { parseLocalDate } from './due-date';
+
 export type BillingPeriod = 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
 
 export interface BillingPeriodInfo {
@@ -83,7 +85,7 @@ export function getOccurrenceDatesInMonth(
   const firstDayOfMonth = new Date(year, month - 1, 1);
   const lastDayOfMonth = new Date(year, month, 0);
 
-  const start = new Date(startDate);
+  const start = parseLocalDate(startDate);
   const occurrences: Date[] = [];
 
   if (billingPeriod === 'monthly') {

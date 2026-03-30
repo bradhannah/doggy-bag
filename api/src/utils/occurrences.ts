@@ -2,6 +2,7 @@
 // Calculate individual payment occurrences for bills/incomes within a month
 
 import type { Bill, Income, Occurrence, BillingPeriod } from '../types';
+import { parseLocalDate } from './due-date';
 
 /**
  * Generate occurrences for a bill within a specific month
@@ -109,6 +110,10 @@ function getMonthlyDates(
 /**
  * Get bi-weekly (every 2 weeks) occurrence dates in a month
  * Requires start_date to calculate correctly
+ *
+ * Uses setDate() arithmetic instead of millisecond math to avoid
+ * DST-related off-by-one errors. The anchor is parsed as local midnight
+ * via parseLocalDate() to prevent UTC-vs-local timezone shifts.
  */
 export function getBiWeeklyDatesInMonth(startDate: string | undefined, month: string): string[] {
   if (!startDate) {
@@ -120,26 +125,22 @@ export function getBiWeeklyDatesInMonth(startDate: string | undefined, month: st
   const startOfMonth = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0);
 
-  const anchor = new Date(startDate);
+  // Parse anchor as local midnight (not UTC)
+  const anchor = parseLocalDate(startDate);
   const dates: string[] = [];
 
-  // Calculate milliseconds in 14 days
-  const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
-
-  // Find the first occurrence on or after the anchor date
-  // that falls within this month
-  let current = new Date(anchor);
+  let current = new Date(anchor.getTime());
 
   // If anchor is after the month, we need to go backwards
   if (current > endOfMonth) {
     while (current > endOfMonth) {
-      current = new Date(current.getTime() - twoWeeksMs);
+      current.setDate(current.getDate() - 14);
     }
   }
 
   // If anchor is before the start of month, advance to first occurrence in month
   while (current < startOfMonth) {
-    current = new Date(current.getTime() + twoWeeksMs);
+    current.setDate(current.getDate() + 14);
   }
 
   // Collect all bi-weekly dates within the month
@@ -147,7 +148,7 @@ export function getBiWeeklyDatesInMonth(startDate: string | undefined, month: st
     if (current >= startOfMonth) {
       dates.push(formatDate(current));
     }
-    current = new Date(current.getTime() + twoWeeksMs);
+    current.setDate(current.getDate() + 14);
   }
 
   return dates.sort();
@@ -156,6 +157,9 @@ export function getBiWeeklyDatesInMonth(startDate: string | undefined, month: st
 /**
  * Get weekly occurrence dates in a month
  * Requires start_date to calculate correctly
+ *
+ * Uses setDate() arithmetic and parseLocalDate() — same DST-safe
+ * approach as getBiWeeklyDatesInMonth.
  */
 export function getWeeklyDatesInMonth(startDate: string | undefined, month: string): string[] {
   if (!startDate) {
@@ -167,24 +171,22 @@ export function getWeeklyDatesInMonth(startDate: string | undefined, month: stri
   const startOfMonth = new Date(year, monthNum - 1, 1);
   const endOfMonth = new Date(year, monthNum, 0);
 
-  const anchor = new Date(startDate);
+  // Parse anchor as local midnight (not UTC)
+  const anchor = parseLocalDate(startDate);
   const dates: string[] = [];
 
-  // Calculate milliseconds in 7 days
-  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-
-  let current = new Date(anchor);
+  let current = new Date(anchor.getTime());
 
   // If anchor is after the month, go backwards
   if (current > endOfMonth) {
     while (current > endOfMonth) {
-      current = new Date(current.getTime() - oneWeekMs);
+      current.setDate(current.getDate() - 7);
     }
   }
 
   // If anchor is before the start of month, advance
   while (current < startOfMonth) {
-    current = new Date(current.getTime() + oneWeekMs);
+    current.setDate(current.getDate() + 7);
   }
 
   // Collect all weekly dates within the month
@@ -192,7 +194,7 @@ export function getWeeklyDatesInMonth(startDate: string | undefined, month: stri
     if (current >= startOfMonth) {
       dates.push(formatDate(current));
     }
-    current = new Date(current.getTime() + oneWeekMs);
+    current.setDate(current.getDate() + 7);
   }
 
   return dates.sort();
@@ -216,7 +218,8 @@ export function getSemiAnnuallyDatesInMonth(
   }
 
   const [year, monthNum] = month.split('-').map(Number);
-  const anchor = new Date(startDate);
+  // Parse anchor as local midnight to get correct month/day
+  const anchor = parseLocalDate(startDate);
   const anchorMonth = anchor.getMonth(); // 0-based
   const anchorDay = anchor.getDate();
 

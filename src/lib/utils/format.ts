@@ -53,6 +53,25 @@ export function getFirstDayOfMonth(): string {
 export const dollarsToCents = parseDollarsToCents;
 
 /**
+ * Parse a YYYY-MM-DD string as local midnight, avoiding the UTC pitfall of new Date("YYYY-MM-DD").
+ * @param dateStr - Date string in YYYY-MM-DD format
+ */
+export function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Returns the current month as YYYY-MM using local time.
+ */
+export function getCurrentMonthString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
  * Formats a date string or Date object into a localized display string
  * @param date - ISO date string (YYYY-MM-DD) or Date object
  */

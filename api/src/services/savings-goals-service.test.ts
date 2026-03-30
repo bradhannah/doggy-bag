@@ -6,6 +6,15 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { SavingsGoal } from '../types';
+import { getTodayLocalDateString } from '../utils/due-date';
+
+/** Convert a Date to YYYY-MM-DD using local time */
+function toLocalDateString(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 describe('SavingsGoalsService', () => {
   let service: SavingsGoalsServiceImpl;
@@ -457,7 +466,7 @@ describe('SavingsGoalsService', () => {
         ...sampleGoals[0],
         target_amount: 100000, // $1000
         created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-        target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        target_date: toLocalDateString(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
       };
 
       // Expected is ~50%, saved is 60% -> green
@@ -470,7 +479,7 @@ describe('SavingsGoalsService', () => {
         ...sampleGoals[0],
         target_amount: 100000,
         created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(), // 50 days ago
-        target_date: new Date(Date.now() + 50 * 24 * 60 * 60 * 1000).toISOString(), // 50 days from now
+        target_date: toLocalDateString(new Date(Date.now() + 50 * 24 * 60 * 60 * 1000)), // 50 days from now
       };
 
       // Expected is ~50% = 50000, saved is 40000 (80% of expected) -> yellow
@@ -483,7 +492,7 @@ describe('SavingsGoalsService', () => {
         ...sampleGoals[0],
         target_amount: 100000,
         created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
-        target_date: new Date(Date.now() + 50 * 24 * 60 * 60 * 1000).toISOString(),
+        target_date: toLocalDateString(new Date(Date.now() + 50 * 24 * 60 * 60 * 1000)),
       };
 
       // Expected is ~50% = 50000, saved is 30000 (60% of expected) -> red
@@ -510,7 +519,7 @@ describe('SavingsGoalsService', () => {
       const goal: SavingsGoal = {
         ...sampleGoals[0],
         created_at: futureDate.toISOString(),
-        target_date: new Date(futureDate.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        target_date: toLocalDateString(new Date(futureDate.getTime() + 90 * 24 * 60 * 60 * 1000)),
       };
 
       const expected = service.getExpectedSavedAmount(goal);
@@ -526,7 +535,7 @@ describe('SavingsGoalsService', () => {
         ...sampleGoals[0],
         target_amount: 100000, // $1000
         created_at: created.toISOString(),
-        target_date: target.toISOString(),
+        target_date: toLocalDateString(target),
       };
 
       // We're exactly halfway, so expect ~50000
@@ -537,15 +546,15 @@ describe('SavingsGoalsService', () => {
     });
 
     test('should accept custom asOfDate parameter', () => {
-      const created = new Date('2026-01-01');
-      const target = new Date('2026-07-01'); // 6 months
-      const asOf = new Date('2026-04-01'); // 3 months in (50%)
+      const created = new Date(2026, 0, 1); // Jan 1, 2026 local
+      const target = new Date(2026, 6, 1); // Jul 1, 2026 local — 6 months
+      const asOf = new Date(2026, 3, 1); // Apr 1, 2026 local — 3 months in (50%)
 
       const goal: SavingsGoal = {
         ...sampleGoals[0],
         target_amount: 100000,
         created_at: created.toISOString(),
-        target_date: target.toISOString(),
+        target_date: toLocalDateString(target),
       };
 
       const expected = service.getExpectedSavedAmount(goal, asOf);

@@ -13,6 +13,7 @@
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import EditCloseModal from './EditCloseModal.svelte';
+  import CopyMoveModal from './CopyMoveModal.svelte';
   import { formatCurrency } from '$lib/utils/format';
 
   export let occurrence: Occurrence;
@@ -24,6 +25,7 @@
   export let readOnly: boolean = false;
   export let isPayoffBill: boolean = false;
   export let isVirtualInsurance: boolean = false;
+  export let instanceIsAdhoc: boolean = false;
 
   // Protected items: payoff bills and virtual insurance items
   $: isProtected = isPayoffBill || isVirtualInsurance;
@@ -43,6 +45,7 @@
   let dateEditError = '';
   let showDeleteConfirm = false;
   let showEditCloseModal = false;
+  let showCopyMoveModal = false;
   let showOverflowMenu = false;
   let overflowMenuRef: HTMLDivElement | null = null;
   let overflowBtnRef: HTMLButtonElement | null = null;
@@ -254,6 +257,25 @@
   // Can delete: ad-hoc occurrences only (NOT payoff bills or virtual insurance - those are auto-managed)
   $: canDelete = !readOnly && !isProtected && occurrence.is_adhoc;
 
+  // Determine if copy/move to next month is available
+  // Available for ad-hoc instances that are not protected
+  $: canCopyToMonth = !readOnly && !isProtected && instanceIsAdhoc;
+
+  // Copy/Move to next month
+  function handleCopyToMonth() {
+    closeOverflowMenu();
+    showCopyMoveModal = true;
+  }
+
+  function handleCopyMoveModalClose() {
+    showCopyMoveModal = false;
+  }
+
+  function handleCopyMoveCompleted() {
+    showCopyMoveModal = false;
+    dispatch('updated');
+  }
+
   // Overflow menu click-outside handler
   function handleClickOutside(event: MouseEvent) {
     if (overflowMenuRef && !overflowMenuRef.contains(event.target as Node)) {
@@ -433,6 +455,22 @@
                   </svg>
                   View Details
                 </button>
+                {#if canCopyToMonth}
+                  <button class="overflow-menu-item" on:click={handleCopyToMonth} role="menuitem">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copy to Next Month...
+                  </button>
+                {/if}
                 {#if canDelete}
                   <button
                     class="overflow-menu-item danger"
@@ -483,6 +521,17 @@
   on:close={handleEditCloseModalClose}
   on:saved={handleEditCloseModalSaved}
   on:closed={handleEditCloseModalClosed}
+/>
+
+<!-- Copy/Move to Next Month Modal -->
+<CopyMoveModal
+  open={showCopyMoveModal}
+  {type}
+  {month}
+  {instanceId}
+  {itemName}
+  on:close={handleCopyMoveModalClose}
+  on:completed={handleCopyMoveCompleted}
 />
 
 <!-- Delete Confirmation Dialog -->

@@ -20,7 +20,7 @@ function getPreviousMonth(month: string): string {
 }
 
 // Get next month
-function getNextMonth(month: string): string {
+export function getNextMonth(month: string): string {
   const [year, m] = month.split('-').map(Number);
   if (m === 12) {
     return `${year + 1}-01`;
@@ -29,7 +29,7 @@ function getNextMonth(month: string): string {
 }
 
 // Format month for display (e.g., "January 2025")
-function formatMonthDisplay(month: string): string {
+export function formatMonthDisplay(month: string): string {
   const [year, m] = month.split('-').map(Number);
   const date = new Date(year, m - 1, 1);
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });

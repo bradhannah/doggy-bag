@@ -3,6 +3,7 @@
 
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
 import { StorageServiceImpl } from '../../services/storage';
+import { getTodayLocalDateString } from '../../utils/due-date';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -206,7 +207,7 @@ describe('SavingsGoalsHandlers', () => {
   describe('createSavingsGoalsContributeHandler', () => {
     test('should make a contribution to a goal', async () => {
       const handler = createSavingsGoalsContributeHandler();
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
       const currentMonth = today.substring(0, 7);
 
       // Create month data for current month if not exists
@@ -247,7 +248,7 @@ describe('SavingsGoalsHandlers', () => {
 
     test('should return 404 for non-existent goal', async () => {
       const handler = createSavingsGoalsContributeHandler();
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
 
       const request = new Request('http://localhost/api/savings-goals/non-existent/contribute', {
         method: 'POST',
@@ -264,7 +265,7 @@ describe('SavingsGoalsHandlers', () => {
 
     test('should return 400 for invalid amount', async () => {
       const handler = createSavingsGoalsContributeHandler();
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
 
       const request = new Request('http://localhost/api/savings-goals/goal-test-001/contribute', {
         method: 'POST',
@@ -299,7 +300,7 @@ describe('SavingsGoalsHandlers', () => {
 
     test('should return 400 for missing goal ID', async () => {
       const handler = createSavingsGoalsContributeHandler();
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
 
       const request = new Request('http://localhost/api/savings-goals//contribute', {
         method: 'POST',
@@ -317,7 +318,7 @@ describe('SavingsGoalsHandlers', () => {
 
     test('should return 400 for goal without linked account', async () => {
       const handler = createSavingsGoalsContributeHandler();
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
 
       const request = new Request('http://localhost/api/savings-goals/goal-no-account/contribute', {
         method: 'POST',

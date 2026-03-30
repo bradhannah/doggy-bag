@@ -8,10 +8,15 @@
   import type { ProjectionResponse } from '../../types/projections';
   import HistogramChart from './HistogramChart.svelte';
   import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
-  import { formatCurrency } from '$lib/utils/format';
+  import {
+    formatCurrency,
+    getTodayDateString,
+    getCurrentMonthString,
+    parseLocalDate,
+  } from '$lib/utils/format';
 
   const today = new Date();
-  let currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+  let currentMonth = getCurrentMonthString(); // YYYY-MM
   let selectedDate: string | null = null;
 
   // Load data when month changes
@@ -29,21 +34,17 @@
   }
 
   function resetToCurrentMonth() {
-    currentMonth = new Date().toISOString().slice(0, 7);
+    currentMonth = getCurrentMonthString();
     selectedDate = null;
   }
 
   function formatMonth(monthStr: string) {
-    const d = new Date(monthStr + '-01');
-    // Adjust for timezone offset to avoid previous day
-    const userTimezoneOffset = d.getTimezoneOffset() * 60000;
-    const adjustedDate = new Date(d.getTime() + userTimezoneOffset);
-    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
-      adjustedDate
-    );
+    const [y, m] = monthStr.split('-').map(Number);
+    const d = new Date(y, m - 1, 1);
+    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(d);
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayDateString();
 
   type ProjectionDay = ProjectionResponse['days'][number];
   type ProjectionEvent = ProjectionDay['events'][number];
@@ -118,7 +119,7 @@
             <header>
               <div>
                 <h2>
-                  {new Date(selectedDay.date).toLocaleDateString(undefined, {
+                  {parseLocalDate(selectedDay.date).toLocaleDateString(undefined, {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric',

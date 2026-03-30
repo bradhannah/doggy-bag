@@ -29,6 +29,8 @@ import {
   migrateIncomeInstance,
   needsBillInstanceMigration,
   needsIncomeInstanceMigration,
+  migrateOccurrenceDatesBills,
+  migrateOccurrenceDatesIncomes,
 } from '../utils/migration';
 import {
   generateBillOccurrences,
@@ -40,6 +42,7 @@ import {
   resequenceOccurrences,
 } from '../utils/occurrences';
 import { calculateUnifiedLeftover } from '../utils/leftover';
+import { getTodayLocalDateString } from '../utils/due-date';
 
 // Summary for a single month in the list
 export interface MonthSummary {
@@ -325,6 +328,29 @@ export class MonthsServiceImpl implements MonthsService {
       if (needsSave) {
         await this.storage.writeJSON(`data/months/${month}.json`, data);
         console.log(`[MonthsService] Migrated instances for ${month} to new schema`);
+      }
+
+      // Occurrence date migration: fix UTC off-by-one on bi-weekly/weekly/semi-annual dates.
+      // Loads source entities to get start_date, recalculates correct dates, updates open occurrences.
+      {
+        const [bills, incomes] = await Promise.all([
+          this.billsService.getAll(),
+          this.incomesService.getAll(),
+        ]);
+        const billMap = new Map(bills.map((b) => [b.id, b]));
+        const incomeMap = new Map(incomes.map((i) => [i.id, i]));
+
+        const billResult = migrateOccurrenceDatesBills(data.bill_instances, billMap, month);
+        const incomeResult = migrateOccurrenceDatesIncomes(data.income_instances, incomeMap, month);
+
+        if (billResult.changed || incomeResult.changed) {
+          data.bill_instances = billResult.instances;
+          data.income_instances = incomeResult.instances;
+          await this.storage.writeJSON(`data/months/${month}.json`, data);
+          console.log(
+            `[MonthsService] Fixed occurrence dates for ${month} (UTC off-by-one migration)`
+          );
+        }
       }
 
       // Clean up any virtual entries that were accidentally persisted (bug fix)
@@ -867,13 +893,11 @@ export class MonthsServiceImpl implements MonthsService {
               if (openOccurrenceIndex !== -1) {
                 bi.occurrences[openOccurrenceIndex].expected_amount = 0;
                 bi.occurrences[openOccurrenceIndex].is_closed = true;
-                bi.occurrences[openOccurrenceIndex].closed_date = new Date()
-                  .toISOString()
-                  .split('T')[0];
+                bi.occurrences[openOccurrenceIndex].closed_date = getTodayLocalDateString();
                 bi.occurrences[openOccurrenceIndex].updated_at = now;
               }
               bi.is_closed = true;
-              bi.closed_date = bi.closed_date || new Date().toISOString().split('T')[0];
+              bi.closed_date = bi.closed_date || getTodayLocalDateString();
             }
 
             // Resequence occurrences

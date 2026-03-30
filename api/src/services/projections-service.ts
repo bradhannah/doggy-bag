@@ -5,6 +5,7 @@ import { MonthsServiceImpl } from './months-service';
 import type { ProjectionResponse, BillInstanceDetailed, IncomeInstanceDetailed } from '../types';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { getOverdueBills, sumOverdueBills } from '../utils/overdue-bills';
+import { getTodayLocalDateString } from '../utils/due-date';
 
 export interface ProjectionsService {
   getProjection(month: string): Promise<ProjectionResponse>;
@@ -23,8 +24,7 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
   public async getProjection(month: string): Promise<ProjectionResponse> {
     // 1. Determine date range
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getTodayLocalDateString();
 
     const displayStartDate = `${month}-01`;
     const isCurrentMonth = todayStr.startsWith(month);
