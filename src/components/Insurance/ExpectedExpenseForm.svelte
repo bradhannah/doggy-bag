@@ -10,7 +10,7 @@
   } from '../../stores/insurance-claims';
   import { activeCategories, loadInsuranceCategories } from '../../stores/insurance-categories';
   import { activeMembers, loadFamilyMembers } from '../../stores/family-members';
-  import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
+  import { paymentSources, loadPaymentSourcesIfNeeded } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
   import type { InsuranceClaim } from '../../types/insurance';
   import { onMount } from 'svelte';
@@ -45,7 +45,7 @@
   onMount(() => {
     loadInsuranceCategories();
     loadFamilyMembers();
-    loadPaymentSources();
+    loadPaymentSourcesIfNeeded();
   });
 
   // Filter to non-investment, non-savings payment sources for bills

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { loadPaymentSources, paymentSources } from '../../../stores/payment-sources';
+  import { loadPaymentSourcesIfNeeded, paymentSources } from '../../../stores/payment-sources';
   import { createSavingsGoal, type SavingsGoalData } from '../../../stores/savings-goals';
   import { createBill } from '../../../stores/bills';
   import { apiClient } from '$lib/api/client';
@@ -132,7 +132,7 @@
   }
 
   onMount(async () => {
-    await loadPaymentSources();
+    await loadPaymentSourcesIfNeeded();
   });
 
   async function handleSubmit(e: Event) {

@@ -2,8 +2,8 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { apiClient } from '$lib/api/client';
   import { parseDollarsToCents } from '$lib/utils/format';
-  import { categories, loadCategories } from '../../stores/categories';
-  import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
+  import { categories, loadCategoriesIfNeeded } from '../../stores/categories';
+  import { paymentSources, loadPaymentSourcesIfNeeded } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
 
   export let open = false;
@@ -40,14 +40,7 @@
   }
 
   onMount(async () => {
-    const promises = [];
-    if ($categories.length === 0) {
-      promises.push(loadCategories());
-    }
-    if ($paymentSources.length === 0) {
-      promises.push(loadPaymentSources());
-    }
-    await Promise.all(promises);
+    await Promise.all([loadCategoriesIfNeeded(), loadPaymentSourcesIfNeeded()]);
 
     // Set defaults after loading
     if (filteredCategories.length > 0 && !categoryId) {

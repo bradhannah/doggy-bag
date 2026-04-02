@@ -26,9 +26,10 @@
     viewMode,
   } from '../../stores/ui';
   import type { BudgetTab } from '../../stores/ui';
-  import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
+  import { paymentSources, loadPaymentSourcesIfNeeded } from '../../stores/payment-sources';
   import { filterSectionsByQuery } from '../../lib/filter-sections';
-  import { monthsStore, monthExists, monthIsReadOnly } from '../../stores/months';
+  import { monthsStore, monthExists, monthlyLoading, monthIsReadOnly } from '../../stores/months';
+  import Spinner from '../shared/Spinner.svelte';
 
   const BUDGET_TABS: { id: string; label: string }[] = [
     { id: 'expenses', label: 'Expenses' },
@@ -79,9 +80,9 @@
   onMount(() => {
     // Sync URL month param to the global store
     goToMonth(month);
-    detailedMonth.loadMonth(month);
-    monthsStore.loadMonth(month);
-    loadPaymentSources();
+    // Note: detailedMonth.loadMonth() and monthsStore.loadMonth() are handled
+    // by the reactive block `$: if (month)` below — no need to duplicate here.
+    loadPaymentSourcesIfNeeded();
 
     window.addEventListener('keydown', handleGlobalKeydown);
     return () => {
@@ -538,9 +539,9 @@
       </div>
     {/if}
 
-    {#if $detailedMonthLoading && !isRefreshing && !$detailedMonthData}
+    {#if ($detailedMonthLoading || $monthlyLoading) && !isRefreshing}
       <div class="loading-state">
-        <p>Loading detailed view...</p>
+        <Spinner size={36} label="Loading detailed view..." />
       </div>
     {:else if !$monthExists}
       <MonthNotCreated

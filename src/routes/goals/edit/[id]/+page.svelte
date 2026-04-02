@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
-  import { loadPaymentSources, paymentSources } from '../../../../stores/payment-sources';
+  import { loadPaymentSourcesIfNeeded, paymentSources } from '../../../../stores/payment-sources';
   import {
     getSavingsGoal,
     updateSavingsGoal,
@@ -263,7 +263,7 @@
     loadError = '';
 
     try {
-      await loadPaymentSources();
+      await loadPaymentSourcesIfNeeded();
       goal = await getSavingsGoal(goalId);
 
       // Populate form fields

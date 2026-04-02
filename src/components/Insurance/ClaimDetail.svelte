@@ -37,7 +37,6 @@
   function getStatusColor(status: ClaimStatus): string {
     switch (status) {
       case 'expected':
-        return 'var(--accent)';
       case 'draft':
       case 'in_progress':
         return 'var(--warning)';
@@ -51,7 +50,6 @@
   function getStatusLabel(status: ClaimStatus): string {
     switch (status) {
       case 'expected':
-        return 'Expected';
       case 'draft':
       case 'in_progress':
         return 'In Progress';

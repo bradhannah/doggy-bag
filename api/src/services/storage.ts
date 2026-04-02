@@ -1,6 +1,10 @@
 import { readFile, writeFile, unlink, access, mkdir, readdir, copyFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { requestStorage } from './request-cache';
+
+// Sentinel value to distinguish "cached null" from "not in cache"
+const CACHE_NULL = Symbol('CACHE_NULL');
 
 // Storage configuration
 interface StorageConfig {
@@ -147,12 +151,25 @@ export class StorageServiceImpl implements StorageService {
 
   public async readFile<T>(path: string): Promise<T | null> {
     const resolvedPath = this.resolvePath(path);
+
+    // Check per-request cache (if inside a request context)
+    const cache = requestStorage.getStore();
+    if (cache) {
+      const cached = cache.get(resolvedPath);
+      if (cached === CACHE_NULL) return null;
+      if (cached !== undefined) return cached as T;
+    }
+
     try {
       const content = await readFile(resolvedPath, 'utf-8');
-      return JSON.parse(content) as T;
+      const parsed = JSON.parse(content) as T;
+      cache?.set(resolvedPath, parsed);
+      return parsed;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[StorageService] Failed to read file ${resolvedPath}:`, errorMessage);
+      // Cache the null result too so repeated reads of missing files don't hit disk
+      cache?.set(resolvedPath, CACHE_NULL);
       return null;
     }
   }
@@ -164,6 +181,8 @@ export class StorageServiceImpl implements StorageService {
       const content = JSON.stringify(data, null, 2);
       await writeFile(resolvedPath, content, 'utf-8');
     });
+    // Invalidate cache after write completes so subsequent reads see fresh data
+    requestStorage.getStore()?.delete(resolvedPath);
   }
 
   public async deleteFile(path: string): Promise<void> {
@@ -176,6 +195,8 @@ export class StorageServiceImpl implements StorageService {
         console.error(`[StorageService] Failed to delete file ${resolvedPath}:`, errorMessage);
       }
     });
+    // Invalidate cache after delete so subsequent reads return null
+    requestStorage.getStore()?.delete(resolvedPath);
   }
 
   public async fileExists(path: string): Promise<boolean> {
@@ -229,5 +250,7 @@ export class StorageServiceImpl implements StorageService {
       await this.ensureDirectory(dirname(resolvedDest));
       await copyFile(resolvedSrc, resolvedDest);
     });
+    // Invalidate cache for destination so subsequent reads see copied data
+    requestStorage.getStore()?.delete(resolvedDest);
   }
 }

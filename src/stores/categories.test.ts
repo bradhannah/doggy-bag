@@ -22,6 +22,8 @@ import {
   billCategories,
   incomeCategories,
   loadCategories,
+  loadCategoriesIfNeeded,
+  resetCategoriesInitialized,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -88,6 +90,7 @@ describe('Categories Store', () => {
     vi.clearAllMocks();
     // Reset store to initial state
     categoriesStore.set({ categories: [], loading: false, error: null });
+    resetCategoriesInitialized();
   });
 
   describe('loadCategories', () => {
@@ -260,6 +263,47 @@ describe('Categories Store', () => {
         expect(incomes.every((c) => c.type === 'income')).toBe(true);
         expect(incomes[0].sort_order).toBeLessThanOrEqual(incomes[1].sort_order);
       });
+    });
+  });
+
+  describe('loadCategoriesIfNeeded', () => {
+    it('fetches data on first call', async () => {
+      mockGet.mockResolvedValueOnce(sampleCategories);
+      await loadCategoriesIfNeeded();
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(get(categories)).toHaveLength(4);
+    });
+
+    it('does not fetch data if already initialized', async () => {
+      mockGet.mockResolvedValueOnce(sampleCategories);
+      await loadCategoriesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      await loadCategoriesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('deduplicates concurrent calls', async () => {
+      mockGet.mockResolvedValueOnce(sampleCategories);
+
+      const p1 = loadCategoriesIfNeeded();
+      const p2 = loadCategoriesIfNeeded();
+      const p3 = loadCategoriesIfNeeded();
+      await Promise.all([p1, p2, p3]);
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows re-fetch after error', async () => {
+      mockGet.mockRejectedValueOnce(new Error('Network error'));
+      await loadCategoriesIfNeeded().catch(() => {});
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      mockGet.mockResolvedValueOnce(sampleCategories);
+      await loadCategoriesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+      expect(get(categories)).toHaveLength(4);
     });
   });
 });

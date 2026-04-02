@@ -22,7 +22,7 @@
   }>();
 
   // Filter state - status uses display values, not internal ClaimStatus
-  type StatusFilter = 'all' | 'expected' | 'in_progress' | 'closed';
+  type StatusFilter = 'all' | 'in_progress' | 'closed';
   let filterStatus: StatusFilter = 'all';
   let filterCategory = '';
   let filterYear = '';
@@ -63,7 +63,6 @@
   function getStatusColor(status: 'expected' | 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
       case 'expected':
-        return 'var(--accent)';
       case 'draft':
       case 'in_progress':
         return 'var(--warning)';
@@ -77,7 +76,6 @@
   function getStatusLabel(status: 'expected' | 'draft' | 'in_progress' | 'closed'): string {
     switch (status) {
       case 'expected':
-        return 'Expected';
       case 'draft':
       case 'in_progress':
         return 'In Progress';
@@ -141,27 +139,25 @@
 
   $: hasFilters = filterStatus !== 'all' || filterCategory || filterYear;
 
-  // Client-side status filtering (since backend doesn't support 'in_progress' = draft + in_progress)
+  // Client-side status filtering (in_progress includes expected, draft, and in_progress)
   $: filteredClaims = $insuranceClaims.filter((claim) => {
     if (filterStatus === 'all') return true;
-    if (filterStatus === 'expected') {
-      return claim.status === 'expected';
-    }
     if (filterStatus === 'in_progress') {
-      return claim.status === 'draft' || claim.status === 'in_progress';
+      return (
+        claim.status === 'expected' || claim.status === 'draft' || claim.status === 'in_progress'
+      );
     }
     return claim.status === filterStatus;
   });
 
-  // Sort claims: expected first (by date), then in_progress, then closed
+  // Sort claims: in_progress (including expected) first by service_date descending, then closed
   $: sortedClaims = [...filteredClaims].sort((a, b) => {
-    // Expected claims first, sorted by service_date ascending (upcoming first)
-    if (a.status === 'expected' && b.status !== 'expected') return -1;
-    if (a.status !== 'expected' && b.status === 'expected') return 1;
-    if (a.status === 'expected' && b.status === 'expected') {
-      return new Date(a.service_date).getTime() - new Date(b.service_date).getTime();
-    }
-    // Then by service_date descending (most recent first)
+    // Closed claims go to the bottom
+    const aIsClosed = a.status === 'closed';
+    const bIsClosed = b.status === 'closed';
+    if (aIsClosed && !bIsClosed) return 1;
+    if (!aIsClosed && bIsClosed) return -1;
+    // Within the same group, sort by service_date descending (most recent first)
     return new Date(b.service_date).getTime() - new Date(a.service_date).getTime();
   });
 </script>
@@ -202,12 +198,6 @@
     <div class="status-filter">
       <button class:active={filterStatus === 'all'} on:click={() => setStatusFilter('all')}>
         All
-      </button>
-      <button
-        class:active={filterStatus === 'expected'}
-        on:click={() => setStatusFilter('expected')}
-      >
-        Expected
       </button>
       <button
         class:active={filterStatus === 'in_progress'}
@@ -625,21 +615,21 @@
     border-color: var(--accent);
   }
 
-  /* Expected claim card styling - distinct appearance */
+  /* Expected claim card styling - distinct appearance but uses warning palette */
   .claim-card.expected {
-    background: var(--accent-muted);
-    border-color: var(--accent-border);
+    background: var(--warning-muted);
+    border-color: var(--warning-border);
     border-style: dashed;
   }
 
   .claim-card.expected:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
+    background: var(--warning-muted);
+    border-color: var(--warning);
   }
 
   .claim-card.expected.selected {
-    background: var(--accent-muted);
-    border-color: var(--accent);
+    background: var(--warning-muted);
+    border-color: var(--warning);
     border-style: solid;
   }
 

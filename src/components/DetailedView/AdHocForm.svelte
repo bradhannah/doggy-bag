@@ -6,7 +6,7 @@
   import { bills, loadBills, type Bill } from '../../stores/bills';
   import { incomes, loadIncomes, type Income } from '../../stores/incomes';
   import { detailedMonth, detailedMonthData } from '../../stores/detailed-month';
-  import { paymentSources, loadPaymentSources } from '../../stores/payment-sources';
+  import { paymentSources, loadPaymentSourcesIfNeeded } from '../../stores/payment-sources';
   import { success, error as showError } from '../../stores/toast';
 
   export let open = false;
@@ -89,9 +89,7 @@
       if ($incomes.length === 0 && type === 'income') {
         await loadIncomes();
       }
-      if ($paymentSources.length === 0) {
-        await loadPaymentSources();
-      }
+      await loadPaymentSourcesIfNeeded();
 
       const monthData = $detailedMonthData;
       if (!monthData) {

@@ -11,8 +11,10 @@
     incomeInstances,
     bankBalances,
   } from '../../stores/months';
+  import Spinner from '../shared/Spinner.svelte';
   import {
     loadPaymentSources,
+    loadPaymentSourcesIfNeeded,
     paymentSources,
     isDebtAccount,
     type PaymentSource,
@@ -34,7 +36,7 @@
 
   // Load payment sources on mount
   onMount(() => {
-    loadPaymentSources();
+    loadPaymentSourcesIfNeeded();
   });
 
   // Load data when month changes
@@ -425,7 +427,7 @@
 <div class="dashboard">
   {#if $monthlyLoading}
     <div class="loading-state">
-      <p>Loading...</p>
+      <Spinner size={36} label="Loading..." />
     </div>
   {:else if !$monthExists}
     <MonthNotCreated

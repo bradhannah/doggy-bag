@@ -2,6 +2,7 @@
   import MonthPickerHeader from '../MonthPickerHeader.svelte';
   import CalendarGrid from './CalendarGrid.svelte';
   import CalendarLegend from './CalendarLegend.svelte';
+  import Spinner from '../shared/Spinner.svelte';
   import { currentMonth, calendarSize, type CalendarSize } from '../../stores/ui';
   import {
     calendarEvents,
@@ -68,8 +69,7 @@
 
     {#if $calendarLoading}
       <div class="loading-state">
-        <span class="spinner"></span>
-        <p>Loading calendar...</p>
+        <Spinner label="Loading calendar..." />
       </div>
     {:else if $calendarError}
       <div class="error-state">
@@ -163,22 +163,6 @@
     padding: var(--space-8);
     color: var(--text-secondary);
     min-height: 400px;
-  }
-
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-default);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: var(--space-3);
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   .error-state {

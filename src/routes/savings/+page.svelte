@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { apiClient } from '$lib/api/client';
   import {
-    loadPaymentSources,
+    loadPaymentSourcesIfNeeded,
     savingsAccounts,
     investmentAccounts,
   } from '../../stores/payment-sources';
@@ -43,11 +43,11 @@
     return `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  onMount(async () => {
-    await loadData();
+  onMount(() => {
+    // Initial load is handled by the reactive block `$: if ($currentMonth)`
   });
 
-  // Reload when month changes via MonthPickerHeader
+  // Load (and reload) when month changes via MonthPickerHeader
   $: if ($currentMonth) {
     loadData();
   }
@@ -63,19 +63,18 @@
     let previousMonthEndBalances: Record<string, number> = {};
 
     try {
-      await loadPaymentSources();
-
-      // Try to load previous month's end balances to use as defaults for start
+      // Load payment sources and previous month data in parallel
+      // (both are independent of each other)
       const prevMonth = getPreviousMonth($currentMonth);
-      try {
-        const prevMonthData = await apiClient.get(`/api/months/${prevMonth}`);
-        if (prevMonthData) {
-          previousMonthEndBalances =
-            (prevMonthData as { savings_balances_end?: Record<string, number> })
-              .savings_balances_end || {};
-        }
-      } catch {
-        // Previous month doesn't exist - that's OK
+      const [, prevMonthResult] = await Promise.all([
+        loadPaymentSourcesIfNeeded(),
+        apiClient.get(`/api/months/${prevMonth}`).catch(() => null),
+      ]);
+
+      if (prevMonthResult) {
+        previousMonthEndBalances =
+          (prevMonthResult as { savings_balances_end?: Record<string, number> })
+            .savings_balances_end || {};
       }
 
       // Load current month data to get existing balances

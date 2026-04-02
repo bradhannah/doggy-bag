@@ -11,7 +11,7 @@ export function getCurrentMonth(): string {
 }
 
 // Get previous month
-function getPreviousMonth(month: string): string {
+export function getPreviousMonth(month: string): string {
   const [year, m] = month.split('-').map(Number);
   if (m === 1) {
     return `${year - 1}-12`;

@@ -52,18 +52,50 @@ export const incomeCategories = derived(categories, (cats) =>
   cats.filter((c) => c.type === 'income').sort((a, b) => a.sort_order - b.sort_order)
 );
 
+// Track whether data has been loaded at least once
+let initialized = false;
+// Deduplicate concurrent in-flight loads
+let inFlightPromise: Promise<void> | null = null;
+
 export async function loadCategories() {
+  // Reset initialized so future loadIfNeeded calls will re-fetch
+  initialized = false;
+  inFlightPromise = null;
+
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
     const data = await apiClient.get('/api/categories');
     const categories = (data || []) as Category[];
     store.update((s) => ({ ...s, categories, loading: false }));
+    initialized = true;
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load categories');
     store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
+}
+
+/**
+ * Load categories only if they haven't been loaded yet.
+ * Deduplicates concurrent calls — if a load is already in-flight, returns the same promise.
+ */
+export async function loadCategoriesIfNeeded(): Promise<void> {
+  if (initialized) return;
+  if (inFlightPromise) return inFlightPromise;
+
+  inFlightPromise = loadCategories().finally(() => {
+    inFlightPromise = null;
+  });
+  return inFlightPromise;
+}
+
+/**
+ * Reset initialized flag (for testing)
+ */
+export function resetCategoriesInitialized(): void {
+  initialized = false;
+  inFlightPromise = null;
 }
 
 export async function createCategory(data: CategoryData) {

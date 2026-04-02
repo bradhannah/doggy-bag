@@ -7,6 +7,7 @@
 import { serve } from 'bun';
 import { routes } from './src/routes';
 import { StorageServiceImpl } from './src/services/storage';
+import { runWithRequestCache } from './src/services/request-cache';
 
 // Check for version flag (used by Makefile to distinguish runtime from compiled binary)
 if (process.argv.includes('--version')) {
@@ -370,6 +371,10 @@ function matchRoute(requestPath: string, routePath: string, hasPathParam: boolea
   return false;
 }
 
+// Pre-sort routes by specificity (longer paths first) once at startup
+// instead of sorting on every request
+const sortedRoutes = [...routes].sort((a, b) => b.path.length - a.path.length);
+
 // Start server
 const server = serve({
   port: PORT,
@@ -387,9 +392,7 @@ const server = serve({
       });
     }
 
-    // Find matching route - sort by specificity (longer paths first)
-    const sortedRoutes = [...routes].sort((a, b) => b.path.length - a.path.length);
-
+    // Find matching route (pre-sorted by specificity at startup)
     for (const route of sortedRoutes) {
       const { path: routePath, definition } = route;
 
@@ -398,7 +401,7 @@ const server = serve({
       if (pathMatches && req.method === definition.method) {
         try {
           log('DEBUG', `Matched route: ${routePath} [${definition.method}]`);
-          const response = await definition.handler(req);
+          const response = await runWithRequestCache(() => definition.handler(req));
 
           // Add CORS headers to existing Response
           const headers = new Headers(response.headers);

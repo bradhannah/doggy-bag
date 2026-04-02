@@ -4,6 +4,7 @@
 import { writable, derived, get } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 import { getTodayDateString } from '$lib/utils/format';
+import { getPreviousMonth } from './ui';
 import type { TodoStatus } from './todos';
 
 // ============================================================================
@@ -42,6 +43,7 @@ export interface TodoInstanceUpdate {
 
 type TodoInstancesState = {
   instances: TodoInstance[];
+  previousMonthInstances: TodoInstance[];
   currentMonth: string | null;
   loading: boolean;
   error: string | null;
@@ -49,6 +51,7 @@ type TodoInstancesState = {
 
 const initialState: TodoInstancesState = {
   instances: [],
+  previousMonthInstances: [],
   currentMonth: null,
   loading: false,
   error: null,
@@ -69,14 +72,22 @@ export const todoInstancesMonth = derived(store, (s) => s.currentMonth);
 // Derived Stores - Filtered by Status
 // ============================================================================
 
-/** Pending instances (sorted by due date, earliest first) */
-export const pendingInstances = derived(todoInstances, (instances) =>
-  instances
-    .filter((i) => i.status === 'pending')
-    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+/** Previous month's instances */
+export const previousMonthInstances = derived(store, (s) => s.previousMonthInstances);
+
+/** Pending instances: current month pending + previous month pending (sorted by due date, earliest first) */
+export const pendingInstances = derived(
+  [todoInstances, previousMonthInstances],
+  ([current, previous]) => {
+    const currentPending = current.filter((i) => i.status === 'pending');
+    const previousPending = previous.filter((i) => i.status === 'pending');
+    return [...previousPending, ...currentPending].sort((a, b) =>
+      a.due_date.localeCompare(b.due_date)
+    );
+  }
 );
 
-/** Completed instances (sorted by completed_at, most recent first) */
+/** Completed instances for the current month only (sorted by completed_at, most recent first) */
 export const completedInstances = derived(todoInstances, (instances) =>
   instances
     .filter((i) => i.status === 'completed')
@@ -88,13 +99,29 @@ export const completedInstances = derived(todoInstances, (instances) =>
     })
 );
 
+/** Previous month's completed instances (sorted by completed_at, most recent first) */
+export const previousMonthCompletedInstances = derived(previousMonthInstances, (instances) =>
+  instances
+    .filter((i) => i.status === 'completed')
+    .sort((a, b) => {
+      if (a.completed_at && b.completed_at) {
+        return b.completed_at.localeCompare(a.completed_at);
+      }
+      return 0;
+    })
+);
+
 /** Overdue instances (pending with due_date < today) */
-export const overdueInstances = derived(todoInstances, (instances) => {
-  const today = getTodayDateString();
-  return instances
-    .filter((i) => i.status === 'pending' && i.due_date < today)
-    .sort((a, b) => a.due_date.localeCompare(b.due_date));
-});
+export const overdueInstances = derived(
+  [todoInstances, previousMonthInstances],
+  ([current, previous]) => {
+    const today = getTodayDateString();
+    const all = [...current, ...previous];
+    return all
+      .filter((i) => i.status === 'pending' && i.due_date < today)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date));
+  }
+);
 
 /** Ad-hoc instances (created directly, not from a todo template) */
 export const adhocInstances = derived(todoInstances, (instances) =>
@@ -106,15 +133,20 @@ export const adhocInstances = derived(todoInstances, (instances) =>
 // ============================================================================
 
 /**
- * Load todo instances for a specific month
+ * Load todo instances for a specific month (also loads previous month for carry-forward)
  */
 export async function loadTodoInstancesForMonth(month: string): Promise<void> {
   store.update((s) => ({ ...s, loading: true, error: null, currentMonth: month }));
 
   try {
-    const data = await apiClient.get(`/api/months/${month}/todos`);
+    const prevMonth = getPreviousMonth(month);
+    const [data, prevData] = await Promise.all([
+      apiClient.get(`/api/months/${month}/todos`),
+      apiClient.get(`/api/months/${prevMonth}/todos`).catch(() => []),
+    ]);
     const instances = (data || []) as TodoInstance[];
-    store.update((s) => ({ ...s, instances, loading: false }));
+    const previousMonthInstances = (prevData || []) as TodoInstance[];
+    store.update((s) => ({ ...s, instances, previousMonthInstances, loading: false }));
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load todo instances');
     store.update((s) => ({ ...s, loading: false, error: err.message }));

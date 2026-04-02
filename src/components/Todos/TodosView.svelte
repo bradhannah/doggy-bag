@@ -3,13 +3,15 @@
   import MonthPickerHeader from '../MonthPickerHeader.svelte';
   import TodoItem from './TodoItem.svelte';
   import QuickAddTodo from './QuickAddTodo.svelte';
-  import { currentMonth } from '../../stores/ui';
+  import Spinner from '../shared/Spinner.svelte';
+  import { currentMonth, getPreviousMonth, formatMonthDisplay } from '../../stores/ui';
   import {
     todoInstances,
     todoInstancesLoading,
     todoInstancesError,
     pendingInstances,
     completedInstances,
+    previousMonthCompletedInstances,
     loadTodoInstancesForMonth,
     completeTodoInstance,
     reopenTodoInstance,
@@ -24,12 +26,18 @@
     loadTodoInstancesForMonth($currentMonth);
   }
 
+  // Compute previous month label for the section header
+  $: previousMonthLabel = formatMonthDisplay(getPreviousMonth($currentMonth));
+
   // Quick add form state
   let showQuickAdd = false;
 
   async function handleComplete(instance: TodoInstance) {
     try {
-      await completeTodoInstance($currentMonth, instance.id);
+      // Use the instance's own month for the API call
+      await completeTodoInstance(instance.month, instance.id);
+      // Reload to refresh both current and previous month data
+      await loadTodoInstancesForMonth($currentMonth);
     } catch (error) {
       console.error('Failed to complete todo:', error);
     }
@@ -37,7 +45,10 @@
 
   async function handleReopen(instance: TodoInstance) {
     try {
-      await reopenTodoInstance($currentMonth, instance.id);
+      // Use the instance's own month for the API call
+      await reopenTodoInstance(instance.month, instance.id);
+      // Reload to refresh both current and previous month data
+      await loadTodoInstancesForMonth($currentMonth);
     } catch (error) {
       console.error('Failed to reopen todo:', error);
     }
@@ -63,7 +74,9 @@
       return;
     }
     try {
-      await deleteTodoInstance($currentMonth, instance.id);
+      await deleteTodoInstance(instance.month, instance.id);
+      // Reload to refresh both current and previous month data
+      await loadTodoInstancesForMonth($currentMonth);
     } catch (error) {
       console.error('Failed to delete todo:', error);
     }
@@ -76,8 +89,7 @@
   <div class="todos-content">
     {#if $todoInstancesLoading}
       <div class="loading-state">
-        <span class="spinner"></span>
-        <p>Loading todos...</p>
+        <Spinner label="Loading todos..." />
       </div>
     {:else if $todoInstancesError}
       <div class="error-state">
@@ -191,6 +203,55 @@
           </ul>
         </section>
       {/if}
+
+      <!-- Previous Month Completed Section -->
+      {#if $previousMonthCompletedInstances.length > 0}
+        <section class="todos-section previous-month-section">
+          <h2 class="section-title">
+            <span class="section-icon previous-month-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="3"
+                  y="4"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M16 2V6M8 2V6M3 10H21"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M9 16L11 18L15 14"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            {previousMonthLabel}
+            <span class="section-count">{$previousMonthCompletedInstances.length}</span>
+          </h2>
+
+          <ul class="todos-list">
+            {#each $previousMonthCompletedInstances as instance (instance.id)}
+              <li>
+                <TodoItem
+                  {instance}
+                  onComplete={handleComplete}
+                  onReopen={handleReopen}
+                  onDelete={handleDelete}
+                />
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
     {/if}
   </div>
 </div>
@@ -247,22 +308,6 @@
     justify-content: center;
     padding: var(--space-8);
     color: var(--text-secondary);
-  }
-
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-default);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: var(--space-3);
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   .error-state {
@@ -344,6 +389,19 @@
   /* Completed section styling */
   .completed-section .section-title {
     color: var(--text-secondary);
+  }
+
+  /* Previous month section styling */
+  .previous-month-section .section-title {
+    color: var(--text-tertiary);
+  }
+
+  .previous-month-icon {
+    color: var(--text-tertiary);
+  }
+
+  .previous-month-section :global(.todo-item) {
+    opacity: 0.75;
   }
 
   @media (max-width: 640px) {

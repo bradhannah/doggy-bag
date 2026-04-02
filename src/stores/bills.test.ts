@@ -35,6 +35,8 @@ import {
   totalFixedCosts,
   billsByCategory,
   loadBills,
+  loadBillsIfNeeded,
+  resetBillsInitialized,
   createBill,
   updateBill,
   deleteBill,
@@ -108,6 +110,7 @@ describe('Bills Store', () => {
     vi.clearAllMocks();
     // Reset store to initial state
     billsStore.set({ bills: [], loading: false, error: null });
+    resetBillsInitialized();
   });
 
   describe('calculateMonthlyContribution', () => {
@@ -363,6 +366,47 @@ describe('Bills Store', () => {
       // The mock includes only 'bill' type categories, but the orphan detection uses
       // allValidCategoryIds which includes ALL category types. A more comprehensive
       // test would require a dynamic mock that can include savings_goal categories.
+    });
+  });
+
+  describe('loadBillsIfNeeded', () => {
+    it('fetches data on first call', async () => {
+      mockGet.mockResolvedValueOnce(sampleBills);
+      await loadBillsIfNeeded();
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(get(bills)).toEqual(sampleBills);
+    });
+
+    it('does not fetch data if already initialized', async () => {
+      mockGet.mockResolvedValueOnce(sampleBills);
+      await loadBillsIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      await loadBillsIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('deduplicates concurrent calls', async () => {
+      mockGet.mockResolvedValueOnce(sampleBills);
+
+      const p1 = loadBillsIfNeeded();
+      const p2 = loadBillsIfNeeded();
+      const p3 = loadBillsIfNeeded();
+      await Promise.all([p1, p2, p3]);
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows re-fetch after error', async () => {
+      mockGet.mockRejectedValueOnce(new Error('Network error'));
+      await loadBillsIfNeeded().catch(() => {});
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      mockGet.mockResolvedValueOnce(sampleBills);
+      await loadBillsIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+      expect(get(bills)).toEqual(sampleBills);
     });
   });
 });

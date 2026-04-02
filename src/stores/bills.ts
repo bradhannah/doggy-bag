@@ -84,18 +84,50 @@ export const loading = derived(store, (s) => s.loading);
 export const error = derived(store, (s) => s.error);
 export const activeBills = derived(bills, (b) => b.filter((b) => b.is_active));
 
+// Track whether data has been loaded at least once
+let initialized = false;
+// Deduplicate concurrent in-flight loads
+let inFlightPromise: Promise<void> | null = null;
+
 export async function loadBills() {
+  // Reset initialized so future loadIfNeeded calls will re-fetch
+  initialized = false;
+  inFlightPromise = null;
+
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
     const data = await apiClient.get('/api/bills');
     const bills = (data || []) as Bill[];
     store.update((s) => ({ ...s, bills, loading: false }));
+    initialized = true;
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load bills');
     store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
+}
+
+/**
+ * Load bills only if they haven't been loaded yet.
+ * Deduplicates concurrent calls — if a load is already in-flight, returns the same promise.
+ */
+export async function loadBillsIfNeeded(): Promise<void> {
+  if (initialized) return;
+  if (inFlightPromise) return inFlightPromise;
+
+  inFlightPromise = loadBills().finally(() => {
+    inFlightPromise = null;
+  });
+  return inFlightPromise;
+}
+
+/**
+ * Reset initialized flag (for testing)
+ */
+export function resetBillsInitialized(): void {
+  initialized = false;
+  inFlightPromise = null;
 }
 
 export async function createBill(data: BillData): Promise<Bill> {

@@ -23,6 +23,8 @@ import {
   linesOfCredit,
   debtAccounts,
   loadPaymentSources,
+  loadPaymentSourcesIfNeeded,
+  resetPaymentSourcesInitialized,
   createPaymentSource,
   updatePaymentSource,
   deletePaymentSource,
@@ -92,6 +94,7 @@ describe('Payment Sources Store', () => {
     vi.clearAllMocks();
     // Reset store to initial state
     paymentSourcesStore.set({ paymentSources: [], loading: false, error: null });
+    resetPaymentSourcesInitialized();
   });
 
   describe('helper functions', () => {
@@ -342,6 +345,85 @@ describe('Payment Sources Store', () => {
         expect(debt).toHaveLength(2);
         expect(debt.every((p) => isDebtAccount(p.type))).toBe(true);
       });
+    });
+  });
+
+  describe('loadPaymentSourcesIfNeeded', () => {
+    it('fetches data on first call', async () => {
+      mockGet.mockResolvedValueOnce(samplePaymentSources);
+      await loadPaymentSourcesIfNeeded();
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(get(paymentSources)).toHaveLength(5);
+    });
+
+    it('does not fetch data if already initialized', async () => {
+      mockGet.mockResolvedValueOnce(samplePaymentSources);
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      // Second call should be a no-op
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('deduplicates concurrent calls', async () => {
+      mockGet.mockResolvedValueOnce(samplePaymentSources);
+
+      // Fire multiple concurrent calls
+      const p1 = loadPaymentSourcesIfNeeded();
+      const p2 = loadPaymentSourcesIfNeeded();
+      const p3 = loadPaymentSourcesIfNeeded();
+      await Promise.all([p1, p2, p3]);
+
+      // Should only have made ONE API call
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-fetches after loadPaymentSources() is called (force refresh)', async () => {
+      mockGet.mockResolvedValue(samplePaymentSources);
+
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      // Force refresh resets initialized
+      await loadPaymentSources();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+
+      // loadIfNeeded should not fetch again since loadPaymentSources re-initialized
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+    });
+
+    it('re-fetches after a mutation (create resets initialized)', async () => {
+      mockGet.mockResolvedValue(samplePaymentSources);
+      mockPost.mockResolvedValueOnce({});
+
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      // Mutation calls loadPaymentSources internally, resetting initialized
+      await createPaymentSource({ name: 'New', type: 'bank_account' });
+      // create calls loadPaymentSources which calls get again
+      expect(mockGet).toHaveBeenCalledTimes(2);
+
+      // After mutation, loadIfNeeded should not re-fetch (mutation already refreshed)
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+    });
+
+    it('allows re-fetch after error', async () => {
+      mockGet.mockRejectedValueOnce(new Error('Network error'));
+
+      // First call fails — initialized stays false
+      await loadPaymentSourcesIfNeeded().catch(() => {});
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      // Second call should retry
+      mockGet.mockResolvedValueOnce(samplePaymentSources);
+      await loadPaymentSourcesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+      expect(get(paymentSources)).toHaveLength(5);
     });
   });
 });

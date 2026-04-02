@@ -76,18 +76,50 @@ export const loading = derived(store, (s) => s.loading);
 export const error = derived(store, (s) => s.error);
 export const activeIncomes = derived(store, (s) => s.incomes.filter((i) => i.is_active));
 
+// Track whether data has been loaded at least once
+let initialized = false;
+// Deduplicate concurrent in-flight loads
+let inFlightPromise: Promise<void> | null = null;
+
 export async function loadIncomes() {
+  // Reset initialized so future loadIfNeeded calls will re-fetch
+  initialized = false;
+  inFlightPromise = null;
+
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
     const data = await apiClient.get('/api/incomes');
     const incomes = (data || []) as Income[];
     store.update((s) => ({ ...s, incomes, loading: false }));
+    initialized = true;
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to load incomes');
     store.update((s) => ({ ...s, loading: false, error: err.message }));
     throw err;
   }
+}
+
+/**
+ * Load incomes only if they haven't been loaded yet.
+ * Deduplicates concurrent calls — if a load is already in-flight, returns the same promise.
+ */
+export async function loadIncomesIfNeeded(): Promise<void> {
+  if (initialized) return;
+  if (inFlightPromise) return inFlightPromise;
+
+  inFlightPromise = loadIncomes().finally(() => {
+    inFlightPromise = null;
+  });
+  return inFlightPromise;
+}
+
+/**
+ * Reset initialized flag (for testing)
+ */
+export function resetIncomesInitialized(): void {
+  initialized = false;
+  inFlightPromise = null;
 }
 
 export async function createIncome(data: IncomeData) {

@@ -35,6 +35,8 @@ import {
   totalMonthlyIncome,
   incomesByCategory,
   loadIncomes,
+  loadIncomesIfNeeded,
+  resetIncomesInitialized,
   createIncome,
   updateIncome,
   deleteIncome,
@@ -108,6 +110,7 @@ describe('Incomes Store', () => {
     vi.clearAllMocks();
     // Reset store to initial state
     incomesStore.set({ incomes: [], loading: false, error: null });
+    resetIncomesInitialized();
   });
 
   describe('calculateMonthlyContribution', () => {
@@ -358,6 +361,47 @@ describe('Incomes Store', () => {
         expect(needsCategory?.category?.name).toBe('Needs Category');
         expect(needsCategory?.incomes.map((i) => i.name)).toContain('Orphan Income');
       });
+    });
+  });
+
+  describe('loadIncomesIfNeeded', () => {
+    it('fetches data on first call', async () => {
+      mockGet.mockResolvedValueOnce(sampleIncomes);
+      await loadIncomesIfNeeded();
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(get(incomes)).toEqual(sampleIncomes);
+    });
+
+    it('does not fetch data if already initialized', async () => {
+      mockGet.mockResolvedValueOnce(sampleIncomes);
+      await loadIncomesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      await loadIncomesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('deduplicates concurrent calls', async () => {
+      mockGet.mockResolvedValueOnce(sampleIncomes);
+
+      const p1 = loadIncomesIfNeeded();
+      const p2 = loadIncomesIfNeeded();
+      const p3 = loadIncomesIfNeeded();
+      await Promise.all([p1, p2, p3]);
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows re-fetch after error', async () => {
+      mockGet.mockRejectedValueOnce(new Error('Network error'));
+      await loadIncomesIfNeeded().catch(() => {});
+      expect(mockGet).toHaveBeenCalledTimes(1);
+
+      mockGet.mockResolvedValueOnce(sampleIncomes);
+      await loadIncomesIfNeeded();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+      expect(get(incomes)).toEqual(sampleIncomes);
     });
   });
 });

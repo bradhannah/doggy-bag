@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Navigation from '../components/Navigation.svelte';
   import ToastContainer from '../components/shared/ToastContainer.svelte';
+  import Spinner from '../components/shared/Spinner.svelte';
   import SplashScreen from '../components/SplashScreen.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom } from '../stores/settings';
   import { sidebarCollapsed } from '../stores/ui';
@@ -222,9 +223,7 @@
         <p>{backendError}</p>
         <p class="hint">Please restart the app or check the logs.</p>
       {:else}
-        <div class="spinner"></div>
-        <h2>Starting Doggy Bag...</h2>
-        <p>Connecting to backend</p>
+        <Spinner size={48} label="Starting Doggy Bag..." />
       {/if}
     </div>
   </div>
@@ -382,22 +381,6 @@
 
   .error-icon {
     color: var(--error);
-  }
-
-  .spinner {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto;
-    border: 3px solid var(--border-default);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   .app-layout {
