@@ -84,31 +84,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ''
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
 
-      - name: Ad-hoc code sign
-        run: |
-          APP_PATH="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Doggy Bag.app"
-          if [ -d "$APP_PATH" ]; then
-            # Sign the bun-sidecar binary first (Bun-compiled binaries need explicit signing)
-            SIDECAR="$APP_PATH/Contents/MacOS/bun-sidecar"
-            if [ -f "$SIDECAR" ]; then
-              codesign --sign - --force "$SIDECAR"
-              echo "Sidecar signed"
-            fi
-            # Sign the main app binary
-            MAIN_BIN="$APP_PATH/Contents/MacOS/doggybag"
-            if [ -f "$MAIN_BIN" ]; then
-              codesign --sign - --force "$MAIN_BIN"
-            fi
-            # Sign the app bundle (without --deep to avoid re-signing the sidecar)
-            codesign --sign - --force "$APP_PATH"
-            codesign --verify --verbose "$APP_PATH"
-            echo "Ad-hoc signing complete"
-          else
-            echo "App bundle not found at $APP_PATH"
-            ls -la src-tauri/target/aarch64-apple-darwin/release/bundle/ || true
-            exit 1
-          fi
-
       - name: Create DMG
         run: |
           DMG_PATH="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
