@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy, tick } from 'svelte';
+  import { onMount, onDestroy, tick, afterUpdate } from 'svelte';
   import {
     detailedMonth,
     detailedMonthData,
@@ -51,6 +51,7 @@
   let savedScrollY: number | null = null;
   let restoreScrollAfterLoad = false;
   let isRefreshing = false; // Track if we're doing a soft refresh vs initial load
+  let pendingFilterCheck = false; // Auto-clear stale filter after refresh when no matches remain
 
   let filterQuery = '';
   let isFilterOpen = false;
@@ -376,6 +377,7 @@
     savedScrollY = window.scrollY;
     restoreScrollAfterLoad = true;
     isRefreshing = true;
+    pendingFilterCheck = true;
 
     detailedMonth.refresh();
     monthsStore.loadMonth(month);
@@ -391,6 +393,18 @@
   $: if (!$detailedMonthLoading && isRefreshing) {
     isRefreshing = false;
   }
+
+  // Auto-clear stale filter after refresh when last matched item was closed/changed.
+  // Uses afterUpdate (imperative) instead of $: (reactive) to avoid a cyclical
+  // dependency: filteredActiveBillSections → filterQuery → totalMatchCount → filterQuery.
+  afterUpdate(() => {
+    if (pendingFilterCheck && !$detailedMonthLoading) {
+      pendingFilterCheck = false;
+      if (filterQuery.trim().length > 0 && totalMatchCount === 0) {
+        filterQuery = '';
+      }
+    }
+  });
 
   async function restoreScrollPosition() {
     // Wait for Svelte DOM updates

@@ -27,6 +27,8 @@
   $: isGoalsActive = currentPath.startsWith('/goals');
   // Check if we're on the todos page
   $: isTodosActive = currentPath.startsWith('/todos');
+  // Check if we're on the notes page
+  $: isNotesActive = currentPath.startsWith('/notes');
   // Check if we're on the calendar page
   $: isCalendarActive = currentPath.startsWith('/calendar');
 
@@ -110,6 +112,45 @@
           <path d="M9 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
         <span>Budget</span>
+      </a>
+    </li>
+    <li>
+      <a href="/notes" class="nav-item" class:active={isNotesActive} title="Notes">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <polyline
+            points="14 2 14 8 20 8"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <line
+            x1="16"
+            y1="13"
+            x2="8"
+            y2="13"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="16"
+            y1="17"
+            x2="8"
+            y2="17"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+        <span>Notes</span>
       </a>
     </li>
     <li>

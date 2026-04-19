@@ -91,6 +91,13 @@ import { createSeedDefaultsHandler } from './handlers/seed.handlers';
 import { createDetailedViewHandler } from './handlers/detailed-view.handlers';
 
 import {
+  createNotesHandlerGET,
+  createNotesHandlerPOST,
+  createNotesHandlerPUT,
+  createNotesHandlerDELETE,
+} from './handlers/notes.handlers';
+
+import {
   createBackupHandlerGET,
   createBackupHandlerPOST,
   createBackupHandlerValidate,
@@ -599,6 +606,21 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/todos',
     definition: { method: 'DELETE', handler: createTodosHandlerDELETE(), hasPathParam: true },
+  },
+
+  // Notes
+  {
+    path: '/api/notes',
+    definition: { method: 'GET', handler: createNotesHandlerGET(), hasPathParam: true },
+  },
+  { path: '/api/notes', definition: { method: 'POST', handler: createNotesHandlerPOST() } },
+  {
+    path: '/api/notes',
+    definition: { method: 'PUT', handler: createNotesHandlerPUT(), hasPathParam: true },
+  },
+  {
+    path: '/api/notes',
+    definition: { method: 'DELETE', handler: createNotesHandlerDELETE(), hasPathParam: true },
   },
 
   // Payment Sources - savings endpoint must come before generic payment-sources routes

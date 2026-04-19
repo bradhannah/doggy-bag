@@ -507,7 +507,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
     const anchor = parseLocalDate(anchorDate);
     const dates: string[] = [];
 
-    let current = new Date(anchor.getTime());
+    const current = new Date(anchor.getTime());
 
     // Move to the correct week within or before the month
     if (current > endOfMonth) {
@@ -545,7 +545,7 @@ export class TodoInstancesServiceImpl implements TodoInstancesService {
     const anchor = parseLocalDate(anchorDate);
     const dates: string[] = [];
 
-    let current = new Date(anchor.getTime());
+    const current = new Date(anchor.getTime());
 
     // Move to the correct two-week period within or before the month
     if (current > endOfMonth) {

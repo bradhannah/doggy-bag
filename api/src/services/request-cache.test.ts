@@ -78,9 +78,6 @@ describe('Request Cache', () => {
       const testData = { name: 'cached', value: 42 };
       await storage.writeFile(path, testData);
 
-      let readCount = 0;
-      const originalReadFile = storage.readFile.bind(storage);
-
       await runWithRequestCache(async () => {
         // First read: should hit disk
         const result1 = await storage.readJSON(path);

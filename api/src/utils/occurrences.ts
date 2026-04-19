@@ -129,7 +129,7 @@ export function getBiWeeklyDatesInMonth(startDate: string | undefined, month: st
   const anchor = parseLocalDate(startDate);
   const dates: string[] = [];
 
-  let current = new Date(anchor.getTime());
+  const current = new Date(anchor.getTime());
 
   // If anchor is after the month, we need to go backwards
   if (current > endOfMonth) {
@@ -175,7 +175,7 @@ export function getWeeklyDatesInMonth(startDate: string | undefined, month: stri
   const anchor = parseLocalDate(startDate);
   const dates: string[] = [];
 
-  let current = new Date(anchor.getTime());
+  const current = new Date(anchor.getTime());
 
   // If anchor is after the month, go backwards
   if (current > endOfMonth) {

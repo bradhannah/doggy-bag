@@ -657,6 +657,17 @@ type DefaultEntity = Bill | Income | PaymentSource | Category;
 type InstanceEntity = BillInstance | IncomeInstance;
 
 // ============================================================================
+// Note Interface
+// ============================================================================
+
+interface Note {
+  id: string;
+  content: string; // The note text (supports multi-line)
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}
+
+// ============================================================================
 // Validation Types
 // ============================================================================
 
@@ -727,6 +738,7 @@ export type {
   SavingsGoal,
   Todo,
   TodoInstance,
+  Note,
   FamilyMember,
   InsurancePlan,
   InsuranceCategory,
