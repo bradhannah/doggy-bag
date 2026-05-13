@@ -21,10 +21,11 @@ if (process.argv.includes('--version')) {
 StorageServiceImpl.initialize();
 
 // Determine environment mode
-// BUN_ENV takes precedence if set, otherwise infer from DATA_DIR
+// Use DATA_DIR to detect mode — BUN_ENV is unreliable in compiled binaries
+// (bun build --compile injects BUN_ENV="development" automatically)
 // - 'development': Fixed port 3000, for browser dev with Vite proxy
 // - 'production': Dynamic port 0, for Tauri (dev or prod builds)
-const envMode = process.env.BUN_ENV || (process.env.DATA_DIR ? 'production' : 'development');
+const envMode = process.env.DATA_DIR ? 'production' : 'development';
 const isDevelopment = envMode === 'development';
 
 // Logging utility with timestamps
@@ -376,64 +377,73 @@ function matchRoute(requestPath: string, routePath: string, hasPathParam: boolea
 const sortedRoutes = [...routes].sort((a, b) => b.path.length - a.path.length);
 
 // Start server
-const server = serve({
-  port: PORT,
-  async fetch(req) {
-    const url = new URL(req.url);
-    const path = url.pathname;
+let server;
+try {
+  server = serve({
+    port: PORT,
+    async fetch(req) {
+      const url = new URL(req.url);
+      const path = url.pathname;
 
-    log('INFO', `${req.method} ${path}`);
+      log('INFO', `${req.method} ${path}`);
 
-    // Handle OPTIONS preflight requests
-    if (req.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: CORS_HEADERS,
-      });
-    }
+      // Handle OPTIONS preflight requests
+      if (req.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: CORS_HEADERS,
+        });
+      }
 
-    // Find matching route (pre-sorted by specificity at startup)
-    for (const route of sortedRoutes) {
-      const { path: routePath, definition } = route;
+      // Find matching route (pre-sorted by specificity at startup)
+      for (const route of sortedRoutes) {
+        const { path: routePath, definition } = route;
 
-      const pathMatches = matchRoute(path, routePath, definition.hasPathParam || false);
+        const pathMatches = matchRoute(path, routePath, definition.hasPathParam || false);
 
-      if (pathMatches && req.method === definition.method) {
-        try {
-          log('DEBUG', `Matched route: ${routePath} [${definition.method}]`);
-          const response = await runWithRequestCache(() => definition.handler(req));
+        if (pathMatches && req.method === definition.method) {
+          try {
+            log('DEBUG', `Matched route: ${routePath} [${definition.method}]`);
+            const response = await runWithRequestCache(() => definition.handler(req));
 
-          // Add CORS headers to existing Response
-          const headers = new Headers(response.headers);
-          Object.entries(CORS_HEADERS).forEach(([key, value]) => {
-            headers.set(key, value);
-          });
+            // Add CORS headers to existing Response
+            const headers = new Headers(response.headers);
+            Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+              headers.set(key, value);
+            });
 
-          return new Response(response.body, {
-            status: response.status,
-            headers,
-          });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          const errorStack = error instanceof Error ? error.stack : undefined;
-          log('ERROR', `Handler error: ${errorMessage}`);
-          if (errorStack) {
-            log('ERROR', `Stack trace:\n${errorStack}`);
+            return new Response(response.body, {
+              status: response.status,
+              headers,
+            });
+          } catch (error) {
+            log('ERROR', `Route handler error for ${routePath}:`, error);
+            const errorStack = error instanceof Error ? error.stack : null;
+
+            if (errorStack) {
+              log('ERROR', `Stack trace:\n${errorStack}`);
+            }
+            return corsResponse(
+              {
+                error: error instanceof Error ? error.message : 'Unknown error',
+              },
+              error instanceof Error && 'status' in error ? (error as any).status : 500
+            );
           }
-          return corsResponse(
-            {
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-            error instanceof Error && 'status' in error ? (error as any).status : 500
-          );
         }
       }
-    }
 
-    // 404 for unknown routes
-    return corsResponse({ error: 'Not Found' }, 404);
-  },
-});
+      // 404 for unknown routes
+      return corsResponse({ error: 'Not Found' }, 404);
+    },
+  });
+} catch (error) {
+  // CRITICAL: Print PORT=ERROR so Rust can detect startup failure
+  // instead of timing out silently
+  console.log('PORT=ERROR');
+  console.error(`Failed to start server: ${error}`);
+  process.exit(1);
+}
 
 // Log startup info
 const storageConfig = StorageServiceImpl.getConfig();

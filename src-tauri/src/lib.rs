@@ -331,7 +331,11 @@ async fn start_bun_sidecar_internal(
 
                     // Check if this is the PORT=XXXX line from the backend
                     if let Some(port_str) = line.strip_prefix("PORT=") {
-                        if let Ok(port) = port_str.trim().parse::<u16>() {
+                        if port_str.trim() == "ERROR" {
+                            println!("[Tauri] Backend failed to start: PORT=ERROR received");
+                            let _ = app_clone
+                                .emit("sidecar-error", Some("Backend failed to start".to_string()));
+                        } else if let Ok(port) = port_str.trim().parse::<u16>() {
                             println!("[Tauri] Captured backend port: {}", port);
 
                             // Store port in state
