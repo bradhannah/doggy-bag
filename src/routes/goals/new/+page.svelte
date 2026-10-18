@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const successTitleId = dialogTitleId();
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { loadPaymentSourcesIfNeeded, paymentSources } from '../../../stores/payment-sources';
@@ -648,19 +650,16 @@
 
 <!-- Success Modal -->
 {#if successModal}
-  <div
-    class="modal-overlay"
-    on:click={closeSuccessModal}
-    on:keydown={(e) => e.key === 'Escape' && closeSuccessModal()}
-    role="presentation"
-  >
+  <div class="modal-overlay" on:click={closeSuccessModal} role="presentation">
     <div
       class="modal-content success-modal"
       on:click|stopPropagation
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
-      tabindex="0"
+      tabindex="-1"
+      aria-labelledby={successTitleId}
+      use:modalFocus={closeSuccessModal}
     >
       <div class="success-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
@@ -675,7 +674,7 @@
         </svg>
       </div>
 
-      <h2>Goal Created!</h2>
+      <h2 id={successTitleId}>Goal Created!</h2>
 
       <p class="success-message">
         <strong>{successModal.goalName}</strong> has been created successfully.
@@ -686,11 +685,11 @@
           <h3>Payment Schedule Set Up</h3>
           <p>
             A recurring payment of <strong>{formatCurrency(successModal.amount || 0)}</strong>
-            ({successModal.frequency}) has been added to your budget.
+            ({successModal.frequency}) is ready for new budgets.
           </p>
           <p class="bill-location-hint">
-            You'll find <strong>"{successModal.billName}"</strong> in your Bills section under the "Savings
-            Goals" category.
+            Find <strong>"{successModal.billName}"</strong> under Savings in Budget. For an existing budget,
+            use Review budget updates to add it.
           </p>
         </div>
       {:else}
@@ -965,15 +964,6 @@
 
   .btn-accent:hover {
     background: var(--accent-hover);
-  }
-
-  .calculator-intro {
-    margin: 0 0 var(--space-4) 0;
-    color: var(--text-secondary);
-  }
-
-  .calculator-intro strong {
-    color: var(--text-primary);
   }
 
   .payment-options {

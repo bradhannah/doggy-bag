@@ -117,6 +117,37 @@ describe('Detailed Month Store', () => {
   });
 
   describe('loadMonth', () => {
+    it('ignores a previous month response that arrives after navigation', async () => {
+      let resolveOld!: (value: DetailedMonthData) => void;
+      mockGet.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOld = resolve;
+          })
+      );
+      const oldRequest = detailedMonth.loadMonth('2025-01');
+      mockGet.mockResolvedValueOnce({ ...sampleDetailedMonthData, month: '2025-02' });
+      await detailedMonth.loadMonth('2025-02');
+      resolveOld(sampleDetailedMonthData);
+      await oldRequest;
+      expect(get(detailedMonthData)?.month).toBe('2025-02');
+    });
+
+    it('does not repopulate a cleared store from an in-flight request', async () => {
+      let resolveOld!: (value: DetailedMonthData) => void;
+      mockGet.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOld = resolve;
+          })
+      );
+      const request = detailedMonth.loadMonth('2025-01');
+      detailedMonth.clear();
+      resolveOld(sampleDetailedMonthData);
+      await request;
+      expect(get(detailedMonthData)).toBeNull();
+    });
+
     it('loads detailed month data from API', async () => {
       mockGet.mockResolvedValue(sampleDetailedMonthData);
 

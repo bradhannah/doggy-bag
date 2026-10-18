@@ -1,808 +1,657 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { apiClient } from '$lib/api/client';
-  import {
-    loadPaymentSourcesIfNeeded,
-    savingsAccounts,
-    investmentAccounts,
-  } from '../../stores/payment-sources';
-  import { currentMonth } from '../../stores/ui';
+  import { currentMonth, formatMonthDisplay } from '../../stores/ui';
   import { success, error as showError } from '../../stores/toast';
   import { formatCurrency, dollarsToCents } from '$lib/utils/format';
+  import type { SavingsAccountSummary, SavingsMonthSummary } from '$lib/types/budget-workflow';
   import MonthPickerHeader from '../../components/MonthPickerHeader.svelte';
   import MonthNotCreated from '../../components/MonthNotCreated.svelte';
+  import ConfirmDialog from '../../components/shared/ConfirmDialog.svelte';
+  import BudgetUpdatesModal from '../../components/DetailedView/BudgetUpdatesModal.svelte';
+  import SavingsPlanModal from '../../components/Savings/SavingsPlanModal.svelte';
 
-  interface SavingsBalances {
-    start: Record<string, number>;
-    end: Record<string, number>;
-    contributions: Record<string, number>;
-  }
-
+  let data: SavingsMonthSummary | null = null;
   let loading = true;
-  let saving = false;
   let creating = false;
   let error = '';
-  let monthExists = true;
-  let balances: SavingsBalances = { start: {}, end: {}, contributions: {} };
+  let requestId = 0;
+  let loadedMonth = '';
+  let edits: Record<string, { start: string; end: string }> = {};
+  let pendingSaves = 0;
+  let showPlan = false;
+  let planAccount = '';
+  let showReview = false;
+  let initialSelected: string[] = [];
+  let pushing = false;
+  let showPushConfirmation = false;
+  let pushDestinationMonth = '';
+  let pendingPush: { month: string; finalBalances: Record<string, number> } | null = null;
 
-  // Editing state - store values in dollars for display
-  // New structure: start, contribution, end (final)
-  let editingValues: Record<string, { start: string; contribution: string; end: string }> = {};
-
-  // Track which field is currently saving (for visual feedback)
-  let savingField: { accountId: string; field: string } | null = null;
-
-  $: allAccounts = [...$savingsAccounts, ...$investmentAccounts];
-  $: hasSavingsAccounts = $savingsAccounts.length > 0;
-  $: hasInvestmentAccounts = $investmentAccounts.length > 0;
-
-  // Calculate previous month from current month
-  function getPreviousMonth(month: string): string {
-    const [year, monthNum] = month.split('-').map(Number);
-    const prevDate = new Date(year, monthNum - 2); // monthNum - 1 for 0-based, -1 more for previous
-    return `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  onMount(() => {
-    // Initial load is handled by the reactive block `$: if ($currentMonth)`
+  onDestroy(() => {
+    requestId++;
   });
+  $: if ($currentMonth) load($currentMonth);
+  $: groups = [
+    {
+      name: 'Savings Accounts',
+      total: 'Total Savings',
+      accounts: data?.accounts.filter((account) => !account.is_investment) ?? [],
+    },
+    {
+      name: 'Investment Accounts',
+      total: 'Total Investments',
+      accounts: data?.accounts.filter((account) => account.is_investment) ?? [],
+    },
+  ];
+  $: hasLegacy = data?.accounts.some((account) => account.unbudgeted_legacy !== 0) ?? false;
 
-  // Load (and reload) when month changes via MonthPickerHeader
-  $: if ($currentMonth) {
-    loadData();
-  }
-
-  // Refresh function for the header button
-  function handleRefresh() {
-    loadData();
-  }
-
-  async function loadData() {
+  async function load(month = $currentMonth) {
+    const id = ++requestId;
     loading = true;
     error = '';
-    let previousMonthEndBalances: Record<string, number> = {};
-
+    if (month !== loadedMonth) {
+      showReview = false;
+      showPlan = false;
+      showPushConfirmation = false;
+    }
     try {
-      // Load payment sources and previous month data in parallel
-      // (both are independent of each other)
-      const prevMonth = getPreviousMonth($currentMonth);
-      const [, prevMonthResult] = await Promise.all([
-        loadPaymentSourcesIfNeeded(),
-        apiClient.get(`/api/months/${prevMonth}`).catch(() => null),
-      ]);
-
-      if (prevMonthResult) {
-        previousMonthEndBalances =
-          (prevMonthResult as { savings_balances_end?: Record<string, number> })
-            .savings_balances_end || {};
-      }
-
-      // Load current month data to get existing balances
-      const monthData = await apiClient.get(`/api/months/${$currentMonth}`);
-      if (monthData) {
-        monthExists = true;
-        const currentStart =
-          (monthData as { savings_balances_start?: Record<string, number> })
-            .savings_balances_start || {};
-        const currentEnd =
-          (monthData as { savings_balances_end?: Record<string, number> }).savings_balances_end ||
-          {};
-        const currentContributions =
-          (monthData as { savings_contributions?: Record<string, number> }).savings_contributions ||
-          {};
-
-        // Use previous month's end balances as defaults for start if current start is empty
-        const startBalances: Record<string, number> = {};
-        for (const account of [...$savingsAccounts, ...$investmentAccounts]) {
-          if (currentStart[account.id] !== undefined) {
-            startBalances[account.id] = currentStart[account.id];
-          } else if (previousMonthEndBalances[account.id] !== undefined) {
-            startBalances[account.id] = previousMonthEndBalances[account.id];
-          }
-        }
-
-        balances = {
-          start: startBalances,
-          end: currentEnd,
-          contributions: currentContributions,
-        };
-      }
-      // Initialize editing values from current balances
-      initEditingValues(previousMonthEndBalances);
+      const result = (await apiClient.get(`/api/months/${month}/savings`)) as SavingsMonthSummary;
+      if (id !== requestId) return;
+      data = result;
+      loadedMonth = month;
+      edits = Object.fromEntries(
+        result.accounts.map((account) => [
+          account.id,
+          {
+            start: ((account.start ?? 0) / 100).toFixed(2),
+            end: account.end == null ? '' : (account.end / 100).toFixed(2),
+          },
+        ])
+      );
     } catch (e) {
-      if (
-        (e as { status?: number }).status === 404 ||
-        (e instanceof Error && e.message.includes('Not Found'))
-      ) {
-        // Month doesn't exist yet - show create prompt
-        monthExists = false;
-        balances = { start: {}, end: {}, contributions: {} };
-        initEditingValues(previousMonthEndBalances);
-      } else {
-        error = e instanceof Error ? e.message : 'Failed to load data';
-      }
+      if (id === requestId) error = e instanceof Error ? e.message : 'Could not load savings';
     } finally {
-      loading = false;
+      if (id === requestId) loading = false;
     }
   }
 
-  function initEditingValues(previousMonthEndBalances: Record<string, number> = {}) {
-    editingValues = {};
-    for (const account of allAccounts) {
-      // Priority: current start balance > previous month end balance
-      const startValue = balances.start[account.id] ?? previousMonthEndBalances[account.id] ?? 0;
-      editingValues[account.id] = {
-        start: centsToDollars(startValue),
-        contribution: centsToDollars(balances.contributions[account.id] ?? 0),
-        end: centsToDollars(balances.end[account.id] ?? 0),
+  function start(account: SavingsAccountSummary): number {
+    return dollarsToCents(edits[account.id]?.start || '0');
+  }
+  function estimate(account: SavingsAccountSummary): number {
+    return start(account) + account.planned + account.unbudgeted_legacy;
+  }
+  function final(account: SavingsAccountSummary): number {
+    const value = edits[account.id]?.end?.trim() ?? '';
+    return value === '' ? estimate(account) : dollarsToCents(value);
+  }
+  function percent(change: number, opening: number): string {
+    if (opening === 0) return change === 0 ? '0%' : 'N/A';
+    const value = (change / Math.abs(opening)) * 100;
+    return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+  }
+  function totals(accounts: SavingsAccountSummary[]) {
+    return accounts.reduce(
+      (sum, account) => ({
+        start: sum.start + start(account),
+        planned: sum.planned + account.planned,
+        recorded: sum.recorded + account.recorded,
+        estimate: sum.estimate + estimate(account),
+        end: sum.end + final(account),
+      }),
+      { start: 0, planned: 0, recorded: 0, estimate: 0, end: 0 }
+    );
+  }
+
+  async function saveBalance(account: SavingsAccountSummary, field: 'start' | 'end') {
+    if (!data?.exists || data.is_read_only || loading || loadedMonth !== $currentMonth) return;
+    const month = loadedMonth;
+    const id = requestId;
+    const raw = edits[account.id][field].trim();
+    const cleaned = raw.replace(/[$,\s]/g, '');
+    if (cleaned && !/^-?(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(cleaned)) {
+      showError('Enter a valid amount with up to two decimal places.');
+      edits[account.id][field] =
+        field === 'end' && account.end == null ? '' : ((account[field] ?? 0) / 100).toFixed(2);
+      edits = { ...edits };
+      return;
+    }
+    const amount = field === 'end' && !cleaned ? null : dollarsToCents(cleaned);
+    pendingSaves++;
+    try {
+      await apiClient.putPath(`/api/months/${month}/savings-balances`, {
+        [field]: { [account.id]: amount },
+      });
+      if (id !== requestId || !data) return;
+      data = {
+        ...data,
+        accounts: data.accounts.map((item) =>
+          item.id === account.id ? { ...item, [field]: amount ?? undefined } : item
+        ),
       };
-    }
-  }
-
-  function centsToDollars(cents: number): string {
-    return (cents / 100).toFixed(2);
-  }
-
-  function formatPercent(change: number, start: number): string {
-    if (start === 0) return change === 0 ? '0%' : 'N/A';
-    const pct = (change / Math.abs(start)) * 100;
-    const sign = pct >= 0 ? '+' : '';
-    return `${sign}${pct.toFixed(1)}%`;
-  }
-
-  // Get values in cents for an account
-  function getStartValue(accountId: string): number {
-    return dollarsToCents(editingValues[accountId]?.start || '0');
-  }
-
-  function getContributionValue(accountId: string): number {
-    return dollarsToCents(editingValues[accountId]?.contribution || '0');
-  }
-
-  // Check if the Final (end) value is auto-calculated (empty or zero with no user input)
-  function isEndAutoCalculated(accountId: string): boolean {
-    const endStr = editingValues[accountId]?.end || '';
-    // Auto-calculated if empty, or "0.00" (initial default), or "0"
-    return endStr === '' || endStr === '0.00' || endStr === '0';
-  }
-
-  // Get the effective end value - uses Est. EOM when auto-calculated
-  function getEndValue(accountId: string): number {
-    if (isEndAutoCalculated(accountId)) {
-      // Auto-calculate as Start + Contribution
-      return getStartValue(accountId) + getContributionValue(accountId);
-    }
-    return dollarsToCents(editingValues[accountId]?.end || '0');
-  }
-
-  // Est. EOM = Start + Contribution
-  function getEstEomValue(accountId: string): number {
-    return getStartValue(accountId) + getContributionValue(accountId);
-  }
-
-  // Change = Final (End) - Start
-  function _getChange(accountId: string): number {
-    return getEndValue(accountId) - getStartValue(accountId);
-  }
-
-  // Handle input changes - force Svelte reactivity by reassigning the object
-  function handleInput(accountId: string, field: 'start' | 'contribution' | 'end', value: string) {
-    editingValues[accountId][field] = value;
-    editingValues = editingValues; // Trigger reactivity for computed totals
-  }
-
-  // Auto-save on blur for a specific field
-  async function handleBlur(accountId: string, field: 'start' | 'contribution' | 'end') {
-    savingField = { accountId, field };
-    try {
-      const payload: {
-        start?: Record<string, number>;
-        end?: Record<string, number>;
-        contributions?: Record<string, number>;
-      } = {};
-
-      if (field === 'start') {
-        payload.start = { [accountId]: dollarsToCents(editingValues[accountId].start) };
-      } else if (field === 'contribution') {
-        payload.contributions = {
-          [accountId]: dollarsToCents(editingValues[accountId].contribution),
-        };
-      } else if (field === 'end') {
-        payload.end = { [accountId]: dollarsToCents(editingValues[accountId].end) };
-      }
-
-      await apiClient.put(`/api/months/${$currentMonth}/savings-balances`, '', payload);
-
-      // Update local balances state
-      if (field === 'start') {
-        balances.start[accountId] = dollarsToCents(editingValues[accountId].start);
-      } else if (field === 'contribution') {
-        balances.contributions[accountId] = dollarsToCents(editingValues[accountId].contribution);
-      } else if (field === 'end') {
-        balances.end[accountId] = dollarsToCents(editingValues[accountId].end);
-      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to save';
-      showError(msg);
+      showError(e instanceof Error ? e.message : 'Balance was not saved');
+      if (id === requestId) {
+        edits[account.id][field] =
+          field === 'end' && account.end == null ? '' : ((account[field] ?? 0) / 100).toFixed(2);
+        edits = { ...edits };
+      }
     } finally {
-      savingField = null;
+      pendingSaves--;
     }
   }
 
-  // Calculate totals for savings accounts
-  // Note: We include editingValues in the expression to ensure Svelte tracks it as a dependency
-  $: totalSavingsStart =
-    editingValues && $savingsAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
-  $: totalSavingsContribution =
-    editingValues && $savingsAccounts.reduce((sum, a) => sum + getContributionValue(a.id), 0);
-  $: totalSavingsEstEom =
-    editingValues && $savingsAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
-  $: totalSavingsEnd =
-    editingValues && $savingsAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
-  $: totalSavingsChange = totalSavingsEnd - totalSavingsStart;
-
-  // Calculate totals for investment accounts
-  $: totalInvestmentStart =
-    editingValues && $investmentAccounts.reduce((sum, a) => sum + getStartValue(a.id), 0);
-  $: totalInvestmentContribution =
-    editingValues && $investmentAccounts.reduce((sum, a) => sum + getContributionValue(a.id), 0);
-  $: totalInvestmentEstEom =
-    editingValues && $investmentAccounts.reduce((sum, a) => sum + getEstEomValue(a.id), 0);
-  $: totalInvestmentEnd =
-    editingValues && $investmentAccounts.reduce((sum, a) => sum + getEndValue(a.id), 0);
-  $: totalInvestmentChange = totalInvestmentEnd - totalInvestmentStart;
-
-  // Grand totals
-  $: grandTotalStart = totalSavingsStart + totalInvestmentStart;
-  $: grandTotalContribution = totalSavingsContribution + totalInvestmentContribution;
-  $: grandTotalEstEom = totalSavingsEstEom + totalInvestmentEstEom;
-  $: grandTotalEnd = totalSavingsEnd + totalInvestmentEnd;
-  $: grandTotalChange = grandTotalEnd - grandTotalStart;
-
-  function formatMonthDisplay(month: string): string {
-    const [year, monthNum] = month.split('-');
-    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-  }
-
-  async function handleCreateMonth() {
-    if (!$currentMonth) return;
+  async function createMonth() {
+    if (creating) return;
+    const month = $currentMonth;
     creating = true;
     try {
-      await apiClient.post(`/api/months/${$currentMonth}/generate`, {});
-      success(`Month ${$currentMonth} created`);
-      monthExists = true;
-      await loadData();
+      await apiClient.post(`/api/months/${month}/generate`, {});
+      success(`Budget created for ${formatMonthDisplay(month)}`);
+      if ($currentMonth === month) await load(month);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to create month';
-      showError(msg);
+      showError(e instanceof Error ? e.message : 'Could not create the budget');
     } finally {
       creating = false;
     }
   }
+
+  function openPlan(accountId = '') {
+    planAccount = accountId;
+    showPlan = true;
+  }
+  function planSaved(result: { recurring: boolean; key?: string }) {
+    showPlan = false;
+    success(
+      result.recurring ? 'Recurring savings plan saved' : 'Savings transfer added to this budget'
+    );
+    if (result.recurring && data?.exists && !data.is_read_only) {
+      initialSelected = result.key ? [result.key] : [];
+      showReview = true;
+    }
+    void load();
+  }
+
+  async function pushFinalBalances(overwrite = false) {
+    if (!data || pushing) return;
+    if (!overwrite)
+      pendingPush = {
+        month: loadedMonth,
+        finalBalances: Object.fromEntries(
+          data.accounts.map((account) => [account.id, final(account)])
+        ),
+      };
+    const payload = pendingPush;
+    if (!payload) return;
+    pushing = true;
+    try {
+      const result = (await apiClient.post(`/api/months/${payload.month}/push-savings-balances`, {
+        finalBalances: payload.finalBalances,
+        overwrite,
+      })) as { destinationMonth: string; requiresConfirmation: boolean };
+      if (payload.month !== $currentMonth) return;
+      pushDestinationMonth = result.destinationMonth;
+      showPushConfirmation = result.requiresConfirmation;
+      if (!result.requiresConfirmation) {
+        pendingPush = null;
+        success(`Final balances pushed to ${formatMonthDisplay(result.destinationMonth)}`);
+      }
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Could not copy balances');
+    } finally {
+      pushing = false;
+    }
+  }
 </script>
 
-<MonthPickerHeader showRefresh={true} onRefresh={handleRefresh} />
+<svelte:head><title>Savings — {$currentMonth}</title></svelte:head>
+<MonthPickerHeader showRefresh={true} onRefresh={() => load()} />
 
 <div class="savings-page">
-  {#if loading}
-    <div class="loading-state">Loading...</div>
-  {:else if error}
-    <div class="error-state">{error}</div>
-  {:else if !monthExists}
-    <MonthNotCreated
-      monthDisplay={formatMonthDisplay($currentMonth)}
-      {creating}
-      hint="Create this month to start tracking savings and investments."
-      on:create={handleCreateMonth}
-    />
-  {:else if allAccounts.length === 0}
-    <div class="empty-state">
-      <h2>No Savings or Investment Accounts</h2>
+  <header class="page-header">
+    <div>
+      <h2>Savings &amp; investments</h2>
       <p>
-        To track savings and investments, go to <a href="/setup">Budget Config</a> and create a bank account
-        with the "Savings Account" option, or select the "Investment Account" type.
+        Plan transfers in Budget, track recorded contributions here, and enter observed account
+        balances.
       </p>
     </div>
-  {:else}
-    <div class="savings-content">
-      {#if hasSavingsAccounts}
-        <section class="account-section">
-          <h2 class="section-title savings-title">Savings Accounts</h2>
-          <div class="accounts-table">
-            <div class="table-header">
-              <span class="col-name">Account</span>
-              <span class="col-value">Start</span>
-              <span class="col-value">Contribution</span>
-              <span class="col-value col-readonly">Est. EOM</span>
-              <span class="col-value">Final</span>
-              <span class="col-change">Change</span>
-            </div>
-            {#each $savingsAccounts as account (account.id)}
-              {@const contribution = editingValues && getContributionValue(account.id)}
-              {@const estEom = editingValues && getEstEomValue(account.id)}
-              {@const isAutoCalc = editingValues && isEndAutoCalculated(account.id)}
-              {@const endVal = editingValues && getEndValue(account.id)}
-              {@const startVal = editingValues && getStartValue(account.id)}
-              {@const change = endVal - startVal}
-              <div class="table-row">
-                <span class="col-name">{account.name}</span>
-                <div class="col-value">
-                  <div
-                    class="input-wrapper"
-                    class:saving={savingField?.accountId === account.id &&
-                      savingField?.field === 'start'}
-                  >
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      value={editingValues[account.id].start}
-                      on:input={(e) => handleInput(account.id, 'start', e.currentTarget.value)}
-                      on:blur={() => handleBlur(account.id, 'start')}
-                      disabled={saving}
-                      class="balance-input"
-                    />
-                  </div>
-                </div>
-                <div class="col-value">
-                  <div
-                    class="input-wrapper contribution-input"
-                    class:saving={savingField?.accountId === account.id &&
-                      savingField?.field === 'contribution'}
-                    class:positive={contribution > 0}
-                    class:negative={contribution < 0}
-                  >
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      value={editingValues[account.id].contribution}
-                      on:input={(e) =>
-                        handleInput(account.id, 'contribution', e.currentTarget.value)}
-                      on:blur={() => handleBlur(account.id, 'contribution')}
-                      disabled={saving}
-                      class="balance-input"
-                    />
-                  </div>
-                </div>
-                <div class="col-value col-readonly">
-                  <span class="est-eom-value">{formatCurrency(estEom)}</span>
-                </div>
-                <div class="col-value">
-                  <div
-                    class="input-wrapper"
-                    class:saving={savingField?.accountId === account.id &&
-                      savingField?.field === 'end'}
-                    class:auto-calculated={isAutoCalc}
-                  >
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      value={isAutoCalc ? '' : editingValues[account.id].end}
-                      on:input={(e) => handleInput(account.id, 'end', e.currentTarget.value)}
-                      on:blur={() => handleBlur(account.id, 'end')}
-                      disabled={saving}
-                      class="balance-input"
-                      placeholder={(estEom / 100).toFixed(2)}
-                    />
-                  </div>
-                </div>
-                <span class="col-change" class:positive={change > 0} class:negative={change < 0}>
-                  {formatCurrency(change)}
-                  <span class="percent">{formatPercent(change, startVal)}</span>
-                </span>
-              </div>
-            {/each}
-            <div class="table-footer">
-              <span class="col-name">Total Savings</span>
-              <span class="col-value">{formatCurrency(totalSavingsStart)}</span>
-              <span
-                class="col-value"
-                class:positive={totalSavingsContribution > 0}
-                class:negative={totalSavingsContribution < 0}
-                >{formatCurrency(totalSavingsContribution)}</span
-              >
-              <span class="col-value col-readonly">{formatCurrency(totalSavingsEstEom)}</span>
-              <span class="col-value">{formatCurrency(totalSavingsEnd)}</span>
-              <span
-                class="col-change"
-                class:positive={totalSavingsChange > 0}
-                class:negative={totalSavingsChange < 0}
-              >
-                {formatCurrency(totalSavingsChange)}
-                <span class="percent">{formatPercent(totalSavingsChange, totalSavingsStart)}</span>
-              </span>
-            </div>
-          </div>
-        </section>
+    <button
+      class="primary"
+      on:click={() => openPlan()}
+      disabled={loading || !data?.accounts.some((account) => account.is_active)}
+      >Plan a transfer</button
+    >
+  </header>
+  {#if loading}
+    <p role="status">Loading savings…</p>
+  {:else if error}
+    <p class="error" role="alert">{error}</p>
+    <button class="secondary" on:click={() => load()}>Retry</button>
+  {:else if data}
+    {#if !data.exists}
+      <MonthNotCreated
+        monthDisplay={formatMonthDisplay(data.month)}
+        {creating}
+        hint="Create this budget to include recurring savings plans and track this month’s balances."
+        on:create={createMonth}
+      />
+    {:else if data.accounts.length === 0}
+      <p>
+        No savings or investment accounts yet. <a href="/setup?tab=payment-sources"
+          >Add an account in Manage</a
+        >.
+      </p>
+    {:else}
+      <div class="actions">
+        <a href="/month/{$currentMonth}">Open this month’s Budget</a>
+        <button
+          class="secondary"
+          on:click={() => {
+            initialSelected = [];
+            showReview = true;
+          }}
+          disabled={data.is_read_only}>Review budget updates</button
+        >
+        <button
+          class="secondary"
+          on:click={() => pushFinalBalances()}
+          disabled={pushing || pendingSaves > 0}
+        >
+          {pushing ? 'Pushing…' : 'Push Final to Next Month'}
+        </button>
+      </div>
+      {#if data.is_read_only}<p class="notice">
+          This month is locked. Unlock it in Manage to edit balances or budget entries.
+        </p>{/if}
+      {#if hasLegacy}
+        <p class="notice">
+          Some previous Savings amounts are not linked to this budget yet. Review budget updates to
+          include them. Estimates include these unlinked amounts until you review them.
+        </p>
       {/if}
-
-      {#if hasInvestmentAccounts}
-        <section class="account-section">
-          <h2 class="section-title investment-title">Investment Accounts</h2>
-          <div class="accounts-table">
-            <div class="table-header">
-              <span class="col-name">Account</span>
-              <span class="col-value">Start</span>
-              <span class="col-value">Contribution</span>
-              <span class="col-value col-readonly">Est. EOM</span>
-              <span class="col-value">Final</span>
-              <span class="col-change">Change</span>
-            </div>
-            {#each $investmentAccounts as account (account.id)}
-              {@const contribution = editingValues && getContributionValue(account.id)}
-              {@const estEom = editingValues && getEstEomValue(account.id)}
-              {@const isAutoCalc = editingValues && isEndAutoCalculated(account.id)}
-              {@const endVal = editingValues && getEndValue(account.id)}
-              {@const startVal = editingValues && getStartValue(account.id)}
-              {@const change = endVal - startVal}
-              <div class="table-row">
-                <span class="col-name">{account.name}</span>
-                <div class="col-value">
-                  <div
-                    class="input-wrapper"
-                    class:saving={savingField?.accountId === account.id &&
-                      savingField?.field === 'start'}
-                  >
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      value={editingValues[account.id].start}
-                      on:input={(e) => handleInput(account.id, 'start', e.currentTarget.value)}
-                      on:blur={() => handleBlur(account.id, 'start')}
-                      disabled={saving}
-                      class="balance-input"
-                    />
-                  </div>
-                </div>
-                <div class="col-value">
-                  <div
-                    class="input-wrapper contribution-input"
-                    class:saving={savingField?.accountId === account.id &&
-                      savingField?.field === 'contribution'}
-                    class:positive={contribution > 0}
-                    class:negative={contribution < 0}
-                  >
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      value={editingValues[account.id].contribution}
-                      on:input={(e) =>
-                        handleInput(account.id, 'contribution', e.currentTarget.value)}
-                      on:blur={() => handleBlur(account.id, 'contribution')}
-                      disabled={saving}
-                      class="balance-input"
-                    />
-                  </div>
-                </div>
-                <div class="col-value col-readonly">
-                  <span class="est-eom-value">{formatCurrency(estEom)}</span>
-                </div>
-                <div class="col-value">
-                  <div
-                    class="input-wrapper"
-                    class:saving={savingField?.accountId === account.id &&
-                      savingField?.field === 'end'}
-                    class:auto-calculated={isAutoCalc}
-                  >
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      value={isAutoCalc ? '' : editingValues[account.id].end}
-                      on:input={(e) => handleInput(account.id, 'end', e.currentTarget.value)}
-                      on:blur={() => handleBlur(account.id, 'end')}
-                      disabled={saving}
-                      class="balance-input"
-                      placeholder={(estEom / 100).toFixed(2)}
-                    />
-                  </div>
-                </div>
-                <span class="col-change" class:positive={change > 0} class:negative={change < 0}>
-                  {formatCurrency(change)}
-                  <span class="percent">{formatPercent(change, startVal)}</span>
-                </span>
-              </div>
-            {/each}
-            <div class="table-footer">
-              <span class="col-name">Total Investments</span>
-              <span class="col-value">{formatCurrency(totalInvestmentStart)}</span>
-              <span
-                class="col-value"
-                class:positive={totalInvestmentContribution > 0}
-                class:negative={totalInvestmentContribution < 0}
-                >{formatCurrency(totalInvestmentContribution)}</span
-              >
-              <span class="col-value col-readonly">{formatCurrency(totalInvestmentEstEom)}</span>
-              <span class="col-value">{formatCurrency(totalInvestmentEnd)}</span>
-              <span
-                class="col-change"
-                class:positive={totalInvestmentChange > 0}
-                class:negative={totalInvestmentChange < 0}
-              >
-                {formatCurrency(totalInvestmentChange)}
-                <span class="percent"
-                  >{formatPercent(totalInvestmentChange, totalInvestmentStart)}</span
+      {#each groups as group (group.name)}
+        {#if group.accounts.length}
+          {@const sum = edits && totals(group.accounts)}
+          <section class="account-section" class:single-account={group.accounts.length === 1}>
+            <h3>{group.name}</h3>
+            <div class="table-scroll">
+              <table>
+                <thead
+                  ><tr
+                    ><th scope="col">Account</th><th scope="col">Start</th><th scope="col"
+                      >Planned</th
+                    ><th scope="col">Recorded</th><th scope="col">Est. EOM</th><th scope="col"
+                      >Final</th
+                    ><th scope="col">Change</th></tr
+                  ></thead
                 >
-              </span>
+                <tbody>
+                  {#each group.accounts as account (account.id)}
+                    {@const opening = edits && start(account)}
+                    {@const closing = edits && final(account)}
+                    <tr class="account-row">
+                      <th scope="row"
+                        ><span>{account.name}</span>{#if !account.is_active}<small
+                            >Archived account</small
+                          >{/if}
+                        {#if account.is_active}<button
+                            class="text-button"
+                            on:click={() => openPlan(account.id)}>Plan transfer</button
+                          >{/if}
+                      </th>
+                      <td data-label="Start"
+                        ><input
+                          type="text"
+                          inputmode="decimal"
+                          aria-label={`${account.name} starting balance`}
+                          bind:value={edits[account.id].start}
+                          on:blur={() => saveBalance(account, 'start')}
+                          disabled={data.is_read_only || pendingSaves > 0}
+                        /></td
+                      >
+                      <td data-label="Planned"
+                        >{formatCurrency(
+                          account.planned
+                        )}{#if account.unbudgeted_legacy !== 0}<small class="legacy"
+                            >{formatCurrency(account.unbudgeted_legacy)} unlinked</small
+                          >{/if}</td
+                      >
+                      <td data-label="Recorded">{formatCurrency(account.recorded)}</td>
+                      <td data-label="Est. EOM">{formatCurrency(edits && estimate(account))}</td>
+                      <td data-label="Final"
+                        ><input
+                          type="text"
+                          inputmode="decimal"
+                          aria-label={`${account.name} final balance`}
+                          bind:value={edits[account.id].end}
+                          placeholder={((edits && estimate(account)) / 100).toFixed(2)}
+                          on:blur={() => saveBalance(account, 'end')}
+                          disabled={data.is_read_only || pendingSaves > 0}
+                        /></td
+                      >
+                      <td
+                        data-label="Change"
+                        class:positive={closing > opening}
+                        class:negative={closing < opening}
+                        >{formatCurrency(closing - opening)}<small
+                          >{percent(closing - opening, opening)}</small
+                        ></td
+                      >
+                    </tr>
+                    {#if account.entries.length}
+                      <tr
+                        ><td colspan="7" class="entry-details"
+                          ><details>
+                            <summary
+                              >{account.entries.length} budget {account.entries.length === 1
+                                ? 'entry'
+                                : 'entries'} for {account.name}</summary
+                            >
+                            <ul>
+                              {#each account.entries as entry (entry.id)}<li>
+                                  <span
+                                    >{entry.name}{#if entry.goal_id}
+                                      · <a href="/goals/edit/{entry.goal_id}">Goal</a>{/if}</span
+                                  ><span
+                                    >Planned {formatCurrency(entry.planned)} · recorded {formatCurrency(
+                                      entry.recorded
+                                    )}</span
+                                  >
+                                </li>{/each}
+                            </ul>
+                          </details></td
+                        ></tr
+                      >
+                    {/if}
+                  {/each}
+                </tbody>
+                <tfoot
+                  ><tr
+                    ><th scope="row">{group.total}</th><td data-label="Start"
+                      >{formatCurrency(sum.start)}</td
+                    ><td data-label="Planned">{formatCurrency(sum.planned)}</td><td
+                      data-label="Recorded">{formatCurrency(sum.recorded)}</td
+                    ><td data-label="Est. EOM">{formatCurrency(sum.estimate)}</td><td
+                      data-label="Final">{formatCurrency(sum.end)}</td
+                    ><td data-label="Change">{formatCurrency(sum.end - sum.start)}</td></tr
+                  ></tfoot
+                >
+              </table>
             </div>
-          </div>
-        </section>
+          </section>
+        {/if}
+      {/each}
+      {#if groups.every((group) => group.accounts.length > 0)}
+        {@const sum = edits && totals(data.accounts)}
+        <p class="grand-total">
+          Total savings &amp; investments: <strong>{formatCurrency(sum.end)}</strong> · planned {formatCurrency(
+            sum.planned
+          )} · recorded {formatCurrency(sum.recorded)}
+        </p>
       {/if}
-
-      {#if hasSavingsAccounts && hasInvestmentAccounts}
-        <section class="grand-total-section">
-          <div class="grand-total-row">
-            <span class="col-name">Grand Total</span>
-            <span class="col-value">{formatCurrency(grandTotalStart)}</span>
-            <span
-              class="col-value"
-              class:positive={grandTotalContribution > 0}
-              class:negative={grandTotalContribution < 0}
-              >{formatCurrency(grandTotalContribution)}</span
-            >
-            <span class="col-value col-readonly">{formatCurrency(grandTotalEstEom)}</span>
-            <span class="col-value">{formatCurrency(grandTotalEnd)}</span>
-            <span
-              class="col-change"
-              class:positive={grandTotalChange > 0}
-              class:negative={grandTotalChange < 0}
-            >
-              {formatCurrency(grandTotalChange)}
-              <span class="percent">{formatPercent(grandTotalChange, grandTotalStart)}</span>
-            </span>
-          </div>
-        </section>
-      {/if}
-
-      <p class="auto-save-hint">Changes are saved automatically when you leave a field.</p>
-    </div>
+      <p class="hint">
+        Planned and recorded amounts come from Budget, including goal contributions and withdrawals.
+        Edit or record a transfer there. Recording transfers does not update your bank balances.
+      </p>
+      <p class="hint">
+        Balances save when you leave a field. Leave Final blank to use the estimate; enter 0 for an
+        empty account. Change includes contributions, withdrawals, interest, and investment
+        movement.
+      </p>
+    {/if}
   {/if}
 </div>
 
+{#if showPlan && data}
+  {#key $currentMonth}<SavingsPlanModal
+      summary={data}
+      initialAccount={planAccount}
+      onClose={() => (showPlan = false)}
+      onSaved={planSaved}
+    />{/key}
+{/if}
+{#if showReview}
+  {#key $currentMonth}<BudgetUpdatesModal
+      month={$currentMonth}
+      {initialSelected}
+      onClose={() => {
+        showReview = false;
+        initialSelected = [];
+      }}
+      onApplied={() => load()}
+    />{/key}
+{/if}
+<ConfirmDialog
+  open={showPushConfirmation}
+  title="Overwrite next month's starting balances?"
+  message={`Some starting balances for ${pushDestinationMonth ? formatMonthDisplay(pushDestinationMonth) : 'next month'} already contain values. Continuing will replace them with ${formatMonthDisplay(pendingPush?.month ?? $currentMonth)}'s final balances or estimates.`}
+  confirmText={pushing ? 'Overwriting…' : 'Overwrite and Continue'}
+  confirmStyle="danger"
+  on:confirm={() => !pushing && pushFinalBalances(true)}
+  on:cancel={() => {
+    showPushConfirmation = false;
+    pendingPush = null;
+  }}
+/>
+
 <style>
   .savings-page {
-    max-width: 1100px;
+    max-width: var(--content-max-md);
     margin: 0 auto;
-    padding: var(--space-4) var(--content-padding) var(--content-padding) var(--content-padding);
+    padding: var(--space-4) var(--content-padding);
   }
-
-  .loading-state,
-  .error-state {
-    text-align: center;
-    padding: var(--space-8);
-    color: var(--text-secondary);
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-5);
   }
-
-  .error-state {
-    color: var(--error);
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: var(--space-8);
-    background: var(--bg-elevated);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-default);
-  }
-
-  .empty-state h2 {
-    margin: 0 0 var(--space-3) 0;
-    font-size: 1.25rem;
-    color: var(--text-primary);
-  }
-
-  .empty-state p {
+  h2,
+  h3 {
     margin: 0;
+  }
+  .page-header p {
     color: var(--text-secondary);
+    margin-bottom: 0;
   }
-
-  .empty-state a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-
-  .empty-state a:hover {
-    text-decoration: underline;
-  }
-
-  .savings-content {
+  .actions {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-  }
-
-  .account-section {
-    background: var(--bg-elevated);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-default);
-    padding: var(--space-4);
-  }
-
-  .section-title {
-    margin: 0 0 var(--space-4) 0;
-    font-size: 1rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .section-title.savings-title {
-    color: var(--success);
-  }
-
-  .section-title.investment-title {
-    color: var(--purple);
-  }
-
-  .accounts-table {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .table-header,
-  .table-row,
-  .table-footer {
-    display: grid;
-    grid-template-columns: 1.5fr 130px 130px 130px 130px 150px;
-    gap: var(--space-3);
     align-items: center;
-    padding: var(--space-2) 0;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
   }
-
-  .table-header {
-    font-size: 0.75rem;
+  .account-section {
+    margin-block: var(--space-5);
+    padding: var(--space-4);
+    border: thin solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-elevated);
+  }
+  h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-3);
+  }
+  .table-scroll {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    min-width: var(--content-max-sm);
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  th,
+  td {
+    padding: var(--space-3) var(--space-2);
+    text-align: right;
+    vertical-align: top;
+  }
+  th:first-child {
+    width: var(--tab-sidebar-width);
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  thead {
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--border-default);
-    padding-bottom: var(--space-3);
+    font-size: 0.8rem;
   }
-
-  .table-row {
-    border-bottom: 1px solid var(--bg-elevated);
+  thead th,
+  tfoot td,
+  tfoot th {
+    border-bottom: thin solid var(--border-default);
   }
-
-  .table-footer {
-    border-top: 1px solid var(--border-default);
-    padding-top: var(--space-3);
+  tfoot {
     font-weight: 600;
+    border-top: thin solid var(--border-default);
   }
-
-  .col-name {
+  input {
+    width: 100%;
+    min-width: 0;
+    text-align: right;
+    padding: var(--space-2);
+    border: thin solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-base);
     color: var(--text-primary);
   }
-
-  .col-value {
-    text-align: right;
+  input:focus {
+    outline: thin solid var(--accent);
+  }
+  small {
+    display: block;
     color: var(--text-secondary);
+    font-weight: 400;
+    font-size: 0.75rem;
+    margin-top: var(--space-1);
   }
-
-  .col-value.col-readonly {
-    color: var(--text-tertiary);
+  .legacy {
+    color: var(--warning);
   }
-
-  .col-change {
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
-  .col-change.positive,
   .positive {
     color: var(--success);
   }
-
-  .col-change.negative,
-  .negative {
+  .negative,
+  .error {
     color: var(--error);
   }
-
-  .percent {
-    font-size: 0.75rem;
-    opacity: 0.8;
+  .entry-details {
+    text-align: left;
+    padding-top: 0;
+    color: var(--text-secondary);
   }
-
-  .input-wrapper {
+  summary {
+    cursor: pointer;
+  }
+  ul {
+    padding-left: var(--space-5);
+  }
+  li {
     display: flex;
-    align-items: center;
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    padding: 0 var(--space-2);
-    transition:
-      border-color 0.2s,
-      box-shadow 0.2s;
-  }
-
-  .input-wrapper:focus-within {
-    border-color: var(--accent);
-  }
-
-  .input-wrapper.saving {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-muted);
-  }
-
-  .input-wrapper.auto-calculated .balance-input {
-    font-style: italic;
-  }
-
-  .input-wrapper.auto-calculated .balance-input::placeholder {
-    font-style: italic;
-    color: var(--text-secondary);
-  }
-
-  .input-wrapper.contribution-input.positive {
-    border-color: var(--success-border);
-    background: var(--success-muted);
-  }
-
-  .input-wrapper.contribution-input.negative {
-    border-color: var(--error-border);
-    background: var(--error-muted);
-  }
-
-  .prefix {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-  }
-
-  .balance-input {
-    width: 100%;
-    padding: var(--space-2);
-    background: transparent;
-    border: none;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    text-align: right;
-  }
-
-  .balance-input:focus {
-    outline: none;
-  }
-
-  .balance-input:disabled {
-    opacity: 0.6;
-  }
-
-  .contribution-input.positive .balance-input {
-    color: var(--success);
-  }
-
-  .contribution-input.negative .balance-input {
-    color: var(--error);
-  }
-
-  .est-eom-value {
-    font-size: 0.9rem;
-    color: var(--text-tertiary);
-  }
-
-  .grand-total-section {
-    background: var(--bg-surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-default);
-    padding: var(--space-4);
-  }
-
-  .grand-total-row {
-    display: grid;
-    grid-template-columns: 1.5fr 130px 130px 130px 130px 150px;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: var(--space-3);
-    align-items: center;
-    font-weight: 600;
+    padding-block: var(--space-1);
   }
-
-  .grand-total-row .col-name {
-    font-size: 1rem;
+  .notice {
+    padding: var(--space-4);
+    border: thin solid var(--accent-border);
+    border-radius: var(--radius-md);
+    background: var(--accent-muted);
   }
-
-  .auto-save-hint {
-    text-align: center;
-    color: var(--text-tertiary);
-    font-size: 0.85rem;
-    margin: 0;
+  .hint {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+  .grand-total {
+    padding: var(--space-4);
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+  }
+  a,
+  .text-button {
+    color: var(--accent);
+  }
+  button {
+    cursor: pointer;
+  }
+  .primary,
+  .secondary {
+    min-height: var(--button-height);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+  }
+  .primary {
+    border: none;
+    background: var(--accent);
+    color: var(--text-inverse);
+  }
+  .secondary {
+    border: thin solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+  }
+  .text-button {
+    display: block;
+    padding: var(--space-1) 0;
+    border: none;
+    background: transparent;
+    font-weight: 400;
+  }
+  button:disabled,
+  input:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  @media (max-width: 70rem) {
+    table {
+      min-width: 0;
+    }
+    table,
+    tbody,
+    tfoot {
+      display: block;
+    }
+    thead {
+      position: absolute;
+      width: var(--space-1);
+      height: var(--space-1);
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    .account-row,
+    tfoot tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    th:first-child {
+      grid-column: 1 / -1;
+      width: auto;
+    }
+    td {
+      text-align: left;
+    }
+    td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-bottom: var(--space-1);
+    }
+    .entry-details {
+      display: block;
+    }
+    tfoot td,
+    tfoot th {
+      border-bottom: none;
+    }
+    .single-account tfoot {
+      display: none;
+    }
   }
 </style>

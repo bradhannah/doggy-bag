@@ -24,3 +24,16 @@ export async function checkReadOnly(month: string): Promise<Response | null> {
   }
   return null;
 }
+
+export async function checkRequestReadOnly(request: Request): Promise<Response | null> {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) return null;
+  const path = new URL(request.url).pathname.replace(/\/$/, '');
+  const match = path.match(/^\/api\/months\/(\d{4}-\d{2})(?:\/|$)/);
+  if (
+    !match ||
+    path === `/api/months/${match[1]}/lock` ||
+    path === `/api/months/${match[1]}/push-savings-balances`
+  )
+    return null;
+  return checkReadOnly(match[1]);
+}

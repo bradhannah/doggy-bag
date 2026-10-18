@@ -45,7 +45,7 @@
   }
 
   $: occurrenceStats = countOccurrences(section.items);
-  $: statsLabel = type === 'bills' ? 'paid' : 'received';
+  const statsLabel = 'complete';
 
   $: showAmber =
     section.subtotal.actual > 0 && section.subtotal.actual !== section.subtotal.expected;
@@ -54,7 +54,7 @@
   // Use is_closed because an item can have payments but still be open
   $: allClosed = section.items.length > 0 && section.items.every((item) => item.is_closed);
   $: isEmpty = section.items.length === 0;
-  $: isComplete = allClosed || isEmpty;
+  $: isComplete = allClosed;
 
   $: headerBgColor = hexToRgba(section.category.color, 0.08);
   $: containerBgColor = hexToRgba(section.category.color, 0.04);
@@ -153,6 +153,7 @@
     </div>
 
     <div class="category-items">
+      {#if isEmpty}<p class="empty-category">No entries yet</p>{/if}
       {#each section.items as item (item.id)}
         <OccurrenceCard
           {item}
@@ -177,6 +178,12 @@
 />
 
 <style>
+  .empty-category {
+    padding: var(--space-3);
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
   .category-section {
     margin-bottom: var(--space-3);
     border-radius: var(--radius-lg);

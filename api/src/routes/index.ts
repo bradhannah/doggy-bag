@@ -32,6 +32,7 @@ import {
   createMonthsHandlerSyncMetadata,
   createMonthsHandlerUpdateBalances,
   createMonthsHandlerUpdateSavingsBalances,
+  createMonthsHandlerPushSavingsBalances,
   createMonthsHandlerSummary,
   createMonthsHandlerManage,
   createMonthsHandlerExists,
@@ -219,6 +220,12 @@ import {
 } from './handlers/todo-instances.handlers';
 
 import { createCalendarHandlerGET } from './handlers/calendar.handlers';
+import {
+  createBudgetUpdatesPreviewHandler,
+  createBudgetUpdatesApplyHandler,
+  createSavingsMonthHandler,
+  createSavingsPlanHandler,
+} from './handlers/budget-workflow.handlers';
 
 // Route definition type
 interface RouteDefinition {
@@ -729,6 +736,22 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
 
   // Months - routes with sub-paths (generate, bank-balances, summary, detailed) first for proper matching
   {
+    path: '/api/months/budget-updates',
+    definition: { method: 'GET', handler: createBudgetUpdatesPreviewHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/budget-updates',
+    definition: { method: 'POST', handler: createBudgetUpdatesApplyHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/savings',
+    definition: { method: 'GET', handler: createSavingsMonthHandler(), hasPathParam: true },
+  },
+  {
+    path: '/api/savings-plans',
+    definition: { method: 'POST', handler: createSavingsPlanHandler() },
+  },
+  {
     path: '/api/months/detailed',
     definition: { method: 'GET', handler: createDetailedViewHandler(), hasPathParam: true },
   },
@@ -747,6 +770,14 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/months/bank-balances',
     definition: { method: 'PUT', handler: createMonthsHandlerUpdateBalances(), hasPathParam: true },
+  },
+  {
+    path: '/api/months/push-savings-balances',
+    definition: {
+      method: 'POST',
+      handler: createMonthsHandlerPushSavingsBalances(),
+      hasPathParam: true,
+    },
   },
   {
     path: '/api/months/savings-balances',

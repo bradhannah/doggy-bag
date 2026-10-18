@@ -99,6 +99,29 @@ describe('Months Store', () => {
   });
 
   describe('loadMonth', () => {
+    it('ignores an old response body after the active month changes', async () => {
+      let resolveBody!: (value: MonthlyData) => void;
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          new Promise((resolve) => {
+            resolveBody = resolve;
+          }),
+      });
+      const oldRequest = monthsStore.loadMonth('2025-01');
+      await Promise.resolve();
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...sampleMonthlyData, month: '2025-02' }),
+      });
+      await monthsStore.loadMonth('2025-02');
+      resolveBody(sampleMonthlyData);
+      await oldRequest;
+      expect(get(monthlyData)?.month).toBe('2025-02');
+    });
+
     it('loads monthly data from API', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

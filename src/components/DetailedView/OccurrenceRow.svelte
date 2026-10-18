@@ -13,6 +13,7 @@
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import EditCloseModal from './EditCloseModal.svelte';
+  import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   import CopyMoveModal from './CopyMoveModal.svelte';
   import { formatCurrency } from '$lib/utils/format';
 
@@ -45,6 +46,7 @@
   let dateEditError = '';
   let showDeleteConfirm = false;
   let showEditCloseModal = false;
+  let editMode: 'record' | 'plan' = 'record';
   let showCopyMoveModal = false;
   let showOverflowMenu = false;
   let overflowMenuRef: HTMLDivElement | null = null;
@@ -191,6 +193,7 @@
   // Open the unified Edit & Close modal
   function openEditCloseModal() {
     if (saving || readOnly) return;
+    editMode = 'record';
     showEditCloseModal = true;
   }
 
@@ -304,6 +307,7 @@
   function handleViewDetails() {
     closeOverflowMenu();
     openEditCloseModal();
+    editMode = 'plan';
   }
 
   // Delete action from overflow menu
@@ -326,12 +330,6 @@
   class:closed={occurrence.is_closed}
   class:adhoc={occurrence.is_adhoc}
   class:clickable={isClickableInsuranceOccurrence}
-  on:click={isClickableInsuranceOccurrence ? handleOccurrenceClick : undefined}
-  on:keydown={isClickableInsuranceOccurrence
-    ? (e) => e.key === 'Enter' && handleOccurrenceClick()
-    : undefined}
-  role={isClickableInsuranceOccurrence ? 'button' : undefined}
-  tabindex={isClickableInsuranceOccurrence ? 0 : undefined}
 >
   <div class="occurrence-row">
     <!-- Date -->
@@ -350,6 +348,7 @@
             max={getMaxDayForMonth(month)}
             disabled={savingDate}
             class="date-input"
+            aria-label={`Due day for ${itemName}`}
             class:has-error={dateEditError}
           />
           {#if dateEditError}
@@ -380,7 +379,7 @@
     <div class="status-column">
       {#if occurrence.is_closed}
         <span class="status-badge closed-badge">
-          {type === 'bill' ? 'Paid' : 'Received'}
+          {occurrence.expected_amount === 0 ? 'Skipped' : type === 'bill' ? 'Paid' : 'Received'}
         </span>
       {:else}
         <span class="status-badge open-badge">
@@ -401,7 +400,9 @@
 
     <!-- Action buttons (right-aligned) -->
     <div class="action-buttons">
-      {#if isProtected}
+      {#if isClickableInsuranceOccurrence}
+        <button class="action-btn edit" on:click={handleOccurrenceClick}>View claim</button>
+      {:else if isProtected}
         <!-- Protected items (payoff bills, virtual insurance): no action buttons, state is auto-managed -->
       {:else if occurrence.is_closed}
         <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
@@ -409,12 +410,12 @@
         </button>
       {:else}
         <button class="action-btn edit" on:click={openEditCloseModal} disabled={saving || readOnly}>
-          Edit
+          {type === 'bill' ? 'Record payment' : 'Record receipt'}
         </button>
       {/if}
 
       <!-- Overflow menu -->
-      {#if !readOnly}
+      {#if !readOnly && ((!isProtected && !occurrence.is_closed) || canCopyToMonth || canDelete)}
         <div class="overflow-menu-container" bind:this={overflowMenuRef}>
           <button
             class="overflow-btn"
@@ -441,20 +442,22 @@
               {#if isPayoffBill}
                 <span class="overflow-menu-empty">No actions available</span>
               {:else}
-                <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                  View Details
-                </button>
+                {#if !occurrence.is_closed && !isProtected}
+                  <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    Edit plan
+                  </button>
+                {/if}
                 {#if canCopyToMonth}
                   <button class="overflow-menu-item" on:click={handleCopyToMonth} role="menuitem">
                     <svg
@@ -509,6 +512,7 @@
 <!-- Edit & Close Modal -->
 <EditCloseModal
   open={showEditCloseModal}
+  mode={editMode}
   {type}
   {month}
   {instanceId}
@@ -535,28 +539,14 @@
 />
 
 <!-- Delete Confirmation Dialog -->
-{#if showDeleteConfirm}
-  <div
-    class="confirm-overlay"
-    on:click={cancelDelete}
-    on:keydown={(e) => e.key === 'Escape' && cancelDelete()}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
-    <div class="confirm-dialog" on:click|stopPropagation role="presentation">
-      <h3>Delete Occurrence</h3>
-      <p>Are you sure you want to delete this occurrence?</p>
-      <p class="confirm-warning">This action cannot be undone.</p>
-      <div class="confirm-actions">
-        <button class="confirm-btn cancel" on:click={cancelDelete}>Cancel</button>
-        <button class="confirm-btn delete" on:click={handleDelete} disabled={saving}>
-          {saving ? 'Deleting...' : 'Delete'}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<ConfirmDialog
+  open={showDeleteConfirm}
+  title="Delete occurrence"
+  message="Delete this occurrence? This action cannot be undone."
+  confirmText="Delete"
+  on:confirm={handleDelete}
+  on:cancel={cancelDelete}
+/>
 
 <style>
   .occurrence-row-container {
@@ -583,10 +573,10 @@
 
   .occurrence-row {
     display: grid;
-    grid-template-columns: 50px 100px 80px 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--space-3);
-    padding: 3px var(--space-3);
+    padding: var(--space-1) var(--space-3);
     padding-left: var(--space-5);
     font-size: 0.85rem;
   }
@@ -611,7 +601,7 @@
   .date-value.editable {
     background: transparent;
     border: none;
-    padding: 2px var(--space-1);
+    padding: calc(var(--space-1) / 2) var(--space-1);
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.85rem;
@@ -632,12 +622,12 @@
   .date-edit {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: calc(var(--space-1) / 2);
   }
 
   .date-input {
-    width: 44px;
-    padding: 2px var(--space-1);
+    width: calc(var(--space-8) + var(--space-3));
+    padding: calc(var(--space-1) / 2) var(--space-1);
     border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
     background: var(--bg-base);
@@ -646,6 +636,7 @@
     font-family: inherit;
     text-align: center;
     -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   .date-input::-webkit-outer-spin-button,
@@ -736,7 +727,7 @@
   }
 
   .action-btn {
-    height: 26px;
+    height: var(--button-height-sm);
     box-sizing: border-box;
     padding: 0 var(--space-3);
     border-radius: var(--radius-sm);
@@ -786,8 +777,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: var(--button-height-sm);
+    height: var(--button-height-sm);
     border-radius: var(--radius-sm);
     border: none;
     background: transparent;
@@ -808,7 +799,7 @@
 
   .overflow-menu {
     position: fixed;
-    min-width: 140px;
+    min-width: calc(var(--space-5) * 7);
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
@@ -855,13 +846,18 @@
 
   .badges-column {
     display: flex;
+    grid-row: 2;
+    grid-column: 1 / -1;
     align-items: center;
     justify-content: flex-start;
+  }
+  .badges-column:empty {
+    display: none;
   }
 
   .badge {
     font-size: 0.55rem;
-    padding: 2px var(--space-1);
+    padding: calc(var(--space-1) / 2) var(--space-1);
     border-radius: var(--radius-sm);
     text-transform: uppercase;
     font-weight: 600;
@@ -878,93 +874,14 @@
     color: var(--accent);
   }
 
-  /* Confirmation dialog */
-  .confirm-overlay {
-    position: fixed;
-    inset: 0;
-    background: var(--overlay-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .confirm-dialog {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    padding: var(--space-6);
-    max-width: 360px;
-    width: 90%;
-  }
-
-  .confirm-dialog h3 {
-    margin: 0 0 var(--space-3);
-    font-size: 1rem;
-    color: var(--text-primary);
-  }
-
-  .confirm-dialog p {
-    margin: 0 0 var(--space-2);
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-  }
-
-  .confirm-warning {
-    color: var(--error) !important;
-    font-size: 0.75rem !important;
-    margin-bottom: var(--space-4) !important;
-  }
-
-  .confirm-actions {
-    display: flex;
-    gap: var(--space-3);
-    justify-content: flex-end;
-  }
-
-  .confirm-btn {
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .confirm-btn.cancel {
-    background: transparent;
-    border: 1px solid var(--border-default);
-    color: var(--text-secondary);
-  }
-
-  .confirm-btn.cancel:hover {
-    border-color: var(--border-hover);
-    color: var(--text-primary);
-  }
-
-  .confirm-btn.delete {
-    background: var(--error);
-    border: none;
-    color: var(--text-inverse);
-  }
-
-  .confirm-btn.delete:hover:not(:disabled) {
-    background: var(--error-hover);
-  }
-
-  .confirm-btn.delete:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 640px) {
+  @media (max-width: 40rem) {
     .occurrence-row {
-      grid-template-columns: 50px 1fr 70px auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       gap: var(--space-2);
     }
-
-    .badges-column {
-      display: none;
+    .action-buttons {
+      grid-column: 1 / -1;
+      justify-content: flex-end;
     }
   }
 </style>

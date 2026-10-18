@@ -25,6 +25,8 @@ export interface Bill {
   payment_method?: 'auto' | 'manual'; // Payment method (auto = autopay, manual = pay manually)
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
+  paused_by_goal_id?: string;
+  goal_status?: 'saving' | 'paused' | 'bought' | 'abandoned' | 'archived';
   is_active: boolean;
   created_at: string;
   updated_at: string;

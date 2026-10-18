@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const titleId = dialogTitleId();
   import { onMount } from 'svelte';
   import { apiClient } from '$lib/api/client';
   import type { SavingsGoal } from '../../stores/savings-goals';
@@ -61,26 +63,22 @@
       day: 'numeric',
     });
   }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }
 </script>
 
-<div class="modal-overlay" on:click={onClose} on:keydown={handleKeydown} role="presentation">
+<div class="modal-overlay" on:click={onClose} role="presentation">
   <div
     class="modal-content"
     on:click|stopPropagation
     on:keydown|stopPropagation
     role="dialog"
     aria-modal="true"
-    aria-labelledby="modal-title"
+    aria-labelledby={titleId}
+    tabindex="-1"
+    use:modalFocus={onClose}
   >
     <div class="modal-header">
       <div class="header-content">
-        <h2 id="modal-title">Payment History</h2>
+        <h2 id={titleId}>Contribution history</h2>
         <p class="modal-subtitle">"{goal.name}"</p>
       </div>
       <button class="close-btn" on:click={onClose} aria-label="Close">
@@ -214,7 +212,7 @@
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
     padding: var(--section-gap);
-    max-width: 560px;
+    max-width: var(--modal-width-md);
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
@@ -288,16 +286,16 @@
   }
 
   .progress-bar {
-    height: 6px;
+    height: calc(var(--space-3) / 2);
     background: var(--bg-elevated);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
   }
 
   .progress-fill {
     height: 100%;
     background: var(--accent);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     transition: width 0.3s ease;
   }
 
@@ -310,7 +308,7 @@
 
   .table-header {
     display: grid;
-    grid-template-columns: 70px 1fr 90px 90px;
+    grid-template-columns: 10ch minmax(0, 1fr) 12ch 12ch;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
     background: var(--bg-elevated);
@@ -323,7 +321,7 @@
 
   .payment-row {
     display: grid;
-    grid-template-columns: 70px 1fr 90px 90px;
+    grid-template-columns: 10ch minmax(0, 1fr) 12ch 12ch;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
     border-top: 1px solid var(--border-subtle);

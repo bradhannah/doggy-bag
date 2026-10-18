@@ -4,8 +4,9 @@ import { MonthsServiceImpl } from '../../services/months-service';
 import { LeftoverServiceImpl } from '../../services/leftover-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
-import { formatErrorForUser } from '../../utils/errors';
+import { formatErrorForUser, getErrorStatus } from '../../utils/errors';
 import { checkReadOnly } from './shared';
+import { excludeBudgetInstance } from '../../utils/savings';
 
 const monthsService = new MonthsServiceImpl();
 const leftoverService = new LeftoverServiceImpl();
@@ -1078,6 +1079,8 @@ export function createBillOccurrenceHandlerClose() {
         typeof payload?.payment_source_id === 'string' ? payload.payment_source_id : undefined;
 
       const instance = await monthsService.closeBillOccurrence(month, instanceId, occurrenceId, {
+        expected_amount: payload.expected_amount,
+        expected_date: payload.expected_date,
         closed_date: closedDate,
         notes,
         payment_source_id: paymentSourceId,
@@ -1123,7 +1126,7 @@ export function createBillOccurrenceHandlerClose() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -1242,6 +1245,8 @@ export function createIncomeOccurrenceHandlerClose() {
         typeof payload?.payment_source_id === 'string' ? payload.payment_source_id : undefined;
 
       const instance = await monthsService.closeIncomeOccurrence(month, instanceId, occurrenceId, {
+        expected_amount: payload.expected_amount,
+        expected_date: payload.expected_date,
         closed_date: closedDate,
         notes,
         payment_source_id: paymentSourceId,
@@ -1287,7 +1292,7 @@ export function createIncomeOccurrenceHandlerClose() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -1345,6 +1350,8 @@ export function createBillOccurrenceHandlerSplit() {
       const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
 
       const result = await monthsService.splitBillOccurrence(month, instanceId, occurrenceId, {
+        expected_amount: payload.expected_amount,
+        expected_date: payload.expected_date,
         paid_amount: payload.paid_amount,
         closed_date: closedDate,
         payment_source_id: paymentSourceId,
@@ -1381,7 +1388,7 @@ export function createBillOccurrenceHandlerSplit() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -1439,6 +1446,8 @@ export function createIncomeOccurrenceHandlerSplit() {
       const notes = typeof payload?.notes === 'string' ? payload.notes : undefined;
 
       const result = await monthsService.splitIncomeOccurrence(month, instanceId, occurrenceId, {
+        expected_amount: payload.expected_amount,
+        expected_date: payload.expected_date,
         paid_amount: payload.paid_amount,
         closed_date: closedDate,
         payment_source_id: paymentSourceId,
@@ -1475,7 +1484,7 @@ export function createIncomeOccurrenceHandlerSplit() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -2080,6 +2089,7 @@ export function createBillInstanceHandlerDELETE() {
       }
 
       // Remove the instance
+      excludeBudgetInstance(monthData, monthData.bill_instances[instanceIndex]);
       monthData.bill_instances.splice(instanceIndex, 1);
       await monthsService.saveMonthlyData(month, monthData);
 
@@ -2158,6 +2168,7 @@ export function createIncomeInstanceHandlerDELETE() {
       }
 
       // Remove the instance
+      excludeBudgetInstance(monthData, monthData.income_instances[instanceIndex]);
       monthData.income_instances.splice(instanceIndex, 1);
       await monthsService.saveMonthlyData(month, monthData);
 

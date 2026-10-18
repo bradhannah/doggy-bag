@@ -27,6 +27,7 @@ export interface Occurrence {
 export type BillingPeriod = 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';
 
 export interface BillInstanceDetailed {
+  savings_account?: { id: string; name: string };
   id: string;
   bill_id: string | null;
   name: string;
@@ -62,6 +63,7 @@ export interface BillInstanceDetailed {
 }
 
 export interface IncomeInstanceDetailed {
+  savings_account?: { id: string; name: string };
   id: string;
   income_id: string | null;
   name: string;
@@ -154,6 +156,7 @@ export interface DetailedMonthData {
   insuranceExpenseSection: CategorySection | null; // Insurance expenses section
   insuranceReimbursementSection: CategorySection | null; // Insurance reimbursements section
   bankBalances: Record<string, number>;
+  bankBalancesUpdatedAt?: Record<string, string>;
   lastUpdated: string;
 }
 
@@ -165,6 +168,7 @@ interface DetailedMonthState {
 }
 
 function createDetailedMonthStore() {
+  let requestId = 0;
   const { subscribe, set, update } = writable<DetailedMonthState>({
     data: null,
     loading: false,
@@ -234,10 +238,18 @@ function createDetailedMonthStore() {
     subscribe,
 
     async loadMonth(month: string): Promise<void> {
-      update((state) => ({ ...state, loading: true, error: null, currentMonth: month }));
+      const id = ++requestId;
+      update((state) => ({
+        ...state,
+        data: state.currentMonth === month ? state.data : null,
+        loading: true,
+        error: null,
+        currentMonth: month,
+      }));
 
       try {
         const data = await apiClient.get(`/api/months/${month}/detailed`);
+        if (id !== requestId) return;
         update((state) => ({
           ...state,
           data,
@@ -245,6 +257,7 @@ function createDetailedMonthStore() {
           error: null,
         }));
       } catch (err) {
+        if (id !== requestId) return;
         const message = err instanceof Error ? err.message : 'Failed to load detailed month data';
         update((state) => ({
           ...state,
@@ -395,6 +408,7 @@ function createDetailedMonthStore() {
     },
 
     clear(): void {
+      requestId++;
       set({
         data: null,
         loading: false,

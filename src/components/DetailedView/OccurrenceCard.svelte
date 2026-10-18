@@ -188,6 +188,11 @@
       >
         {item.name}
       </button>
+      {#if item.savings_account}
+        <a class="savings-link" href="/savings"
+          >{type === 'bill' ? 'To' : 'From'} {item.savings_account.name}</a
+        >
+      {/if}
       {#if isPayoffBill}
         <span class="billing-badge payoff">Payoff</span>
       {:else if isVirtualInsurance}
@@ -323,6 +328,10 @@
 {/if}
 
 <style>
+  .savings-link {
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
   .occurrence-card {
     background: var(--bg-elevated);
     border-radius: var(--radius-md);

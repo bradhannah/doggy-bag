@@ -104,7 +104,10 @@
       </div>
     {:else}
       <div class="content">
-        <OverdueBillsBanner overdueBills={chartData.overdue_bills} />
+        <OverdueBillsBanner
+          overdueBills={chartData.overdue_bills}
+          description="These unpaid bills are scheduled at the start of the projection."
+        />
 
         <div class="chart-section">
           <HistogramChart

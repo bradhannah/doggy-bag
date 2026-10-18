@@ -163,4 +163,57 @@ describe('MonthsService - close occurrence notes', () => {
     expect(result?.occurrences[0].is_closed).toBe(true);
     expect(result?.occurrences[0].payment_source_id).toBeUndefined();
   });
+
+  test('records edited amount and due date together with a payment', async () => {
+    await service.closeBillOccurrence(testMonth, 'bi-rent-001', 'occ-b1', {
+      expected_amount: 7500,
+      expected_date: '2025-04-10',
+      closed_date: '2025-04-12',
+    });
+    const saved = await service.getMonthlyData(testMonth);
+    expect(saved?.bill_instances[0].expected_amount).toBe(7500);
+    expect(saved?.bill_instances[0].occurrences[0]).toMatchObject({
+      expected_amount: 7500,
+      expected_date: '2025-04-10',
+      is_closed: true,
+    });
+  });
+
+  test('uses edited income amount when recording a receipt', async () => {
+    const result = await service.closeIncomeOccurrence(testMonth, 'ii-pay-001', 'occ-i1', {
+      expected_amount: 525000,
+      closed_date: '2025-04-06',
+    });
+    expect(result?.expected_amount).toBe(525000);
+    expect(result?.occurrences[0].expected_amount).toBe(525000);
+  });
+
+  test('splits the edited total rather than the previous amount', async () => {
+    const result = await service.splitBillOccurrence(testMonth, 'bi-rent-001', 'occ-b1', {
+      expected_amount: 10000,
+      paid_amount: 2500,
+      closed_date: '2025-04-06',
+    });
+    expect(result?.closedOccurrence.expected_amount).toBe(2500);
+    expect(result?.newOccurrence.expected_amount).toBe(7500);
+    expect((await service.getMonthlyData(testMonth))?.bill_instances[0].expected_amount).toBe(
+      10000
+    );
+  });
+
+  test('rejects invalid edits without recording payment', async () => {
+    await expect(
+      service.closeBillOccurrence(testMonth, 'bi-rent-001', 'occ-b1', {
+        expected_amount: -1,
+      })
+    ).rejects.toThrow();
+    await expect(
+      service.closeBillOccurrence(testMonth, 'bi-rent-001', 'occ-b1', {
+        expected_date: '2025-04-31',
+      })
+    ).rejects.toThrow();
+    expect(
+      (await service.getMonthlyData(testMonth))?.bill_instances[0].occurrences[0].is_closed
+    ).toBe(false);
+  });
 });

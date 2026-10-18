@@ -4,7 +4,7 @@ import { MonthsServiceImpl } from '../../services/months-service';
 import { LeftoverServiceImpl } from '../../services/leftover-service';
 import { BillsServiceImpl } from '../../services/bills-service';
 import { IncomesServiceImpl } from '../../services/incomes-service';
-import { formatErrorForUser } from '../../utils/errors';
+import { formatErrorForUser, getErrorStatus } from '../../utils/errors';
 import type { MonthlyData } from '../../types';
 
 const monthsService = new MonthsServiceImpl();
@@ -32,7 +32,7 @@ async function enrichMonthlyData(monthlyData: MonthlyData) {
     return {
       ...instance,
       name: instance.name || bill?.name || 'Unknown Bill',
-      billing_period: bill?.billing_period || 'monthly',
+      billing_period: instance.billing_period || bill?.billing_period || 'monthly',
     };
   });
 
@@ -42,7 +42,7 @@ async function enrichMonthlyData(monthlyData: MonthlyData) {
     return {
       ...instance,
       name: instance.name || income?.name || 'Unknown Income',
-      billing_period: income?.billing_period || 'monthly',
+      billing_period: instance.billing_period || income?.billing_period || 'monthly',
     };
   });
 
@@ -726,9 +726,28 @@ export function createMonthsHandlerUpdateSavingsBalances() {
 
       const { start, end, contributions } = body as {
         start?: Record<string, number>;
-        end?: Record<string, number>;
+        end?: Record<string, number | null>;
         contributions?: Record<string, number>;
       };
+
+      for (const [name, values] of Object.entries({ start, end, contributions })) {
+        if (values === undefined) continue;
+        if (
+          !values ||
+          typeof values !== 'object' ||
+          Array.isArray(values) ||
+          !Object.values(values).every(
+            (value) => (name === 'end' && value === null) || Number.isSafeInteger(value)
+          )
+        ) {
+          return Response.json(
+            {
+              error: `${name} must contain integer amounts in cents${name === 'end' ? ' or null to clear a balance' : ''}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
 
       const monthlyData = await monthsService.updateSavingsBalances(
         month,
@@ -754,7 +773,7 @@ export function createMonthsHandlerUpdateSavingsBalances() {
       console.error('[MonthsHandler] UpdateSavingsBalances failed:', error);
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const status = errorMessage.includes('not found') ? 404 : 500;
+      const status = errorMessage.includes('not found') ? 404 : getErrorStatus(error);
 
       return new Response(
         JSON.stringify({
@@ -765,6 +784,59 @@ export function createMonthsHandlerUpdateSavingsBalances() {
           headers: { 'Content-Type': 'application/json' },
           status,
         }
+      );
+    }
+  };
+}
+
+// POST /api/months/:month/push-savings-balances - Push effective final balances to next month
+export function createMonthsHandlerPushSavingsBalances() {
+  return async (request: Request) => {
+    try {
+      const month = extractMonth(request.url);
+      if (!month) {
+        return Response.json({ error: 'Invalid month format. Expected YYYY-MM' }, { status: 400 });
+      }
+
+      const body = (await request.json()) as {
+        finalBalances?: Record<string, number>;
+        overwrite?: boolean;
+      };
+      const finalBalances = body?.finalBalances;
+      const isValid =
+        finalBalances !== null &&
+        typeof finalBalances === 'object' &&
+        !Array.isArray(finalBalances) &&
+        Object.values(finalBalances).every(Number.isFinite);
+
+      if (!isValid) {
+        return Response.json(
+          { error: 'finalBalances must be a map of account IDs to amounts' },
+          { status: 400 }
+        );
+      }
+
+      const result = await monthsService.pushSavingsBalancesToNextMonth(
+        month,
+        finalBalances,
+        body.overwrite === true
+      );
+
+      return Response.json({
+        sourceMonth: month,
+        destinationMonth: result.destinationMonth,
+        requiresConfirmation: result.requiresConfirmation,
+        savings_balances_start: result.monthlyData?.savings_balances_start,
+      });
+    } catch (error) {
+      console.error('[MonthsHandler] PushSavingsBalances failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return Response.json(
+        {
+          error: formatErrorForUser(error),
+          message: 'Failed to push savings balances',
+        },
+        { status: errorMessage.includes('not found') ? 404 : getErrorStatus(error) }
       );
     }
   };

@@ -10,9 +10,10 @@
   import { success, error as showError } from '../../stores/toast';
   import { apiClient } from '../../lib/api/client';
   import SplitConfirmModal from './SplitConfirmModal.svelte';
-  import { formatCurrency, parseDollarsToCents } from '$lib/utils/format';
+  import { formatCurrency, parseDollarsToCents, getTodayDateString } from '$lib/utils/format';
 
   export let open = false;
+  export let mode: 'record' | 'plan' = 'record';
   export let type: 'bill' | 'income' = 'bill';
   export let month = '';
   export let instanceId = '';
@@ -34,7 +35,7 @@
   let day = '';
   let notes = '';
   let paymentSourceId = '';
-  let paymentDay = '';
+  let paymentDate = '';
 
   // Close options
   type CloseOption = 'paid_full' | 'paid_nothing' | 'partial';
@@ -53,25 +54,18 @@
 
   // Date helpers
   const today = new Date();
-  const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
   // Computed values
-  $: resolvedMonth = month === todayMonth ? month : todayMonth;
-  $: [resolvedYear, resolvedMonthNum] = resolvedMonth.split('-').map(Number);
+  $: [resolvedYear, resolvedMonthNum] = month.split('-').map(Number);
   $: lastDay =
     resolvedYear && resolvedMonthNum
       ? new Date(resolvedYear, resolvedMonthNum, 0).getDate()
       : today.getDate();
-  $: maxDay = Math.min(today.getDate(), lastDay);
   $: dayOptions = Array.from({ length: lastDay }, (_, index) => String(index + 1));
-  $: paymentDayOptions = Array.from({ length: maxDay }, (_, index) => String(index + 1));
-
-  // Parse amount from cents to display
-  $: displayAmount = expectedAmount / 100;
 
   // Calculate partial remaining
   $: partialCents = parseDollarsToCents(partialAmount);
-  $: remainingCents = expectedAmount - partialCents;
+  $: remainingCents = parseDollarsToCents(amount) - partialCents;
   $: remainingDisplay = remainingCents > 0 ? formatCurrency(remainingCents) : '$0.00';
 
   // Initialize form when modal opens
@@ -88,7 +82,8 @@
     day = String(Math.min(initialDay, lastDay));
 
     // Payment day defaults to due date (capped at today so no future dates)
-    paymentDay = String(Math.min(initialDay, maxDay));
+    paymentDate =
+      expectedDate && expectedDate <= getTodayDateString() ? expectedDate : getTodayDateString();
 
     // Notes
     notes = existingNotes || '';
@@ -107,7 +102,7 @@
   }
 
   function handleClose() {
-    dispatch('close');
+    if (!saving) dispatch('close');
   }
 
   // Build the expected_date from month + day
@@ -142,7 +137,7 @@
 
       success(`${type === 'bill' ? 'Bill' : 'Income'} updated`);
       dispatch('saved');
-      handleClose();
+      dispatch('close');
     } catch (err) {
       formError = err instanceof Error ? err.message : 'Failed to save';
       showError(formError);
@@ -154,6 +149,15 @@
   // Close the occurrence based on selected option
   async function handleCloseAction() {
     formError = '';
+
+    if (closeOption !== 'paid_nothing' && parseDollarsToCents(amount) <= 0) {
+      formError = 'Amount must be greater than zero';
+      return;
+    }
+    if (!paymentDate || paymentDate > getTodayDateString()) {
+      formError = 'Enter a payment date on or before today';
+      return;
+    }
 
     if (closeOption === 'partial') {
       // Validate partial amount
@@ -184,27 +188,15 @@
     saving = true;
 
     try {
-      const closedDate = buildDate(resolvedMonth, paymentDay);
+      const closedDate = paymentDate;
       const endpoint =
         type === 'bill'
           ? `/api/months/${month}/bills/${instanceId}/occurrences/${occurrenceId}/close`
           : `/api/months/${month}/incomes/${instanceId}/occurrences/${occurrenceId}/close`;
 
-      // For "Paid Nothing", we need to first update the amount to 0, then close
-      if (closeOption === 'paid_nothing') {
-        // Update amount to 0 first
-        const updateEndpoint =
-          type === 'bill'
-            ? `/api/months/${month}/bills/${instanceId}/occurrences/${occurrenceId}`
-            : `/api/months/${month}/incomes/${instanceId}/occurrences/${occurrenceId}`;
-
-        await apiClient.put(updateEndpoint, '', {
-          expected_amount: 0,
-          notes: notes || null,
-        });
-      }
-
       await apiClient.post(endpoint, {
+        expected_amount: closeOption === 'paid_nothing' ? 0 : parseDollarsToCents(amount),
+        expected_date: buildDate(month, day),
         closed_date: closedDate,
         notes: notes || null,
         payment_source_id: paymentSourceId || undefined,
@@ -212,11 +204,11 @@
 
       const message =
         closeOption === 'paid_nothing'
-          ? `${type === 'bill' ? 'Bill' : 'Income'} closed ($0)`
-          : `${type === 'bill' ? 'Bill' : 'Income'} closed`;
+          ? `${type === 'bill' ? 'Payment' : 'Receipt'} skipped ($0 recorded)`
+          : `${type === 'bill' ? 'Payment' : 'Receipt'} recorded`;
       success(message);
       dispatch('closed');
-      handleClose();
+      dispatch('close');
     } catch (err) {
       formError = err instanceof Error ? err.message : 'Failed to close';
       showError(formError);
@@ -231,13 +223,15 @@
     showSplitConfirm = false;
 
     try {
-      const closedDate = buildDate(resolvedMonth, paymentDay);
+      const closedDate = paymentDate;
       const endpoint =
         type === 'bill'
           ? `/api/months/${month}/bills/${instanceId}/occurrences/${occurrenceId}/split`
           : `/api/months/${month}/incomes/${instanceId}/occurrences/${occurrenceId}/split`;
 
       await apiClient.post(endpoint, {
+        expected_amount: parseDollarsToCents(amount),
+        expected_date: buildDate(month, day),
         paid_amount: splitPaidAmount,
         closed_date: closedDate,
         notes: notes || null,
@@ -246,7 +240,7 @@
 
       success(`Partial payment recorded - ${formatCurrency(splitPaidAmount)}`);
       dispatch('closed');
-      handleClose();
+      dispatch('close');
     } catch (err) {
       formError = err instanceof Error ? err.message : 'Failed to split occurrence';
       showError(formError);
@@ -263,16 +257,21 @@
   $: closeButtonLabel = (() => {
     switch (closeOption) {
       case 'paid_full':
-        return `Close - Paid ${formatCurrency(parseDollarsToCents(amount))}`;
+        return `Record ${type === 'bill' ? 'payment' : 'receipt'} ${formatCurrency(parseDollarsToCents(amount))}`;
       case 'paid_nothing':
-        return 'Close - $0 Paid';
+        return `Skip ${type === 'bill' ? 'payment' : 'receipt'}`;
       case 'partial':
-        return `Pay ${formatCurrency(partialCents)} & Keep Open`;
+        return `Record ${formatCurrency(partialCents)} & keep remainder`;
     }
   })();
 </script>
 
-<Modal {open} title="Edit & Close" onClose={handleClose} size="md">
+<Modal
+  {open}
+  title={mode === 'plan' ? 'Edit plan' : type === 'bill' ? 'Record payment' : 'Record receipt'}
+  onClose={handleClose}
+  size="md"
+>
   <svelte:fragment slot="eyebrow">{type === 'bill' ? 'Bill' : 'Income'}</svelte:fragment>
 
   <div class="modal-content">
@@ -304,89 +303,98 @@
       </label>
     </div>
 
-    <div class="divider"></div>
+    {#if mode === 'record'}
+      <div class="divider"></div>
 
-    <!-- Close Options -->
-    <p class="section-label">How would you like to handle this?</p>
+      <!-- Close Options -->
+      <p class="section-label">How would you like to handle this?</p>
 
-    <div class="radio-group">
-      <label class="radio-option" class:selected={closeOption === 'paid_full'}>
-        <input type="radio" bind:group={closeOption} value="paid_full" disabled={saving} />
-        <div class="radio-content">
-          <span class="radio-title"
-            >Close - Paid in Full ({formatCurrency(parseDollarsToCents(amount))})</span
-          >
-          <span class="radio-desc">Mark as complete. No remaining balance.</span>
-        </div>
-      </label>
+      <div class="radio-group">
+        <label class="radio-option" class:selected={closeOption === 'paid_full'}>
+          <input type="radio" bind:group={closeOption} value="paid_full" disabled={saving} />
+          <div class="radio-content">
+            <span class="radio-title"
+              >{type === 'bill' ? 'Full payment' : 'Full receipt'} ({formatCurrency(
+                parseDollarsToCents(amount)
+              )})</span
+            >
+            <span class="radio-desc">Mark as complete. No remaining balance.</span>
+          </div>
+        </label>
 
-      <label class="radio-option" class:selected={closeOption === 'paid_nothing'}>
-        <input type="radio" bind:group={closeOption} value="paid_nothing" disabled={saving} />
-        <div class="radio-content">
-          <span class="radio-title">Close - Paid Nothing ($0)</span>
-          <span class="radio-desc">Mark as complete. Waived or skipped this period.</span>
-        </div>
-      </label>
+        <label class="radio-option" class:selected={closeOption === 'paid_nothing'}>
+          <input type="radio" bind:group={closeOption} value="paid_nothing" disabled={saving} />
+          <div class="radio-content">
+            <span class="radio-title">Skip this {type === 'bill' ? 'payment' : 'receipt'} ($0)</span
+            >
+            <span class="radio-desc">Mark as complete. Waived or skipped this period.</span>
+          </div>
+        </label>
 
-      <label class="radio-option" class:selected={closeOption === 'partial'}>
-        <input type="radio" bind:group={closeOption} value="partial" disabled={saving} />
-        <div class="radio-content">
-          <span class="radio-title">Partial Payment - Keep Open</span>
-          <span class="radio-desc">Pay part now, remainder stays due.</span>
-          {#if closeOption === 'partial'}
-            <div class="partial-input">
-              <label>
-                <span>Amount paid:</span>
-                <div class="amount-input-group small">
-                  <span class="prefix">$</span>
-                  <input
-                    type="text"
-                    bind:value={partialAmount}
-                    placeholder="0.00"
-                    disabled={saving}
-                  />
-                </div>
-              </label>
-              {#if partialCents > 0 && remainingCents > 0}
-                <p class="remaining-note">
-                  Remaining {remainingDisplay} will become new occurrence
-                </p>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      </label>
-    </div>
+        <label class="radio-option" class:selected={closeOption === 'partial'}>
+          <input type="radio" bind:group={closeOption} value="partial" disabled={saving} />
+          <div class="radio-content">
+            <span class="radio-title">Partial {type === 'bill' ? 'payment' : 'receipt'}</span>
+            <span class="radio-desc">Record part now; keep the remaining amount planned.</span>
+            {#if closeOption === 'partial'}
+              <div class="partial-input">
+                <label>
+                  <span>Amount {type === 'bill' ? 'paid' : 'received'}:</span>
+                  <div class="amount-input-group small">
+                    <span class="prefix">$</span>
+                    <input
+                      type="text"
+                      bind:value={partialAmount}
+                      placeholder="0.00"
+                      disabled={saving}
+                    />
+                  </div>
+                </label>
+                {#if partialCents > 0 && remainingCents > 0}
+                  <p class="remaining-note">
+                    Remaining {remainingDisplay} will become new occurrence
+                  </p>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        </label>
+      </div>
 
-    <div class="divider"></div>
+      <div class="divider"></div>
 
-    <!-- Payment Details -->
-    <div class="field-row">
-      <label class="field">
-        <span>Payment Date</span>
-        <select bind:value={paymentDay} disabled={saving}>
-          {#each paymentDayOptions as opt (opt)}
-            <option value={opt}>{opt}</option>
-          {/each}
-        </select>
-      </label>
+      <!-- Payment Details -->
+      <div class="field-row">
+        <label class="field">
+          <span>{type === 'bill' ? 'Payment' : 'Receipt'} Date</span>
+          <input
+            type="date"
+            bind:value={paymentDate}
+            max={getTodayDateString()}
+            disabled={saving}
+          />
+        </label>
 
-      <label class="field">
-        <span>Payment Source</span>
-        <select bind:value={paymentSourceId} disabled={saving}>
-          <option value="">None</option>
-          {#each $paymentSources as source (source.id)}
-            <option value={source.id}>
-              {source.name}
-              {#if source.metadata?.last_four_digits}
-                ****{source.metadata.last_four_digits}
-              {/if}
-            </option>
-          {/each}
-        </select>
-      </label>
-    </div>
+        <label class="field">
+          <span>Payment Source</span>
+          <select bind:value={paymentSourceId} disabled={saving}>
+            <option value="">None</option>
+            {#each $paymentSources as source (source.id)}
+              <option value={source.id}>
+                {source.name}
+                {#if source.metadata?.last_four_digits}
+                  ****{source.metadata.last_four_digits}
+                {/if}
+              </option>
+            {/each}
+          </select>
+        </label>
+      </div>
 
+      <p class="snapshot-note">
+        Keep your bank balance snapshots up to date after recorded transactions.
+      </p>
+    {/if}
     <label class="field">
       <span>Notes (optional)</span>
       <textarea rows="3" bind:value={notes} placeholder="Add a note..." disabled={saving}
@@ -394,7 +402,7 @@
     </label>
 
     {#if formError}
-      <p class="error-message">{formError}</p>
+      <p class="error-message" role="alert">{formError}</p>
     {/if}
   </div>
 
@@ -405,15 +413,20 @@
       on:click={handleSaveWithoutClosing}
       disabled={saving}
     >
-      Save Without Closing
+      Save plan changes
     </button>
     <div class="footer-right">
       <button class="button-ghost" type="button" on:click={handleClose} disabled={saving}>
         Cancel
       </button>
-      <button class="button-primary" type="button" on:click={handleCloseAction} disabled={saving}>
-        {saving ? 'Saving...' : closeButtonLabel}
-      </button>
+      {#if mode === 'record'}<button
+          class="button-primary"
+          type="button"
+          on:click={handleCloseAction}
+          disabled={saving}
+        >
+          {saving ? 'Saving...' : closeButtonLabel}
+        </button>{/if}
     </div>
   </svelte:fragment>
 </Modal>
@@ -428,6 +441,11 @@
 />
 
 <style>
+  .snapshot-note {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
   .modal-content {
     display: grid;
     gap: var(--space-4);

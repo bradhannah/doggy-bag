@@ -2,6 +2,16 @@ import { createLogger } from '../logger';
 
 const log = createLogger('API Client');
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 // Dynamic port storage - set by Tauri sidecar-ready event
 let apiPort: number | null = null;
 
@@ -68,8 +78,8 @@ export const apiClient = {
     const response = await fetch(apiUrl(path));
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      const message = error.message || error.error || `GET ${path} failed: ${response.statusText}`;
-      throw new Error(message);
+      const message = error.error || error.message || `GET ${path} failed: ${response.statusText}`;
+      throw new ApiError(message, response.status);
     }
     return response.json();
   },
@@ -82,9 +92,9 @@ export const apiClient = {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      const message = error.message || error.error || `POST ${path} failed: ${response.statusText}`;
-      const details = error.details ? `: ${error.details.join(', ')}` : '';
-      throw new Error(message + details);
+      const message = error.error || error.message || `POST ${path} failed: ${response.statusText}`;
+      const details = Array.isArray(error.details) ? `: ${error.details.join(', ')}` : '';
+      throw new ApiError(message + details, response.status);
     }
     return response.json();
   },
@@ -98,9 +108,9 @@ export const apiClient = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       const message =
-        error.message || error.error || `PUT ${path}/${id} failed: ${response.statusText}`;
-      const details = error.details ? `: ${error.details.join(', ')}` : '';
-      throw new Error(message + details);
+        error.error || error.message || `PUT ${path}/${id} failed: ${response.statusText}`;
+      const details = Array.isArray(error.details) ? `: ${error.details.join(', ')}` : '';
+      throw new ApiError(message + details, response.status);
     }
     return response.json();
   },
@@ -114,8 +124,8 @@ export const apiClient = {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      const message = error.message || error.error || `PUT ${path} failed: ${response.statusText}`;
-      throw new Error(message);
+      const message = error.error || error.message || `PUT ${path} failed: ${response.statusText}`;
+      throw new ApiError(message, response.status);
     }
     return response.json();
   },
@@ -125,7 +135,7 @@ export const apiClient = {
       method: 'DELETE',
     });
     if (!response.ok && response.status !== 204) {
-      throw new Error(`DELETE ${path}/${id} failed: ${response.statusText}`);
+      throw new ApiError(`DELETE ${path}/${id} failed: ${response.statusText}`, response.status);
     }
     return null;
   },
@@ -144,7 +154,7 @@ export const apiClient = {
       } catch {
         // Use raw error body if not JSON
       }
-      throw new Error(errorMsg);
+      throw new ApiError(errorMsg, response.status);
     }
     return null;
   },

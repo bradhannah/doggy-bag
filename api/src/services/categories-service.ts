@@ -337,12 +337,12 @@ export class CategoriesServiceImpl implements CategoriesService {
   }
 
   /**
-   * Ensure the "Savings Goals" category exists for bill categories.
+   * Ensure the shared savings category exists for contributions and goals.
    * Creates it if not found. This is a system category for savings goal contributions.
    * @returns The savings goals category
    */
   public async ensureGoalsCategoryExists(): Promise<Category> {
-    const GOALS_CATEGORY_NAME = 'Savings Goals';
+    const GOALS_CATEGORY_NAME = 'Savings';
     const GOALS_CATEGORY_COLOR = '#10b981'; // Emerald green
 
     try {
@@ -355,7 +355,11 @@ export class CategoriesServiceImpl implements CategoriesService {
 
       if (goalsCategory) {
         // Migrate old "Goals" category to new type if needed
-        if (goalsCategory.type !== 'savings_goal' || goalsCategory.name !== GOALS_CATEGORY_NAME) {
+        if (
+          goalsCategory.type !== 'savings_goal' ||
+          goalsCategory.name === 'Savings Goals' ||
+          goalsCategory.name === 'Goals'
+        ) {
           const updatedCategory = await this.update(goalsCategory.id, {
             name: GOALS_CATEGORY_NAME,
             type: 'savings_goal',
@@ -399,7 +403,7 @@ export class CategoriesServiceImpl implements CategoriesService {
    * @returns The goal completions category
    */
   public async ensureGoalCompletionsCategoryExists(): Promise<Category> {
-    const GOAL_COMPLETIONS_CATEGORY_NAME = 'Goal Completions';
+    const GOAL_COMPLETIONS_CATEGORY_NAME = 'Savings withdrawals';
     const GOAL_COMPLETIONS_CATEGORY_COLOR = '#10b981'; // Emerald green (same as Goals)
 
     try {
@@ -407,10 +411,19 @@ export class CategoriesServiceImpl implements CategoriesService {
 
       // Look for existing goal completions category
       const goalCompletionsCategory = categories.find(
-        (c) => c.name === GOAL_COMPLETIONS_CATEGORY_NAME && c.type === 'income'
+        (c) =>
+          (c.name === GOAL_COMPLETIONS_CATEGORY_NAME || c.name === 'Goal Completions') &&
+          c.type === 'income'
       );
 
       if (goalCompletionsCategory) {
+        if (goalCompletionsCategory.name === 'Goal Completions') {
+          return (
+            (await this.update(goalCompletionsCategory.id, {
+              name: GOAL_COMPLETIONS_CATEGORY_NAME,
+            })) ?? goalCompletionsCategory
+          );
+        }
         return goalCompletionsCategory;
       }
 

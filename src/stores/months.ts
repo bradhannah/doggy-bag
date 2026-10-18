@@ -94,6 +94,7 @@ export interface MonthlyData {
   variable_expenses: VariableExpense[];
   free_flowing_expenses: FreeFlowingExpense[];
   bank_balances: Record<string, number>;
+  bank_balances_updated_at?: Record<string, string>;
   savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
   savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
   summary: LeftoverSummary;
@@ -121,13 +122,18 @@ const initialState: MonthsState = {
 // Create the store
 function createMonthsStore() {
   const { subscribe, set, update } = writable<MonthsState>(initialState);
+  let requestId = 0;
+  let activeMonth: string | null = null;
 
   return {
     subscribe,
 
     async loadMonth(month: string): Promise<void> {
+      const id = ++requestId;
+      activeMonth = month;
       update((state) => ({
         ...state,
+        data: state.data?.month === month ? state.data : null,
         loading: true,
         error: null,
         exists: false,
@@ -137,6 +143,7 @@ function createMonthsStore() {
       try {
         // Try to load existing month data
         const response = await fetch(apiUrl(`/api/months/${month}`));
+        if (id !== requestId) return;
 
         if (response.status === 404) {
           // Month doesn't exist - don't auto-generate, let user decide
@@ -154,6 +161,7 @@ function createMonthsStore() {
           // Sync is now only triggered explicitly (e.g., when creating month or via sync button)
           // This prevents deleted instances from being re-added on refresh
           const data = await response.json();
+          if (id !== requestId) return;
           update((state) => ({
             ...state,
             data: data as MonthlyData,
@@ -163,6 +171,7 @@ function createMonthsStore() {
           }));
         }
       } catch (error) {
+        if (id !== requestId) return;
         update((state) => ({
           ...state,
           loading: false,
@@ -174,6 +183,8 @@ function createMonthsStore() {
     // Explicit sync method - adds any new bills/incomes that were created after the month was generated
     // Note: This will re-add any instances that were manually deleted if their bill/income entity still exists
     async syncMonth(month: string): Promise<boolean> {
+      const id = ++requestId;
+      activeMonth = month;
       update((state) => ({ ...state, loading: true, error: null }));
 
       try {
@@ -186,6 +197,7 @@ function createMonthsStore() {
         }
 
         const data = await syncResponse.json();
+        if (id !== requestId) return true;
         update((state) => ({
           ...state,
           data: data as MonthlyData,
@@ -195,6 +207,7 @@ function createMonthsStore() {
         }));
         return true;
       } catch (error) {
+        if (id !== requestId) return false;
         update((state) => ({
           ...state,
           loading: false,
@@ -205,6 +218,8 @@ function createMonthsStore() {
     },
 
     async createMonth(month: string): Promise<boolean> {
+      const id = ++requestId;
+      activeMonth = month;
       update((state) => ({ ...state, loading: true, error: null }));
 
       try {
@@ -217,6 +232,7 @@ function createMonthsStore() {
         }
 
         const data = await generateResponse.json();
+        if (id !== requestId) return true;
         update((state) => ({
           ...state,
           data: data as MonthlyData,
@@ -226,6 +242,7 @@ function createMonthsStore() {
         }));
         return true;
       } catch (error) {
+        if (id !== requestId) return false;
         update((state) => ({
           ...state,
           loading: false,
@@ -241,6 +258,7 @@ function createMonthsStore() {
 
         if (response.ok) {
           const summary = await response.json();
+          if (month !== activeMonth) return;
           update((state) => ({
             ...state,
             data: state.data
@@ -271,12 +289,13 @@ function createMonthsStore() {
         }
 
         const data = await response.json();
+        if (month !== activeMonth) return;
         update((state) => ({
           ...state,
           data: {
             ...state.data,
             ...data,
-            bank_balances: balances,
+            bank_balances: data.bank_balances ?? { ...state.data?.bank_balances, ...balances },
           } as MonthlyData,
         }));
       } catch (error) {
@@ -286,6 +305,8 @@ function createMonthsStore() {
     },
 
     reset() {
+      requestId++;
+      activeMonth = null;
       set(initialState);
     },
   };

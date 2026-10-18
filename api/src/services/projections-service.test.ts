@@ -12,6 +12,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { PaymentSource, MonthlyData, Category } from '../types';
 import { ValidationError } from '../utils/errors';
+import { DetailedViewServiceImpl } from './detailed-view-service';
+import { getTodayLocalDateString } from '../utils/due-date';
 
 describe('ProjectionsService', () => {
   let service: ProjectionsServiceImpl;
@@ -330,5 +332,90 @@ describe('ProjectionsService', () => {
         expect(result.end_date).toBe(`${month}-31`);
       }
     });
+  });
+
+  test('projection agrees with Budget for overdue, paid-today and insurance events', async () => {
+    const today = getTodayLocalDateString();
+    const month = today.slice(0, 7);
+    const stamp = new Date().toISOString();
+    const data: MonthlyData = {
+      month,
+      bill_instances: [
+        {
+          id: 'bill',
+          bill_id: null,
+          name: 'Bill',
+          month,
+          billing_period: 'monthly',
+          expected_amount: 20000,
+          is_default: false,
+          is_closed: false,
+          is_adhoc: true,
+          occurrences: [
+            {
+              id: 'overdue',
+              sequence: 1,
+              expected_date: `${month}-01`,
+              expected_amount: 10000,
+              is_closed: false,
+              is_adhoc: true,
+              created_at: stamp,
+              updated_at: stamp,
+            },
+            {
+              id: 'paid',
+              sequence: 2,
+              expected_date: today,
+              closed_date: today,
+              expected_amount: 10000,
+              is_closed: true,
+              is_adhoc: true,
+              created_at: stamp,
+              updated_at: stamp,
+            },
+          ],
+          created_at: stamp,
+          updated_at: stamp,
+        },
+      ],
+      income_instances: [],
+      variable_expenses: [],
+      free_flowing_expenses: [],
+      bank_balances: { 'ps-checking-001': 100000 },
+      is_read_only: false,
+      created_at: stamp,
+      updated_at: stamp,
+    };
+    await writeFile(join(testDir, 'months', `${month}.json`), JSON.stringify(data));
+    await writeFile(
+      join(testDir, 'entities', 'insurance-claims.json'),
+      JSON.stringify([
+        {
+          id: 'claim',
+          claim_number: 0,
+          family_member_id: 'person',
+          family_member_name: 'Person',
+          category_id: 'dental',
+          category_name: 'Dental',
+          service_date: today,
+          total_amount: 0,
+          status: 'draft',
+          is_expected: true,
+          expected_cost: 20000,
+          expected_reimbursement: 10000,
+          submissions: [],
+          documents: [],
+          created_at: stamp,
+          updated_at: stamp,
+        },
+      ])
+    );
+    const budget = await new DetailedViewServiceImpl().getDetailedMonth(month);
+    const projection = await service.getProjection(month);
+    expect(budget.leftover).toBe(80000);
+    expect(projection.days.at(-1)?.balance).toBe(budget.leftover);
+    expect(
+      projection.days.flatMap((day) => day.events).filter((event) => event.kind === 'actual')
+    ).toHaveLength(1);
   });
 });

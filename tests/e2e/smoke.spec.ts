@@ -27,14 +27,9 @@ test.describe('Smoke Tests', () => {
   test('can navigate to manage page', async ({ page }) => {
     await page.goto('/');
 
-    // Look for a link to manage/setup
-    const manageLink = page.getByRole('link', { name: /manage/i });
-
-    // If manage link exists, click it
-    if (await manageLink.isVisible()) {
-      await manageLink.click();
-      await expect(page).toHaveURL(/manage/);
-    }
+    const manageLink = page.getByRole('link', { name: 'Manage', exact: true });
+    await manageLink.click();
+    await expect(page).toHaveURL(/\/setup$/);
   });
 
   test('app does not show console errors', async ({ page }) => {

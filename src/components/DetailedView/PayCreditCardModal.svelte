@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const titleId = dialogTitleId();
   import { createEventDispatcher } from 'svelte';
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
@@ -38,9 +40,6 @@
 
   // Calculate new balance after payment (auto-calculated unless overridden)
   $: calculatedNewBalance = currentBalance - paymentAmountCents;
-  $: displayNewBalance = isNewBalanceManual
-    ? parseDollarsToCents(newBalanceOverride)
-    : calculatedNewBalance;
 
   // Validate form
   $: isValid = paymentAmountCents > 0 && paymentDay !== '';
@@ -104,14 +103,9 @@
   }
 
   function handleCancel() {
+    if (saving) return;
     dispatch('cancel');
     open = false;
-  }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      handleCancel();
-    }
   }
 
   function handleNewBalanceInput() {
@@ -123,13 +117,14 @@
   <div
     class="modal-overlay"
     on:click={handleCancel}
-    on:keydown={handleKeydown}
     role="dialog"
     aria-modal="true"
+    aria-labelledby={titleId}
     tabindex="-1"
+    use:modalFocus={handleCancel}
   >
     <div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="none">
-      <h3>Pay {cardName}</h3>
+      <h3 id={titleId}>Record payment to {cardName}</h3>
 
       <div class="balance-summary">
         <div class="summary-row">
@@ -165,7 +160,7 @@
         <label for="payment-day">Payment Date</label>
         <select id="payment-day" bind:value={paymentDay} disabled={saving}>
           <option value="">Select day...</option>
-          {#each daysInMonth as day}
+          {#each daysInMonth as day (day)}
             <option value={String(day)}>{month}-{String(day).padStart(2, '0')}</option>
           {/each}
         </select>
@@ -231,7 +226,7 @@
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     padding: var(--space-6);
-    max-width: 420px;
+    max-width: var(--modal-width-sm);
     width: 90%;
     animation: slideIn 0.2s ease-out;
   }

@@ -7,6 +7,7 @@ import { AdhocServiceImpl } from '../../services/adhoc-service';
 import { CategoriesServiceImpl } from '../../services/categories-service';
 import { formatErrorForUser } from '../../utils/errors';
 import { sumClosedOccurrenceAmounts } from '../../utils/tally';
+import { sumOccurrenceExpectedAmounts } from '../../utils/occurrences';
 import { getTodayLocalDateString } from '../../utils/due-date';
 import type { SavingsGoalStatus, GoalTemperature, MonthlyData } from '../../types';
 
@@ -15,6 +16,28 @@ const billsService = new BillsServiceImpl();
 const monthsService = new MonthsServiceImpl();
 const adhocService = new AdhocServiceImpl();
 const categoriesService = new CategoriesServiceImpl();
+
+async function goalActionBody(
+  request: Request
+): Promise<{ keep_current_month?: boolean; completed_at?: string }> {
+  const text = await request.text();
+  const body = text.trim() ? JSON.parse(text) : {};
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    Array.isArray(body) ||
+    (body.keep_current_month !== undefined && typeof body.keep_current_month !== 'boolean')
+  ) {
+    throw new Error('keep_current_month must be a boolean');
+  }
+  if (
+    body.completed_at !== undefined &&
+    (typeof body.completed_at !== 'string' || !Number.isFinite(Date.parse(body.completed_at)))
+  ) {
+    throw new Error('Invalid completion date');
+  }
+  return body;
+}
 
 // Extended goal response with calculated fields
 interface SavingsGoalWithCalculations {
@@ -63,7 +86,11 @@ async function calculateSavedAmount(goalId: string, allMonthData?: MonthlyData[]
         // Check if this instance is linked to our goal via:
         // 1. Parent bill (scheduled payments) - bill_id matches a linked bill
         // 2. Direct goal_id on BillInstance (ad-hoc contributions)
-        const isLinkedViaBill = billInstance.bill_id && linkedBillIds.has(billInstance.bill_id);
+        const isLinkedViaBill =
+          !billInstance.source_snapshot &&
+          !billInstance.goal_id &&
+          billInstance.bill_id &&
+          linkedBillIds.has(billInstance.bill_id);
         const isLinkedDirectly = billInstance.goal_id === goalId;
 
         if (!isLinkedViaBill && !isLinkedDirectly) continue;
@@ -343,7 +370,7 @@ export function createSavingsGoalsPauseHandler() {
         );
       }
 
-      const pausedGoal = await savingsGoalsService.pause(id);
+      const pausedGoal = await savingsGoalsService.pause(id, await goalActionBody(request));
 
       if (!pausedGoal) {
         return new Response(
@@ -444,7 +471,7 @@ export function createSavingsGoalsResumeHandler() {
 }
 
 /**
- * Complete a goal (Buy That Thing!) - POST /api/savings-goals/:id/complete
+ * Complete a goal - POST /api/savings-goals/:id/complete
  * Optional body: { completed_at?: string }
  */
 export function createSavingsGoalsCompleteHandler() {
@@ -466,16 +493,8 @@ export function createSavingsGoalsCompleteHandler() {
         );
       }
 
-      // Parse optional body for completion date
-      let completedAt: string | undefined;
-      try {
-        const body = await request.json();
-        completedAt = body.completed_at;
-      } catch {
-        // No body or invalid JSON - use default (now)
-      }
-
-      const completedGoal = await savingsGoalsService.complete(id, completedAt);
+      const body = await goalActionBody(request);
+      const completedGoal = await savingsGoalsService.complete(id, body.completed_at, body);
 
       if (!completedGoal) {
         return new Response(
@@ -536,7 +555,7 @@ export function createSavingsGoalsAbandonHandler() {
         );
       }
 
-      const abandonedGoal = await savingsGoalsService.abandon(id);
+      const abandonedGoal = await savingsGoalsService.abandon(id, await goalActionBody(request));
 
       if (!abandonedGoal) {
         return new Response(
@@ -1066,15 +1085,22 @@ export function createSavingsGoalsPaymentsHandler() {
 
         for (const billInstance of monthData.bill_instances) {
           // Check if this instance is linked to our goal
-          const isLinkedViaBill = billInstance.bill_id && linkedBillIds.has(billInstance.bill_id);
+          const isLinkedViaBill =
+            !billInstance.source_snapshot &&
+            !billInstance.goal_id &&
+            billInstance.bill_id &&
+            linkedBillIds.has(billInstance.bill_id);
           const isLinkedDirectly = billInstance.goal_id === id;
 
           if (!isLinkedViaBill && !isLinkedDirectly) continue;
 
           // Determine source name
-          const isScheduled = isLinkedViaBill && !isLinkedDirectly;
+          const isScheduled = !!billInstance.bill_id && !billInstance.is_adhoc;
           const description = isScheduled
-            ? (billInstance.bill_id && billNameMap.get(billInstance.bill_id)) || 'Scheduled payment'
+            ? billInstance.name ||
+              billInstance.source_snapshot?.name ||
+              (billInstance.bill_id && billNameMap.get(billInstance.bill_id)) ||
+              'Scheduled payment'
             : 'One-time contribution';
 
           // Process each occurrence
@@ -1109,7 +1135,12 @@ export function createSavingsGoalsPaymentsHandler() {
         .reduce((sum, p) => sum + p.amount, 0);
       const remaining = goal.target_amount != null ? goal.target_amount - totalSaved : null;
 
-      if (remaining != null && remaining > 0 && linkedBills.length > 0) {
+      if (
+        goal.status === 'saving' &&
+        remaining != null &&
+        remaining > 0 &&
+        linkedBills.length > 0
+      ) {
         // Get the primary linked bill for projections (use the first active one)
         const activeBill = linkedBills.find((b) => b.is_active);
         if (activeBill) {
@@ -1333,7 +1364,7 @@ export function createSavingsGoalsRemoveScheduleHandler() {
       let closedOccurrencesCount = 0;
 
       for (const monthData of allMonthData) {
-        if (!monthData?.bill_instances) continue;
+        if (!monthData?.bill_instances || monthData.is_read_only) continue;
 
         let monthModified = false;
 
@@ -1343,6 +1374,9 @@ export function createSavingsGoalsRemoveScheduleHandler() {
           for (const occurrence of billInstance.occurrences || []) {
             // Close future unpaid occurrences (expected_date > today and not closed)
             if (!occurrence.is_closed && occurrence.expected_date > today) {
+              // Closed occurrences count as paid. A cancelled contribution must
+              // record zero, matching the budget's "Paid Nothing" semantics.
+              occurrence.expected_amount = 0;
               occurrence.is_closed = true;
               occurrence.closed_date = today;
               occurrence.notes =
@@ -1354,6 +1388,7 @@ export function createSavingsGoalsRemoveScheduleHandler() {
           }
 
           // Update instance is_closed if all occurrences are now closed
+          billInstance.expected_amount = sumOccurrenceExpectedAmounts(billInstance.occurrences);
           const allClosed = billInstance.occurrences?.every((o) => o.is_closed) ?? true;
           if (allClosed && !billInstance.is_closed) {
             billInstance.is_closed = true;

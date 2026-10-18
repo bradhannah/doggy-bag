@@ -87,7 +87,11 @@ describe('CalendarService', () => {
   // Sample monthly data with bill instances, income instances, and todo instances
   const sampleMonthlyData: MonthlyData = {
     month: '2026-02',
-    starting_balances: {},
+    bank_balances: {},
+    free_flowing_expenses: [],
+    is_read_only: false,
+    created_at: '2026-02-01T00:00:00.000Z',
+    updated_at: '2026-02-01T00:00:00.000Z',
     bill_instances: [
       {
         id: 'bi-rent-001',

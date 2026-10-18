@@ -2,9 +2,10 @@
 
 import { StorageServiceImpl } from './storage';
 import { ValidationServiceImpl } from './validation';
+import { preserveSourceHistory, recurringRevisions } from './source-history';
 import type { StorageService } from './storage';
 import type { ValidationService } from './validation';
-import type { Bill, ValidationResult } from '../types';
+import type { Bill, SavingsGoal, ValidationResult } from '../types';
 
 export interface BillsService {
   getAll(): Promise<Bill[]>;
@@ -32,10 +33,16 @@ export class BillsServiceImpl implements BillsService {
   public async getAll(): Promise<Bill[]> {
     try {
       const bills = (await this.storage.readJSON<Bill[]>('data/entities/bills.json')) || [];
-      return bills;
+      const goals =
+        (await this.storage.readJSON<SavingsGoal[]>('data/entities/savings-goals.json')) || [];
+      const statuses = new Map(goals.map((goal) => [goal.id, goal.status]));
+      return bills.map((bill) => ({
+        ...bill,
+        goal_status: bill.goal_id ? statuses.get(bill.goal_id) : undefined,
+      }));
     } catch (error) {
       console.error('[BillsService] Failed to load bills:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -107,12 +114,21 @@ export class BillsServiceImpl implements BillsService {
         return null;
       }
 
+      await preserveSourceHistory(this.storage, 'bill', bills[index]);
       const now = new Date().toISOString();
       const updatedBill: Bill = {
         ...bills[index],
         ...updates,
         updated_at: now,
       };
+      updatedBill.recurring_revisions = recurringRevisions(bills[index], updatedBill);
+      // An explicit stop or reassignment supersedes the goal's automatic resume.
+      if (
+        (updates.is_active === false && !updates.paused_by_goal_id) ||
+        (updates.goal_id !== undefined && updates.goal_id !== bills[index].goal_id)
+      ) {
+        delete updatedBill.paused_by_goal_id;
+      }
 
       bills[index] = updatedBill;
       await this.storage.writeJSON('data/entities/bills.json', bills);
@@ -126,6 +142,8 @@ export class BillsServiceImpl implements BillsService {
   public async delete(id: string): Promise<void> {
     try {
       const bills = await this.getAll();
+      const source = bills.find((bill) => bill.id === id);
+      if (source) await preserveSourceHistory(this.storage, 'bill', source);
       const filtered = bills.filter((bill) => bill.id !== id);
       await this.storage.writeJSON('data/entities/bills.json', filtered);
     } catch (error) {

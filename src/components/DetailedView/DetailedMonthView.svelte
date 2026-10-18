@@ -137,10 +137,10 @@
     }
   }
 
-  // Helper: check if a category section is complete (all closed or empty)
+  // Empty categories are available for planning, not completed work.
   // Use is_closed because that indicates the user has marked the item as done
   function isSectionComplete(section: { items: { is_closed: boolean }[] }): boolean {
-    return section.items.length === 0 || section.items.every((item) => item.is_closed);
+    return section.items.length > 0 && section.items.every((item) => item.is_closed);
   }
 
   // Helper: count closed items in a section
@@ -574,6 +574,7 @@
         <SummarySidebar
           paymentSources={$paymentSources}
           bankBalances={$detailedMonthData.bankBalances}
+          bankBalancesUpdatedAt={$detailedMonthData.bankBalancesUpdatedAt ?? {}}
           tallies={$detailedMonthData.tallies}
           leftoverBreakdown={$detailedMonthData.leftoverBreakdown}
           payoffSummaries={$detailedMonthData.payoffSummaries ?? []}
@@ -632,8 +633,10 @@
                     {/if}
                   </div>
 
-                  {#if totalBills === 0}
-                    <p class="empty-text">No bill categories. Add categories in Setup.</p>
+                  {#if sortedBillSections.length === 0}
+                    <p class="empty-text">
+                      No bill categories. <a href="/setup">Add categories in Manage.</a>
+                    </p>
                   {:else}
                     {#each filteredActiveBillSections as section (section.category.id)}
                       <CategorySection
@@ -715,8 +718,10 @@
                     {/if}
                   </div>
 
-                  {#if totalIncomes === 0}
-                    <p class="empty-text">No income categories. Add categories in Setup.</p>
+                  {#if sortedIncomeSections.length === 0}
+                    <p class="empty-text">
+                      No income categories. <a href="/setup">Add categories in Manage.</a>
+                    </p>
                   {:else}
                     {#each filteredActiveIncomeSections as section (section.category.id)}
                       <CategorySection
@@ -879,11 +884,7 @@
     /* Note: container-type was removed because it breaks position:fixed for child drawers
        (fixed positioning becomes relative to the container instead of the viewport).
        Using media queries instead of container queries for responsive layout. */
-    /* Explicit width based on content: summary sidebar + gap + 2 panels + gap between panels */
-    width: calc(
-      var(--summary-sidebar-width) + var(--space-6) + (2 * var(--panel-width-medium)) +
-        var(--space-6)
-    );
+    width: 100%;
     max-width: 100%;
     /* Center with auto margins */
     margin-left: auto;
@@ -894,8 +895,7 @@
   }
 
   .content-wrapper.medium {
-    /* Same calculation for medium mode */
-    width: calc(
+    max-width: calc(
       var(--summary-sidebar-width) + var(--space-6) + (2 * var(--panel-width-medium)) +
         var(--space-6)
     );
@@ -903,7 +903,9 @@
 
   .content-wrapper.medium.table-view {
     /* Table view is single-column, so narrower in medium mode */
-    width: calc(var(--summary-sidebar-width) + var(--space-6) + var(--panel-width-single-medium));
+    max-width: calc(
+      var(--summary-sidebar-width) + var(--space-6) + var(--panel-width-single-medium)
+    );
   }
 
   .content-wrapper.wide {
@@ -917,7 +919,7 @@
   /* Main layout with sidebar */
   .detailed-layout {
     display: grid;
-    grid-template-columns: var(--summary-sidebar-width) auto;
+    grid-template-columns: var(--summary-sidebar-width) minmax(0, 1fr);
     gap: var(--space-6);
     align-items: start;
   }
@@ -926,10 +928,10 @@
     min-width: 0; /* Prevent grid blowout */
   }
 
-  /* Medium mode: two columns side by side */
+  /* Fit two panels when there is room; otherwise stack without horizontal overflow. */
   .sections-container {
     display: grid;
-    grid-template-columns: var(--panel-width-medium) var(--panel-width-medium);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--panel-width-medium)), 1fr));
     gap: var(--space-6);
   }
 
@@ -954,32 +956,29 @@
   /* Single column mode: stack vertically (Bills on top, Income below) */
   /* Uses 2/3 of the total 2-column width, centered */
   .sections-container.single-column {
-    grid-template-columns: var(--panel-width-single-medium);
+    grid-template-columns: minmax(0, var(--panel-width-single-medium));
     justify-content: center;
   }
 
   .sections-container.single-column .section {
-    width: var(--panel-width-single-medium);
+    width: 100%;
     min-width: 0;
     max-width: var(--panel-width-single-medium);
   }
 
   /* Wide mode: flexible grid with two columns */
   .content-wrapper.wide .sections-container {
-    grid-template-columns: minmax(var(--panel-width-min-wide), 1fr) minmax(
-        var(--panel-width-min-wide),
-        1fr
-      );
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--panel-width-min-wide)), 1fr));
   }
 
   /* Wide mode + Single column: use wider single column width, centered */
   .content-wrapper.wide .sections-container.single-column {
-    grid-template-columns: var(--panel-width-single-wide);
+    grid-template-columns: minmax(0, var(--panel-width-single-wide));
     justify-content: center;
   }
 
   .content-wrapper.wide .sections-container.single-column .section {
-    width: var(--panel-width-single-wide);
+    width: 100%;
     min-width: 0;
     max-width: var(--panel-width-single-wide);
   }
@@ -989,17 +988,15 @@
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-default);
     padding: var(--space-6);
-    /* Medium mode: fixed width panels */
-    width: var(--panel-width-medium);
-    min-width: var(--panel-width-medium);
-    max-width: var(--panel-width-medium);
-    overflow-x: hidden; /* Prevent horizontal scrollbar */
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* Wide mode: flexible panels */
   .content-wrapper.wide .section {
     width: auto;
-    min-width: var(--panel-width-min-wide);
+    min-width: 0;
     max-width: none;
   }
 
@@ -1029,7 +1026,7 @@
   .loading-state,
   .error-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: calc(var(--space-8) * 2) var(--space-5);
     color: var(--text-secondary);
   }
 
@@ -1054,9 +1051,12 @@
   }
 
   .empty-text {
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     text-align: center;
-    padding: 40px 20px;
+    padding: calc(var(--space-5) * 2) var(--space-5);
+  }
+  .empty-text a {
+    color: var(--accent);
   }
 
   /* Completed categories divider */
@@ -1129,7 +1129,7 @@
   /* Responsive: stack summary sidebar on smaller screens
      Breakpoint = nav sidebar (220) + summary sidebar (260) + gap (24) + main content min (600) = 1104px
      Rounded to 1100px for cleaner value */
-  @media (max-width: 1100px) {
+  @media (max-width: 68.75rem) {
     .detailed-layout {
       grid-template-columns: 1fr;
     }
@@ -1140,7 +1140,7 @@
      which applies .medium or .wide classes directly. */
 
   /* Mobile responsive */
-  @media (max-width: 768px) {
+  @media (max-width: 48rem) {
     .detailed-view {
       padding: 0 var(--content-padding-mobile) var(--content-padding-mobile)
         var(--content-padding-mobile);

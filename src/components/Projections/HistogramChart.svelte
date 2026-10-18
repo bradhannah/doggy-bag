@@ -25,7 +25,7 @@
 
   // Use viewBox for responsive scaling
   const viewBoxWidth = 800;
-  const viewBoxHeight = 400;
+  const viewBoxHeight = height;
   const chartWidth = viewBoxWidth - padding.left - padding.right;
   const chartHeight = viewBoxHeight - padding.top - padding.bottom;
 

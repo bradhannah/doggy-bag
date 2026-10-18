@@ -36,7 +36,7 @@
 
     try {
       await apiClient.putPath(`/api/months/${month}/bank-balances`, {
-        [paymentSourceId]: newBalance,
+        [paymentSourceId]: isDebtAccount(paymentSourceType) ? -newBalance : newBalance,
       });
       success('Balance updated');
       dispatch('updated');

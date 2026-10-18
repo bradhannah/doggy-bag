@@ -20,6 +20,7 @@ import type {
   MonthlyData,
 } from '../types';
 import { getTodayLocalDateString } from '../utils/due-date';
+import { excludeBudgetInstance } from '../utils/savings';
 
 // Request types
 export interface CreateAdhocBillRequest {
@@ -321,6 +322,7 @@ export class AdhocServiceImpl implements AdhocService {
       throw new Error('Cannot delete non-adhoc item with adhoc endpoint');
     }
 
+    excludeBudgetInstance(monthData, instance);
     monthData.bill_instances = monthData.bill_instances.filter((bi) => bi.id !== instanceId);
     await this.monthsService.saveMonthlyData(month, monthData);
 
@@ -357,12 +359,16 @@ export class AdhocServiceImpl implements AdhocService {
       category_id: string;
       day_of_month?: number;
       start_date?: string;
+      savings_account_id?: string;
+      goal_id?: string;
     } = {
       name: data.name,
       amount: data.amount,
       billing_period: data.billing_period,
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
+      savings_account_id: instance.savings_account_id,
+      goal_id: instance.goal_id,
     };
 
     // Add day_of_month for monthly billing (required by validation)
@@ -380,7 +386,8 @@ export class AdhocServiceImpl implements AdhocService {
     const updatedInstance: BillInstance = {
       ...instance,
       bill_id: newBill.id,
-      expected_amount: data.amount,
+      source_snapshot: structuredClone(newBill),
+      legacy_savings_account_id: undefined,
       // Keep is_adhoc: true as historical record
       updated_at: now,
     };
@@ -452,6 +459,7 @@ export class AdhocServiceImpl implements AdhocService {
       is_closed: true,
       is_adhoc: true,
       goal_id: data.goal_id,
+      savings_account_id: data.payment_source_id,
       name: `Payment: ${data.goal_name}`,
       category_id: data.category_id,
       payment_source_id: data.payment_source_id,
@@ -581,6 +589,7 @@ export class AdhocServiceImpl implements AdhocService {
       throw new Error('Cannot delete non-adhoc item with adhoc endpoint');
     }
 
+    excludeBudgetInstance(monthData, instance);
     monthData.income_instances = monthData.income_instances.filter((ii) => ii.id !== instanceId);
     await this.monthsService.saveMonthlyData(month, monthData);
 
@@ -617,12 +626,16 @@ export class AdhocServiceImpl implements AdhocService {
       category_id: string;
       day_of_month?: number;
       start_date?: string;
+      savings_account_id?: string;
+      goal_id?: string;
     } = {
       name: data.name,
       amount: data.amount,
       billing_period: data.billing_period,
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
+      savings_account_id: instance.savings_account_id,
+      goal_id: instance.goal_id,
     };
 
     // Add day_of_month for monthly billing (required by validation)
@@ -640,7 +653,8 @@ export class AdhocServiceImpl implements AdhocService {
     const updatedInstance: IncomeInstance = {
       ...instance,
       income_id: newIncome.id,
-      expected_amount: data.amount,
+      source_snapshot: structuredClone(newIncome),
+      legacy_savings_account_id: undefined,
       // Keep is_adhoc: true as historical record
       updated_at: now,
     };
@@ -723,6 +737,8 @@ export class AdhocServiceImpl implements AdhocService {
       is_closed: false,
       is_adhoc: true,
       name: instance.name,
+      savings_account_id: instance.savings_account_id,
+      goal_id: instance.goal_id,
       category_id: instance.category_id,
       payment_source_id: instance.payment_source_id,
       created_at: now,
@@ -798,6 +814,8 @@ export class AdhocServiceImpl implements AdhocService {
       is_closed: false,
       is_adhoc: true,
       name: instance.name,
+      savings_account_id: instance.savings_account_id,
+      goal_id: instance.goal_id,
       category_id: instance.category_id,
       payment_source_id: instance.payment_source_id,
       created_at: now,

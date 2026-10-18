@@ -1,4 +1,9 @@
 <script lang="ts">
+  import ContributionScope from '../../../../components/Goals/ContributionScope.svelte';
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const confirmTitleId = dialogTitleId();
+  const successTitleId = dialogTitleId();
+  let keepCurrentMonth = false;
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
@@ -13,6 +18,7 @@
     type SavingsGoalUpdate,
   } from '../../../../stores/savings-goals';
   import { createBill, type Bill } from '../../../../stores/bills';
+  import { currentMonth, currentMonthDisplay } from '../../../../stores/ui';
   import { success, error as showError } from '../../../../stores/toast';
   import { apiClient } from '$lib/api/client';
   import { formatCurrency, getTodayDateString, parseLocalDate } from '$lib/utils/format';
@@ -99,7 +105,7 @@
   $: minDate = goal?.status === 'saving' ? getTodayDateString() : undefined;
 
   // Active schedule detection
-  $: activeBills = bills.filter((b) => b.is_active);
+  $: activeBills = bills.filter((b) => b.is_active || b.paused_by_goal_id === goalId);
   $: hasActiveSchedule = activeBills.length > 0;
   $: activeBill = activeBills[0]; // Primary active schedule
 
@@ -466,7 +472,7 @@
 
     actionLoading = true;
     try {
-      await completeGoal(goal.id);
+      await completeGoal(goal.id, undefined, keepCurrentMonth);
       success(`Congratulations! "${goal.name}" completed!`);
       confirmModal = null;
       goto('/goals');
@@ -482,7 +488,7 @@
 
     actionLoading = true;
     try {
-      await abandonGoal(goal.id);
+      await abandonGoal(goal.id, keepCurrentMonth);
       success(`"${goal.name}" abandoned`);
       confirmModal = null;
       goto('/goals');
@@ -672,7 +678,7 @@
       </div>
 
       <!-- Payment Schedule Section -->
-      {#if goal.status === 'saving'}
+      {#if goal.status === 'saving' || goal.status === 'paused'}
         <div class="form-section schedule-section">
           <h2>Payment Schedule</h2>
 
@@ -682,7 +688,9 @@
               <div class="schedule-info">
                 <div class="schedule-summary">
                   <span class="schedule-amount">{getScheduleSummary(activeBill)}</span>
-                  <span class="schedule-status active">Active</span>
+                  <span class="schedule-status active"
+                    >{goal.status === 'paused' ? 'Paused with goal' : 'Active'}</span
+                  >
                 </div>
                 <p class="schedule-name">{activeBill.name}</p>
               </div>
@@ -715,6 +723,8 @@
                 </button>
               </div>
             </div>
+          {:else if goal.status === 'paused'}
+            <p>Resume contributions from Goals before adding a new schedule.</p>
           {:else if showScheduleForm}
             <!-- Schedule Creation Form -->
             <div class="schedule-form">
@@ -1067,8 +1077,9 @@
 {#if confirmModal}
   <div
     class="modal-overlay"
-    on:click={() => (confirmModal = null)}
-    on:keydown={(e) => e.key === 'Escape' && (confirmModal = null)}
+    on:click={() => {
+      if (!actionLoading && !removingSchedule) confirmModal = null;
+    }}
     role="presentation"
   >
     <div
@@ -1077,9 +1088,14 @@
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
+      aria-labelledby={confirmTitleId}
+      tabindex="-1"
+      use:modalFocus={() => {
+        if (!actionLoading && !removingSchedule) confirmModal = null;
+      }}
     >
       {#if confirmModal.type === 'complete'}
-        <h2>Complete Goal</h2>
+        <h2 id={confirmTitleId}>Complete goal</h2>
         <p>
           Congratulations! Are you ready to mark <strong>"{goal?.name}"</strong> as complete?
         </p>
@@ -1094,20 +1110,19 @@
             {/if}
           </p>
         {/if}
+        <ContributionScope bind:keepCurrentMonth disabled={actionLoading} />
         <div class="modal-actions">
           <button class="btn-secondary" on:click={() => (confirmModal = null)}>Cancel</button>
           <button class="btn-success" on:click={handleComplete} disabled={actionLoading}>
-            {actionLoading ? 'Completing...' : 'Yes, I bought it!'}
+            {actionLoading ? 'Completing...' : 'Complete goal'}
           </button>
         </div>
       {:else if confirmModal.type === 'abandon'}
-        <h2>Abandon Goal</h2>
+        <h2 id={confirmTitleId}>Abandon Goal</h2>
         <p>
           Are you sure you want to abandon <strong>"{goal?.name}"</strong>?
         </p>
-        <p class="modal-warning">
-          This will mark the goal as abandoned. Any scheduled payments will remain on your budget.
-        </p>
+        <ContributionScope bind:keepCurrentMonth disabled={actionLoading} />
         <div class="modal-actions">
           <button class="btn-secondary" on:click={() => (confirmModal = null)}>Cancel</button>
           <button class="btn-danger" on:click={handleAbandon} disabled={actionLoading}>
@@ -1115,7 +1130,7 @@
           </button>
         </div>
       {:else if confirmModal.type === 'remove-schedule'}
-        <h2>Remove Payment Schedule</h2>
+        <h2 id={confirmTitleId}>Remove Payment Schedule</h2>
         <p>Are you sure you want to remove the payment schedule for this goal?</p>
         <p class="modal-warning">
           Future scheduled payments will be cancelled. Any payments already made will remain
@@ -1134,18 +1149,16 @@
 
 <!-- Bill Success Modal -->
 {#if billSuccessModal}
-  <div
-    class="modal-overlay"
-    on:click={closeBillSuccessModal}
-    on:keydown={(e) => e.key === 'Escape' && closeBillSuccessModal()}
-    role="presentation"
-  >
+  <div class="modal-overlay" on:click={closeBillSuccessModal} role="presentation">
     <div
       class="modal-content"
       on:click|stopPropagation
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
+      aria-labelledby={successTitleId}
+      tabindex="-1"
+      use:modalFocus={closeBillSuccessModal}
     >
       <div class="success-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
@@ -1159,7 +1172,7 @@
           />
         </svg>
       </div>
-      <h2>Payment Schedule Created!</h2>
+      <h2 id={successTitleId}>Payment Schedule Created!</h2>
       <p>
         Your recurring payment <strong>"{billSuccessModal.billName}"</strong> has been created.
       </p>
@@ -1178,9 +1191,11 @@
         </div>
       </div>
       <p class="success-note">
-        This payment will appear in your monthly budget under the <strong>Savings Goals</strong> category.
-        When you close (pay) each occurrence, it will automatically add to your saved amount for this
-        goal.
+        New budgets will include this payment under <strong>Savings</strong>. For an existing
+        budget,
+        <a href="/month/{$currentMonth}?review=updates">review updates for {$currentMonthDisplay}</a
+        > to add it. Recording each payment updates both this goal and its account’s recorded contributions
+        in Savings.
       </p>
       <div class="modal-actions center">
         <button class="btn-primary" on:click={closeBillSuccessModal}> Got it! </button>

@@ -289,7 +289,7 @@
       {/if}
     </div>
   {:else if !loading}
-    <p class="empty-message">No payment sources set up yet. Add them in Setup.</p>
+    <p class="empty-message">No payment sources set up yet. Add them in Manage.</p>
   {/if}
 </div>
 

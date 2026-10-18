@@ -112,6 +112,15 @@ describe('API Client', () => {
   });
 
   describe('apiClient.get', () => {
+    it('retains HTTP status for missing-resource UI states', async () => {
+      mockFetch.mockReturnValue(mockErrorResponse({ error: 'Monthly data not found' }, 404));
+      await expect(apiClient.get('/api/months/2098-01')).rejects.toMatchObject({
+        name: 'ApiError',
+        status: 404,
+        message: 'Monthly data not found',
+      });
+    });
+
     it('makes GET request and returns JSON', async () => {
       const responseData = { id: 1, name: 'Test' };
       mockFetch.mockReturnValue(mockResponse(responseData));
