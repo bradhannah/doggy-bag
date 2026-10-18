@@ -2,6 +2,7 @@
 
 import { StorageServiceImpl } from './storage';
 import { ValidationServiceImpl } from './validation';
+import { preserveSourceHistory, recurringRevisions } from './source-history';
 import type { StorageService } from './storage';
 import type { ValidationService } from './validation';
 import type { Income, ValidationResult } from '../types';
@@ -38,7 +39,7 @@ export class IncomesServiceImpl implements IncomesService {
       }));
     } catch (error) {
       console.error('[IncomesService] Failed to load incomes:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -94,12 +95,14 @@ export class IncomesServiceImpl implements IncomesService {
         return null;
       }
 
+      await preserveSourceHistory(this.storage, 'income', incomes[index]);
       const now = new Date().toISOString();
       const updatedIncome: Income = {
         ...incomes[index],
         ...updates,
         updated_at: now,
       };
+      updatedIncome.recurring_revisions = recurringRevisions(incomes[index], updatedIncome);
 
       incomes[index] = updatedIncome;
       await this.storage.writeJSON('data/entities/incomes.json', incomes);
@@ -113,6 +116,8 @@ export class IncomesServiceImpl implements IncomesService {
   public async delete(id: string): Promise<void> {
     try {
       const incomes = await this.getAll();
+      const source = incomes.find((income) => income.id === id);
+      if (source) await preserveSourceHistory(this.storage, 'income', source);
       const filtered = incomes.filter((income) => income.id !== id);
       await this.storage.writeJSON('data/entities/incomes.json', filtered);
     } catch (error) {

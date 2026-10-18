@@ -7,7 +7,8 @@
 import { serve } from 'bun';
 import { routes } from './src/routes';
 import { StorageServiceImpl } from './src/services/storage';
-import { runWithRequestCache } from './src/services/request-cache';
+import { runWithDataAccess } from './src/services/data-access';
+import { checkRequestReadOnly } from './src/routes/handlers/shared';
 
 // Check for version flag (used by Makefile to distinguish runtime from compiled binary)
 if (process.argv.includes('--version')) {
@@ -404,7 +405,9 @@ try {
         if (pathMatches && req.method === definition.method) {
           try {
             log('DEBUG', `Matched route: ${routePath} [${definition.method}]`);
-            const response = await runWithRequestCache(() => definition.handler(req));
+            const response = await runWithDataAccess(
+              async () => (await checkRequestReadOnly(req)) ?? definition.handler(req)
+            );
 
             // Add CORS headers to existing Response
             const headers = new Headers(response.headers);

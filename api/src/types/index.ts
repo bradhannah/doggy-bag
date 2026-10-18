@@ -73,11 +73,14 @@ interface PaymentSourceMetadata {
 // ============================================================================
 
 interface Bill {
+  recurring_revisions?: { amount?: string; schedule?: string };
+  savings_account_id?: string; // Destination account for a savings contribution
   id: string;
   name: string;
   amount: number;
   billing_period: BillingPeriod;
   start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
+  effective_from?: string; // First eligible date; start_date remains the recurrence anchor
   // For monthly billing: specify EITHER day_of_month OR (recurrence_week + recurrence_day)
   day_of_month?: number; // 1-31 (use 31 for "last day of month")
   recurrence_week?: number; // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
@@ -87,17 +90,22 @@ interface Bill {
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
   goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
+  paused_by_goal_id?: string; // Only schedules paused by this goal resume automatically
+  goal_status?: SavingsGoalStatus; // Resolved on reads; the goal is the source of truth
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 interface Income {
+  recurring_revisions?: { amount?: string; schedule?: string };
+  savings_account_id?: string; // Savings account funding a withdrawal into the budget
   id: string;
   name: string;
   amount: number;
   billing_period: BillingPeriod;
   start_date?: string; // ISO date string (YYYY-MM-DD), required for bi_weekly/weekly/semi_annually
+  effective_from?: string;
   // For monthly billing: specify EITHER day_of_month OR (recurrence_week + recurrence_day)
   day_of_month?: number; // 1-31 (use 31 for "last day of month")
   recurrence_week?: number; // 1-5 (1st, 2nd, 3rd, 4th, 5th/last weekday of month)
@@ -117,6 +125,10 @@ interface Income {
 // ============================================================================
 
 interface Occurrence {
+  recurring_origin?: { index: number; amount: number; date: string };
+  recurring_review?: Partial<
+    Record<'expected_amount' | 'expected_date', { version: string; value: number | string }>
+  >;
   id: string;
   sequence: number; // 1, 2, 3... for ordering within the month
   expected_date: string; // YYYY-MM-DD - calculated from day_of_month/start_date, overridable
@@ -139,6 +151,10 @@ interface Occurrence {
 // ============================================================================
 
 interface BillInstance {
+  kept_recurring_revision?: string;
+  savings_account_id?: string;
+  legacy_savings_account_id?: string; // Imported standalone monthly savings plan
+  source_snapshot?: Bill;
   id: string;
   bill_id: string | null; // null for ad-hoc bills
   month: string;
@@ -166,6 +182,11 @@ interface BillInstance {
 }
 
 interface IncomeInstance {
+  kept_recurring_revision?: string;
+  savings_account_id?: string;
+  legacy_savings_account_id?: string;
+  source_snapshot?: Income;
+  goal_id?: string;
   id: string;
   income_id: string | null; // null for ad-hoc income
   month: string;
@@ -475,6 +496,10 @@ interface BackupMetadata {
 }
 
 interface MonthlyData {
+  occurrence_dates_migrated?: boolean;
+  paused_goal_contributions?: { instance: BillInstance; legacy_hint_adjusted: boolean }[];
+  excluded_budget_sources?: string[]; // Explicit exclusions for this month (kind:source ID)
+  last_budget_update?: { request_key: string }; // Idempotent retry of the latest review/apply
   month: string;
   bill_instances: BillInstance[];
   income_instances: IncomeInstance[];
@@ -482,21 +507,30 @@ interface MonthlyData {
   free_flowing_expenses: FreeFlowingExpense[];
   todo_instances?: TodoInstance[]; // Todo instances for this month
   bank_balances: Record<string, number>;
+  bank_balances_updated_at?: Record<string, string>;
   savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
   savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
-  savings_contributions?: Record<string, number>; // Expected contribution per account (cents)
+  savings_contributions?: Record<string, number>; // Legacy planning hints; linked transfers live in budget instances
   is_read_only: boolean; // Lock month from edits
+  insurance_snapshot?: { billInstances: BillInstance[]; incomeInstances: IncomeInstance[] };
   created_at: string;
   updated_at: string;
 }
 
 interface BackupFileData {
+  schema_version?: 2;
   export_date: string;
   bills: Bill[];
   incomes: Income[];
   payment_sources: PaymentSource[];
   categories: Category[];
   months: MonthlyData[];
+  // Additional entity JSON files, keyed by filename; core collections remain above
+  // for compatibility with existing exports.
+  entities?: Record<string, unknown>;
+  // Data-directory-relative paths under documents/ or legacy data/documents/.
+  // Binary contents are encoded as base64.
+  documents?: Record<string, string>;
 }
 
 // ============================================================================
@@ -525,6 +559,7 @@ interface CategorySection {
 }
 
 interface BillInstanceDetailed {
+  savings_account?: { id: string; name: string };
   id: string;
   bill_id: string | null;
   name: string;
@@ -559,6 +594,7 @@ interface BillInstanceDetailed {
 }
 
 interface IncomeInstanceDetailed {
+  savings_account?: { id: string; name: string };
   id: string;
   income_id: string | null;
   name: string;
@@ -644,6 +680,7 @@ interface DetailedMonthResponse {
   insuranceExpenseSection: CategorySection | null; // Insurance expenses section
   insuranceReimbursementSection: CategorySection | null; // Insurance reimbursements section
   bankBalances: Record<string, number>;
+  bankBalancesUpdatedAt?: Record<string, string>;
   lastUpdated: string;
 }
 

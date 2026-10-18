@@ -186,12 +186,12 @@
   <!-- Insurance Plans Section -->
   {#if $activePlans.length > 0}
     <div class="plans-section">
-      <label class="section-label">
+      <h3 class="section-label">
         Insurance Plans
         <span class="section-hint"
           >Drag between sections to assign/unassign • Drag within to reorder</span
         >
-      </label>
+      </h3>
 
       <!-- Assigned Plans -->
       <div class="plans-subsection">
@@ -286,7 +286,7 @@
     </div>
   {:else}
     <div class="plans-section">
-      <label class="section-label">Insurance Plans</label>
+      <h3 class="section-label">Insurance Plans</h3>
       <p class="empty-plans">
         No insurance plans available. Add plans in the Insurance Plans section first.
       </p>

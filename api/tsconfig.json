@@ -10,7 +10,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
     "outDir": "./dist",
-    "rootDir": "."
+    "rootDir": ".."
   },
   "include": ["src/**/*", "server.ts"],
   "exclude": ["node_modules", "dist"]

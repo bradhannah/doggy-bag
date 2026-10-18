@@ -368,12 +368,9 @@
       // Confirm import via dialog
       pendingImportData = data;
       pendingImportMessage =
-        `Import backup from ${data.export_date}? ` +
-        `This will overwrite: ${validationResult.summary.bills} bills, ` +
-        `${validationResult.summary.incomes} incomes, ` +
-        `${validationResult.summary.payment_sources} payment sources, ` +
-        `${validationResult.summary.categories} categories. ` +
-        `This action cannot be undone.`;
+        data.schema_version === 2
+          ? `Restore the complete snapshot from ${data.export_date}? This replaces all entity data, monthly budgets, and uploaded documents with the backup contents.`
+          : `Import the legacy budget backup from ${data.export_date}? This restores its bills, incomes, accounts, categories, and included months. Goals, insurance, notes, other features, and months absent from this older backup retain their current data.`;
       showImportConfirm = true;
     } catch {
       addToast('Failed to import backup: Invalid file format', 'error');
@@ -1901,28 +1898,6 @@
     color: var(--text-secondary);
   }
 
-  .backup-meta .separator {
-    color: var(--text-tertiary);
-  }
-
-  .restore-button {
-    height: var(--button-height-sm);
-    padding: 0 var(--space-4);
-    background: transparent;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .restore-button:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-    color: var(--text-primary);
-  }
-
   /* Restore Confirmation Modal */
   .modal-header.warning {
     color: var(--warning);
@@ -2054,16 +2029,6 @@
     display: inline-flex;
     align-items: center;
     color: var(--warning);
-    cursor: help;
-  }
-
-  .backup-note-text {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--text-tertiary);
-    font-style: italic;
     cursor: help;
   }
 </style>

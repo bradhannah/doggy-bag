@@ -2,6 +2,7 @@
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
 import { BackupServiceImpl } from './backup-service';
 import { StorageServiceImpl } from './storage';
+import { InsuranceClaimsServiceImpl } from './insurance-claims-service';
 import { mkdir, rm, writeFile, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -152,6 +153,95 @@ describe('BackupService', () => {
   // ==========================================================================
 
   describe('exportBackup', () => {
+    test('round trips additional domains and binary documents into a clean directory', async () => {
+      const domains = [
+        'savings-goals',
+        'notes',
+        'todos',
+        'insurance-claims',
+        'insurance-plans',
+        'family-members',
+      ];
+      for (const domain of domains) {
+        await writeFile(
+          join(testDir, 'entities', `${domain}.json`),
+          JSON.stringify([{ id: domain }])
+        );
+      }
+      await mkdir(join(testDir, 'documents', 'insurance', 'receipts'), { recursive: true });
+      const document = Buffer.from([0, 255, 12, 34, 0, 128]);
+      await writeFile(join(testDir, 'documents', 'insurance', 'receipts', 'receipt.pdf'), document);
+      const backup = await service.exportBackup();
+      const target = join(testDir, 'restored');
+      StorageServiceImpl.initialize(target);
+      try {
+        const restoredService = new BackupServiceImpl();
+        await restoredService.importBackup(backup);
+        for (const domain of domains) {
+          expect(
+            JSON.parse(await readFile(join(target, 'entities', `${domain}.json`), 'utf8'))
+          ).toEqual([{ id: domain }]);
+        }
+        expect(
+          await readFile(join(target, 'documents', 'insurance', 'receipts', 'receipt.pdf'))
+        ).toEqual(document);
+        expect(JSON.parse(await readFile(join(target, 'months', '2025-01.json'), 'utf8'))).toEqual(
+          sampleMonths[0]
+        );
+        // A complete snapshot replaces records that were added after the backup.
+        await writeFile(
+          join(target, 'months', '2025-03.json'),
+          JSON.stringify({ ...sampleMonths[0], month: '2025-03' })
+        );
+        await restoredService.importBackup(backup);
+        expect(await readdir(join(target, 'months'))).not.toContain('2025-03.json');
+      } finally {
+        StorageServiceImpl.initialize(testDir);
+      }
+    });
+
+    test('rejects unsafe document paths before changing live data', async () => {
+      const backup = await service.exportBackup();
+      backup.documents = { '../outside.txt': Buffer.from('bad').toString('base64') };
+      await expect(service.importBackup(backup)).rejects.toThrow('Invalid document');
+      expect(JSON.parse(await readFile(join(testDir, 'entities', 'bills.json'), 'utf8'))).toEqual(
+        sampleBills
+      );
+    });
+
+    test('restores a real insurance upload so the document service can open it', async () => {
+      const bytes = Buffer.from([37, 80, 68, 70, 0, 128, 255]);
+      await writeFile(
+        join(testDir, 'entities', 'insurance-claims.json'),
+        JSON.stringify([
+          {
+            id: 'claim',
+            claim_number: 1,
+            service_date: '2026-01-10',
+            category_name: 'Dental',
+            documents: [],
+            submissions: [],
+            total_amount: 10000,
+          },
+        ])
+      );
+      const upload = await new InsuranceClaimsServiceImpl().addDocument(
+        'claim',
+        new File([bytes], 'receipt.pdf', { type: 'application/pdf' }),
+        'receipt'
+      );
+      const backup = await service.exportBackup();
+      StorageServiceImpl.initialize(join(testDir, 'uploaded-restored'));
+      try {
+        await new BackupServiceImpl().importBackup(backup);
+        const document = await new InsuranceClaimsServiceImpl().getDocument('claim', upload.id);
+        expect(document).not.toBeNull();
+        expect(await readFile(document!.path)).toEqual(bytes);
+      } finally {
+        StorageServiceImpl.initialize(testDir);
+      }
+    });
+
     test('exports all entities and months', async () => {
       const backup = await service.exportBackup();
 

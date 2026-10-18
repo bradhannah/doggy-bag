@@ -50,11 +50,17 @@
 
 <Modal
   {open}
-  title="Make a Payment"
+  title="Record extra contribution"
   subtitle={`Add a one-time contribution to "${goal.name}"`}
-  {onClose}
+  onClose={() => {
+    if (!submitting) onClose();
+  }}
 >
   <form on:submit={handleSubmit}>
+    <p class="field-hint">
+      For a scheduled contribution, record its existing entry in Budget. This adds an extra one-time
+      contribution.
+    </p>
     <div class="form-field">
       <label for="amount">Amount</label>
       <div class="input-with-prefix">
@@ -67,7 +73,7 @@
           min="0.01"
           step="0.01"
           required
-          autofocus
+          data-initial-focus
         />
       </div>
     </div>
@@ -101,7 +107,7 @@
         Cancel
       </button>
       <button type="submit" class="btn-primary" disabled={!isValid || submitting}>
-        {submitting ? 'Adding...' : 'Add Payment'}
+        {submitting ? 'Recording...' : 'Record contribution'}
       </button>
     </div>
   </form>
@@ -168,7 +174,7 @@
     display: block;
     margin-top: var(--space-1);
     font-size: 0.75rem;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
   }
 
   .progress-preview {

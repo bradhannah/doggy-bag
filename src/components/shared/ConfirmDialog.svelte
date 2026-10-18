@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+
+  const titleId = dialogTitleId();
 
   export let title: string = 'Confirm';
   export let message: string = 'Are you sure?';
@@ -21,52 +24,28 @@
     dispatch('cancel');
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (!open) return;
-
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      handleCancel();
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      handleConfirm();
-    }
-  }
-
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       handleCancel();
     }
   }
-
-  onMount(() => {
-    document.addEventListener('keydown', handleKeydown);
-  });
-
-  onDestroy(() => {
-    document.removeEventListener('keydown', handleKeydown);
-  });
 </script>
 
 {#if open}
-  <div
-    class="dialog-backdrop"
-    role="presentation"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && handleCancel()}
-  >
+  <div class="dialog-backdrop" role="presentation" on:click={handleBackdropClick}>
     <div
       class="dialog"
+      use:modalFocus={handleCancel}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       tabindex="-1"
     >
-      <h2 id="dialog-title" class="dialog-title">{title}</h2>
+      <h2 id={titleId} class="dialog-title">{title}</h2>
       <p class="dialog-message">{message}</p>
 
       <div class="dialog-actions">
-        <button class="btn btn-cancel" on:click={handleCancel}>
+        <button class="btn btn-cancel" data-initial-focus on:click={handleCancel}>
           {cancelText}
         </button>
         <button
@@ -87,7 +66,7 @@
     position: fixed;
     inset: 0;
     background: var(--overlay-bg);
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(calc(var(--space-1) / 2));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,19 +85,19 @@
 
   .dialog {
     background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
+    border: thin solid var(--border-default);
     border-radius: var(--radius-lg);
     padding: var(--space-6);
     width: 90%;
-    min-width: 320px;
+    min-width: 0;
     max-width: var(--modal-width-sm);
-    box-shadow: 0 16px 48px var(--shadow-heavy);
+    box-shadow: 0 var(--space-4) calc(var(--space-6) * 2) var(--shadow-heavy);
     animation: slideIn 0.2s ease-out;
   }
 
   @keyframes slideIn {
     from {
-      transform: scale(0.95) translateY(-10px);
+      transform: scale(0.95) translateY(calc(var(--space-2) * -1));
       opacity: 0;
     }
     to {
@@ -160,7 +139,7 @@
 
   .btn-cancel {
     background: transparent;
-    border: 1px solid var(--border-default);
+    border: thin solid var(--border-default);
     color: var(--text-secondary);
   }
 
@@ -172,7 +151,7 @@
 
   .btn-confirm.danger {
     background: var(--error);
-    color: white;
+    color: var(--text-inverse);
   }
 
   .btn-confirm.danger:hover {

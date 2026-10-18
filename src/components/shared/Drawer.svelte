@@ -9,6 +9,8 @@
    * @prop onSave - Optional callback to save changes (used with dirty check)
    */
   import UnsavedChangesDialog from './UnsavedChangesDialog.svelte';
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const titleId = dialogTitleId();
 
   export let isOpen = false;
   export let title = '';
@@ -18,13 +20,6 @@
 
   // State for unsaved changes confirmation dialog
   let showUnsavedDialog = false;
-
-  // Handle keyboard escape to close
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape' && isOpen) {
-      attemptClose();
-    }
-  }
 
   // Handle backdrop click
   function handleBackdropClick() {
@@ -70,21 +65,20 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
 {#if isOpen}
   <div class="drawer-backdrop" on:click={handleBackdropClick} role="presentation">
     <div
       class="drawer"
       on:click={handleDrawerClick}
-      on:keydown={handleKeydown}
+      on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
-      aria-labelledby="drawer-title"
-      tabindex="0"
+      aria-labelledby={titleId}
+      tabindex="-1"
+      use:modalFocus={attemptClose}
     >
       <div class="drawer-header">
-        <h2 id="drawer-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button class="close-btn" on:click={attemptClose} aria-label="Close drawer">
           &times;
         </button>
@@ -180,7 +174,7 @@
   }
 
   /* Mobile: full width drawer from bottom */
-  @media (max-width: 768px) {
+  @media (max-width: 48rem) {
     .drawer-backdrop {
       align-items: flex-end;
       justify-content: stretch;
@@ -188,6 +182,7 @@
 
     .drawer {
       width: 100%;
+      max-width: 100%;
       height: 90%;
       border-left: none;
       border-top: 1px solid var(--border-default);

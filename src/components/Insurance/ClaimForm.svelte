@@ -181,12 +181,12 @@
   {#if !hasFamilyMembers}
     <div class="warning-message">
       You need to set up family members first.
-      <a href="/setup">Go to Setup</a>
+      <a href="/setup">Go to Manage</a>
     </div>
   {:else if !hasCategories}
     <div class="warning-message">
       You need to set up insurance categories first.
-      <a href="/setup">Go to Setup</a>
+      <a href="/setup">Go to Manage</a>
     </div>
   {/if}
 

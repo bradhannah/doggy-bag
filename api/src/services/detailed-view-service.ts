@@ -267,6 +267,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       insuranceExpenseSection,
       insuranceReimbursementSection,
       bankBalances: monthlyData.bank_balances,
+      bankBalancesUpdatedAt: monthlyData.bank_balances_updated_at ?? {},
       lastUpdated: monthlyData.updated_at,
     };
   }
@@ -278,7 +279,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     month: string
   ): BillInstanceDetailed[] {
     return instances.map((instance) => {
-      const bill = instance.bill_id ? billsMap.get(instance.bill_id) : null;
+      const bill =
+        instance.source_snapshot ?? (instance.bill_id ? billsMap.get(instance.bill_id) : null);
       const paymentSourceId = instance.payment_source_id || bill?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
 
@@ -302,6 +304,15 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       return {
         id: instance.id,
         bill_id: instance.bill_id,
+        goal_id: instance.goal_id ?? bill?.goal_id,
+        savings_account: instance.savings_account_id
+          ? {
+              id: instance.savings_account_id,
+              name:
+                paymentSourcesMap.get(instance.savings_account_id)?.name ??
+                'Archived savings account',
+            }
+          : undefined,
         name: instance.name || bill?.name || 'Unknown Bill',
         billing_period: instance.billing_period || bill?.billing_period || 'monthly',
         expected_amount: instance.expected_amount,
@@ -344,7 +355,9 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     month: string
   ): IncomeInstanceDetailed[] {
     return instances.map((instance) => {
-      const income = instance.income_id ? incomesMap.get(instance.income_id) : null;
+      const income =
+        instance.source_snapshot ??
+        (instance.income_id ? incomesMap.get(instance.income_id) : null);
       const paymentSourceId = instance.payment_source_id || income?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
 
@@ -367,6 +380,14 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       return {
         id: instance.id,
         income_id: instance.income_id,
+        savings_account: instance.savings_account_id
+          ? {
+              id: instance.savings_account_id,
+              name:
+                paymentSourcesMap.get(instance.savings_account_id)?.name ??
+                'Archived savings account',
+            }
+          : undefined,
         name: instance.name || income?.name || 'Unknown Income',
         billing_period: instance.billing_period || income?.billing_period || 'monthly',
         expected_amount: instance.expected_amount,

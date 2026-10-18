@@ -25,14 +25,14 @@
       <div class="summary-label">Active Plans</div>
       <div class="summary-value">{$activePlans.length}</div>
       <div class="summary-link">
-        <a href="/setup">Manage in Setup</a>
+        <a href="/setup">Open Manage</a>
       </div>
     </div>
     <div class="summary-card">
       <div class="summary-label">Categories</div>
       <div class="summary-value">{$activeCategories.length}</div>
       <div class="summary-link">
-        <a href="/setup">Manage in Setup</a>
+        <a href="/setup">Open Manage</a>
       </div>
     </div>
   </div>

@@ -169,17 +169,18 @@ export class CalendarServiceImpl implements CalendarService {
 
     // Get the bill name
     let title: string;
-    if (instance.bill_id && billsMap.has(instance.bill_id)) {
-      title = billsMap.get(instance.bill_id)!.name;
-    } else if (instance.name) {
+    if (instance.name) {
       title = instance.name;
+    } else if (instance.bill_id && billsMap.has(instance.bill_id)) {
+      title = billsMap.get(instance.bill_id)!.name;
     } else {
       title = 'Unknown Bill';
     }
 
     // Check if this is a savings goal contribution
     // Either the instance has goal_id OR the underlying bill has goal_id
-    const bill = instance.bill_id ? billsMap.get(instance.bill_id) : null;
+    const bill =
+      instance.source_snapshot ?? (instance.bill_id ? billsMap.get(instance.bill_id) : null);
     const isGoalContribution = !!(instance.goal_id || bill?.goal_id);
     const effectiveGoalId = instance.goal_id || bill?.goal_id;
     let goalTitle = title;
@@ -223,10 +224,10 @@ export class CalendarServiceImpl implements CalendarService {
 
     // Get the income name
     let title: string;
-    if (instance.income_id && incomesMap.has(instance.income_id)) {
-      title = incomesMap.get(instance.income_id)!.name;
-    } else if (instance.name) {
+    if (instance.name) {
       title = instance.name;
+    } else if (instance.income_id && incomesMap.has(instance.income_id)) {
+      title = incomesMap.get(instance.income_id)!.name;
     } else {
       title = 'Unknown Income';
     }

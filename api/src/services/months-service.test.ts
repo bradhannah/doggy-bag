@@ -437,4 +437,87 @@ describe('MonthsService - syncMetadata', () => {
       expect(rentInstance?.metadata?.bank_transaction_name).toBe('RENT PAYMENT LANDLORD');
     });
   });
+
+  describe('pushSavingsBalancesToNextMonth', () => {
+    test('keeps zero final balances distinct from cleared balances', async () => {
+      await service.updateSavingsBalances(testMonth, undefined, { savings: 0 });
+      expect((await service.getMonthlyData(testMonth))?.savings_balances_end).toEqual({
+        savings: 0,
+      });
+      await service.updateSavingsBalances(testMonth, undefined, { savings: null });
+      expect((await service.getMonthlyData(testMonth))?.savings_balances_end).toEqual({});
+    });
+
+    const destinationMonth = '2025-04';
+
+    async function writeDestination(start: Record<string, number> = {}) {
+      await writeFile(
+        join(testDir, 'months', `${destinationMonth}.json`),
+        JSON.stringify(
+          {
+            ...sampleMonthlyData,
+            month: destinationMonth,
+            savings_balances_start: start,
+            savings_contributions: { savings: 5000 },
+            savings_balances_end: { savings: 125000 },
+          },
+          null,
+          2
+        )
+      );
+    }
+
+    test('pushes final balances without confirmation when destination starts are zero', async () => {
+      await writeDestination({ savings: 0 });
+
+      const result = await service.pushSavingsBalancesToNextMonth(testMonth, {
+        savings: 120000,
+        investment: 450000,
+      });
+
+      expect(result.requiresConfirmation).toBe(false);
+      expect(result.destinationMonth).toBe(destinationMonth);
+      expect(result.monthlyData?.savings_balances_start).toEqual({
+        savings: 120000,
+        investment: 450000,
+      });
+      expect(result.monthlyData?.savings_contributions).toEqual({ savings: 5000 });
+      expect(result.monthlyData?.savings_balances_end).toEqual({ savings: 125000 });
+    });
+
+    test('requires confirmation before overwriting a non-zero destination start', async () => {
+      await writeDestination({ savings: 99999 });
+
+      const preview = await service.pushSavingsBalancesToNextMonth(testMonth, { savings: 120000 });
+      expect(preview.requiresConfirmation).toBe(true);
+      expect((await service.getMonthlyData(destinationMonth))?.savings_balances_start).toEqual({
+        savings: 99999,
+      });
+
+      const result = await service.pushSavingsBalancesToNextMonth(
+        testMonth,
+        { savings: 120000 },
+        true
+      );
+      expect(result.requiresConfirmation).toBe(false);
+      expect(result.monthlyData?.savings_balances_start).toEqual({ savings: 120000 });
+    });
+
+    test('handles December to January and rejects a missing destination month', async () => {
+      await expect(
+        service.pushSavingsBalancesToNextMonth('2025-12', { savings: 120000 })
+      ).rejects.toThrow('Monthly data for 2026-01 not found');
+    });
+
+    test('does not overwrite a locked destination month', async () => {
+      await writeDestination({ savings: 99999 });
+      await service.toggleReadOnly(destinationMonth);
+      await expect(
+        service.pushSavingsBalancesToNextMonth(testMonth, { savings: 0 }, true)
+      ).rejects.toThrow('read-only');
+      expect((await service.getMonthlyData(destinationMonth))?.savings_balances_start).toEqual({
+        savings: 99999,
+      });
+    });
+  });
 });

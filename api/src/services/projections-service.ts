@@ -4,7 +4,7 @@ import { DetailedViewServiceImpl } from './detailed-view-service';
 import { MonthsServiceImpl } from './months-service';
 import type { ProjectionResponse, BillInstanceDetailed, IncomeInstanceDetailed } from '../types';
 import { calculateUnifiedLeftover } from '../utils/leftover';
-import { getOverdueBills, sumOverdueBills } from '../utils/overdue-bills';
+import { getOverdueBills } from '../utils/overdue-bills';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { ValidationError } from '../utils/errors';
 
@@ -98,9 +98,11 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
     // Process Bills
     // Flatten all bill sections into a single list and cast to correct type
-    const allBills = detailedData.billSections.flatMap((s) => s.items as BillInstanceDetailed[]);
+    const allBills = [
+      ...detailedData.billSections.flatMap((s) => s.items as BillInstanceDetailed[]),
+      ...((detailedData.insuranceExpenseSection?.items ?? []) as BillInstanceDetailed[]),
+    ];
     const overdueBills = getOverdueBills(allBills, month, todayStr);
-    const overdueTotal = sumOverdueBills(overdueBills);
 
     for (const bill of allBills) {
       const occurrences = bill.occurrences || [];
@@ -144,9 +146,10 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
     // Process Incomes
     // Flatten all income sections into a single list and cast to correct type
-    const allIncomes = detailedData.incomeSections.flatMap(
-      (s) => s.items as IncomeInstanceDetailed[]
-    );
+    const allIncomes = [
+      ...detailedData.incomeSections.flatMap((s) => s.items as IncomeInstanceDetailed[]),
+      ...((detailedData.insuranceReimbursementSection?.items ?? []) as IncomeInstanceDetailed[]),
+    ];
 
     for (const income of allIncomes) {
       const occurrences = income.occurrences || [];
@@ -181,8 +184,9 @@ export class ProjectionsServiceImpl implements ProjectionsService {
     }
 
     // 5. Generate Daily Projection
-    // Start with unified leftover baseline - overdue bills
-    let currentBalance = startingBalance - overdueTotal;
+    // Current account balances already include recorded activity. Overdue open
+    // events are scheduled on the balance start day and deducted exactly once.
+    let currentBalance = startingBalance;
 
     const days: ProjectionResponse['days'] = [];
 
@@ -203,12 +207,12 @@ export class ProjectionsServiceImpl implements ProjectionsService {
       for (const event of events) {
         if (event.type === 'income') {
           dailyIncome += event.amount;
-          if (isBalanceDay) {
+          if (isBalanceDay && event.kind === 'scheduled') {
             currentBalance += event.amount;
           }
         } else {
           dailyExpense += event.amount;
-          if (isBalanceDay) {
+          if (isBalanceDay && event.kind === 'scheduled') {
             currentBalance -= event.amount;
           }
         }

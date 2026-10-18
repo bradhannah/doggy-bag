@@ -226,13 +226,14 @@ export async function deleteSavingsGoal(id: string): Promise<void> {
  * Pause a saving goal
  * @throws Error if goal is not in 'saving' status
  */
-export async function pauseGoal(id: string): Promise<SavingsGoal> {
+export async function pauseGoal(id: string, keepCurrentMonth = false): Promise<SavingsGoal> {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
     const response = await fetch(`${apiClient.getBaseUrl()}/api/savings-goals/${id}/pause`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keep_current_month: keepCurrentMonth }),
     });
 
     if (!response.ok) {
@@ -279,19 +280,23 @@ export async function resumeGoal(id: string): Promise<SavingsGoal> {
 }
 
 /**
- * Complete a goal (Buy That Thing!)
+ * Complete a goal and stop its recurring contributions
  * @param id - Goal ID
  * @param completedAt - Optional completion date (defaults to now)
  * @throws Error if goal is already closed
  */
-export async function completeGoal(id: string, completedAt?: string): Promise<SavingsGoal> {
+export async function completeGoal(
+  id: string,
+  completedAt?: string,
+  keepCurrentMonth = false
+): Promise<SavingsGoal> {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
     const response = await fetch(`${apiClient.getBaseUrl()}/api/savings-goals/${id}/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: completedAt ? JSON.stringify({ completed_at: completedAt }) : undefined,
+      body: JSON.stringify({ completed_at: completedAt, keep_current_month: keepCurrentMonth }),
     });
 
     if (!response.ok) {
@@ -313,13 +318,14 @@ export async function completeGoal(id: string, completedAt?: string): Promise<Sa
  * Abandon a goal
  * @throws Error if goal is already closed
  */
-export async function abandonGoal(id: string): Promise<SavingsGoal> {
+export async function abandonGoal(id: string, keepCurrentMonth = false): Promise<SavingsGoal> {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
     const response = await fetch(`${apiClient.getBaseUrl()}/api/savings-goals/${id}/abandon`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keep_current_month: keepCurrentMonth }),
     });
 
     if (!response.ok) {

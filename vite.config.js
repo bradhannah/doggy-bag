@@ -14,6 +14,8 @@ export default defineConfig(async () => ({
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
+    // Shared budget contracts/calculations are also imported by the Bun API.
+    fs: { allow: ['src', 'shared', '.svelte-kit', 'node_modules'] },
     port: 1420,
     strictPort: true,
     host: host || false,

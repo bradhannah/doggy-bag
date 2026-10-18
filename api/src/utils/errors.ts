@@ -41,6 +41,14 @@ export class ReadOnlyError extends Error {
   }
 }
 
+export function getErrorStatus(error: unknown): number {
+  if (error instanceof ValidationError) return 400;
+  if (error instanceof ReadOnlyError) return 403;
+  if (error instanceof NotFoundError) return 404;
+  if (error instanceof ConflictError) return 409;
+  return 500;
+}
+
 export interface ErrorDetails {
   message: string;
   type: string;

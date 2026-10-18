@@ -54,9 +54,9 @@ export default defineConfig({
 
   // Run your local dev server before starting the tests
   webServer: {
-    command: 'make dev-browser',
+    command: 'bun run api/src/testing/e2e-server.ts',
     url: 'http://localhost:1420',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120 * 1000, // 2 minutes to start
     stdout: 'pipe',
     stderr: 'pipe',

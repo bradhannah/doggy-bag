@@ -299,7 +299,7 @@ export function migrateOccurrenceDatesBills(
       return inst;
     }
 
-    const bill = billMap.get(inst.bill_id);
+    const bill = inst.source_snapshot ?? billMap.get(inst.bill_id);
     if (!bill || !bill.start_date) return inst;
 
     const updated = recalcOccurrenceDates(
@@ -344,7 +344,7 @@ export function migrateOccurrenceDatesIncomes(
       return inst;
     }
 
-    const income = incomeMap.get(inst.income_id);
+    const income = inst.source_snapshot ?? incomeMap.get(inst.income_id);
     if (!income || !income.start_date) return inst;
 
     const updated = recalcOccurrenceDates(
@@ -400,7 +400,13 @@ function recalcOccurrenceDates(
   // Check if any date actually changed
   let anyChanged = false;
   const updatedScheduled = scheduled.map((occ, i) => {
-    if (!occ.is_closed && i < correctDates.length && occ.expected_date !== correctDates[i]) {
+    if (
+      !occ.is_closed &&
+      !occ.recurring_origin &&
+      !occ.recurring_review?.expected_date &&
+      i < correctDates.length &&
+      occ.expected_date !== correctDates[i]
+    ) {
       anyChanged = true;
       return {
         ...occ,

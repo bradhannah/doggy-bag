@@ -3,6 +3,46 @@
 
 import type { Bill, Income, Occurrence, BillingPeriod } from '../types';
 import { parseLocalDate } from './due-date';
+import { ValidationError } from './errors';
+
+export interface OccurrenceEdits {
+  expected_amount?: number;
+  expected_date?: string;
+}
+
+// Apply edits before closing/splitting, so the persisted payment matches its preview.
+export function applyOccurrenceEdits(
+  occurrence: Occurrence,
+  edits: OccurrenceEdits,
+  month: string
+): Occurrence {
+  if (
+    edits.expected_amount !== undefined &&
+    (!Number.isSafeInteger(edits.expected_amount) || edits.expected_amount < 0)
+  ) {
+    throw new ValidationError('Amount must be a non-negative integer in cents');
+  }
+  if (edits.expected_date !== undefined) {
+    const date = edits.expected_date;
+    const [year, monthNumber, day] = typeof date === 'string' ? date.split('-').map(Number) : [];
+    if (
+      typeof date !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      date.slice(0, 7) !== month ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      day < 1 ||
+      day > new Date(year, monthNumber, 0).getDate()
+    ) {
+      throw new ValidationError('Due date must be a valid date within the budget month');
+    }
+  }
+  return {
+    ...occurrence,
+    expected_amount: edits.expected_amount ?? occurrence.expected_amount,
+    expected_date: edits.expected_date ?? occurrence.expected_date,
+  };
+}
 
 /**
  * Generate occurrences for a bill within a specific month
@@ -11,13 +51,21 @@ export function generateBillOccurrences(
   bill: Bill,
   month: string // "2026-01"
 ): Occurrence[] {
-  return generateOccurrences(
+  const occurrences = generateOccurrences(
     bill.billing_period,
     bill.amount,
     bill.start_date,
     bill.day_of_month,
-    month
+    month,
+    bill.recurrence_week,
+    bill.recurrence_day
   );
+  const effectiveFrom =
+    bill.effective_from ??
+    (bill.goal_id || bill.billing_period === 'monthly' ? bill.start_date : undefined);
+  return effectiveFrom
+    ? occurrences.filter((occurrence) => occurrence.expected_date >= effectiveFrom)
+    : occurrences;
 }
 
 /**
@@ -27,13 +75,20 @@ export function generateIncomeOccurrences(
   income: Income,
   month: string // "2026-01"
 ): Occurrence[] {
-  return generateOccurrences(
+  const occurrences = generateOccurrences(
     income.billing_period,
     income.amount,
     income.start_date,
     income.day_of_month,
-    month
+    month,
+    income.recurrence_week,
+    income.recurrence_day
   );
+  const effectiveFrom =
+    income.effective_from ?? (income.billing_period === 'monthly' ? income.start_date : undefined);
+  return effectiveFrom
+    ? occurrences.filter((occurrence) => occurrence.expected_date >= effectiveFrom)
+    : occurrences;
 }
 
 /**
@@ -45,10 +100,19 @@ export function generateOccurrences(
   amount: number,
   startDate: string | undefined,
   dayOfMonth: number | undefined,
-  month: string
+  month: string,
+  recurrenceWeek?: number,
+  recurrenceDay?: number
 ): Occurrence[] {
   const now = new Date().toISOString();
-  const dates = getOccurrenceDatesInMonth(billingPeriod, startDate, dayOfMonth, month);
+  const dates = getOccurrenceDatesInMonth(
+    billingPeriod,
+    startDate,
+    dayOfMonth,
+    month,
+    recurrenceWeek,
+    recurrenceDay
+  );
 
   return dates.map((date, index) => ({
     id: crypto.randomUUID(),
@@ -69,7 +133,9 @@ export function getOccurrenceDatesInMonth(
   billingPeriod: BillingPeriod,
   startDate: string | undefined,
   dayOfMonth: number | undefined,
-  month: string
+  month: string,
+  recurrenceWeek?: number,
+  recurrenceDay?: number
 ): string[] {
   const [year, monthNum] = month.split('-').map(Number);
   const endOfMonth = new Date(year, monthNum, 0); // Last day of month
@@ -77,6 +143,25 @@ export function getOccurrenceDatesInMonth(
 
   switch (billingPeriod) {
     case 'monthly':
+      if (recurrenceWeek !== undefined && recurrenceDay !== undefined) {
+        if (
+          !Number.isInteger(recurrenceWeek) ||
+          recurrenceWeek < 1 ||
+          recurrenceWeek > 5 ||
+          !Number.isInteger(recurrenceDay) ||
+          recurrenceDay < 0 ||
+          recurrenceDay > 6
+        ) {
+          throw new ValidationError('Invalid monthly weekday recurrence');
+        }
+        const day =
+          recurrenceWeek === 5
+            ? lastDayOfMonth - ((endOfMonth.getDay() - recurrenceDay + 7) % 7)
+            : 1 +
+              ((recurrenceDay - new Date(year, monthNum - 1, 1).getDay() + 7) % 7) +
+              (recurrenceWeek - 1) * 7;
+        return [`${month}-${String(day).padStart(2, '0')}`];
+      }
       return getMonthlyDates(dayOfMonth, month, lastDayOfMonth);
 
     case 'bi_weekly':

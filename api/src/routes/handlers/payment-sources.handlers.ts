@@ -63,7 +63,7 @@ export function createPaymentSourcesHandlerPOST() {
         try {
           const monthExists = await monthsService.monthExists(currentMonth);
           if (monthExists) {
-            await monthsService.syncWithDefaults(currentMonth);
+            await monthsService.syncManualPaymentSource(currentMonth, newSource.id);
             console.log(
               `[PaymentSourcesHandler] Synced new track_payments_manually card ${newSource.name} to ${currentMonth}`
             );
@@ -138,7 +138,7 @@ export function createPaymentSourcesHandlerPUT() {
         try {
           const monthExists = await monthsService.monthExists(currentMonth);
           if (monthExists) {
-            await monthsService.syncWithDefaults(currentMonth);
+            await monthsService.syncManualPaymentSource(currentMonth, updatedSource.id);
             console.log(
               `[PaymentSourcesHandler] Synced updated track_payments_manually card ${updatedSource.name} to ${currentMonth}`
             );

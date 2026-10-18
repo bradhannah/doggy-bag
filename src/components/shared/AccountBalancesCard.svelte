@@ -124,7 +124,7 @@
   {#if loading}
     <div class="loading-state">Loading...</div>
   {:else if paymentSources.length === 0}
-    <p class="empty-message">No accounts set up. <a href="/setup">Add accounts in Setup</a></p>
+    <p class="empty-message">No accounts set up. <a href="/setup">Add accounts in Manage</a></p>
   {:else}
     <!-- Assets Section - Bank Accounts & Cash -->
     {#if assetAccounts.length > 0}

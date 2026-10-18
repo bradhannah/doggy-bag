@@ -44,6 +44,7 @@
 
   export let paymentSources: PaymentSource[] = [];
   export let bankBalances: Record<string, number> = {};
+  export let bankBalancesUpdatedAt: Record<string, string> = {};
   export let tallies: Tallies;
   export let leftoverBreakdown: LeftoverBreakdown;
   export let payoffSummaries: PayoffSummary[] = [];
@@ -95,13 +96,14 @@
 
   // Start editing a balance (works for both asset and debt accounts)
   async function startEditingBalance(source: PaymentSource) {
-    if (readOnly || !month) return;
+    if (readOnly || !month || savingBalance) return;
     editingBalanceId = source.id;
     // For display, get the absolute value in dollars
     const displayBalance = getDisplayBalance(source) ?? 0;
-    editingBalanceValue = (Math.abs(displayBalance) / 100).toFixed(2);
-    // Store whether we're editing a debt account
     editingIsDebtAccount = isDebtAccount(source.type);
+    editingBalanceValue = (
+      (editingIsDebtAccount ? Math.abs(displayBalance) : displayBalance) / 100
+    ).toFixed(2);
 
     // Wait for DOM to update, then focus and select for immediate typing
     await tick();
@@ -118,10 +120,12 @@
 
   // Save edited balance
   async function saveBalance() {
-    if (!editingBalanceId || !month) return;
+    if (!editingBalanceId || !month || savingBalance) return;
+    const savedId = editingBalanceId;
+    const savedMonth = month;
 
     const newAmountDollars = parseFloat(editingBalanceValue);
-    if (isNaN(newAmountDollars) || newAmountDollars < 0) {
+    if (!Number.isFinite(newAmountDollars) || (editingIsDebtAccount && newAmountDollars < 0)) {
       showError('Please enter a valid amount');
       return;
     }
@@ -137,9 +141,9 @@
         : Math.round(newAmountDollars * 100);
 
       // Build updated bank balances object
-      const updatedBalances = { ...bankBalances, [editingBalanceId]: newBalanceCents };
+      const updatedBalances = { [savedId]: newBalanceCents };
 
-      const response = await fetch(apiUrl(`/api/months/${month}/bank-balances`), {
+      const response = await fetch(apiUrl(`/api/months/${savedMonth}/bank-balances`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedBalances),
@@ -151,8 +155,10 @@
       }
 
       success('Balance updated');
-      cancelEditingBalance();
-      dispatch('refresh');
+      if (month === savedMonth) {
+        if (editingBalanceId === savedId) cancelEditingBalance();
+        dispatch('refresh');
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       showError(message);
@@ -168,6 +174,13 @@
     } else if (event.key === 'Escape') {
       cancelEditingBalance();
     }
+  }
+
+  function balanceUpdated(id: string): string {
+    const stamp = bankBalancesUpdatedAt[id];
+    return stamp
+      ? `Updated ${new Date(stamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
+      : 'Update time unavailable';
   }
 
   // Calculate totals
@@ -195,20 +208,29 @@
     <!-- Asset Accounts -->
     <div class="box-section">
       <h3 class="box-title asset-title">Bank Accounts & Cash</h3>
+      <p class="snapshot-note">
+        Enter current balances including recorded transactions. Ordinary payment records are
+        separate from these snapshots.
+      </p>
       <div class="balance-list">
         {#each assetAccounts as source (source.id)}
           {@const isEditing = editingBalanceId === source.id}
           {@const canEdit = !readOnly && month}
           {@const displayBalance = getDisplayBalance(source) ?? 0}
           <div class="balance-row">
-            <span class="balance-name">{source.name}</span>
+            <div class="balance-info">
+              <span class="balance-name">{source.name}</span>
+              {#if getBalance(source) !== null}<small class="balance-updated"
+                  >{balanceUpdated(source.id)}</small
+                >{/if}
+            </div>
             {#if isEditing}
               <div class="balance-edit">
                 <span class="currency-prefix">$</span>
                 <input
                   type="number"
                   step="0.01"
-                  min="0"
+                  aria-label={`${source.name} balance`}
                   class="balance-input"
                   bind:this={balanceInputEl}
                   bind:value={editingBalanceValue}
@@ -268,7 +290,11 @@
                 title={canEdit ? 'Click to edit balance' : ''}
                 disabled={!canEdit}
               >
-                {formatCurrency(displayBalance)}
+                {getBalance(source) === null
+                  ? canEdit
+                    ? 'Enter balance'
+                    : 'Not entered'
+                  : formatCurrency(displayBalance)}
               </button>
             {/if}
           </div>
@@ -306,6 +332,9 @@
                     <span class="payoff-indicator" title="Pay off monthly">payoff</span>
                   {/if}
                 </span>
+                {#if getBalance(source) !== null}<small class="balance-updated"
+                    >{balanceUpdated(source.id)}</small
+                  >{/if}
                 {#if payoff && payoff.paid > 0}
                   <span class="payoff-progress">
                     Paid: {formatCurrency(payoff.paid)}
@@ -319,6 +348,7 @@
                     type="number"
                     step="0.01"
                     min="0"
+                    aria-label={`${source.name} balance`}
                     class="balance-input"
                     bind:this={balanceInputEl}
                     bind:value={editingBalanceValue}
@@ -378,7 +408,11 @@
                   title={canEdit ? 'Click to edit balance' : ''}
                   disabled={!canEdit}
                 >
-                  {formatCurrency(displayBalance)}
+                  {getBalance(source) === null
+                    ? canEdit
+                      ? 'Enter balance'
+                      : 'Not entered'
+                    : formatCurrency(displayBalance)}
                 </button>
               {/if}
             </div>
@@ -505,6 +539,22 @@
 </aside>
 
 <style>
+  .snapshot-note,
+  .balance-updated {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .snapshot-note {
+    margin: 0 0 var(--space-3);
+  }
+  .balance-updated {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  .balance-info {
+    min-width: 0;
+  }
   .summary-sidebar {
     width: var(--summary-sidebar-width);
     min-width: var(--summary-sidebar-width);
@@ -522,7 +572,7 @@
     background: var(--bg-elevated);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
-    padding: 14px;
+    padding: var(--space-4);
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -975,5 +1025,17 @@
     background: var(--success);
     border-color: var(--success);
     color: var(--text-inverse);
+  }
+
+  @media (max-width: 68.75rem) {
+    .summary-sidebar {
+      width: 100%;
+      position: static;
+      max-height: none;
+      overflow: visible;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--summary-sidebar-width)), 1fr));
+      align-items: start;
+    }
   }
 </style>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const titleId = dialogTitleId();
   /**
    * ItemDetailsDrawer - READ-ONLY drawer showing bill/income details
    *
@@ -29,9 +31,6 @@
   export let type: 'bill' | 'income' = 'bill';
   export let item: BillInstanceDetailed | IncomeInstanceDetailed | null = null;
   export let categoryName: string = '';
-  export let month = '';
-  // Note: occurrenceId prop kept for backwards compatibility but no longer used for filtering
-  export let occurrenceId: string | null = null;
 
   const dispatch = createEventDispatcher();
 
@@ -126,12 +125,6 @@
     dispatch('close');
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      handleClose();
-    }
-  }
-
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       handleClose();
@@ -139,24 +132,18 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
 {#if open && item}
-  <div
-    class="drawer-backdrop"
-    role="presentation"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && handleClose()}
-  >
+  <div class="drawer-backdrop" role="presentation" on:click={handleBackdropClick}>
     <div
       class="drawer"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="details-title"
+      aria-labelledby={titleId}
       tabindex="-1"
+      use:modalFocus={handleClose}
     >
       <header class="drawer-header">
-        <h3 id="details-title">{item.name}</h3>
+        <h3 id={titleId}>{item.name}</h3>
         <button class="close-btn" on:click={handleClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path

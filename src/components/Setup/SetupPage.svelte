@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { apiClient } from '../../lib/api/client';
+  import { currentMonth, currentMonthDisplay } from '../../stores/ui';
 
   // Stores
   import {
@@ -144,6 +145,7 @@
   export let initialEditId: string | null = null;
 
   let activeTab: TabId = 'months';
+  let recurringItemSaved = false;
 
   // ============ Months Tab State ============
   let months: MonthSummary[] = [];
@@ -648,6 +650,7 @@
   }
 
   function handleSave() {
+    if (activeTab === 'bills' || activeTab === 'incomes') recurringItemSaved = true;
     closeDrawer();
   }
 
@@ -825,6 +828,18 @@
 
     <!-- Main Content Area -->
     <main class="setup-content">
+      {#if recurringItemSaved}
+        <p class="budget-review-notice">
+          Recurring item saved.
+          <a href="/month/{$currentMonth}?review=updates"
+            >Review updates to {$currentMonthDisplay}’s budget</a
+          >.
+          <button
+            on:click={() => (recurringItemSaved = false)}
+            aria-label="Dismiss budget update reminder">Dismiss</button
+          >
+        </p>
+      {/if}
       {#if activeTab === 'months'}
         <!-- Months Tab Content -->
         <div class="content-header">
@@ -1234,6 +1249,22 @@
 </div>
 
 <style>
+  .budget-review-notice {
+    padding: var(--space-3);
+    background: var(--accent-muted);
+    border: thin solid var(--accent-border);
+    border-radius: var(--radius-md);
+  }
+  .budget-review-notice a {
+    color: var(--accent);
+  }
+  .budget-review-notice button {
+    margin-left: var(--space-3);
+    border: none;
+    color: var(--text-secondary);
+    background: transparent;
+    cursor: pointer;
+  }
   .setup-page {
     min-height: 100vh;
     background: var(--bg-surface);

@@ -13,9 +13,9 @@
   $: {
     const today = new Date();
     const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
+    const todayStr = `${year}-${todayMonth}-${day}`;
     const monthStart = `${month}-01`;
     const monthParts = month.split('-');
     const monthDate = new Date(parseInt(monthParts[0]), parseInt(monthParts[1]) - 1, 1);
@@ -74,17 +74,25 @@
       type="text"
       class="title-input"
       placeholder="What needs to be done?"
+      aria-label="Todo title"
       bind:value={title}
       on:keydown={handleKeydown}
       autofocus
     />
-    <input type="date" class="date-input" bind:value={dueDate} on:keydown={handleKeydown} />
+    <input
+      type="date"
+      class="date-input"
+      aria-label="Todo due date"
+      bind:value={dueDate}
+      on:keydown={handleKeydown}
+    />
   </div>
 
   <div class="form-row notes-row">
     <textarea
       class="notes-input"
       placeholder="Notes (optional)"
+      aria-label="Todo notes"
       bind:value={notes}
       on:keydown={handleKeydown}
       rows="2"

@@ -8,7 +8,7 @@
    */
   import { createBill, updateBill } from '../../stores/bills';
   import { paymentSourcesStore } from '../../stores/payment-sources';
-  import { billCategories, loadCategories } from '../../stores/categories';
+  import { billCategories, categories, loadCategories } from '../../stores/categories';
   import { savingsGoals } from '../../stores/savings-goals';
   import { success, error as showError } from '../../stores/toast';
   import type { Bill, BillData, EntityMetadata } from '../../stores/bills';
@@ -18,6 +18,11 @@
   export let editingItem: Bill | null = null;
   export let onSave: () => void = () => {};
   export let onCancel: () => void = () => {};
+  $: categoryOptions = $categories.filter(
+    (category) =>
+      $billCategories.some((billCategory) => billCategory.id === category.id) ||
+      category.id === editingItem?.category_id
+  );
 
   // Find the linked savings goal if this bill has a goal_id
   $: linkedGoal = editingItem?.goal_id
@@ -459,7 +464,7 @@
       disabled={saving || !hasPaymentSources}
     >
       <option value="">-- Select Category --</option>
-      {#each $billCategories as cat (cat.id)}
+      {#each categoryOptions as cat (cat.id)}
         <option value={cat.id}>{cat.name}</option>
       {/each}
     </select>

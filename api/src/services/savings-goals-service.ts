@@ -3,6 +3,8 @@ import { StorageServiceImpl } from './storage';
 import type { StorageService } from './storage';
 import type { SavingsGoal, SavingsGoalStatus, GoalTemperature, ValidationResult } from '../types';
 import { parseLocalDate } from '../utils/due-date';
+import { runWithDataAccess } from './data-access';
+import { updateGoalContributions, type GoalContributionScope } from './goal-contributions-service';
 
 export interface SavingsGoalsService {
   getAll(): Promise<SavingsGoal[]>;
@@ -13,16 +15,21 @@ export interface SavingsGoalsService {
   ): Promise<SavingsGoal>;
   update(
     id: string,
-    updates: Partial<Omit<SavingsGoal, 'id' | 'created_at' | 'updated_at'>>
+    updates: Partial<Omit<SavingsGoal, 'id' | 'created_at' | 'updated_at'>>,
+    scope?: GoalContributionScope
   ): Promise<SavingsGoal | null>;
   delete(id: string): Promise<void>;
   validate(data: Partial<SavingsGoal>): ValidationResult;
 
   // Status transition methods
-  pause(id: string): Promise<SavingsGoal | null>;
+  pause(id: string, scope?: GoalContributionScope): Promise<SavingsGoal | null>;
   resume(id: string): Promise<SavingsGoal | null>;
-  complete(id: string, completedAt?: string): Promise<SavingsGoal | null>;
-  abandon(id: string): Promise<SavingsGoal | null>;
+  complete(
+    id: string,
+    completedAt?: string,
+    scope?: GoalContributionScope
+  ): Promise<SavingsGoal | null>;
+  abandon(id: string, scope?: GoalContributionScope): Promise<SavingsGoal | null>;
   archive(id: string): Promise<SavingsGoal | null>;
   unarchive(id: string, restoreToStatus: 'bought' | 'abandoned'): Promise<SavingsGoal | null>;
 
@@ -90,62 +97,84 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
 
   public async update(
     id: string,
-    updates: Partial<Omit<SavingsGoal, 'id' | 'created_at' | 'updated_at'>>
+    updates: Partial<Omit<SavingsGoal, 'id' | 'created_at' | 'updated_at'>>,
+    scope: GoalContributionScope = {}
   ): Promise<SavingsGoal | null> {
-    try {
-      const goals = await this.getAll();
-      const index = goals.findIndex((g) => g.id === id);
+    return runWithDataAccess(async () => {
+      try {
+        const goals = await this.getAll();
+        const index = goals.findIndex((g) => g.id === id);
 
-      if (index === -1) {
-        console.warn(`[SavingsGoalsService] Goal ${id} not found`);
-        return null;
+        if (index === -1) {
+          console.warn(`[SavingsGoalsService] Goal ${id} not found`);
+          return null;
+        }
+
+        // Handle null values - convert to undefined for optional fields
+        // This allows clients to explicitly clear fields by sending null
+        // We need to set undefined explicitly (not just delete) to override existing values
+        const processedUpdates: Record<string, unknown> = { ...updates };
+        if (updates.target_amount === null) {
+          processedUpdates.target_amount = undefined;
+        }
+        if (updates.target_date === null) {
+          processedUpdates.target_date = undefined;
+        }
+
+        const updatedGoal = {
+          ...goals[index],
+          ...processedUpdates,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Remove undefined values from the final object to keep it clean
+        const cleanedGoal = Object.fromEntries(
+          Object.entries(updatedGoal).filter(([, v]) => v !== undefined)
+        ) as typeof updatedGoal;
+
+        const validation = this.validate(cleanedGoal);
+        if (!validation.isValid) {
+          throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+        }
+
+        const previous = goals[index];
+        if (updates.status && updates.status !== previous.status) {
+          const allowed: Record<SavingsGoalStatus, SavingsGoalStatus[]> = {
+            saving: ['paused', 'bought', 'abandoned'],
+            paused: ['saving', 'bought', 'abandoned'],
+            bought: ['archived'],
+            abandoned: ['archived'],
+            archived: ['bought', 'abandoned'],
+          };
+          if (!allowed[previous.status]?.includes(updates.status))
+            throw new Error(`Cannot change goal from '${previous.status}' to '${updates.status}'`);
+          if (previous.status === 'saving' || previous.status === 'paused') {
+            await updateGoalContributions(previous, updates.status, scope);
+          }
+        }
+        goals[index] = cleanedGoal;
+        await this.storage.writeJSON(this.STORAGE_PATH, goals);
+        return cleanedGoal;
+      } catch (error) {
+        console.error('[SavingsGoalsService] Failed to update savings goal:', error);
+        throw error;
       }
-
-      // Handle null values - convert to undefined for optional fields
-      // This allows clients to explicitly clear fields by sending null
-      // We need to set undefined explicitly (not just delete) to override existing values
-      const processedUpdates: Record<string, unknown> = { ...updates };
-      if (updates.target_amount === null) {
-        processedUpdates.target_amount = undefined;
-      }
-      if (updates.target_date === null) {
-        processedUpdates.target_date = undefined;
-      }
-
-      const updatedGoal = {
-        ...goals[index],
-        ...processedUpdates,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Remove undefined values from the final object to keep it clean
-      const cleanedGoal = Object.fromEntries(
-        Object.entries(updatedGoal).filter(([, v]) => v !== undefined)
-      ) as typeof updatedGoal;
-
-      const validation = this.validate(cleanedGoal);
-      if (!validation.isValid) {
-        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-      }
-
-      goals[index] = cleanedGoal;
-      await this.storage.writeJSON(this.STORAGE_PATH, goals);
-      return cleanedGoal;
-    } catch (error) {
-      console.error('[SavingsGoalsService] Failed to update savings goal:', error);
-      throw error;
-    }
+    });
   }
 
   public async delete(id: string): Promise<void> {
-    try {
-      const goals = await this.getAll();
-      const filtered = goals.filter((g) => g.id !== id);
-      await this.storage.writeJSON(this.STORAGE_PATH, filtered);
-    } catch (error) {
-      console.error('[SavingsGoalsService] Failed to delete savings goal:', error);
-      throw error;
-    }
+    return runWithDataAccess(async () => {
+      try {
+        const goals = await this.getAll();
+        const goal = goals.find((item) => item.id === id);
+        if (goal) await updateGoalContributions(goal, 'abandoned');
+        const filtered = goals.filter((g) => g.id !== id);
+        await this.storage.writeJSON(this.STORAGE_PATH, filtered);
+      } catch (error) {
+        console.error('[SavingsGoalsService] Failed to delete savings goal:', error);
+        throw error;
+      }
+    });
   }
 
   public validate(data: Partial<SavingsGoal>): ValidationResult {
@@ -206,7 +235,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
    * Can only pause goals in 'saving' status
    * @param id - Goal ID
    */
-  public async pause(id: string): Promise<SavingsGoal | null> {
+  public async pause(id: string, scope: GoalContributionScope = {}): Promise<SavingsGoal | null> {
     try {
       const goal = await this.getById(id);
       if (!goal) {
@@ -220,10 +249,14 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         );
       }
 
-      return await this.update(id, {
-        status: 'paused',
-        paused_at: new Date().toISOString(),
-      });
+      return await this.update(
+        id,
+        {
+          status: 'paused',
+          paused_at: new Date().toISOString(),
+        },
+        scope
+      );
     } catch (error) {
       console.error('[SavingsGoalsService] Failed to pause goal:', error);
       throw error;
@@ -265,7 +298,11 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
    * @param id - Goal ID
    * @param completedAt - Optional completion date (defaults to now)
    */
-  public async complete(id: string, completedAt?: string): Promise<SavingsGoal | null> {
+  public async complete(
+    id: string,
+    completedAt?: string,
+    scope: GoalContributionScope = {}
+  ): Promise<SavingsGoal | null> {
     try {
       const goal = await this.getById(id);
       if (!goal) {
@@ -279,11 +316,15 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         );
       }
 
-      return await this.update(id, {
-        status: 'bought',
-        completed_at: completedAt || new Date().toISOString(),
-        paused_at: undefined, // Clear paused timestamp
-      });
+      return await this.update(
+        id,
+        {
+          status: 'bought',
+          completed_at: completedAt || new Date().toISOString(),
+          paused_at: undefined, // Clear paused timestamp
+        },
+        scope
+      );
     } catch (error) {
       console.error('[SavingsGoalsService] Failed to complete goal:', error);
       throw error;
@@ -295,7 +336,7 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
    * Can abandon goals in 'saving' or 'paused' status
    * @param id - Goal ID
    */
-  public async abandon(id: string): Promise<SavingsGoal | null> {
+  public async abandon(id: string, scope: GoalContributionScope = {}): Promise<SavingsGoal | null> {
     try {
       const goal = await this.getById(id);
       if (!goal) {
@@ -309,11 +350,15 @@ export class SavingsGoalsServiceImpl implements SavingsGoalsService {
         );
       }
 
-      return await this.update(id, {
-        status: 'abandoned',
-        completed_at: new Date().toISOString(),
-        paused_at: undefined, // Clear paused timestamp
-      });
+      return await this.update(
+        id,
+        {
+          status: 'abandoned',
+          completed_at: new Date().toISOString(),
+          paused_at: undefined, // Clear paused timestamp
+        },
+        scope
+      );
     } catch (error) {
       console.error('[SavingsGoalsService] Failed to abandon goal:', error);
       throw error;

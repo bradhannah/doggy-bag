@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const titleId = dialogTitleId();
 
   export let open: boolean = false;
   export let title: string = 'Unsaved Changes';
@@ -23,45 +25,24 @@
     dispatch('cancel');
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (!open) return;
-
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      handleCancel();
-    }
-  }
-
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       handleCancel();
     }
   }
-
-  onMount(() => {
-    document.addEventListener('keydown', handleKeydown);
-  });
-
-  onDestroy(() => {
-    document.removeEventListener('keydown', handleKeydown);
-  });
 </script>
 
 {#if open}
-  <div
-    class="dialog-backdrop"
-    role="presentation"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && handleCancel()}
-  >
+  <div class="dialog-backdrop" role="presentation" on:click={handleBackdropClick}>
     <div
       class="dialog"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       tabindex="-1"
+      use:modalFocus={handleCancel}
     >
-      <h2 id="dialog-title" class="dialog-title">{title}</h2>
+      <h2 id={titleId} class="dialog-title">{title}</h2>
       <p class="dialog-message">{message}</p>
 
       <div class="dialog-actions">
@@ -78,7 +59,7 @@
     position: fixed;
     inset: 0;
     background: var(--overlay-bg);
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(calc(var(--space-1) / 2));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -101,15 +82,15 @@
     border-radius: var(--radius-lg);
     padding: var(--space-6);
     width: 90%;
-    min-width: 320px;
+    min-width: 0;
     max-width: var(--modal-width-sm);
-    box-shadow: 0 16px 48px var(--shadow-heavy);
+    box-shadow: 0 var(--space-4) calc(var(--space-6) * 2) var(--shadow-heavy);
     animation: slideIn 0.2s ease-out;
   }
 
   @keyframes slideIn {
     from {
-      transform: scale(0.95) translateY(-10px);
+      transform: scale(0.95) translateY(calc(var(--space-5) / -2));
       opacity: 0;
     }
     to {

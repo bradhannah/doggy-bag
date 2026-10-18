@@ -375,7 +375,7 @@ describe('CategoriesService', () => {
   describe('ensureGoalsCategoryExists', () => {
     test('creates goals category if not exists', async () => {
       const goals = await service.ensureGoalsCategoryExists();
-      expect(goals.name).toBe('Savings Goals');
+      expect(goals.name).toBe('Savings');
       expect(goals.type).toBe('savings_goal');
       expect(goals.is_predefined).toBe(true);
       expect(goals.color).toBe('#10b981'); // Emerald green
@@ -400,7 +400,7 @@ describe('CategoriesService', () => {
   describe('ensureGoalCompletionsCategoryExists', () => {
     test('creates goal completions category if not exists', async () => {
       const goalCompletions = await service.ensureGoalCompletionsCategoryExists();
-      expect(goalCompletions.name).toBe('Goal Completions');
+      expect(goalCompletions.name).toBe('Savings withdrawals');
       expect(goalCompletions.type).toBe('income');
       expect(goalCompletions.is_predefined).toBe(true);
       expect(goalCompletions.color).toBe('#10b981'); // Emerald green

@@ -122,12 +122,11 @@ describe('StorageService', () => {
       expect(result).toBeNull();
     });
 
-    test('returns null for invalid JSON', async () => {
+    test('reports invalid JSON rather than treating saved data as absent', async () => {
       const path = join(testDir, 'invalid.json');
       await writeFile(path, 'not valid json', 'utf-8');
 
-      const result = await storage.readFile('invalid.json');
-      expect(result).toBeNull();
+      await expect(storage.readFile('invalid.json')).rejects.toThrow('Unable to read saved data');
     });
 
     test('handles nested paths', async () => {

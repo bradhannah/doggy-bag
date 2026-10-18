@@ -239,6 +239,10 @@
 <ToastContainer />
 
 <style>
+  :global(:is(button, a, input, select, textarea, [tabindex]):focus-visible) {
+    outline: calc(var(--space-1) / 2) solid var(--border-focus);
+    outline-offset: calc(var(--space-1) / 2);
+  }
   :global(:root) {
     /* Typography */
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
@@ -390,6 +394,7 @@
 
   .main-content {
     flex: 1;
+    min-width: 0;
     margin-left: var(--sidebar-width);
     padding: 0;
     min-height: 100vh;

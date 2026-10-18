@@ -1,4 +1,9 @@
 <script lang="ts">
+  import ContributionScope from '../../components/Goals/ContributionScope.svelte';
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  const confirmTitleId = dialogTitleId();
+  const unarchiveTitleId = dialogTitleId();
+  let keepCurrentMonth = false;
   import { onMount } from 'svelte';
   import {
     savingsGoals,
@@ -86,7 +91,7 @@
     for (const goal of openGoals) {
       try {
         const bills = (await getGoalBills(goal.id)) as Bill[];
-        const activeBill = bills.find((b) => b.is_active);
+        const activeBill = bills.find((b) => b.is_active || b.paused_by_goal_id === goal.id);
 
         if (activeBill) {
           const remainingAmount =
@@ -139,7 +144,7 @@
     actionLoading = goal.id;
     try {
       await resumeGoal(goal.id);
-      success(`"${goal.name}" resumed`);
+      success(`Upcoming contributions to "${goal.name}" resumed`);
       confirmModal = null;
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to resume goal');
@@ -151,7 +156,7 @@
   async function handlePause(goal: SavingsGoal) {
     actionLoading = goal.id;
     try {
-      await pauseGoal(goal.id);
+      await pauseGoal(goal.id, keepCurrentMonth);
       success(`"${goal.name}" paused`);
       confirmModal = null;
     } catch (e) {
@@ -164,7 +169,7 @@
   async function handleAbandon(goal: SavingsGoal) {
     actionLoading = goal.id;
     try {
-      await abandonGoal(goal.id);
+      await abandonGoal(goal.id, keepCurrentMonth);
       success(`"${goal.name}" abandoned`);
       confirmModal = null;
     } catch (e) {
@@ -177,7 +182,7 @@
   async function handleComplete(goal: SavingsGoal) {
     actionLoading = goal.id;
     try {
-      await completeGoal(goal.id);
+      await completeGoal(goal.id, undefined, keepCurrentMonth);
       success(`Congratulations! "${goal.name}" completed!`);
       confirmModal = null;
     } catch (e) {
@@ -232,10 +237,12 @@
     type: 'complete' | 'delete' | 'archive' | 'pause' | 'abandon',
     goal: SavingsGoal
   ) {
+    keepCurrentMonth = false;
     confirmModal = { type, goal };
   }
 
   function closeConfirmModal() {
+    if (actionLoading) return;
     confirmModal = null;
   }
 
@@ -248,6 +255,7 @@
   }
 
   function closeUnarchiveModal() {
+    if (actionLoading) return;
     unarchiveModal = null;
   }
 
@@ -327,7 +335,6 @@
       {#each filteredGoals as goal (goal.id)}
         {@const daysRemaining = goal.target_date ? getDaysRemaining(goal.target_date) : null}
         {@const isOverdue = daysRemaining !== null && daysRemaining < 0 && goal.status === 'saving'}
-        {@const isOpenEnded = goal.target_amount == null}
         {@const isOpen = goal.status === 'saving' || goal.status === 'paused'}
         <div
           class="goal-card"
@@ -347,7 +354,8 @@
                   class="icon-btn warning"
                   on:click|stopPropagation={() => openConfirmModal('pause', goal)}
                   disabled={actionLoading === goal.id}
-                  title="Pause goal"
+                  title="Pause contributions"
+                  aria-label={`Pause contributions to ${goal.name}`}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <rect
@@ -583,7 +591,7 @@
                 on:click|stopPropagation={() => (makePaymentModal = goal)}
                 disabled={actionLoading === goal.id}
               >
-                + Payment
+                + Extra contribution
               </button>
               <button
                 class="action-btn view"
@@ -597,15 +605,20 @@
                 on:click={() => openConfirmModal('complete', goal)}
                 disabled={actionLoading === goal.id}
               >
-                Buy That Thing!
+                Complete goal
               </button>
             {:else if goal.status === 'paused'}
+              <button
+                class="action-btn success"
+                on:click={() => openConfirmModal('complete', goal)}
+                disabled={actionLoading === goal.id}>Complete goal</button
+              >
               <button
                 class="action-btn primary"
                 on:click={() => handleResume(goal)}
                 disabled={actionLoading === goal.id}
               >
-                Resume
+                Resume contributions
               </button>
               <button
                 class="action-btn view"
@@ -670,8 +683,7 @@
 {#if confirmModal}
   <div
     class="modal-overlay"
-    on:click={closeConfirmModal}
-    on:keydown={(e) => e.key === 'Escape' && closeConfirmModal()}
+    on:click={() => !actionLoading && closeConfirmModal()}
     role="presentation"
   >
     <div
@@ -680,9 +692,14 @@
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
+      aria-labelledby={confirmTitleId}
+      tabindex="-1"
+      use:modalFocus={() => {
+        if (!actionLoading) closeConfirmModal();
+      }}
     >
       {#if confirmModal.type === 'complete'}
-        <h2>Complete Goal</h2>
+        <h2 id={confirmTitleId}>Complete goal</h2>
         <p>
           Congratulations! Are you ready to mark <strong>"{confirmModal.goal.name}"</strong> as complete?
         </p>
@@ -695,22 +712,30 @@
             You've saved {formatCurrency(confirmModal.goal.saved_amount)} total.
           {/if}
         </p>
+        <ContributionScope bind:keepCurrentMonth disabled={!!actionLoading} />
         <div class="modal-actions">
-          <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
+          <button
+            class="action-btn secondary"
+            on:click={closeConfirmModal}
+            disabled={!!actionLoading}>Cancel</button
+          >
           <button
             class="action-btn success"
             on:click={() => confirmModal && handleComplete(confirmModal.goal)}
             disabled={actionLoading === confirmModal.goal.id}
           >
-            {actionLoading === confirmModal.goal.id ? 'Completing...' : 'Yes, I bought it!'}
+            {actionLoading === confirmModal.goal.id ? 'Completing...' : 'Complete goal'}
           </button>
         </div>
       {:else if confirmModal.type === 'delete'}
-        <h2>Delete Goal</h2>
+        <h2 id={confirmTitleId}>Delete Goal</h2>
         <p>
           Are you sure you want to delete <strong>"{confirmModal.goal.name}"</strong>?
         </p>
-        <p class="modal-warning">This action cannot be undone.</p>
+        <p class="modal-warning">
+          This deletes the goal and stops its upcoming contributions. Recorded budget history is
+          preserved.
+        </p>
         <div class="modal-actions">
           <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
           <button
@@ -722,7 +747,7 @@
           </button>
         </div>
       {:else if confirmModal.type === 'archive'}
-        <h2>Archive Goal</h2>
+        <h2 id={confirmTitleId}>Archive Goal</h2>
         <p>
           Archive <strong>"{confirmModal.goal.name}"</strong> to hide it from the main list?
         </p>
@@ -740,13 +765,11 @@
           </button>
         </div>
       {:else if confirmModal.type === 'pause'}
-        <h2>Pause Goal</h2>
+        <h2 id={confirmTitleId}>Pause contributions</h2>
         <p>
           Pause saving for <strong>"{confirmModal.goal.name}"</strong>?
         </p>
-        <p class="modal-info">
-          Scheduled payments will continue to appear in your budget. You can resume saving anytime.
-        </p>
+        <ContributionScope bind:keepCurrentMonth pausing disabled={!!actionLoading} />
         <div class="modal-actions">
           <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
           <button
@@ -754,17 +777,15 @@
             on:click={() => confirmModal && handlePause(confirmModal.goal)}
             disabled={actionLoading === confirmModal.goal.id}
           >
-            {actionLoading === confirmModal.goal.id ? 'Pausing...' : 'Pause Goal'}
+            {actionLoading === confirmModal.goal.id ? 'Pausing...' : 'Pause contributions'}
           </button>
         </div>
       {:else if confirmModal.type === 'abandon'}
-        <h2>Abandon Goal</h2>
+        <h2 id={confirmTitleId}>Abandon Goal</h2>
         <p>
           Are you sure you want to abandon <strong>"{confirmModal.goal.name}"</strong>?
         </p>
-        <p class="modal-warning">
-          This will mark the goal as abandoned. Any scheduled payments will remain on your budget.
-        </p>
+        <ContributionScope bind:keepCurrentMonth disabled={!!actionLoading} />
         <div class="modal-actions">
           <button class="action-btn secondary" on:click={closeConfirmModal}>Cancel</button>
           <button
@@ -784,8 +805,7 @@
 {#if unarchiveModal}
   <div
     class="modal-overlay"
-    on:click={closeUnarchiveModal}
-    on:keydown={(e) => e.key === 'Escape' && closeUnarchiveModal()}
+    on:click={() => !actionLoading && closeUnarchiveModal()}
     role="presentation"
   >
     <div
@@ -794,8 +814,13 @@
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
+      aria-labelledby={unarchiveTitleId}
+      tabindex="-1"
+      use:modalFocus={() => {
+        if (!actionLoading) closeUnarchiveModal();
+      }}
     >
-      <h2>Unarchive Goal</h2>
+      <h2 id={unarchiveTitleId}>Unarchive Goal</h2>
       <p>
         Restore <strong>"{unarchiveModal.goal.name}"</strong> from the archive.
       </p>
@@ -857,7 +882,7 @@
 
 <style>
   .goals-page {
-    max-width: 1200px;
+    max-width: var(--content-max-setup);
     margin: 0 auto;
     padding: var(--content-padding);
   }
@@ -1388,17 +1413,19 @@
   }
 
   .action-btn.warning {
-    background: var(--warning);
-    color: var(--text-inverse);
+    background: var(--warning-bg);
+    color: var(--text-primary);
+    border-color: var(--warning-border);
   }
 
   .action-btn.warning:hover:not(:disabled) {
-    background: var(--warning-hover);
+    background: var(--warning-muted);
   }
 
   /* Actions Layout */
   .goal-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
     margin-top: auto;
     padding-top: var(--space-3);
@@ -1430,6 +1457,8 @@
     padding: var(--section-gap);
     max-width: var(--modal-width-sm);
     width: 90%;
+    max-height: 90dvh;
+    overflow-y: auto;
   }
 
   .modal-content h2 {

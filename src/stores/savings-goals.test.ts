@@ -487,13 +487,14 @@ describe('Savings Goals Store', () => {
       });
       mockGet.mockResolvedValue(sampleGoals);
 
-      const result = await pauseGoal('goal-1');
+      const result = await pauseGoal('goal-1', true);
 
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:3000/api/savings-goals/goal-1/pause',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keep_current_month: true }),
         }
       );
       expect(result.status).toBe('paused');
@@ -574,7 +575,7 @@ describe('Savings Goals Store', () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: undefined,
+          body: JSON.stringify({ keep_current_month: false }),
         }
       );
       expect(result.status).toBe('bought');
@@ -599,7 +600,7 @@ describe('Savings Goals Store', () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ completed_at: '2025-01-15T00:00:00Z' }),
+          body: JSON.stringify({ completed_at: '2025-01-15T00:00:00Z', keep_current_month: false }),
         }
       );
     });
@@ -641,6 +642,7 @@ describe('Savings Goals Store', () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keep_current_month: false }),
         }
       );
       expect(result.status).toBe('abandoned');

@@ -197,10 +197,10 @@
             class="control-btn"
             on:click={() => columnMode.toggle()}
             title={$columnMode === '2-col'
-              ? '2 columns (click for 1 column)'
-              : '1 column (click for 2 columns)'}
+              ? 'Automatic columns — stacks to fit (click for one column)'
+              : 'One column (click for automatic columns)'}
           >
-            <span class="column-number">{$columnMode === '2-col' ? '2' : '1'}</span>
+            <span class="column-number">{$columnMode === '2-col' ? 'Auto' : '1'}</span>
           </button>
         {/if}
 
@@ -279,7 +279,9 @@
             class="control-btn"
             class:active={$hidePaidItems}
             on:click={() => hidePaidItems.toggle()}
-            title={$hidePaidItems ? 'Show all items' : 'Hide paid items'}
+            title={$hidePaidItems ? 'Show all items' : 'Hide completed items'}
+            aria-label="Hide completed items"
+            aria-pressed={$hidePaidItems}
           >
             {#if $hidePaidItems}
               <!-- Eye with slash (hidden) -->
@@ -392,6 +394,8 @@
 <style>
   .month-picker-header {
     display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
     align-items: center;
     justify-content: space-between;
     padding: var(--space-4) var(--space-4);
@@ -411,10 +415,13 @@
   .controls-spacer {
     display: flex;
     justify-content: flex-end;
+    flex: 1 0 auto;
   }
 
   .center-group {
     display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
   }
@@ -423,8 +430,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: var(--button-height);
+    height: var(--button-height);
     background: transparent;
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
@@ -444,7 +451,7 @@
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
-    min-width: 180px;
+    min-width: 12ch;
     text-align: center;
   }
 
@@ -483,7 +490,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--button-height-sm);
+    min-width: var(--button-height-sm);
+    padding: 0 var(--space-1);
     height: var(--button-height-sm);
     background: var(--bg-hover);
     border: 1px solid var(--border-default);
@@ -535,7 +543,16 @@
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 80rem) {
+    .spacer:not(.controls-spacer) {
+      display: none;
+    }
+    .controls-spacer {
+      flex-grow: 1;
+    }
+  }
+
+  @media (max-width: 30rem) {
     .month-picker-header {
       padding: var(--space-3) var(--space-3);
     }
@@ -546,12 +563,12 @@
 
     .month-title {
       font-size: 1rem;
-      min-width: 140px;
+      min-width: 10ch;
     }
 
     .nav-btn {
-      width: 32px;
-      height: 32px;
+      width: var(--space-8);
+      height: var(--space-8);
     }
 
     .today-btn {
@@ -564,8 +581,8 @@
     }
 
     .control-btn {
-      width: 28px;
-      height: 28px;
+      min-width: var(--button-height-sm);
+      height: var(--button-height-sm);
     }
   }
 </style>

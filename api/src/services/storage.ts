@@ -1,7 +1,18 @@
-import { readFile, writeFile, unlink, access, mkdir, readdir, copyFile } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  unlink,
+  access,
+  mkdir,
+  readdir,
+  copyFile,
+  rename,
+} from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requestStorage } from './request-cache';
+import { StorageError } from '../utils/errors';
+import { assertDataAccessHealthy, failDataAccess } from './data-access';
 
 // Sentinel value to distinguish "cached null" from "not in cache"
 const CACHE_NULL = Symbol('CACHE_NULL');
@@ -166,33 +177,43 @@ export class StorageServiceImpl implements StorageService {
       cache?.set(resolvedPath, parsed);
       return parsed;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[StorageService] Failed to read file ${resolvedPath}:`, errorMessage);
-      // Cache the null result too so repeated reads of missing files don't hit disk
-      cache?.set(resolvedPath, CACHE_NULL);
-      return null;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        cache?.set(resolvedPath, CACHE_NULL);
+        return null;
+      }
+      const failure = new StorageError(`Unable to read saved data: ${resolvedPath}`, resolvedPath);
+      failDataAccess(failure);
+      throw failure;
     }
   }
 
   public async writeFile<T>(path: string, data: T): Promise<void> {
+    assertDataAccessHealthy();
     const resolvedPath = this.resolvePath(path);
+    const content = JSON.stringify(data, null, 2);
     await this.withWriteLock(resolvedPath, async () => {
+      assertDataAccessHealthy();
       await this.ensureDirectory(dirname(resolvedPath));
-      const content = JSON.stringify(data, null, 2);
-      await writeFile(resolvedPath, content, 'utf-8');
+      const temporaryPath = `${resolvedPath}.${crypto.randomUUID()}.tmp`;
+      try {
+        await writeFile(temporaryPath, content, { encoding: 'utf-8', flag: 'wx' });
+        await rename(temporaryPath, resolvedPath);
+      } finally {
+        await unlink(temporaryPath).catch(() => undefined);
+      }
     });
     // Invalidate cache after write completes so subsequent reads see fresh data
     requestStorage.getStore()?.delete(resolvedPath);
   }
 
   public async deleteFile(path: string): Promise<void> {
+    assertDataAccessHealthy();
     const resolvedPath = this.resolvePath(path);
     await this.withWriteLock(resolvedPath, async () => {
       try {
         await unlink(resolvedPath);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`[StorageService] Failed to delete file ${resolvedPath}:`, errorMessage);
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
     });
     // Invalidate cache after delete so subsequent reads return null
@@ -204,22 +225,15 @@ export class StorageServiceImpl implements StorageService {
     try {
       await access(resolvedPath, constants.F_OK);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
     }
   }
 
   public async ensureDirectory(path: string): Promise<void> {
     const resolvedPath = this.resolvePath(path);
-    try {
-      await mkdir(resolvedPath, { recursive: true });
-    } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (error instanceof Error && 'code' in error && (error as any).code !== 'EEXIST') {
-        const errorMessage = error.message;
-        console.error(`[StorageService] Failed to create directory ${resolvedPath}:`, errorMessage);
-      }
-    }
+    await mkdir(resolvedPath, { recursive: true });
   }
 
   public async listFiles(path: string): Promise<string[]> {
@@ -228,9 +242,10 @@ export class StorageServiceImpl implements StorageService {
       const entries = await readdir(resolvedPath, { withFileTypes: true });
       return entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[StorageService] Failed to list files in ${resolvedPath}:`, errorMessage);
-      return [];
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      const failure = new StorageError(`Unable to list saved data: ${resolvedPath}`, resolvedPath);
+      failDataAccess(failure);
+      throw failure;
     }
   }
 
@@ -244,6 +259,7 @@ export class StorageServiceImpl implements StorageService {
   }
 
   public async copyFile(src: string, dest: string): Promise<void> {
+    assertDataAccessHealthy();
     const resolvedSrc = this.resolvePath(src);
     const resolvedDest = this.resolvePath(dest);
     await this.withWriteLock(resolvedDest, async () => {

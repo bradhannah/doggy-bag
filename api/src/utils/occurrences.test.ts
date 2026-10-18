@@ -2,6 +2,8 @@
 import { describe, test, expect } from 'bun:test';
 import {
   generateOccurrences,
+  generateBillOccurrences,
+  generateIncomeOccurrences,
   getOccurrenceDatesInMonth,
   getBiWeeklyDatesInMonth,
   getWeeklyDatesInMonth,
@@ -13,9 +15,66 @@ import {
   createAdhocOccurrence,
   resequenceOccurrences,
 } from './occurrences';
-import type { Occurrence } from '../types';
+import type { Occurrence, Bill } from '../types';
 
 describe('Occurrence Utilities', () => {
+  describe('configured schedule semantics', () => {
+    const source: Bill = {
+      id: 'bill',
+      name: 'Scheduled',
+      amount: 20000,
+      billing_period: 'monthly',
+      recurrence_week: 2,
+      recurrence_day: 1,
+      category_id: 'category',
+      payment_source_id: 'account',
+      is_active: true,
+      created_at: '2026-01-01',
+      updated_at: '2026-01-01',
+    };
+
+    test('bills and incomes honour second Monday', () => {
+      expect(generateBillOccurrences(source, '2026-10').map((o) => o.expected_date)).toEqual([
+        '2026-10-12',
+      ]);
+      expect(generateIncomeOccurrences(source, '2026-10').map((o) => o.expected_date)).toEqual([
+        '2026-10-12',
+      ]);
+    });
+
+    test('last weekday works in a month with only four occurrences', () => {
+      expect(
+        generateBillOccurrences({ ...source, recurrence_week: 5 }, '2026-02').map(
+          (o) => o.expected_date
+        )
+      ).toEqual(['2026-02-23']);
+    });
+
+    test('a future savings schedule is not backdated into an existing budget', () => {
+      for (const billing_period of ['monthly', 'weekly', 'bi_weekly'] as const) {
+        expect(
+          generateBillOccurrences(
+            { ...source, billing_period, goal_id: 'goal', start_date: '2026-11-01' },
+            '2026-10'
+          )
+        ).toEqual([]);
+      }
+    });
+
+    test('an explicit effective date limits an anchored recurring income', () => {
+      expect(
+        generateIncomeOccurrences(
+          {
+            ...source,
+            billing_period: 'weekly',
+            start_date: '2026-10-05',
+            effective_from: '2026-10-15',
+          },
+          '2026-10'
+        ).map((o) => o.expected_date)
+      ).toEqual(['2026-10-19', '2026-10-26']);
+    });
+  });
   describe('getOccurrenceDatesInMonth', () => {
     describe('monthly billing', () => {
       test('returns single date for monthly billing', () => {

@@ -53,7 +53,7 @@
     return { total, closed };
   }
 
-  $: statsLabel = type === 'bills' ? 'paid' : 'received';
+  const statsLabel = 'complete';
   $: paidLabel = type === 'bills' ? 'Paid' : 'Received';
 
   // Compute grand totals across all sections
@@ -97,13 +97,13 @@
           {#if hiddenCount > 0}
             <span class="hidden-badge">{hiddenCount} hidden</span>
           {/if}
-          <span
-            class="occ-badge"
-            class:all-complete={occStats.closed === occStats.total && occStats.total > 0}
-          >
-            {occStats.closed}/{occStats.total}
-            {statsLabel}
-          </span>
+          {#if occStats.total > 0}<span
+              class="occ-badge"
+              class:all-complete={occStats.closed === occStats.total && occStats.total > 0}
+            >
+              {occStats.closed}/{occStats.total}
+              {statsLabel}
+            </span>{/if}
           {#if !readOnly}
             <button
               class="add-adhoc-btn"

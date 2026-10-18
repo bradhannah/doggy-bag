@@ -13,17 +13,14 @@
    * - footer: Optional footer content (typically action buttons)
    */
 
+  import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+
+  const titleId = dialogTitleId();
   export let open = false;
   export let title = '';
   export let subtitle = '';
   export let onClose: () => void = () => {};
   export let size: 'sm' | 'md' | 'lg' = 'sm';
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape' && open) {
-      onClose();
-    }
-  }
 
   function handleBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
@@ -36,17 +33,16 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
 {#if open}
   <div class="modal-backdrop" role="presentation" on:click={handleBackdropClick}>
     <div
       class="modal modal-{size}"
+      use:modalFocus={onClose}
       on:click={handleModalClick}
-      on:keydown={handleKeydown}
+      on:keydown={(event) => event.stopPropagation()}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
       tabindex="-1"
     >
       <header class="modal-header">
@@ -54,7 +50,7 @@
           {#if $$slots.eyebrow}
             <p class="eyebrow"><slot name="eyebrow" /></p>
           {/if}
-          <h2 id="modal-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           {#if subtitle}
             <p class="modal-subtitle">{subtitle}</p>
           {/if}
@@ -97,9 +93,9 @@
 
   .modal {
     background: var(--bg-surface);
-    border: 1px solid var(--border-default);
+    border: thin solid var(--border-default);
     border-radius: var(--radius-lg);
-    box-shadow: 0 24px 60px var(--shadow-heavy);
+    box-shadow: 0 var(--space-6) calc(var(--space-8) * 2) var(--shadow-heavy);
     display: flex;
     flex-direction: column;
     max-height: 90vh;
@@ -107,15 +103,15 @@
   }
 
   .modal-sm {
-    width: min(100%, var(--modal-width-sm, 400px));
+    width: min(100%, var(--modal-width-sm));
   }
 
   .modal-md {
-    width: min(100%, var(--panel-width-medium, 500px));
+    width: min(100%, var(--panel-width-medium));
   }
 
   .modal-lg {
-    width: min(100%, var(--panel-width-large, 640px));
+    width: min(100%, var(--content-max-sm));
   }
 
   @keyframes fadeIn {
@@ -134,7 +130,7 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: var(--space-4) var(--space-5);
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: thin solid var(--border-default);
   }
 
   .modal-title-group {
@@ -187,14 +183,14 @@
 
   .modal-footer {
     padding: var(--space-4) var(--space-5);
-    border-top: 1px solid var(--border-default);
+    border-top: thin solid var(--border-default);
     display: flex;
     justify-content: flex-end;
     gap: var(--space-3);
   }
 
   /* Mobile adjustments */
-  @media (max-width: 480px) {
+  @media (max-width: 30rem) {
     .modal {
       width: 95%;
       margin: var(--space-4);
