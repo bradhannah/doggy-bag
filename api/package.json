@@ -1,6 +1,6 @@
 {
   "name": "budgetforfun-api",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Bun HTTP backend for doggy-bag",
   "type": "module",
   "scripts": {
