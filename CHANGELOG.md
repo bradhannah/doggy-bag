@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-17
+
+### Added
+
+- Linked Savings and Budget transfer planning, with recurring and month-only contributions and withdrawals.
+- Selective review of new recurring entries and changed amounts/dates, with explicit monthly-override choices and version-scoped keep decisions.
+- Goal pause/resume/completion behaviour that manages future contributions while retaining recorded history.
+
+### Improved
+
+- Responsive Budget and Savings layouts, clearer payment/receipt actions, keyboard focus handling, and balance snapshot timestamps.
+- Legacy Savings reconciliation, historical source snapshots, month-lock protections, and complete backup/restore including uploaded documents.
+
+### Fixed
+
+- Payment amount/date persistence, partial-payment handling, projection discrepancies, and stale month responses.
+- Concurrent data operations and corrupt-data handling with atomic individual-file replacement.
+- Release packaging dependency mismatch by pinning Tauri JavaScript packages to their locked Rust counterparts. The unpublished v0.13.0 build was superseded by this release.
+
 ## [0.1.0] - 2026-01-04
 
 ### Added
