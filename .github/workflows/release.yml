@@ -77,6 +77,11 @@ jobs:
       - name: Build sidecar (production)
         run: make build-sidecar
 
+      - name: Verify compiled sidecar startup outside the project directory
+        run: bun test ./api/server.startup.test.ts
+        env:
+          SIDECAR_BINARY: ${{ github.workspace }}/src-tauri/binaries/bun-sidecar-aarch64-apple-darwin
+
       - name: Build Tauri (release)
         run: |
           npm run tauri build -- --target aarch64-apple-darwin

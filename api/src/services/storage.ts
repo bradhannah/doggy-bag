@@ -25,13 +25,19 @@ interface StorageConfig {
   isDevelopment: boolean;
 }
 
-// Default configuration (development mode)
-let config: StorageConfig = {
-  basePath: 'data',
-  entitiesDir: 'data/entities',
-  monthsDir: 'data/months',
-  isDevelopment: true,
-};
+function createConfig(basePath?: string): StorageConfig {
+  const resolvedBasePath = basePath || process.env.DATA_DIR || 'data';
+  return {
+    basePath: resolvedBasePath,
+    entitiesDir: join(resolvedBasePath, 'entities'),
+    monthsDir: join(resolvedBasePath, 'months'),
+    isDevelopment: !process.env.DATA_DIR,
+  };
+}
+
+// Route imports can construct services before server.ts calls initialize().
+// Honor DATA_DIR immediately so desktop launches never create cwd-relative data.
+let config: StorageConfig = createConfig();
 
 export interface StorageService {
   readFile<T>(path: string): Promise<T | null>;
@@ -56,18 +62,10 @@ export class StorageServiceImpl implements StorageService {
    * In development, defaults to './data'.
    */
   public static initialize(basePath?: string): void {
-    const resolvedBasePath = basePath || process.env.DATA_DIR || 'data';
-    const isDevelopment = !process.env.DATA_DIR;
+    config = createConfig(basePath);
 
-    config = {
-      basePath: resolvedBasePath,
-      entitiesDir: join(resolvedBasePath, 'entities'),
-      monthsDir: join(resolvedBasePath, 'months'),
-      isDevelopment,
-    };
-
-    console.log(`[StorageService] Initialized with base path: ${resolvedBasePath}`);
-    console.log(`[StorageService] Mode: ${isDevelopment ? 'development' : 'production'}`);
+    console.log(`[StorageService] Initialized with base path: ${config.basePath}`);
+    console.log(`[StorageService] Mode: ${config.isDevelopment ? 'development' : 'production'}`);
 
     // Reset instance to use new config
     StorageServiceImpl.instance = null;
