@@ -51,7 +51,11 @@ import {
   createIncomeInstance,
   createManualPaymentInstance,
 } from '../utils/monthly-instances';
-import { annotateSavingsAccounts, retireCoveredLegacySavings } from '../utils/savings';
+import {
+  annotateSavingsAccounts,
+  excludeBudgetInstance,
+  retireCoveredLegacySavings,
+} from '../utils/savings';
 
 export interface OccurrencePaymentDetails extends OccurrenceEdits {
   closed_date?: string;
@@ -2040,6 +2044,16 @@ export class MonthsServiceImpl implements MonthsService {
 
       instance.occurrences.splice(occIndex, 1);
 
+      // An ad-hoc item with no occurrences left is removed entirely. Leaving it empty
+      // would let getMonthlyData backfill a $0 placeholder occurrence that can't be cleared.
+      if (instance.is_adhoc && instance.occurrences.length === 0) {
+        excludeBudgetInstance(data, instance);
+        data.bill_instances.splice(instanceIndex, 1);
+        data.updated_at = now;
+        await this.saveMonthlyData(month, data);
+        return instance;
+      }
+
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
       instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
@@ -2081,6 +2095,16 @@ export class MonthsServiceImpl implements MonthsService {
       const now = new Date().toISOString();
 
       instance.occurrences.splice(occIndex, 1);
+
+      // An ad-hoc item with no occurrences left is removed entirely. Leaving it empty
+      // would let getMonthlyData backfill a $0 placeholder occurrence that can't be cleared.
+      if (instance.is_adhoc && instance.occurrences.length === 0) {
+        excludeBudgetInstance(data, instance);
+        data.income_instances.splice(instanceIndex, 1);
+        data.updated_at = now;
+        await this.saveMonthlyData(month, data);
+        return instance;
+      }
 
       // Resequence and update totals
       instance.occurrences = resequenceOccurrences(instance.occurrences);
