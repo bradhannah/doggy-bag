@@ -9,6 +9,8 @@ import { IncomesServiceImpl } from './incomes-service';
 import type { IncomesService } from './incomes-service';
 import { SavingsGoalsServiceImpl } from './savings-goals-service';
 import type { SavingsGoalsService } from './savings-goals-service';
+import { InsuranceClaimsServiceImpl } from './insurance-claims-service';
+import type { InsuranceClaimsService } from './insurance-claims-service';
 import type {
   MonthlyData,
   BillInstance,
@@ -20,6 +22,7 @@ import type {
   SavingsGoal,
 } from '../types';
 import { getTodayLocalDateString } from '../utils/due-date';
+import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
 
 // ============================================================================
 // Calendar Event Types
@@ -38,6 +41,7 @@ export interface CalendarEvent {
   source_id: string; // ID of the source entity (bill_id, income_id, goal_id, todo_id)
   instance_id: string; // ID of the instance (bill_instance_id, income_instance_id, todo_instance_id)
   occurrence_id?: string; // For bills/incomes: the specific occurrence ID
+  is_insurance?: boolean; // Insurance bill or reimbursement; source_id is the claim ID
 }
 
 export interface CalendarResponse {
@@ -70,12 +74,68 @@ export class CalendarServiceImpl implements CalendarService {
   private billsService: BillsService;
   private incomesService: IncomesService;
   private goalsService: SavingsGoalsService;
+  private insuranceClaimsService: InsuranceClaimsService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
     this.billsService = new BillsServiceImpl();
     this.incomesService = new IncomesServiceImpl();
     this.goalsService = new SavingsGoalsServiceImpl();
+    this.insuranceClaimsService = new InsuranceClaimsServiceImpl();
+  }
+
+  /**
+   * Insurance entries are virtual: built from claims, or for a locked month taken from
+   * the snapshot captured when it was locked (the same source the Budget uses).
+   */
+  private async getInsuranceEntries(
+    month: string,
+    monthlyData: MonthlyData
+  ): Promise<{ billInstances: BillInstance[]; incomeInstances: IncomeInstance[] }> {
+    if (monthlyData.is_read_only && monthlyData.insurance_snapshot) {
+      return monthlyData.insurance_snapshot;
+    }
+    const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month);
+    return buildVirtualInsuranceEntries(claims, month);
+  }
+
+  private insuranceEvents(
+    entries: { billInstances: BillInstance[]; incomeInstances: IncomeInstance[] },
+    today: string
+  ): CalendarEvent[] {
+    const events: CalendarEvent[] = [];
+    const push = (
+      type: 'bill' | 'income',
+      instance: BillInstance | IncomeInstance,
+      occ: Occurrence,
+      title: string
+    ) => {
+      // A plan that hasn't decided, or denied, moves no money
+      if (occ.expected_amount === 0) return;
+      events.push({
+        id: `${type}-${instance.id}-${occ.id}`,
+        type,
+        date: occ.expected_date,
+        title,
+        amount: occ.expected_amount,
+        is_closed: occ.is_closed,
+        is_overdue: !occ.is_closed && occ.expected_date < today,
+        source_id: instance.claim_id ?? instance.id,
+        instance_id: instance.id,
+        occurrence_id: occ.id,
+        is_insurance: true,
+      });
+    };
+    for (const instance of entries.billInstances) {
+      for (const occ of instance.occurrences) push('bill', instance, occ, instance.name ?? '');
+    }
+    for (const instance of entries.incomeInstances) {
+      for (const occ of instance.occurrences) {
+        const title = occ.plan_name ? `${instance.name} · ${occ.plan_name}` : (instance.name ?? '');
+        push('income', instance, occ, title);
+      }
+    }
+    return events;
   }
 
   private async getMonthlyData(month: string): Promise<MonthlyData | null> {
@@ -108,16 +168,21 @@ export class CalendarServiceImpl implements CalendarService {
       const goalsMap = new Map<string, SavingsGoal>(goals.map((g) => [g.id, g]));
 
       // Process bill instances
-      for (const billInstance of monthlyData.bill_instances) {
+      for (const billInstance of monthlyData.bill_instances.filter((i) => !i.is_virtual)) {
         const instanceEvents = this.processBillInstance(billInstance, billsMap, goalsMap, today);
         events.push(...instanceEvents);
       }
 
       // Process income instances
-      for (const incomeInstance of monthlyData.income_instances) {
+      for (const incomeInstance of monthlyData.income_instances.filter((i) => !i.is_virtual)) {
         const instanceEvents = this.processIncomeInstance(incomeInstance, incomesMap, today);
         events.push(...instanceEvents);
       }
+
+      // Insurance bills and reimbursements (virtual: never in the month file)
+      events.push(
+        ...this.insuranceEvents(await this.getInsuranceEntries(month, monthlyData), today)
+      );
 
       // Process todo instances
       const todoInstances = monthlyData.todo_instances || [];

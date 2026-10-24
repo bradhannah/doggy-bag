@@ -6,7 +6,7 @@
    * 1. Converts the expected expense to a regular claim
    * 2. Assigns a claim number
    * 3. Auto-generates draft submissions based on family member's plans
-   * 4. Optionally updates the linked bill amount to match actual cost
+   * 4. Records whether the clinic bill has been paid
    */
   import { createEventDispatcher } from 'svelte';
   import { convertExpectedToClaim } from '../../stores/insurance-claims';
@@ -23,7 +23,7 @@
 
   // Form state
   let actualCostDollars = claim.expected_cost ? (claim.expected_cost / 100).toFixed(2) : '';
-  let updateBillAmount = true;
+  let billPaid = true;
   let submitting = false;
 
   // Computed
@@ -40,7 +40,7 @@
     try {
       const converted = await convertExpectedToClaim(claim.id, {
         actual_cost: actualCostCents,
-        update_bill_amount: updateBillAmount,
+        bill_paid: billPaid,
       });
 
       success(`Converted to claim #${converted.claim_number}`);
@@ -106,13 +106,13 @@
       {/if}
     </div>
 
-    <!-- Update Bill Checkbox -->
+    <!-- Bill Paid Checkbox -->
     <label class="checkbox-field">
-      <input type="checkbox" bind:checked={updateBillAmount} />
-      <span>Update budget with actual cost</span>
+      <input type="checkbox" bind:checked={billPaid} />
+      <span>I've paid the clinic</span>
     </label>
     <p class="checkbox-hint">
-      The linked bill in your budget will be updated to match the actual cost.
+      The Budget shows the bill for the actual cost, marked paid on today's date.
     </p>
 
     <!-- Out of Pocket Preview -->

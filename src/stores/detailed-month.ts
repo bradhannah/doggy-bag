@@ -3,6 +3,7 @@ import { writable, derived } from 'svelte/store';
 import { apiClient } from '../lib/api/client';
 import { getTodayDateString } from '../lib/utils/format';
 import type { EntityMetadata } from './bills';
+import type { SubmissionStatus } from '../types/insurance';
 
 // Occurrence - individual payment instance within a billing period
 // In the occurrence-only model, closing an occurrence = payment recorded
@@ -22,6 +23,9 @@ export interface Occurrence {
   plan_name?: string; // Insurance plan name (e.g., "Canada Life AWS")
   claim_id?: string; // Link to InsuranceClaim
   claim_submission_id?: string; // Link to specific ClaimSubmission
+  submission_status?: SubmissionStatus; // That submission's status (drives the label)
+  awaiting_plan_name?: string; // For awaiting_previous: the earlier plan it waits on
+  is_insurance_estimate?: boolean; // Estimated reimbursement shown before any plan decides
 }
 
 export type BillingPeriod = 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';

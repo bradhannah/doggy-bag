@@ -15,8 +15,10 @@
   import EditCloseModal from './EditCloseModal.svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   import CopyMoveModal from './CopyMoveModal.svelte';
-  import { formatCurrency } from '$lib/utils/format';
+  import { formatCurrency, getTodayDateString } from '$lib/utils/format';
   import { paymentSources } from '../../stores/payment-sources';
+  import { getInsuranceLineDisplay } from '$lib/insurance/budget-line-status';
+  import { updateSubmission } from '../../stores/insurance-claims';
 
   export let occurrence: Occurrence;
   export let month: string;
@@ -345,15 +347,48 @@
     });
   }
 
-  $: statusLabel = occurrence.is_closed
-    ? occurrence.expected_amount === 0
-      ? 'Skipped'
+  // Insurance reimbursement lines read as the plan's status ("Not submitted", "Approved ·
+  // awaiting payment"); a plan that hasn't decided shows "—" instead of $0.
+  $: insuranceDisplay = isVirtualInsurance ? getInsuranceLineDisplay(occurrence) : null;
+  $: showExpectedAmount = insuranceDisplay?.showAmount ?? true;
+  $: statusLabel = insuranceDisplay
+    ? insuranceDisplay.label
+    : occurrence.is_closed
+      ? occurrence.expected_amount === 0
+        ? 'Skipped'
+        : type === 'bill'
+          ? 'Paid'
+          : 'Received'
       : type === 'bill'
-        ? 'Paid'
-        : 'Received'
-    : type === 'bill'
-      ? 'Open'
-      : 'Expected';
+        ? 'Open'
+        : 'Expected';
+  $: statusTone = insuranceDisplay
+    ? insuranceDisplay.tone
+    : occurrence.is_closed && occurrence.expected_amount > 0
+      ? 'success'
+      : 'neutral';
+  $: canMarkReceived =
+    !readOnly &&
+    occurrence.submission_status === 'approved' &&
+    !!occurrence.claim_id &&
+    !!occurrence.claim_submission_id;
+
+  async function markReceived() {
+    if (!canMarkReceived || saving) return;
+    saving = true;
+    try {
+      await updateSubmission(occurrence.claim_id!, occurrence.claim_submission_id!, {
+        status: 'paid',
+        date_paid: getTodayDateString(),
+      });
+      success(`${occurrence.plan_name ?? 'Insurance'} payment received`);
+      dispatch('updated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to mark received');
+    } finally {
+      saving = false;
+    }
+  }
   $: sourceName = $paymentSources.find((ps) => ps.id === occurrence.payment_source_id)?.name;
   $: closedNote =
     occurrence.is_closed && occurrence.closed_date
@@ -404,12 +439,19 @@
       </span>
       <span
         class="badge"
-        class:badge-success={occurrence.is_closed && occurrence.expected_amount > 0}
+        class:badge-success={statusTone === 'success'}
+        class:badge-warning={statusTone === 'warning'}
+        class:badge-error={statusTone === 'error'}
+        class:badge-accent={statusTone === 'accent'}
       >
         {statusLabel}
       </span>
       {#if occurrence.plan_name}
-        <span class="badge badge-accent">{occurrence.plan_name}</span>
+        {#if insuranceDisplay}
+          <span class="occ-plan">{occurrence.plan_name}</span>
+        {:else}
+          <span class="badge badge-accent">{occurrence.plan_name}</span>
+        {/if}
       {/if}
       {#if occurrence.is_adhoc && !instanceIsAdhoc}
         <span class="badge badge-purple">Ad-hoc</span>
@@ -419,15 +461,19 @@
       {/if}
     </div>
 
-    <span class="ledger-amount occ-amount" data-col="expected">
-      {formatCurrency(occurrence.expected_amount)}
+    <span class="ledger-amount occ-amount" class:muted={!showExpectedAmount} data-col="expected">
+      {showExpectedAmount ? formatCurrency(occurrence.expected_amount) : '—'}
     </span>
     <span class="ledger-amount occ-amount" class:paid={occurrence.is_closed} data-col="paid">
       {occurrence.is_closed ? formatCurrency(occurrence.expected_amount) : '—'}
     </span>
 
     <div class="ledger-actions">
-      {#if isClickableInsuranceOccurrence}
+      {#if canMarkReceived}
+        <button class="btn btn-sm btn-primary" on:click={markReceived} disabled={saving}>
+          Mark received
+        </button>
+      {:else if isClickableInsuranceOccurrence}
         <button class="btn btn-sm btn-secondary" on:click={handleOccurrenceClick}>View claim</button
         >
       {:else if isProtected}
@@ -683,6 +729,19 @@
     font-size: var(--font-size-xs);
     color: var(--error);
     white-space: nowrap;
+  }
+
+  .occ-plan {
+    min-width: 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .occ-amount.muted {
+    color: var(--text-secondary);
   }
 
   .occ-meta {

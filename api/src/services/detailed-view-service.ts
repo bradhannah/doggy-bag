@@ -122,9 +122,17 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       incomesMap
     );
 
-    // Calculate tallies with breakdown
-    const billsTally = calculateRegularBillsTally(monthlyData.bill_instances);
-    const adhocBillsTally = calculateAdhocBillsTally(monthlyData.bill_instances);
+    // Calculate tallies with breakdown. Insurance items (flagged ad-hoc) and payoff bills
+    // (flagged regular) have their own tallies below, so the regular and ad-hoc tallies
+    // leave them out; otherwise the totals would count them twice.
+    const plainBillInstances = monthlyData.bill_instances.filter(
+      (bi) => !(bi.is_virtual === true && bi.is_insurance_expense === true) && !bi.is_payoff_bill
+    );
+    const plainIncomeInstances = monthlyData.income_instances.filter(
+      (ii) => !(ii.is_virtual === true && ii.is_insurance_reimbursement === true)
+    );
+    const billsTally = calculateRegularBillsTally(plainBillInstances);
+    const adhocBillsTally = calculateAdhocBillsTally(plainBillInstances);
 
     // Calculate CC Payoffs tally (bills with is_payoff_bill = true)
     const payoffBills = monthlyData.bill_instances.filter((bi) => bi.is_payoff_bill === true);
@@ -206,8 +214,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       insuranceExpensesTally
     );
 
-    const incomeTally = calculateRegularIncomeTally(monthlyData.income_instances);
-    const adhocIncomeTally = calculateAdhocIncomeTally(monthlyData.income_instances);
+    const incomeTally = calculateRegularIncomeTally(plainIncomeInstances);
+    const adhocIncomeTally = calculateAdhocIncomeTally(plainIncomeInstances);
     // Total income includes regular + adhoc + insurance reimbursements
     const totalIncomeTally = combineTallies(
       combineTallies(incomeTally, adhocIncomeTally),
@@ -367,8 +375,12 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const calculatedDueDate = calculateDueDate(month, dueDay);
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
 
-      // Determine if overdue (for income, this means "expected but not received")
-      const overdueStatus = isOverdue(dueDate || undefined, instance.is_closed);
+      // Determine if overdue (for income, this means "expected but not received").
+      // Insurance lines with no amount yet (plan hasn't decided) aren't money owed.
+      const awaitsMoney =
+        !instance.is_insurance_reimbursement ||
+        (instance.occurrences || []).some((occ) => !occ.is_closed && occ.expected_amount > 0);
+      const overdueStatus = awaitsMoney && isOverdue(dueDate || undefined, instance.is_closed);
 
       // Calculate total received from occurrence payments
       const totalReceived = getEffectiveIncomeAmount(instance);

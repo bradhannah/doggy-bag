@@ -608,7 +608,7 @@ describe('InsuranceClaimsService', () => {
       expect(updatedClaim!.status).toBe('in_progress');
     });
 
-    test('should be closed when all submissions have final answer', async () => {
+    test('should stay in_progress while approved money has not arrived, then close when paid', async () => {
       const claim = await service.create({
         family_member_id: 'fm-john-001',
         category_id: 'ic-dental-001',
@@ -628,7 +628,15 @@ describe('InsuranceClaimsService', () => {
         date_resolved: '2025-06-20',
       });
 
-      const updatedClaim = await service.getById(claim.id);
+      let updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim!.status).toBe('in_progress');
+
+      await service.updateSubmission(claim.id, submission.id, {
+        status: 'paid',
+        date_paid: '2025-06-28',
+      });
+
+      updatedClaim = await service.getById(claim.id);
       expect(updatedClaim!.status).toBe('closed');
     });
 
@@ -715,8 +723,17 @@ describe('InsuranceClaimsService', () => {
       });
 
       updatedClaim = await service.getById(claim.id);
-      expect(updatedClaim!.status).toBe('closed');
+      expect(updatedClaim!.status).toBe('in_progress');
       expect(updatedClaim!.submissions[0].amount_reimbursed).toBe(12000);
+
+      // Step 5: Money arrives
+      await service.updateSubmission(claim.id, submission.id, {
+        status: 'paid',
+        date_paid: '2025-06-30',
+      });
+
+      updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim!.status).toBe('closed');
     });
 
     test('should handle multi-submission claim with primary and secondary insurance', async () => {
@@ -754,8 +771,8 @@ describe('InsuranceClaimsService', () => {
       });
 
       updatedClaim = await service.getById(claim.id);
-      // Still closed because all submissions have final answer
-      expect(updatedClaim!.status).toBe('closed');
+      // Approved but not received yet
+      expect(updatedClaim!.status).toBe('in_progress');
 
       // Step 4: Submit remainder to secondary insurance
       const secondarySub = await service.addSubmission(claim.id, {
@@ -781,8 +798,14 @@ describe('InsuranceClaimsService', () => {
       });
 
       updatedClaim = await service.getById(claim.id);
-      expect(updatedClaim!.status).toBe('closed');
+      expect(updatedClaim!.status).toBe('in_progress');
       expect(updatedClaim!.submissions.length).toBe(2);
+
+      // Step 6: Both payments arrive
+      await service.updateSubmission(claim.id, primarySub.id, { status: 'paid' });
+      await service.updateSubmission(claim.id, secondarySub.id, { status: 'paid' });
+      updatedClaim = await service.getById(claim.id);
+      expect(updatedClaim!.status).toBe('closed');
 
       // Verify total reimbursement
       const totalReimbursed = updatedClaim!.submissions.reduce(
@@ -839,12 +862,13 @@ describe('InsuranceClaimsService', () => {
       updatedClaim = await service.getById(claim.id);
       expect(updatedClaim!.status).toBe('in_progress');
 
-      // Step 4: Secondary approves
+      // Step 4: Secondary approves, then pays
       await service.updateSubmission(claim.id, sub2.id, {
         status: 'approved',
         amount_reimbursed: 40000,
         date_resolved: '2025-06-30',
       });
+      await service.updateSubmission(claim.id, sub2.id, { status: 'paid' });
 
       updatedClaim = await service.getById(claim.id);
       expect(updatedClaim!.status).toBe('closed');
@@ -902,10 +926,59 @@ describe('InsuranceClaimsService', () => {
 
       const summary = await service.getSummary();
 
-      expect(summary.pending_count).toBe(1);
+      // Claim 1 is approved but not received, so it's still in progress
+      expect(summary.pending_count).toBe(2);
       expect(summary.pending_amount).toBe(25000);
-      expect(summary.closed_count).toBe(1);
-      expect(summary.reimbursed_amount).toBe(12000);
+      expect(summary.closed_count).toBe(0);
+      expect(summary.reimbursed_amount).toBe(0);
+      expect(summary.awaiting_payment_count).toBe(1);
+      expect(summary.awaiting_payment_amount).toBe(12000);
+      expect(summary.waiting_count).toBe(1);
+      expect(summary.waiting_amount).toBe(25000);
+
+      // Money for claim 1 arrives: it closes and counts as received
+      await service.updateSubmission(claim1.id, sub1.id, {
+        status: 'paid',
+        date_paid: '2025-06-30',
+      });
+      const after = await service.getSummary();
+      expect(after.closed_count).toBe(1);
+      expect(after.reimbursed_amount).toBe(12000);
+      expect(after.awaiting_payment_amount).toBe(0);
+    });
+
+    test('counts plans ready to submit and money received this year', async () => {
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(
+          [{ ...sampleFamilyMembers[0], plans: ['ip-primary-001', 'ip-secondary-002'] }],
+          null,
+          2
+        )
+      );
+      const year = new Date().getFullYear();
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: `${year}-01-10`,
+        total_amount: 13560,
+      });
+      const [primary] = claim.submissions;
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 12400,
+      });
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'paid',
+        date_paid: `${year}-01-20`,
+      });
+
+      const summary = await service.getSummary();
+      expect(summary.to_submit_count).toBe(1);
+      expect(summary.to_submit_amount).toBe(1160);
+      expect(summary.received_year).toBe(year);
+      expect(summary.received_this_year_amount).toBe(12400);
+      expect(summary.received_this_year_claims).toBe(1);
     });
   });
 
@@ -1094,48 +1167,58 @@ describe('InsuranceClaimsService', () => {
     });
 
     test('updateSubmission cascade should handle 3+ submissions correctly', async () => {
-      // Create claim and manually add 3 submissions to test chained cascade
+      const thirdPlan: InsurancePlan = {
+        ...samplePlans[1],
+        id: 'ip-third-003',
+        name: 'Third Plan',
+      };
+      await writeFile(
+        join(testDir, 'entities', 'insurance-plans.json'),
+        JSON.stringify([...samplePlans, thirdPlan], null, 2)
+      );
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(
+          [
+            {
+              ...sampleFamilyMembers[0],
+              plans: ['ip-primary-001', 'ip-secondary-002', 'ip-third-003'],
+            },
+          ],
+          null,
+          2
+        )
+      );
+
       const claim = await service.create({
         family_member_id: 'fm-john-001',
         category_id: 'ic-dental-001',
         service_date: '2025-06-15',
         total_amount: 10000,
       });
+      const [sub1, sub2, sub3] = claim.submissions;
+      expect(sub2.status).toBe('awaiting_previous');
+      expect(sub3.status).toBe('awaiting_previous');
 
-      // Add 3 submissions manually (simulating auto-generation)
-      const sub1 = await service.addSubmission(claim.id, {
-        plan_id: 'ip-primary-001',
-        amount_claimed: 10000,
-        documents_sent: [],
-      });
-
-      // Manually update sub2 and sub3 to awaiting_previous with $0
-      const claimAfterAdd = await service.getById(claim.id);
-      expect(claimAfterAdd).not.toBeNull();
-
-      // Add second submission (we'll manually set it to awaiting_previous)
-      const sub2 = await service.addSubmission(claim.id, {
-        plan_id: 'ip-secondary-002',
-        amount_claimed: 0,
-        documents_sent: [],
-      });
-
-      // Directly update status to awaiting_previous via updateSubmission
-      await service.updateSubmission(claim.id, sub2.id, {
-        status: 'awaiting_previous',
-      });
-
-      // Approve first submission with partial payment
+      // Primary approves $40: the second plan claims the $60 left; the third keeps waiting
       await service.updateSubmission(claim.id, sub1.id, {
         status: 'approved',
         amount_reimbursed: 4000,
       });
+      let updated = await service.getById(claim.id);
+      expect(updated!.submissions[1].status).toBe('draft');
+      expect(updated!.submissions[1].amount_claimed).toBe(6000);
+      expect(updated!.submissions[2].status).toBe('awaiting_previous');
 
-      // Check that sub2 was activated with remaining amount
-      const updatedClaim = await service.getById(claim.id);
-      const updatedSub2 = updatedClaim!.submissions.find((s) => s.id === sub2.id);
-      expect(updatedSub2!.status).toBe('draft');
-      expect(updatedSub2!.amount_claimed).toBe(6000); // $100 - $40 = $60
+      // Second approves $50: the third claims the last $10
+      await service.updateSubmission(claim.id, sub2.id, { status: 'pending' });
+      await service.updateSubmission(claim.id, sub2.id, {
+        status: 'approved',
+        amount_reimbursed: 5000,
+      });
+      updated = await service.getById(claim.id);
+      expect(updated!.submissions[2].status).toBe('draft');
+      expect(updated!.submissions[2].amount_claimed).toBe(1000);
     });
   });
 
@@ -1387,7 +1470,7 @@ describe('InsuranceClaimsService', () => {
         service.updateSubmission(claim.id, submission.id, {
           status: 'paid',
         })
-      ).rejects.toThrow('Can only mark a submission as paid after it has been approved');
+      ).rejects.toThrow('Record the approval before marking the money received');
     });
 
     test('should reject paid status from pending', async () => {
@@ -1413,7 +1496,7 @@ describe('InsuranceClaimsService', () => {
         service.updateSubmission(claim.id, submission.id, {
           status: 'paid',
         })
-      ).rejects.toThrow('Can only mark a submission as paid after it has been approved');
+      ).rejects.toThrow('Record the approval before marking the money received');
     });
 
     test('should reject paid status from denied', async () => {
@@ -1444,7 +1527,7 @@ describe('InsuranceClaimsService', () => {
         service.updateSubmission(claim.id, submission.id, {
           status: 'paid',
         })
-      ).rejects.toThrow('Can only mark a submission as paid after it has been approved');
+      ).rejects.toThrow('Record the approval before marking the money received');
     });
 
     test('should allow re-setting paid on already-paid submission', async () => {
@@ -1679,7 +1762,7 @@ describe('InsuranceClaimsService', () => {
       });
 
       updatedClaim = await service.getById(claim.id);
-      expect(updatedClaim!.status).toBe('closed');
+      expect(updatedClaim!.status).toBe('in_progress');
       expect(updatedClaim!.submissions[0].status).toBe('approved');
 
       // approved -> paid
@@ -1695,6 +1778,240 @@ describe('InsuranceClaimsService', () => {
       // Original resolved date should be preserved
       expect(updatedClaim!.submissions[0].date_resolved).toBe('2025-06-25');
       expect(updatedClaim!.submissions[0].amount_reimbursed).toBe(12000);
+    });
+  });
+
+  // ============================================================================
+  // Submission rules: amounts, clearing fields, keeping later plans in step
+  // ============================================================================
+
+  describe('Submission rules', () => {
+    async function useTwoPlans() {
+      await writeFile(
+        join(testDir, 'entities', 'family-members.json'),
+        JSON.stringify(
+          [{ ...sampleFamilyMembers[0], plans: ['ip-primary-001', 'ip-secondary-002'] }],
+          null,
+          2
+        )
+      );
+    }
+
+    async function twoPlanClaim(total = 13560) {
+      await useTwoPlans();
+      const claim = await service.create({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        service_date: '2026-09-02',
+        total_amount: total,
+      });
+      return { claim, primary: claim.submissions[0], secondary: claim.submissions[1] };
+    }
+
+    test('a new claim stays draft after an edit while nothing has been submitted', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.updateSubmission(claim.id, primary.id, { notes: 'Receipt is in the drawer' });
+      expect((await service.getById(claim.id))!.status).toBe('draft');
+    });
+
+    test('approving without an amount is rejected', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await expect(
+        service.updateSubmission(claim.id, primary.id, { status: 'approved' })
+      ).rejects.toThrow('Enter the amount the insurer approved');
+    });
+
+    test('marking received keeps a typed amount', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 12000,
+      });
+      const paid = await service.updateSubmission(claim.id, primary.id, {
+        status: 'paid',
+        amount_reimbursed: 12400,
+      });
+      expect(paid!.amount_reimbursed).toBe(12400);
+      const secondary = (await service.getById(claim.id))!.submissions[1];
+      expect(secondary.amount_claimed).toBe(1160);
+    });
+
+    test('a denial always records $0', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      const denied = await service.updateSubmission(claim.id, primary.id, {
+        status: 'denied',
+        amount_reimbursed: 15000,
+      });
+      expect(denied!.amount_reimbursed).toBe(0);
+    });
+
+    test('null clears a field and unknown fields are ignored', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'pending',
+        date_submitted: '2026-09-03',
+        notes: 'Sent online',
+      });
+      const updated = await service.updateSubmission(claim.id, primary.id, {
+        notes: null,
+        date_submitted: null,
+        plan_id: 'someone-else',
+        amount_claimed: 1,
+      } as unknown as Parameters<typeof service.updateSubmission>[2]);
+      expect(updated!.notes).toBeUndefined();
+      expect(updated!.date_submitted).toBeUndefined();
+      expect(updated!.plan_id).toBe('ip-primary-001');
+      expect(updated!.amount_claimed).toBe(13560);
+    });
+
+    test('clients cannot set waiting for a previous plan', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await expect(
+        service.updateSubmission(claim.id, primary.id, { status: 'awaiting_previous' })
+      ).rejects.toThrow('set automatically');
+    });
+
+    test('moving to a new status fills in a missing date with today', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const pending = await service.updateSubmission(claim.id, primary.id, { status: 'pending' });
+      expect(pending!.date_submitted).toBe(todayStr);
+      const approved = await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 12400,
+      });
+      expect(approved!.date_resolved).toBe(todayStr);
+      const paid = await service.updateSubmission(claim.id, primary.id, { status: 'paid' });
+      expect(paid!.date_paid).toBe(todayStr);
+    });
+
+    test('changing the approved amount recalculates what the secondary claims', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 10000,
+      });
+      expect((await service.getById(claim.id))!.submissions[1].amount_claimed).toBe(3560);
+      await service.updateSubmission(claim.id, primary.id, { amount_reimbursed: 12400 });
+      expect((await service.getById(claim.id))!.submissions[1].amount_claimed).toBe(1160);
+    });
+
+    test('undoing the primary decision sends an unsubmitted secondary back to waiting', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 12400,
+      });
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'pending',
+        amount_reimbursed: null,
+        date_resolved: null,
+      });
+      const secondary = (await service.getById(claim.id))!.submissions[1];
+      expect(secondary.status).toBe('awaiting_previous');
+      expect(secondary.amount_claimed).toBe(0);
+    });
+
+    test('a submitted secondary is never changed by the primary', async () => {
+      const { claim, primary, secondary } = await twoPlanClaim();
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 12400,
+      });
+      await service.updateSubmission(claim.id, secondary.id, { status: 'pending' });
+      await service.updateSubmission(claim.id, primary.id, { amount_reimbursed: 10000 });
+      const after = (await service.getById(claim.id))!.submissions[1];
+      expect(after.status).toBe('pending');
+      expect(after.amount_claimed).toBe(1160);
+    });
+
+    test('deleting the primary makes the secondary next in line', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.deleteSubmission(claim.id, primary.id);
+      const [only] = (await service.getById(claim.id))!.submissions;
+      expect(only.status).toBe('draft');
+      expect(only.amount_claimed).toBe(13560);
+    });
+
+    test('a new claim total updates what unsubmitted plans claim', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      await service.update(claim.id, { total_amount: 14000 });
+      expect((await service.getById(claim.id))!.submissions[0].amount_claimed).toBe(14000);
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 12400,
+      });
+      await service.update(claim.id, { total_amount: 13560 });
+      const subs = (await service.getById(claim.id))!.submissions;
+      // The approved primary keeps what it claimed; only the unsubmitted secondary moves
+      expect(subs[0].amount_claimed).toBe(14000);
+      expect(subs[1].amount_claimed).toBe(1160);
+    });
+
+    test('claim updates ignore fields that are not editable', async () => {
+      const { claim } = await twoPlanClaim();
+      const updated = await service.update(claim.id, {
+        description: 'Massage',
+        submissions: [],
+        status: 'closed',
+      } as unknown as Parameters<typeof service.update>[1]);
+      expect(updated!.description).toBe('Massage');
+      expect(updated!.submissions.length).toBe(2);
+      expect(updated!.status).toBe('draft');
+    });
+
+    test('a primary that covers everything closes the claim once paid', async () => {
+      const { claim, primary } = await twoPlanClaim(10000);
+      await service.updateSubmission(claim.id, primary.id, {
+        status: 'approved',
+        amount_reimbursed: 10000,
+      });
+      await service.updateSubmission(claim.id, primary.id, { status: 'paid' });
+      const updated = await service.getById(claim.id);
+      expect(updated!.submissions[1].amount_claimed).toBe(0);
+      expect(updated!.status).toBe('closed');
+    });
+
+    test('scheduled appointments cannot take submissions until converted', async () => {
+      const expected = await service.createExpectedExpense({
+        family_member_id: 'fm-john-001',
+        category_id: 'ic-dental-001',
+        appointment_date: '2026-11-15',
+        expected_cost: 13560,
+        expected_reimbursement: 12400,
+        payment_source_id: 'ps-checking',
+      });
+      await expect(
+        service.addSubmission(expected.id, {
+          plan_id: 'ip-primary-001',
+          amount_claimed: 13560,
+          documents_sent: [],
+        })
+      ).rejects.toThrow('Convert this scheduled appointment');
+    });
+
+    test('stored data: a wrong status is corrected and old rows can still be edited', async () => {
+      const { claim, primary } = await twoPlanClaim();
+      // An approval saved without an amount, under a stale "closed" status
+      const raw = [
+        {
+          ...claim,
+          status: 'closed',
+          submissions: [
+            { ...primary, status: 'approved', date_resolved: '2026-01-21' },
+            { ...claim.submissions[1], status: 'approved', amount_reimbursed: 1160 },
+          ],
+        },
+      ];
+      await writeFile(join(testDir, 'entities', 'insurance-claims.json'), JSON.stringify(raw));
+
+      expect((await service.getById(claim.id))!.status).toBe('in_progress');
+      const edited = await service.updateSubmission(claim.id, primary.id, { notes: 'Check EOB' });
+      expect(edited!.notes).toBe('Check EOB');
+      await expect(
+        service.updateSubmission(claim.id, primary.id, { status: 'paid' })
+      ).rejects.toThrow('Enter the amount the insurer approved');
     });
   });
 });

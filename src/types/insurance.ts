@@ -121,10 +121,19 @@ export interface InsuranceClaim {
 }
 
 export interface InsuranceClaimsSummary {
-  pending_count: number;
-  pending_amount: number;
+  pending_count: number; // Claims in progress
+  pending_amount: number; // Claimed on submissions waiting for a decision
   closed_count: number;
-  reimbursed_amount: number;
+  reimbursed_amount: number; // Received on closed claims
+  to_submit_count: number; // Plans ready to send
+  to_submit_amount: number;
+  waiting_count: number; // Submitted, no decision yet
+  waiting_amount: number;
+  awaiting_payment_count: number; // Approved, money not received yet
+  awaiting_payment_amount: number;
+  received_year: number;
+  received_this_year_amount: number;
+  received_this_year_claims: number;
 }
 
 export interface BackupMetadata {

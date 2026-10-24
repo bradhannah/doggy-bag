@@ -10,6 +10,7 @@
   import { apiClient } from '../../lib/api/client';
   import { success, error as showError } from '../../stores/toast';
   import { formatCurrency } from '$lib/utils/format';
+  import { getInsuranceLineDisplay } from '$lib/insurance/budget-line-status';
 
   export let item: BillInstanceDetailed | IncomeInstanceDetailed;
   export let type: 'bill' | 'income' = 'bill';
@@ -100,6 +101,11 @@
   $: occurrenceCount = item.occurrence_count || occurrences.length;
   $: isExtraOccurrenceMonth = item.is_extra_occurrence_month;
   $: totalExpected = occurrences.reduce((sum, occ) => sum + occ.expected_amount, 0);
+  // Insurance plans that haven't decided have no amount yet: show "—", not $0
+  $: allUndecided =
+    isVirtualInsurance &&
+    occurrences.length > 0 &&
+    occurrences.every((occ) => getInsuranceLineDisplay(occ)?.showAmount === false);
   // In the occurrence-only model, closed occurrences represent paid amounts
   $: totalPaid = occurrences.reduce(
     (sum, occ) => sum + (occ.is_closed ? occ.expected_amount : 0),
@@ -212,8 +218,8 @@
         {payoffPaidSoFar > 0 ? formatCurrency(payoffPaidSoFar) : '—'}
       </span>
     {:else}
-      <span class="ledger-amount item-amount" data-col="expected">
-        {formatCurrency(totalExpected)}
+      <span class="ledger-amount item-amount" class:muted={allUndecided} data-col="expected">
+        {allUndecided ? '—' : formatCurrency(totalExpected)}
       </span>
       <span
         class="ledger-amount item-amount"
@@ -384,6 +390,10 @@
     font-size: var(--font-size-md);
     font-weight: 500;
     color: var(--text-primary);
+  }
+
+  .item-amount.muted {
+    color: var(--text-secondary);
   }
 
   .item-amount.amber {

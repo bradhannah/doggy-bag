@@ -11,7 +11,15 @@ import type { InsuranceCategoriesService } from './insurance-categories-service'
 import type { InsurancePlansService } from './insurance-plans-service';
 import type { FamilyMembersService } from './family-members-service';
 import type { InsuranceProvidersService } from './insurance-providers-service';
-import { parseLocalDate } from '../utils/due-date';
+import { getTodayLocalDateString, parseLocalDate } from '../utils/due-date';
+import { NotFoundError, ValidationError } from '../utils/errors';
+import {
+  deriveClaimStatus,
+  getClaimBudgetMonths,
+  hasNothingLeftToClaim,
+  isDecided,
+  recalculateDownstreamSubmissions,
+} from '../utils/insurance-claims';
 import type {
   InsuranceClaim,
   ClaimDocument,
@@ -35,6 +43,47 @@ export interface ClaimFilters {
   category_id?: string;
   year?: number;
 }
+
+/** Fields a client may change on a submission. `null` (or '' for text) clears a field. */
+export type SubmissionUpdate = {
+  [K in
+    | 'status'
+    | 'amount_reimbursed'
+    | 'date_submitted'
+    | 'date_resolved'
+    | 'date_paid'
+    | 'eob_document_id'
+    | 'notes']?: ClaimSubmission[K] | null;
+};
+
+const SUBMISSION_UPDATE_FIELDS = [
+  'status',
+  'amount_reimbursed',
+  'date_submitted',
+  'date_resolved',
+  'date_paid',
+  'eob_document_id',
+  'notes',
+] as const;
+
+const CLAIM_UPDATE_FIELDS = new Set([
+  'family_member_id',
+  'category_id',
+  'description',
+  'provider_id',
+  'provider_name',
+  'service_date',
+  'total_amount',
+  'expected_reimbursement',
+]);
+
+const CLIENT_SUBMISSION_STATUSES: SubmissionStatus[] = [
+  'draft',
+  'pending',
+  'approved',
+  'paid',
+  'denied',
+];
 
 export interface InsuranceClaimsService {
   // Claims CRUD
@@ -94,17 +143,7 @@ export interface InsuranceClaimsService {
   updateSubmission(
     claimId: string,
     submissionId: string,
-    updates: Partial<
-      Pick<
-        ClaimSubmission,
-        | 'status'
-        | 'amount_reimbursed'
-        | 'date_submitted'
-        | 'date_resolved'
-        | 'eob_document_id'
-        | 'notes'
-      >
-    >
+    updates: SubmissionUpdate
   ): Promise<ClaimSubmission | null>;
   deleteSubmission(claimId: string, submissionId: string): Promise<void>;
 
@@ -114,6 +153,7 @@ export interface InsuranceClaimsService {
   // Expected Expenses (scheduled future insurance appointments)
   // Budget entries are virtual - injected by MonthsService, not stored
   getClaimsForMonth(month: string): Promise<InsuranceClaim[]>;
+  getClaimsWithBudgetActivity(month: string): Promise<InsuranceClaim[]>;
   createExpectedExpense(data: {
     family_member_id: string;
     category_id: string;
@@ -140,7 +180,7 @@ export interface InsuranceClaimsService {
   cancelExpectedExpense(id: string): Promise<void>;
   convertExpectedToClaim(
     id: string,
-    data: { actual_cost: number; update_bill_amount?: boolean }
+    data: { actual_cost: number; bill_paid?: boolean; update_bill_amount?: boolean }
   ): Promise<InsuranceClaim>;
 }
 
@@ -157,35 +197,6 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
     this.plansService = new InsurancePlansServiceImpl();
     this.familyMembersService = new FamilyMembersServiceImpl();
     this.providersService = new InsuranceProvidersServiceImpl();
-  }
-
-  /**
-   * Calculate the claim status based on submission statuses:
-   * - draft: No submissions OR all submissions are draft
-   * - in_progress: At least one submission is pending OR has mix of draft and final
-   * - closed: ALL submissions have final answer (approved/paid/denied) - no drafts allowed
-   */
-  private calculateClaimStatus(submissions: ClaimSubmission[]): ClaimStatus {
-    if (submissions.length === 0) {
-      return 'draft';
-    }
-
-    const allDraft = submissions.every((s) => s.status === 'draft');
-    if (allDraft) {
-      return 'draft';
-    }
-
-    // Final statuses are approved, paid, or denied
-    const finalStatuses: SubmissionStatus[] = ['approved', 'paid', 'denied'];
-
-    // Check if ALL submissions have a final status (no drafts, no pending)
-    const allFinal = submissions.every((s) => finalStatuses.includes(s.status));
-    if (allFinal) {
-      return 'closed';
-    }
-
-    // Otherwise it's in progress (has pending, or mix of draft and final)
-    return 'in_progress';
   }
 
   /**
@@ -218,8 +229,10 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
     return `${paddedNumber}_${date}_${sanitizedCategory}_${documentType}.${ext}`;
   }
 
+  /** All claims, with status derived from their submissions so a stored status can't drift. */
   private async getAllRaw(): Promise<InsuranceClaim[]> {
-    return (await this.storage.readJSON<InsuranceClaim[]>(STORAGE_PATH)) || [];
+    const claims = (await this.storage.readJSON<InsuranceClaim[]>(STORAGE_PATH)) || [];
+    return claims.map((claim) => ({ ...claim, status: deriveClaimStatus(claim) }));
   }
 
   /**
@@ -239,13 +252,13 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
 
     const provider = await this.providersService.getById(providerId);
     if (!provider) {
-      throw new Error('Provider not found');
+      throw new NotFoundError('Provider');
     }
     if (!provider.is_active) {
-      throw new Error('Provider is inactive');
+      throw new ValidationError('Provider is inactive');
     }
     if (!provider.category_ids.includes(categoryId)) {
-      throw new Error('Provider is not available for this category');
+      throw new ValidationError('Provider is not available for this category');
     }
     return { providerId: provider.id, providerName: provider.name };
   }
@@ -304,19 +317,19 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       // Validate
       const validation = this.validate(data);
       if (!validation.isValid) {
-        throw new Error('Validation failed: ' + validation.errors.join(', '));
+        throw new ValidationError('Validation failed: ' + validation.errors.join(', '));
       }
 
       // Get family member for denormalized name
       const familyMember = await this.familyMembersService.getById(data.family_member_id);
       if (!familyMember) {
-        throw new Error('Family member not found');
+        throw new NotFoundError('Family member');
       }
 
       // Get category for denormalized name
       const category = await this.categoriesService.getById(data.category_id);
       if (!category) {
-        throw new Error('Category not found');
+        throw new NotFoundError('Category');
       }
 
       // Resolve provider_id -> provider_name snapshot
@@ -432,12 +445,17 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         return null;
       }
 
+      // Request bodies arrive as-is; only these fields are editable here
+      updates = Object.fromEntries(
+        Object.entries(updates).filter(([key]) => CLAIM_UPDATE_FIELDS.has(key))
+      ) as typeof updates;
+
       // If family member changed, update denormalized name
       let familyMemberName = claims[index].family_member_name;
       if (updates.family_member_id && updates.family_member_id !== claims[index].family_member_id) {
         const familyMember = await this.familyMembersService.getById(updates.family_member_id);
         if (!familyMember) {
-          throw new Error('Family member not found');
+          throw new NotFoundError('Family member');
         }
         familyMemberName = familyMember.name;
       }
@@ -447,7 +465,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       if (updates.category_id && updates.category_id !== claims[index].category_id) {
         const category = await this.categoriesService.getById(updates.category_id);
         if (!category) {
-          throw new Error('Category not found');
+          throw new NotFoundError('Category');
         }
         categoryName = category.name;
       }
@@ -486,7 +504,14 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       // Validate the merged data
       const validation = this.validate(updatedClaim);
       if (!validation.isValid) {
-        throw new Error('Validation failed: ' + validation.errors.join(', '));
+        throw new ValidationError('Validation failed: ' + validation.errors.join(', '));
+      }
+
+      // A new total changes what each unsubmitted plan should claim
+      if (updatedClaim.total_amount !== claims[index].total_amount) {
+        updatedClaim.submissions = updatedClaim.submissions.map((s) => ({ ...s }));
+        recalculateDownstreamSubmissions(updatedClaim, { afterIndex: -1 });
+        updatedClaim.status = deriveClaimStatus(updatedClaim);
       }
 
       claims[index] = updatedClaim;
@@ -506,7 +531,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const claim = claims.find((c) => c.id === id);
 
       if (!claim) {
-        throw new Error('Claim not found');
+        throw new NotFoundError('Claim');
       }
 
       // Delete all associated documents
@@ -532,49 +557,67 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   }
 
   public async getSummary(): Promise<InsuranceClaimsSummary> {
+    const receivedYear = Number(getTodayLocalDateString().substring(0, 4));
+    const summary: InsuranceClaimsSummary = {
+      pending_count: 0,
+      pending_amount: 0,
+      closed_count: 0,
+      reimbursed_amount: 0,
+      to_submit_count: 0,
+      to_submit_amount: 0,
+      waiting_count: 0,
+      waiting_amount: 0,
+      awaiting_payment_count: 0,
+      awaiting_payment_amount: 0,
+      received_year: receivedYear,
+      received_this_year_amount: 0,
+      received_this_year_claims: 0,
+    };
+
     try {
       const claims = await this.getAllRaw();
 
-      let pending_count = 0;
-      let pending_amount = 0;
-      let closed_count = 0;
-      let reimbursed_amount = 0;
-
       for (const claim of claims) {
-        if (claim.status === 'in_progress') {
-          pending_count++;
-          // Sum pending submission amounts
-          for (const sub of claim.submissions) {
-            if (sub.status === 'pending') {
-              pending_amount += sub.amount_claimed;
-            }
-          }
-        } else if (claim.status === 'closed') {
-          closed_count++;
-          // Sum reimbursed amounts from resolved submissions
-          for (const sub of claim.submissions) {
-            if (sub.amount_reimbursed !== undefined) {
-              reimbursed_amount += sub.amount_reimbursed;
-            }
-          }
-        }
-      }
+        if (claim.is_expected) continue;
+        if (claim.status === 'in_progress') summary.pending_count++;
+        if (claim.status === 'closed') summary.closed_count++;
 
-      return {
-        pending_count,
-        pending_amount,
-        closed_count,
-        reimbursed_amount,
-      };
+        let receivedThisYear = false;
+        claim.submissions.forEach((sub, index) => {
+          const reimbursed = sub.amount_reimbursed ?? 0;
+          switch (sub.status) {
+            case 'draft': {
+              const ready = claim.submissions.slice(0, index).every((s) => isDecided(s.status));
+              if (ready && !hasNothingLeftToClaim(claim, index) && sub.amount_claimed > 0) {
+                summary.to_submit_count++;
+                summary.to_submit_amount += sub.amount_claimed;
+              }
+              break;
+            }
+            case 'pending':
+              summary.waiting_count++;
+              summary.waiting_amount += sub.amount_claimed;
+              summary.pending_amount += sub.amount_claimed;
+              break;
+            case 'approved':
+              summary.awaiting_payment_count++;
+              summary.awaiting_payment_amount += reimbursed;
+              break;
+            case 'paid':
+              if (claim.status === 'closed') summary.reimbursed_amount += reimbursed;
+              if (sub.date_paid?.startsWith(String(receivedYear))) {
+                summary.received_this_year_amount += reimbursed;
+                receivedThisYear = true;
+              }
+              break;
+          }
+        });
+        if (receivedThisYear) summary.received_this_year_claims++;
+      }
     } catch (error) {
       console.error('[InsuranceClaimsService] Failed to get summary:', error);
-      return {
-        pending_count: 0,
-        pending_amount: 0,
-        closed_count: 0,
-        reimbursed_amount: 0,
-      };
     }
+    return summary;
   }
 
   public validate(data: Partial<InsuranceClaim>): ValidationResult {
@@ -646,7 +689,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const index = claims.findIndex((c) => c.id === claimId);
 
       if (index === -1) {
-        throw new Error('Claim not found');
+        throw new NotFoundError('Claim');
       }
 
       const claim = claims[index];
@@ -739,14 +782,14 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const index = claims.findIndex((c) => c.id === claimId);
 
       if (index === -1) {
-        throw new Error('Claim not found');
+        throw new NotFoundError('Claim');
       }
 
       const claim = claims[index];
       const docIndex = claim.documents.findIndex((d) => d.id === documentId);
 
       if (docIndex === -1) {
-        throw new Error('Document not found');
+        throw new NotFoundError('Document');
       }
 
       const document = claim.documents[docIndex];
@@ -754,7 +797,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       // Check if document is referenced by any submission
       for (const sub of claim.submissions) {
         if (sub.documents_sent.includes(documentId) || sub.eob_document_id === documentId) {
-          throw new Error('Cannot delete document that is referenced by a submission');
+          throw new ValidationError('Cannot delete document that is referenced by a submission');
         }
       }
 
@@ -790,13 +833,20 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const index = claims.findIndex((c) => c.id === claimId);
 
       if (index === -1) {
-        throw new Error('Claim not found');
+        throw new NotFoundError('Claim');
+      }
+
+      const claim = claims[index];
+      if (claim.is_expected) {
+        throw new ValidationError(
+          'Convert this scheduled appointment to a claim before submitting it'
+        );
       }
 
       // Get plan for snapshot
       const plan = await this.plansService.getById(data.plan_id);
       if (!plan) {
-        throw new Error('Insurance plan not found');
+        throw new ValidationError('Insurance plan not found');
       }
 
       // Create plan snapshot
@@ -806,27 +856,24 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         policy_number: plan.policy_number,
         member_id: plan.member_id,
         owner: plan.owner,
-        // priority: plan.priority, // REMOVED
         portal_url: plan.portal_url,
       };
 
-      const claim = claims[index];
-
       // Validate amount_claimed
       if (typeof data.amount_claimed !== 'number' || data.amount_claimed < 0) {
-        throw new Error('Amount claimed must be a non-negative number');
+        throw new ValidationError('Amount claimed must be a non-negative number');
       }
 
       // Validate documents_sent
       if (!Array.isArray(data.documents_sent)) {
-        throw new Error('Documents sent must be an array');
+        throw new ValidationError('Documents sent must be an array');
       }
 
       // Verify all document IDs exist
       for (const docId of data.documents_sent) {
         const docExists = claim.documents.some((d) => d.id === docId);
         if (!docExists) {
-          throw new Error(`Document ${docId} not found on this claim`);
+          throw new ValidationError(`Document ${docId} not found on this claim`);
         }
       }
 
@@ -840,9 +887,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       };
 
       claim.submissions.push(newSubmission);
-
-      // Recalculate claim status
-      claim.status = this.calculateClaimStatus(claim.submissions);
+      claim.status = deriveClaimStatus(claim);
       claim.updated_at = new Date().toISOString();
 
       claims[index] = claim;
@@ -856,21 +901,22 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
     }
   }
 
+  /**
+   * Change one plan's submission, then bring the plans after it into step.
+   *
+   * Rules:
+   * - Only the SubmissionUpdate fields are applied; `null` or '' clears a field.
+   * - Approved and paid need the amount the insurer approved. Denied is always $0.
+   * - Paid only follows approved. Waiting for a previous plan is set by the app, not clients.
+   * - Moving to pending, approved/denied or paid fills a missing submitted, decided or
+   *   paid date with today, so the Budget knows which month the money belongs to.
+   * - A change in status or amount recalculates later unsubmitted plans: they claim what's
+   *   left, or go back to waiting if this plan is no longer decided.
+   */
   public async updateSubmission(
     claimId: string,
     submissionId: string,
-    updates: Partial<
-      Pick<
-        ClaimSubmission,
-        | 'status'
-        | 'amount_reimbursed'
-        | 'date_submitted'
-        | 'date_resolved'
-        | 'date_paid'
-        | 'eob_document_id'
-        | 'notes'
-      >
-    >
+    updates: SubmissionUpdate
   ): Promise<ClaimSubmission | null> {
     try {
       const claims = await this.getAllRaw();
@@ -889,71 +935,92 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         return null;
       }
 
-      // Validate EOB document if provided
-      if (updates.eob_document_id) {
-        const docExists = claim.documents.some((d) => d.id === updates.eob_document_id);
-        if (!docExists) {
-          throw new Error('EOB document not found on this claim');
+      const original = claim.submissions[subIndex];
+      const merged: ClaimSubmission = { ...original };
+      const mergedFields = merged as unknown as Record<string, unknown>;
+      for (const field of SUBMISSION_UPDATE_FIELDS) {
+        if (!(field in updates)) continue;
+        const value = updates[field];
+        if (value === null || value === '') {
+          delete mergedFields[field];
+        } else if (value !== undefined) {
+          mergedFields[field] = typeof value === 'string' ? value.trim() : value;
         }
       }
 
-      // Validate paid transition: can only go to paid from approved
-      if (updates.status === 'paid') {
-        const originalStatus = claim.submissions[subIndex].status;
-        if (originalStatus !== 'approved' && originalStatus !== 'paid') {
-          throw new Error('Can only mark a submission as paid after it has been approved');
-        }
-      }
-
-      const updatedSubmission: ClaimSubmission = {
-        ...claim.submissions[subIndex],
-        ...updates,
-      };
-
-      claim.submissions[subIndex] = updatedSubmission;
-
-      // Cascade logic: when a submission is approved/denied/paid, activate the next awaiting submission
       if (
-        updates.status === 'approved' ||
-        updates.status === 'denied' ||
-        updates.status === 'paid'
+        merged.status !== original.status &&
+        !CLIENT_SUBMISSION_STATUSES.includes(merged.status)
       ) {
-        // Find the next submission with status 'awaiting_previous' (must be after current in array order)
-        const nextAwaitingIndex = claim.submissions.findIndex(
-          (s, idx) => idx > subIndex && s.status === 'awaiting_previous'
+        throw new ValidationError(
+          merged.status === 'awaiting_previous'
+            ? 'Waiting for a previous plan is set automatically'
+            : `Unknown submission status: ${merged.status}`
         );
+      }
+      if (
+        updates.amount_reimbursed !== undefined &&
+        updates.amount_reimbursed !== null &&
+        (typeof updates.amount_reimbursed !== 'number' ||
+          !Number.isInteger(updates.amount_reimbursed) ||
+          updates.amount_reimbursed < 0)
+      ) {
+        throw new ValidationError('Approved amount must be zero or more');
+      }
+      if (merged.eob_document_id && !claim.documents.some((d) => d.id === merged.eob_document_id)) {
+        throw new ValidationError('EOB document not found on this claim');
+      }
 
-        if (nextAwaitingIndex !== -1) {
-          // Calculate total reimbursed from all submissions before the awaiting one
-          const totalReimbursed = claim.submissions
-            .slice(0, nextAwaitingIndex)
-            .reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
+      const statusChanged = merged.status !== original.status;
+      if (statusChanged && merged.status === 'paid' && original.status !== 'approved') {
+        throw new ValidationError('Record the approval before marking the money received');
+      }
+      if (
+        (merged.status === 'approved' || merged.status === 'paid') &&
+        (statusChanged || 'amount_reimbursed' in updates) &&
+        typeof merged.amount_reimbursed !== 'number'
+      ) {
+        throw new ValidationError('Enter the amount the insurer approved');
+      }
+      if (merged.status === 'denied') {
+        merged.amount_reimbursed = 0;
+      }
 
-          // Remaining amount to claim (minimum 0)
-          const remainingAmount = Math.max(0, claim.total_amount - totalReimbursed);
+      const today = getTodayLocalDateString();
+      if (statusChanged) {
+        if (merged.status === 'pending' && !merged.date_submitted) {
+          merged.date_submitted = today;
+        }
+        if ((merged.status === 'approved' || merged.status === 'denied') && !merged.date_resolved) {
+          merged.date_resolved = today;
+        }
+        if (merged.status === 'paid' && !merged.date_paid) {
+          merged.date_paid = today;
+        }
+      }
 
-          // Activate the next submission
-          claim.submissions[nextAwaitingIndex].status = 'draft';
-          claim.submissions[nextAwaitingIndex].amount_claimed = remainingAmount;
+      claim.submissions[subIndex] = merged;
 
+      if (statusChanged || merged.amount_reimbursed !== original.amount_reimbursed) {
+        const adjustments = recalculateDownstreamSubmissions(claim, {
+          afterIndex: subIndex,
+          demoteIfPreviousUndecided: isDecided(original.status) && !isDecided(merged.status),
+        });
+        for (const change of adjustments) {
           console.log(
-            '[InsuranceClaimsService] Cascaded to next submission:',
-            claim.submissions[nextAwaitingIndex].plan_snapshot.name,
-            'with amount:',
-            remainingAmount
+            `[InsuranceClaimsService] ${change.plan_name}: ${change.field} ${change.from} -> ${change.to}`
           );
         }
       }
 
-      // Recalculate claim status
-      claim.status = this.calculateClaimStatus(claim.submissions);
+      claim.status = deriveClaimStatus(claim);
       claim.updated_at = new Date().toISOString();
 
       claims[claimIndex] = claim;
       await this.storage.writeJSON(STORAGE_PATH, claims);
 
       console.log('[InsuranceClaimsService] Updated submission on claim #', claim.claim_number);
-      return updatedSubmission;
+      return merged;
     } catch (error) {
       console.error('[InsuranceClaimsService] Failed to update submission:', error);
       throw error;
@@ -966,20 +1033,21 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const claimIndex = claims.findIndex((c) => c.id === claimId);
 
       if (claimIndex === -1) {
-        throw new Error('Claim not found');
+        throw new NotFoundError('Claim');
       }
 
       const claim = claims[claimIndex];
       const subIndex = claim.submissions.findIndex((s) => s.id === submissionId);
 
       if (subIndex === -1) {
-        throw new Error('Submission not found');
+        throw new NotFoundError('Submission');
       }
 
       claim.submissions.splice(subIndex, 1);
+      // The plan after the deleted one may now be next in line
+      recalculateDownstreamSubmissions(claim, { afterIndex: subIndex - 1 });
 
-      // Recalculate claim status
-      claim.status = this.calculateClaimStatus(claim.submissions);
+      claim.status = deriveClaimStatus(claim);
       claim.updated_at = new Date().toISOString();
 
       claims[claimIndex] = claim;
@@ -1015,7 +1083,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
 
       // Don't allow marking expected expenses as paid (they should be converted first)
       if (claim.is_expected) {
-        throw new Error('Cannot mark expected expenses as paid - convert to claim first');
+        throw new ValidationError('Cannot mark expected expenses as paid - convert to claim first');
       }
 
       const now = new Date().toISOString();
@@ -1062,6 +1130,20 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   }
 
   /**
+   * Claims that put something in a month's Budget: the bill in its service month,
+   * and each plan's reimbursement in the month its money moves.
+   */
+  public async getClaimsWithBudgetActivity(month: string): Promise<InsuranceClaim[]> {
+    try {
+      const claims = await this.getAllRaw();
+      return claims.filter((claim) => getClaimBudgetMonths(claim).has(month));
+    } catch (error) {
+      console.error('[InsuranceClaimsService] Failed to get claims for month:', error);
+      return [];
+    }
+  }
+
+  /**
    * Create an expected insurance expense (virtual - no physical bill/income instances)
    */
   public async createExpectedExpense(data: {
@@ -1076,24 +1158,24 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
   }): Promise<InsuranceClaim> {
     try {
       // Validate
-      if (!data.family_member_id) throw new Error('Family member is required');
-      if (!data.category_id) throw new Error('Category is required');
-      if (!data.appointment_date) throw new Error('Appointment date is required');
+      if (!data.family_member_id) throw new ValidationError('Family member is required');
+      if (!data.category_id) throw new ValidationError('Category is required');
+      if (!data.appointment_date) throw new ValidationError('Appointment date is required');
       if (data.expected_cost === undefined || data.expected_cost < 0) {
-        throw new Error('Expected cost must be non-negative');
+        throw new ValidationError('Expected cost must be non-negative');
       }
       if (data.expected_reimbursement === undefined || data.expected_reimbursement < 0) {
-        throw new Error('Expected reimbursement must be non-negative');
+        throw new ValidationError('Expected reimbursement must be non-negative');
       }
-      if (!data.payment_source_id) throw new Error('Payment source is required');
+      if (!data.payment_source_id) throw new ValidationError('Payment source is required');
 
       // Get family member
       const familyMember = await this.familyMembersService.getById(data.family_member_id);
-      if (!familyMember) throw new Error('Family member not found');
+      if (!familyMember) throw new NotFoundError('Family member');
 
       // Get insurance category
       const insuranceCategory = await this.categoriesService.getById(data.category_id);
-      if (!insuranceCategory) throw new Error('Insurance category not found');
+      if (!insuranceCategory) throw new NotFoundError('Insurance category');
 
       // Resolve provider_id -> provider_name snapshot
       const { providerId, providerName } = await this.resolveProvider(
@@ -1171,7 +1253,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
 
       const claim = claims[index];
       if (claim.status !== 'expected' || !claim.is_expected) {
-        throw new Error('Can only update expected expenses');
+        throw new ValidationError('Can only update expected expenses');
       }
 
       const now = new Date().toISOString();
@@ -1180,14 +1262,14 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       let familyMemberName = claim.family_member_name;
       if (updates.family_member_id && updates.family_member_id !== claim.family_member_id) {
         const familyMember = await this.familyMembersService.getById(updates.family_member_id);
-        if (!familyMember) throw new Error('Family member not found');
+        if (!familyMember) throw new NotFoundError('Family member');
         familyMemberName = familyMember.name;
       }
 
       let categoryName = claim.category_name;
       if (updates.category_id && updates.category_id !== claim.category_id) {
         const insuranceCategory = await this.categoriesService.getById(updates.category_id);
-        if (!insuranceCategory) throw new Error('Insurance category not found');
+        if (!insuranceCategory) throw new NotFoundError('Insurance category');
         categoryName = insuranceCategory.name;
       }
 
@@ -1247,11 +1329,11 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       const claim = claims.find((c) => c.id === id);
 
       if (!claim) {
-        throw new Error('Expected expense not found');
+        throw new NotFoundError('Expected expense');
       }
 
       if (claim.status !== 'expected' || !claim.is_expected) {
-        throw new Error('Can only cancel expected expenses');
+        throw new ValidationError('Can only cancel expected expenses');
       }
 
       // Simply remove the claim - no physical instances to clean up (they're virtual)
@@ -1271,23 +1353,25 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
    */
   public async convertExpectedToClaim(
     id: string,
-    data: { actual_cost: number; update_bill_amount?: boolean }
+    // update_bill_amount is accepted from older clients and ignored: the bill always
+    // shows the claim's actual cost
+    data: { actual_cost: number; bill_paid?: boolean; update_bill_amount?: boolean }
   ): Promise<InsuranceClaim> {
     try {
       const claims = await this.getAllRaw();
       const index = claims.findIndex((c) => c.id === id);
 
       if (index === -1) {
-        throw new Error('Expected expense not found');
+        throw new NotFoundError('Expected expense');
       }
 
       const claim = claims[index];
       if (claim.status !== 'expected' || !claim.is_expected) {
-        throw new Error('Can only convert expected expenses');
+        throw new ValidationError('Can only convert expected expenses');
       }
 
       if (data.actual_cost < 0) {
-        throw new Error('Actual cost must be non-negative');
+        throw new ValidationError('Actual cost must be non-negative');
       }
 
       const now = new Date().toISOString();
@@ -1297,7 +1381,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
 
       // Get family member for submissions
       const familyMember = await this.familyMembersService.getById(claim.family_member_id);
-      if (!familyMember) throw new Error('Family member not found');
+      if (!familyMember) throw new NotFoundError('Family member');
 
       // Auto-generate draft submissions based on family member's plans
       // Each submission becomes a potential income source when reimbursed
@@ -1333,9 +1417,9 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         });
       }
 
-      // Update the claim
-      // Auto-mark bill as paid if the expected expense had a payment source set
-      const autoPaid = !!claim.payment_source_id;
+      // The bill counts as paid unless the caller says otherwise; without a choice it
+      // follows whether the expected expense had a payment source
+      const billPaid = data.bill_paid ?? !!claim.payment_source_id;
       claims[index] = {
         ...claim,
         claim_number: claimNumber,
@@ -1344,8 +1428,8 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
         is_expected: false,
         converted_from_expected_at: now,
         submissions,
-        bill_paid: autoPaid,
-        bill_paid_date: autoPaid ? now.split('T')[0] : undefined,
+        bill_paid: billPaid,
+        bill_paid_date: billPaid ? getTodayLocalDateString() : undefined,
         updated_at: now,
       };
 

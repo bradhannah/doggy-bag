@@ -1,11 +1,13 @@
 <script lang="ts">
   /**
-   * ClaimDetail - Detailed view of a single claim with submissions and documents
+   * ClaimDetail - One claim: what to do next, where the money stands, and each
+   * insurance plan in the order it is claimed.
    */
-  import type { InsuranceClaim, ClaimStatus } from '../../types/insurance';
+  import type { InsuranceClaim } from '../../types/insurance';
   import {
     deleteClaim,
     createSubmission,
+    updateSubmission,
     loadInsuranceClaims,
     loadClaimsSummary,
     markBillPaid,
@@ -13,11 +15,25 @@
   } from '../../stores/insurance-claims';
   import { activePlans } from '../../stores/insurance-plans';
   import { success, error as showError } from '../../stores/toast';
+  import { isTauri } from '../../stores/settings';
   import { createEventDispatcher } from 'svelte';
   import SubmissionCard from './SubmissionCard.svelte';
   import DocumentUpload from './DocumentUpload.svelte';
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
-  import { formatCurrency, formatDate, dollarsToCents } from '$lib/utils/format';
+  import AmountInput from '../shared/AmountInput.svelte';
+  import {
+    formatCurrency,
+    formatDate,
+    dollarsToCents,
+    getTodayDateString,
+  } from '$lib/utils/format';
+  import {
+    getClaimHeadline,
+    getClaimMoney,
+    getNextStep,
+    planName,
+    remainingToClaim,
+  } from '$lib/insurance/claim-progress';
 
   export let claim: InsuranceClaim;
   export let onEdit: () => void = () => {};
@@ -29,43 +45,115 @@
   let showNewSubmissionForm = false;
   let newSubmissionPlanId = '';
   let newSubmissionAmount = '';
-  let submitting = false;
+  let busy = false;
   let showDeleteConfirm = false;
-  let deleting = false;
-  let togglingBillPaid = false;
 
-  function getStatusColor(status: ClaimStatus): string {
-    switch (status) {
-      case 'expected':
-      case 'draft':
-      case 'in_progress':
-        return 'var(--warning)';
-      case 'closed':
-        return 'var(--success)';
-      default:
-        return 'var(--text-primary)';
+  $: headline = getClaimHeadline(claim);
+  $: money = getClaimMoney(claim);
+  $: next = getNextStep(claim);
+  $: nextPortalUrl = next?.kind === 'submit' ? next.submission.plan_snapshot.portal_url : undefined;
+  $: hasActivePlans = $activePlans.length > 0;
+  $: subtitle = [
+    claim.provider_name,
+    claim.family_member_name,
+    `${claim.is_expected ? 'Appointment' : 'Service'} ${formatDate(claim.service_date)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  async function refresh() {
+    await loadInsuranceClaims();
+    await loadClaimsSummary();
+    dispatch('updated');
+  }
+
+  async function run(action: () => Promise<unknown>, message: string, failure: string) {
+    busy = true;
+    try {
+      await action();
+      success(message);
+      await refresh();
+    } catch (e) {
+      showError(e instanceof Error ? e.message : failure);
+    } finally {
+      busy = false;
     }
   }
 
-  function getStatusLabel(status: ClaimStatus): string {
-    switch (status) {
-      case 'expected':
-      case 'draft':
-      case 'in_progress':
-        return 'In Progress';
-      case 'closed':
-        return 'Closed';
-      default:
-        return status;
+  function markNextSubmitted() {
+    if (next?.kind !== 'submit') return;
+    const { submission } = next;
+    run(
+      () =>
+        updateSubmission(claim.id, submission.id, {
+          status: 'pending',
+          date_submitted: getTodayDateString(),
+        }),
+      `Submitted to ${planName(submission)}`,
+      'Failed to mark submitted'
+    );
+  }
+
+  function markNextReceived() {
+    if (next?.kind !== 'receive') return;
+    const { submission } = next;
+    run(
+      () =>
+        updateSubmission(claim.id, submission.id, {
+          status: 'paid',
+          date_paid: getTodayDateString(),
+        }),
+      `${planName(submission)} payment received`,
+      'Failed to mark received'
+    );
+  }
+
+  const toggleBillPaid = () =>
+    run(
+      () => markBillPaid(claim.id, !claim.bill_paid),
+      claim.bill_paid ? 'Clinic bill marked unpaid' : 'Clinic bill marked paid',
+      'Failed to update the bill'
+    );
+
+  async function openPortal(url: string | undefined) {
+    if (!url) return;
+    try {
+      if (isTauri()) {
+        const { openUrl } = await import('@tauri-apps/plugin-opener');
+        await openUrl(url);
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch (e) {
+      showError('Failed to open portal');
+      console.error('Failed to open portal URL:', e);
     }
   }
 
-  function handleDelete() {
-    showDeleteConfirm = true;
+  function startNewSubmission() {
+    newSubmissionPlanId = '';
+    const remaining = remainingToClaim(claim, claim.submissions.length);
+    newSubmissionAmount = (remaining / 100).toFixed(2);
+    showNewSubmissionForm = true;
+  }
+
+  async function saveNewSubmission() {
+    if (!newSubmissionPlanId) {
+      showError('Choose an insurance plan');
+      return;
+    }
+    const amountCents = dollarsToCents(newSubmissionAmount);
+    if (amountCents <= 0) {
+      showError('Enter the amount to claim');
+      return;
+    }
+    const data: SubmissionData = { plan_id: newSubmissionPlanId, amount_claimed: amountCents };
+    await run(() => createSubmission(claim.id, data), 'Plan added', 'Failed to add the plan');
+    showNewSubmissionForm = false;
   }
 
   async function confirmDelete() {
-    deleting = true;
+    busy = true;
     try {
       await deleteClaim(claim.id);
       success(`Claim #${claim.claim_number} deleted`);
@@ -74,618 +162,481 @@
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Failed to delete claim');
     } finally {
-      deleting = false;
+      busy = false;
       showDeleteConfirm = false;
     }
   }
-
-  function cancelDelete() {
-    showDeleteConfirm = false;
-  }
-
-  async function toggleBillPaid() {
-    togglingBillPaid = true;
-    try {
-      await markBillPaid(claim.id, !claim.bill_paid);
-      success(claim.bill_paid ? 'Bill marked as unpaid' : 'Bill marked as paid');
-      dispatch('updated');
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to update bill status');
-    } finally {
-      togglingBillPaid = false;
-    }
-  }
-
-  // Calculate remaining uncovered amount for new submissions
-  $: remainingUncovered = Math.max(0, claim.total_amount - totalReimbursed);
-
-  function startNewSubmission() {
-    newSubmissionPlanId = '';
-    // Suggest the remaining uncovered amount
-    newSubmissionAmount = (remainingUncovered / 100).toFixed(2);
-    showNewSubmissionForm = true;
-  }
-
-  function cancelNewSubmission() {
-    showNewSubmissionForm = false;
-  }
-
-  async function saveNewSubmission() {
-    if (!newSubmissionPlanId) {
-      showError('Please select an insurance plan');
-      return;
-    }
-
-    const amountCents = dollarsToCents(newSubmissionAmount);
-    if (amountCents <= 0) {
-      showError('Please enter a valid amount');
-      return;
-    }
-
-    submitting = true;
-    try {
-      const data: SubmissionData = {
-        plan_id: newSubmissionPlanId,
-        amount_claimed: amountCents,
-      };
-
-      await createSubmission(claim.id, data);
-      success('Submission created');
-      showNewSubmissionForm = false;
-      dispatch('updated');
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Failed to create submission');
-    } finally {
-      submitting = false;
-    }
-  }
-
-  async function handleSubmissionUpdate() {
-    await loadInsuranceClaims();
-    await loadClaimsSummary();
-    dispatch('updated');
-  }
-
-  // Calculate totals
-  $: totalReimbursed = claim.submissions.reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
-  $: approvedAwaitingPayment = claim.submissions
-    .filter((s) => s.status === 'approved')
-    .reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
-  $: totalReceived = claim.submissions
-    .filter((s) => s.status === 'paid')
-    .reduce((sum, s) => sum + (s.amount_reimbursed || 0), 0);
-  $: hasActivePlans = $activePlans.length > 0;
 </script>
 
 <div class="claim-detail">
-  <!-- Header -->
-  <div class="detail-header">
-    <div class="header-left">
-      <h3>Claim #{claim.claim_number}</h3>
-      <span class="claim-status" style="color: {getStatusColor(claim.status)}">
-        {getStatusLabel(claim.status)}
-      </span>
-    </div>
-    <div class="header-actions">
-      {#if claim.status === 'expected'}
-        <button class="btn btn-primary btn-sm" on:click={() => dispatch('convert')}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+  <header class="detail-header">
+    <div class="header-row">
+      <div class="header-title">
+        <h3>
+          {claim.is_expected ? '' : `#${claim.claim_number} `}{claim.category_name}
+        </h3>
+        <span
+          class="badge"
+          class:badge-accent={headline.tone === 'accent'}
+          class:badge-warning={headline.tone === 'warning'}
+          class:badge-success={headline.tone === 'success'}
+        >
+          {headline.label}
+        </span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-secondary" on:click={onEdit}>Edit</button>
+        <button
+          class="icon-btn danger"
+          on:click={() => (showDeleteConfirm = true)}
+          disabled={busy}
+          aria-label="Delete claim"
+          title="Delete claim"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
-              d="M5 13l4 4L19 7"
+              d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
             />
           </svg>
-          Convert to Claim
         </button>
-      {:else}
-        <button
-          class="btn btn-sm"
-          class:btn-bill-paid={claim.bill_paid}
-          class:btn-secondary={!claim.bill_paid}
-          on:click={toggleBillPaid}
-          disabled={togglingBillPaid}
-        >
-          {#if claim.bill_paid}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M5 13l4 4L19 7"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Bill Paid
-          {:else}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-              <path
-                d="M12 6v12M6 12h12"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            Mark Paid
-          {/if}
+        <button class="icon-btn" on:click={onClose} aria-label="Close claim" title="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
         </button>
-      {/if}
-      <button class="btn btn-secondary btn-sm" on:click={onEdit}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-          <path
-            d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-        Edit
-      </button>
-      <button class="btn btn-danger btn-sm" on:click={handleDelete} disabled={deleting}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" />
-          <path
-            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-        Delete
-      </button>
-    </div>
-  </div>
-
-  <!-- Claim Info -->
-  <div class="claim-info">
-    <div class="info-row">
-      <span class="info-label">Family Member:</span>
-      <span class="info-value">{claim.family_member_name}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Category:</span>
-      <span class="info-value">{claim.category_name}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Service Date:</span>
-      <span class="info-value">{formatDate(claim.service_date)}</span>
-    </div>
-    {#if claim.provider_name}
-      <div class="info-row">
-        <span class="info-label">Provider:</span>
-        <span class="info-value">{claim.provider_name}</span>
       </div>
-    {/if}
+    </div>
+    <p class="header-subtitle">{subtitle}</p>
     {#if claim.description}
-      <div class="info-row description">
-        <span class="info-label">Description:</span>
-        <span class="info-value">{claim.description}</span>
-      </div>
+      <p class="header-description">{claim.description}</p>
     {/if}
-  </div>
+  </header>
 
-  <!-- Financial Summary -->
-  <div class="financial-summary" class:has-estimate={!!claim.expected_reimbursement}>
-    <div class="summary-item">
-      <span class="summary-label">Total Amount</span>
-      <span class="summary-value">{formatCurrency(claim.total_amount)}</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">Total Reimbursed</span>
-      <span class="summary-value success">{formatCurrency(totalReimbursed)}</span>
-    </div>
-    {#if approvedAwaitingPayment > 0}
-      <div class="summary-item">
-        <span class="summary-label">Awaiting Payment</span>
-        <span class="summary-value" style="color: var(--warning)"
-          >{formatCurrency(approvedAwaitingPayment)}</span
-        >
+  {#if next && next.kind !== 'decide'}
+    <section class="next-step" aria-label="Next step">
+      <div class="next-text">
+        <span class="next-label">Next step</span>
+        {#if next.kind === 'submit'}
+          <span class="next-title">
+            Submit {next.index > 0 ? 'the remaining ' : ''}{formatCurrency(next.amount)} to {planName(
+              next.submission
+            )}
+          </span>
+          <span class="next-hint">
+            {next.index > 0
+              ? `Include ${planName(claim.submissions[next.index - 1])}'s explanation of benefits (EOB).`
+              : 'Include the receipt from the clinic.'}
+          </span>
+        {:else if next.kind === 'receive'}
+          <span class="next-title">
+            Waiting for {formatCurrency(next.amount)} from {planName(next.submission)}
+          </span>
+          <span class="next-hint">Mark it received when the money arrives.</span>
+        {:else if next.kind === 'convert'}
+          <span class="next-title">After the appointment, record what it cost</span>
+          <span class="next-hint">This turns the scheduled visit into a claim you can submit.</span>
+        {:else if next.kind === 'add_plan'}
+          <span class="next-title">Add the insurance plans to claim from</span>
+          <span class="next-hint">
+            {hasActivePlans
+              ? 'Plans are claimed in order: primary first, then secondary.'
+              : 'Set up your insurance plans on the Manage page first.'}
+          </span>
+        {/if}
       </div>
-    {/if}
-    {#if totalReceived > 0}
-      <div class="summary-item">
-        <span class="summary-label">Received</span>
-        <span class="summary-value" style="color: var(--accent)"
-          >{formatCurrency(totalReceived)}</span
-        >
+      <div class="next-actions">
+        {#if next.kind === 'submit'}
+          <button class="btn btn-primary" on:click={markNextSubmitted} disabled={busy}>
+            Mark submitted
+          </button>
+          {#if nextPortalUrl}
+            <button class="btn btn-sm btn-link" on:click={() => openPortal(nextPortalUrl)}>
+              Open {planName(next.submission)} portal ↗
+            </button>
+          {/if}
+        {:else if next.kind === 'receive'}
+          <button class="btn btn-primary" on:click={markNextReceived} disabled={busy}>
+            Mark received
+          </button>
+        {:else if next.kind === 'convert'}
+          <button class="btn btn-primary" on:click={() => dispatch('convert')}>
+            Convert to claim
+          </button>
+        {:else if next.kind === 'add_plan' && hasActivePlans}
+          <button class="btn btn-primary" on:click={startNewSubmission}>Add plan</button>
+        {:else if next.kind === 'add_plan'}
+          <a class="btn btn-secondary" href="/setup?tab=insurance-plans">Set up plans</a>
+        {/if}
       </div>
-    {/if}
-    <div class="summary-item">
-      <span class="summary-label">Out of Pocket</span>
-      <span class="summary-value warning"
-        >{formatCurrency(claim.total_amount - totalReimbursed)}</span
-      >
-    </div>
-    {#if claim.expected_reimbursement}
-      <div class="summary-item">
-        <span class="summary-label">Expected Return</span>
-        <span class="summary-value accent">{formatCurrency(claim.expected_reimbursement)}</span>
-      </div>
-    {/if}
-  </div>
+    </section>
+  {/if}
 
-  <!-- Submissions Section -->
-  <div class="submissions-section">
-    <div class="section-header">
-      <h4>Submissions ({claim.submissions.length})</h4>
-      {#if hasActivePlans && !showNewSubmissionForm}
-        <button class="btn btn-primary btn-sm" on:click={startNewSubmission}>
-          + Add Submission
+  <section class="money" aria-label="Money">
+    {#if claim.is_expected}
+      <div class="money-cell">
+        <span class="money-label">Estimated cost</span>
+        <span class="money-value">{formatCurrency(money.cost)}</span>
+      </div>
+      <div class="money-cell">
+        <span class="money-label">Estimated back</span>
+        <span class="money-value">{formatCurrency(money.estimate ?? 0)}</span>
+      </div>
+      <div class="money-cell">
+        <span class="money-label">Your share</span>
+        <span class="money-value">
+          {formatCurrency(Math.max(0, money.cost - (money.estimate ?? 0)))}
+        </span>
+      </div>
+    {:else}
+      <div class="money-cell">
+        <span class="money-label">Cost</span>
+        <span class="money-value">{formatCurrency(money.cost)}</span>
+        <button
+          class="money-note bill-toggle"
+          class:paid={claim.bill_paid}
+          on:click={toggleBillPaid}
+          disabled={busy}
+          title={claim.bill_paid ? 'Mark the clinic bill unpaid' : 'Mark the clinic bill paid'}
+        >
+          {claim.bill_paid ? 'Clinic bill paid ✓' : 'Mark clinic bill paid'}
+        </button>
+      </div>
+      <div class="money-cell">
+        <span class="money-label">Approved</span>
+        <span class="money-value">{formatCurrency(money.approved)}</span>
+        {#if money.estimate}
+          <span class="money-note">of {formatCurrency(money.estimate)} estimated</span>
+        {/if}
+      </div>
+      <div class="money-cell">
+        <span class="money-label">Received</span>
+        <span class="money-value" class:success={money.received > 0}>
+          {formatCurrency(money.received)}
+        </span>
+        {#if money.received === 0}<span class="money-note">nothing yet</span>{/if}
+      </div>
+      <div class="money-cell">
+        <span class="money-label">Owed to you</span>
+        <span class="money-value" class:warning={money.owed > 0}>{formatCurrency(money.owed)}</span>
+        {#if money.stillToClaim > 0}
+          <span class="money-note">+ up to {formatCurrency(money.stillToClaim)} more</span>
+        {/if}
+      </div>
+    {/if}
+  </section>
+
+  {#if !claim.is_expected}
+    <section class="plans" aria-label="Insurance plans">
+      <div class="section-header">
+        <h4>Insurance plans</h4>
+        {#if claim.submissions.length > 1}
+          <span class="section-hint">In the order you claim them</span>
+        {/if}
+      </div>
+
+      {#each claim.submissions as submission, index (submission.id)}
+        <SubmissionCard
+          {claim}
+          {index}
+          highlight={submission.id === highlightSubmissionId}
+          on:updated={refresh}
+          on:deleted={refresh}
+        />
+      {/each}
+
+      {#if showNewSubmissionForm}
+        <div class="new-plan">
+          <div class="field-grid">
+            <label class="field">
+              <span>Insurance plan</span>
+              <select bind:value={newSubmissionPlanId} disabled={busy}>
+                <option value="">Choose a plan</option>
+                {#each $activePlans as plan (plan.id)}
+                  <option value={plan.id}>{plan.name}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="field">
+              <span>Amount to claim</span>
+              <AmountInput bind:value={newSubmissionAmount} disabled={busy} />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button
+              class="btn btn-sm btn-ghost"
+              on:click={() => (showNewSubmissionForm = false)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button class="btn btn-sm btn-primary" on:click={saveNewSubmission} disabled={busy}>
+              Add plan
+            </button>
+          </div>
+        </div>
+      {:else if hasActivePlans && claim.submissions.length > 0}
+        <button class="btn btn-sm btn-ghost add-plan" on:click={startNewSubmission}>
+          + Add another plan
         </button>
       {/if}
-    </div>
+    </section>
+  {/if}
 
-    {#if showNewSubmissionForm}
-      <div class="new-submission-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="new-submission-plan">Insurance Plan</label>
-            <select id="new-submission-plan" bind:value={newSubmissionPlanId} disabled={submitting}>
-              <option value="">-- Select Plan --</option>
-              {#each $activePlans as plan (plan.id)}
-                <option value={plan.id}>{plan.name}</option>
-              {/each}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="new-submission-amount">Amount to Claim</label>
-            <div class="amount-input-wrapper">
-              <span class="currency-prefix">$</span>
-              <input
-                id="new-submission-amount"
-                type="text"
-                bind:value={newSubmissionAmount}
-                disabled={submitting}
-              />
-            </div>
-          </div>
-        </div>
-        <div class="form-actions">
-          <button
-            class="btn btn-secondary btn-sm"
-            on:click={cancelNewSubmission}
-            disabled={submitting}
-          >
-            Cancel
-          </button>
-          <button class="btn btn-primary btn-sm" on:click={saveNewSubmission} disabled={submitting}>
-            {submitting ? 'Creating...' : 'Create Submission'}
-          </button>
-        </div>
-      </div>
-    {/if}
-
-    {#if claim.submissions.length === 0}
-      <p class="empty-message">
-        No submissions yet.
-        {#if hasActivePlans}
-          Click "Add Submission" to submit this claim to an insurance plan.
-        {:else}
-          <a href="/setup">Set up insurance plans</a> to start tracking submissions.
-        {/if}
-      </p>
-    {:else}
-      <div class="submissions-list">
-        {#each claim.submissions as submission (submission.id)}
-          <SubmissionCard
-            {submission}
-            claimId={claim.id}
-            highlight={submission.id === highlightSubmissionId}
-            on:updated={handleSubmissionUpdate}
-            on:deleted={handleSubmissionUpdate}
-          />
-        {/each}
-      </div>
-    {/if}
-  </div>
-
-  <!-- Documents Section -->
   <DocumentUpload
     claimId={claim.id}
     documents={claim.documents}
-    on:uploaded={handleSubmissionUpdate}
-    on:deleted={handleSubmissionUpdate}
+    on:uploaded={refresh}
+    on:deleted={refresh}
   />
 </div>
 
-<!-- Delete Confirmation Dialog -->
 <ConfirmDialog
   open={showDeleteConfirm}
   title="Delete Claim"
   message="Delete claim #{claim.claim_number}? This action cannot be undone."
-  confirmText={deleting ? 'Deleting...' : 'Delete'}
+  confirmText={busy ? 'Deleting...' : 'Delete'}
   on:confirm={confirmDelete}
-  on:cancel={cancelDelete}
+  on:cancel={() => (showDeleteConfirm = false)}
 />
 
 <style>
   .claim-detail {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-5);
   }
 
   .detail-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: var(--space-1);
     padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--border-default);
   }
 
-  .header-left {
+  .header-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-3);
   }
 
-  .header-left h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
   }
 
-  .claim-status {
-    font-size: 0.75rem;
+  .header-title h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
     font-weight: 600;
-    text-transform: uppercase;
-    padding: var(--space-1) var(--space-2);
-    background: var(--bg-elevated);
-    border-radius: var(--radius-sm);
+    color: var(--text-primary);
   }
 
   .header-actions {
     display: flex;
-    gap: var(--space-2);
-    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
   }
 
-  .claim-info {
-    background: var(--bg-base);
-    border: 1px solid var(--border-subtle);
+  .icon-btn.danger:hover:not(:disabled) {
+    background: var(--error-bg);
+    color: var(--error);
+  }
+
+  .header-subtitle,
+  .header-description {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .next-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--accent-border);
     border-radius: var(--radius-md);
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+    background: var(--accent-muted);
   }
 
-  .info-row {
+  .next-text {
+    flex: 1;
+    min-width: 0;
     display: flex;
-    gap: var(--space-3);
-  }
-
-  .info-row.description {
     flex-direction: column;
     gap: var(--space-1);
   }
 
-  .info-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    min-width: 100px;
-  }
-
-  .info-value {
-    color: var(--text-primary);
-    font-size: 0.875rem;
-  }
-
-  .financial-summary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-3);
-  }
-
-  .financial-summary.has-estimate {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .summary-item {
-    background: var(--bg-elevated);
-    border-radius: var(--radius-sm);
-    padding: var(--space-3);
-    text-align: center;
-  }
-
-  .summary-label {
-    display: block;
-    font-size: 0.6875rem;
+  .next-label {
+    font-size: var(--font-size-2xs);
     font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--text-secondary);
-    margin-bottom: var(--space-1);
-  }
-
-  .summary-value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .summary-value.success {
-    color: var(--success);
-  }
-
-  .summary-value.warning {
-    color: var(--warning);
-  }
-
-  .summary-value.accent {
     color: var(--accent);
   }
 
-  .submissions-section {
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--border-default);
+  .next-title {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .next-hint {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .next-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+
+  .money {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 1px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--border-default);
+    overflow: hidden;
+  }
+
+  .money-cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    background: var(--bg-surface);
+  }
+
+  .money-label {
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .money-value {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .money-value.success {
+    color: var(--success);
+  }
+
+  .money-value.warning {
+    color: var(--warning);
+  }
+
+  .money-note {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+  }
+
+  .bill-toggle {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+  }
+
+  .bill-toggle.paid {
+    color: var(--success);
+  }
+
+  .bill-toggle:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  .plans {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
   }
 
   .section-header {
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-3);
   }
 
   .section-header h4 {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-md);
     font-weight: 600;
     color: var(--text-primary);
   }
 
-  .submissions-list {
+  .section-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+  }
+
+  .add-plan {
+    align-self: flex-start;
+  }
+
+  .new-plan {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-  }
-
-  .empty-message {
-    color: var(--text-tertiary);
-    font-size: 0.8125rem;
-    margin: 0;
-  }
-
-  .empty-message a {
-    color: var(--accent);
-  }
-
-  /* New submission form */
-  .new-submission-form {
-    background: var(--bg-base);
-    border: 1px solid var(--accent-border, var(--accent));
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--accent-border);
     border-radius: var(--radius-md);
-    padding: var(--space-4);
-    margin-bottom: var(--space-3);
+    background: var(--bg-base);
   }
 
-  .form-row {
+  .field-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     gap: var(--space-3);
-    margin-bottom: var(--space-3);
   }
 
-  .form-group {
+  .field {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-  }
-
-  .form-group label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--text-secondary);
   }
 
-  .form-group select,
-  .form-group input {
-    padding: var(--space-2);
+  .field select {
+    padding: 0 var(--space-2);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    background: var(--bg-base);
     color: var(--text-primary);
-    font-size: 0.875rem;
-  }
-
-  .form-group select:focus,
-  .form-group input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .amount-input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .currency-prefix {
-    position: absolute;
-    left: var(--space-2);
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    pointer-events: none;
-  }
-
-  .amount-input-wrapper input {
-    padding-left: var(--space-5);
-    width: 100%;
+    font: inherit;
+    font-size: var(--font-size-md);
   }
 
   .form-actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--space-2);
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    border: none;
-    cursor: pointer;
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
-
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-sm {
-    padding: var(--space-1) var(--space-2);
-    font-size: 0.75rem;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-
-  .btn-secondary {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: var(--bg-hover);
-  }
-
-  .btn-danger {
-    background: var(--error);
-    color: var(--text-inverse);
-  }
-
-  .btn-danger:hover:not(:disabled) {
-    background: var(--error-hover);
-  }
-
-  .btn-bill-paid {
-    background: var(--success-bg);
-    color: var(--success);
-    border: 1px solid var(--success-border);
-  }
-
-  .btn-bill-paid:hover:not(:disabled) {
-    background: var(--success-muted);
   }
 </style>

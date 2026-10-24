@@ -5,7 +5,7 @@ import {
   InsuranceClaimsService,
   InsuranceClaimsServiceImpl,
 } from '../../services/insurance-claims-service';
-import { formatErrorForUser } from '../../utils/errors';
+import { formatErrorForUser, getErrorStatus } from '../../utils/errors';
 import type { ClaimStatus, DocumentType } from '../../types';
 import { readFile } from 'fs/promises';
 
@@ -76,7 +76,7 @@ export function createInsuranceClaimsHandlerGET() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -102,7 +102,7 @@ export function createInsuranceClaimsSummaryHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -144,7 +144,7 @@ export function createInsuranceClaimsHandlerPOST() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -198,7 +198,7 @@ export function createInsuranceClaimsHandlerPUT() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -238,7 +238,7 @@ export function createInsuranceClaimsHandlerDELETE() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -360,7 +360,7 @@ export function createClaimDocumentUploadHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -423,7 +423,7 @@ export function createClaimDocumentDownloadHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -551,7 +551,7 @@ export function createClaimSubmissionPOSTHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -609,7 +609,7 @@ export function createClaimSubmissionPUTHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -653,7 +653,7 @@ export function createClaimSubmissionDELETEHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -728,7 +728,7 @@ export function createClaimBillPaidHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -822,7 +822,7 @@ export function createExpectedExpenseHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -879,7 +879,7 @@ export function updateExpectedExpenseHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -922,7 +922,7 @@ export function cancelExpectedExpenseHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
@@ -967,7 +967,7 @@ export function convertExpectedToClaimHandler() {
 
       const claim = await claimsService.convertExpectedToClaim(id, {
         actual_cost: body.actual_cost,
-        update_bill_amount: body.update_bill_amount,
+        bill_paid: typeof body.bill_paid === 'boolean' ? body.bill_paid : undefined,
       });
 
       return new Response(JSON.stringify(claim), {
@@ -984,7 +984,7 @@ export function convertExpectedToClaimHandler() {
         }),
         {
           headers: { 'Content-Type': 'application/json' },
-          status: 500,
+          status: getErrorStatus(error),
         }
       );
     }
