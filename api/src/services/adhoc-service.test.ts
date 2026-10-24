@@ -326,6 +326,40 @@ describe('AdhocService', () => {
       expect(bill.occurrences).toHaveLength(1);
     });
 
+    test('defaults the due date to today in the current month', async () => {
+      const today = getTodayLocalDateString();
+      const bill = await service.createAdhocBill(today.substring(0, 7), {
+        name: 'Repair',
+        amount: 25000,
+        category_id: 'cat-bills',
+      });
+
+      expect(bill.occurrences[0].expected_date).toBe(today);
+      expect(bill.is_closed).toBe(false);
+    });
+
+    test('defaults the due date into the target month when adding to another month', async () => {
+      const otherMonth = '2030-06';
+      await writeFile(
+        join(testDir, 'months', `${otherMonth}.json`),
+        JSON.stringify(getEmptyMonthData(otherMonth), null, 2)
+      );
+
+      const bill = await service.createAdhocBill(otherMonth, {
+        name: 'Future repair',
+        amount: 25000,
+        category_id: 'cat-bills',
+      });
+      const income = await service.createAdhocIncome(otherMonth, {
+        name: 'Future gift',
+        amount: 5000,
+        category_id: 'cat-income',
+      });
+
+      expect(bill.occurrences[0].expected_date).toBe('2030-06-01');
+      expect(income.occurrences[0].expected_date).toBe('2030-06-01');
+    });
+
     test('should reject ad-hoc bill without name', async () => {
       const currentMonth = new Date().toISOString().substring(0, 7);
 

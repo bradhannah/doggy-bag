@@ -34,6 +34,14 @@ export function getTodayLocalDateString(): string {
 }
 
 /**
+ * Today's date when it falls inside `month` ("YYYY-MM"), otherwise the 1st of that month.
+ * Used as the default date for things created or projected while viewing another month.
+ */
+export function todayOrFirstOfMonth(month: string, todayStr = getTodayLocalDateString()): string {
+  return todayStr.startsWith(month) ? todayStr : `${month}-01`;
+}
+
+/**
  * Calculate the due date for a bill/income in a specific month
  * Handles edge cases like due day 31 in short months
  *
