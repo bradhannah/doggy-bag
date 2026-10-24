@@ -86,7 +86,7 @@
     {/if}
   </div>
 
-  <!-- Delete button for ad-hoc todos -->
+  <!-- Delete button for ad-hoc todos; other rows keep an empty slot so dates line up -->
   {#if canDelete}
     <button
       class="delete-btn"
@@ -104,6 +104,8 @@
         />
       </svg>
     </button>
+  {:else}
+    <span class="delete-slot" aria-hidden="true"></span>
   {/if}
 </div>
 
@@ -116,9 +118,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    min-height: 52px;
-    max-height: 52px;
-    overflow: hidden;
+    min-height: calc(var(--control-height) + var(--space-4));
     box-sizing: border-box;
     transition:
       background 0.2s,
@@ -250,10 +250,15 @@
   }
 
   /* Delete button */
-  .delete-btn {
+  .delete-btn,
+  .delete-slot {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: var(--icon-button-size);
+    height: var(--icon-button-size);
+    margin-left: var(--space-2);
+  }
+
+  .delete-btn {
     border: none;
     border-radius: var(--radius-sm);
     background: transparent;
@@ -266,10 +271,10 @@
       background 0.2s,
       color 0.2s;
     opacity: 0;
-    margin-left: var(--space-2);
   }
 
-  .todo-item:hover .delete-btn {
+  .todo-item:hover .delete-btn,
+  .todo-item:focus-within .delete-btn {
     opacity: 1;
   }
 
@@ -285,9 +290,6 @@
   @media (max-width: 480px) {
     .todo-item {
       padding: var(--space-3);
-      min-height: 48px;
-      max-height: 48px;
-      overflow: hidden;
     }
 
     .title {

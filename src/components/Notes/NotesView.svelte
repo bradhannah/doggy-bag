@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import NoteItem from './NoteItem.svelte';
+  import PageHeader from '../shared/PageHeader.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import {
     notes,
@@ -72,47 +73,9 @@
 </script>
 
 <div class="notes-page">
-  <div class="notes-header">
-    <h1 class="page-title">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <polyline
-          points="14 2 14 8 20 8"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <line
-          x1="16"
-          y1="13"
-          x2="8"
-          y2="13"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-        />
-        <line
-          x1="16"
-          y1="17"
-          x2="8"
-          y2="17"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-        />
-      </svg>
-      Notes
-    </h1>
-  </div>
-
   <div class="notes-content">
+    <PageHeader title="Notes" subtitle="Quick notes that aren't tied to a month." />
+
     <!-- Quick add -->
     <div class="quick-add">
       <textarea
@@ -178,24 +141,6 @@
     flex-direction: column;
     min-height: 100vh;
     background: var(--bg-base);
-  }
-
-  .notes-header {
-    padding: var(--space-6) var(--section-gap) 0;
-    max-width: var(--content-max-md);
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .page-title {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
   }
 
   .notes-content {
@@ -342,10 +287,6 @@
   }
 
   @media (max-width: 640px) {
-    .notes-header {
-      padding: var(--space-4) var(--space-4) 0;
-    }
-
     .notes-content {
       padding: var(--space-4);
     }

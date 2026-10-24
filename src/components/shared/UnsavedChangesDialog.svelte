@@ -63,7 +63,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-dialog);
     animation: fadeIn 0.15s ease-out;
   }
 
@@ -144,7 +144,7 @@
 
   .btn-discard {
     background: var(--error);
-    color: white;
+    color: var(--text-on-error);
   }
 
   .btn-discard:hover {

@@ -1,6 +1,6 @@
 // UI Store - Manages UI state including current month selection
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, readable } from 'svelte/store';
 
 // Get current month in YYYY-MM format
 export function getCurrentMonth(): string {
@@ -347,6 +347,23 @@ function createSidebarCollapsedStore() {
 }
 
 export const sidebarCollapsed = createSidebarCollapsedStore();
+
+// Narrow windows always use the icon rail so the sidebar never covers the page.
+const NARROW_NAV_QUERY = '(max-width: 56.25rem)';
+
+export const narrowWindow = readable(false, (set) => {
+  if (typeof window === 'undefined' || !window.matchMedia) return;
+  const media = window.matchMedia(NARROW_NAV_QUERY);
+  set(media.matches);
+  const update = (event: MediaQueryListEvent) => set(event.matches);
+  media.addEventListener('change', update);
+  return () => media.removeEventListener('change', update);
+});
+
+export const navCollapsed = derived(
+  [sidebarCollapsed, narrowWindow],
+  ([$collapsed, $narrow]) => $collapsed || $narrow
+);
 
 // UI state store for sidebar, drawers, etc.
 interface UIState {

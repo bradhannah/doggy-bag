@@ -8,41 +8,15 @@
   import type { ProjectionResponse } from '../../types/projections';
   import HistogramChart from './HistogramChart.svelte';
   import OverdueBillsBanner from '../OverdueBillsBanner.svelte';
-  import {
-    formatCurrency,
-    getTodayDateString,
-    getCurrentMonthString,
-    parseLocalDate,
-  } from '$lib/utils/format';
+  import { formatCurrency, getTodayDateString, parseLocalDate } from '$lib/utils/format';
+  import MonthPickerHeader from '../MonthPickerHeader.svelte';
+  import PageHeader from '../shared/PageHeader.svelte';
+  import { currentMonth } from '../../stores/ui';
 
-  const today = new Date();
-  let currentMonth = getCurrentMonthString(); // YYYY-MM
   let selectedDate: string | null = null;
 
-  // Load data when month changes
-  $: {
-    projectionsStore.loadProjection(currentMonth);
-  }
-
-  function changeMonth(offset: number) {
-    const [year, month] = currentMonth.split('-').map(Number);
-    const monthIndex = month - 1 + offset;
-    const nextYear = year + Math.floor(monthIndex / 12);
-    const nextMonth = ((monthIndex % 12) + 12) % 12;
-    currentMonth = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
-    selectedDate = null;
-  }
-
-  function resetToCurrentMonth() {
-    currentMonth = getCurrentMonthString();
-    selectedDate = null;
-  }
-
-  function formatMonth(monthStr: string) {
-    const [y, m] = monthStr.split('-').map(Number);
-    const d = new Date(y, m - 1, 1);
-    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(d);
-  }
+  // Follows the month chosen in the shared month bar, like Budget and Savings
+  $: projectionsStore.loadProjection($currentMonth);
 
   const todayStr = getTodayDateString();
 
@@ -52,7 +26,7 @@
   $: chartData = $projectionData || null;
 
   $: if (chartData) {
-    if (!selectedDate || !selectedDate.startsWith(currentMonth)) {
+    if (!selectedDate || !selectedDate.startsWith($currentMonth)) {
       const todayMatch = chartData.days.find((day) => day.date === todayStr);
       selectedDate = todayMatch ? todayMatch.date : (chartData.days[0]?.date ?? null);
     }
@@ -68,34 +42,24 @@
     : [];
 </script>
 
+<MonthPickerHeader
+  showRefresh={true}
+  onRefresh={() => projectionsStore.loadProjection($currentMonth)}
+/>
+
 <div class="projections-page">
-  <header>
-    <div class="title-block">
-      <h1>Monthly Projections</h1>
-      <p>Forecast daily balances with upcoming income and bills.</p>
-    </div>
-    <div class="controls">
-      <button
-        on:click={() => changeMonth(-1)}
-        aria-label="Previous month"
-        disabled={$projectionLoading}
-      >
-        &larr;
-      </button>
-      <span class="month-label">{formatMonth(currentMonth)}</span>
-      <button on:click={() => changeMonth(1)} aria-label="Next month" disabled={$projectionLoading}>
-        &rarr;
-      </button>
-      <button class="today-button" on:click={resetToCurrentMonth} disabled={$projectionLoading}>
-        Today
-      </button>
-    </div>
-  </header>
+  <PageHeader
+    title="Projections"
+    subtitle="Forecast daily balances with upcoming income and bills."
+  />
 
   {#if $projectionLoading}
     <div class="loading">Loading projection...</div>
   {:else if $projectionError}
-    <div class="error">{$projectionError}</div>
+    <div class="error" role="status">
+      <p>{$projectionError}</p>
+      <a class="btn btn-sm btn-secondary" href="/month/{$currentMonth}">Open Budget</a>
+    </div>
   {:else if chartData}
     {#if chartData.no_data}
       <div class="no-data">
@@ -168,77 +132,28 @@
     margin: 0 auto;
   }
 
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-5);
-  }
-
-  .title-block h1 {
-    margin: 0 0 var(--space-1) 0;
-  }
-
-  .title-block p {
-    margin: 0;
+  .loading {
+    padding: var(--space-8) 0;
+    text-align: center;
     color: var(--text-secondary);
   }
 
-  .controls {
+  /* Usually "enter bank balances": a fixable state, so point to where to fix it */
+  .error {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    border-radius: var(--radius-lg);
+    color: var(--warning);
   }
 
-  .today-button {
-    padding: 0 var(--space-3);
-    height: var(--button-height-sm);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-default);
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      background 0.2s ease,
-      border-color 0.2s ease,
-      color 0.2s ease;
-  }
-
-  .today-button:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-  }
-
-  .controls button {
-    min-width: var(--button-height-sm);
-    height: var(--button-height-sm);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-default);
-    background: var(--bg-base);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition:
-      background 0.2s ease,
-      border-color 0.2s ease,
-      color 0.2s ease;
-  }
-
-  .controls button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .controls button:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-  }
-
-  .month-label {
-    font-weight: 600;
-    text-align: center;
-    padding: 0 var(--space-4);
+  .error p {
+    flex: 1;
+    margin: 0;
+    font-size: var(--font-size-md);
   }
 
   .chart-section {
@@ -251,7 +166,7 @@
     border-radius: var(--radius-lg);
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-light);
+    box-shadow: var(--shadow-sm);
   }
 
   .day-details header {

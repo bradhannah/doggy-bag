@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '../shared/PageHeader.svelte';
   /**
    * InsuranceClaimsPage - Main page component for insurance claims management
    * Layout: Left panel (claims list) + Right panel (claim detail or form)
@@ -160,11 +161,7 @@
 </script>
 
 <div class="insurance-page">
-  <!-- Page Header -->
-  <header class="page-header">
-    <h1>Insurance Claims</h1>
-    <p class="subtitle">Track medical expenses and reimbursements</p>
-  </header>
+  <PageHeader title="Insurance" subtitle="Track medical expenses, claims and reimbursements" />
 
   <!-- Summary Cards -->
   <ClaimsSummary />
@@ -194,7 +191,12 @@
     {#if selectedClaim}
       <div class="detail-panel">
         <div class="detail-header-bar">
-          <button class="close-btn" on:click={closeDetail} title="Close">
+          <button
+            class="icon-btn close-btn"
+            on:click={closeDetail}
+            aria-label="Close claim"
+            title="Close"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
                 d="M18 6L6 18M6 6l12 12"
@@ -297,29 +299,12 @@
 
 <style>
   .insurance-page {
-    max-width: 1400px;
+    max-width: var(--content-max-md);
     margin: 0 auto;
     padding: var(--content-padding);
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--header-height, 0px));
-  }
-
-  .page-header {
-    margin-bottom: var(--space-4);
-  }
-
-  .page-header h1 {
-    margin: 0 0 var(--space-1);
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .subtitle {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.9375rem;
+    height: 100vh;
   }
 
   .setup-notice {
@@ -380,26 +365,6 @@
     background: var(--bg-elevated);
   }
 
-  .close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .close-btn:hover {
-    background: var(--accent-muted);
-    color: var(--text-primary);
-  }
-
   .detail-content {
     flex: 1;
     overflow-y: auto;
@@ -429,14 +394,10 @@
     background: var(--accent-hover);
   }
 
-  /* Responsive */
+  /* Narrow windows show one panel at a time: the list, or the open claim */
   @media (max-width: 900px) {
     .main-content.with-detail {
       grid-template-columns: 1fr;
-    }
-
-    .list-panel {
-      display: none;
     }
 
     .main-content.with-detail .list-panel {

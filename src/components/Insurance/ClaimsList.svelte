@@ -210,14 +210,24 @@
       </button>
     </div>
 
-    <select bind:value={filterCategory} on:change={applyFilters}>
+    <select
+      class="control-sm"
+      aria-label="Filter by category"
+      bind:value={filterCategory}
+      on:change={applyFilters}
+    >
       <option value="">All Categories</option>
       {#each $activeCategories as cat (cat.id)}
         <option value={cat.id}>{cat.icon} {cat.name}</option>
       {/each}
     </select>
 
-    <select bind:value={filterYear} on:change={applyFilters}>
+    <select
+      class="control-sm"
+      aria-label="Filter by year"
+      bind:value={filterYear}
+      on:change={applyFilters}
+    >
       <option value="">All Years</option>
       {#each availableYears as year (year)}
         <option value={year}>{year}</option>
@@ -368,9 +378,11 @@
     gap: var(--space-2);
   }
 
+  /* A compact toolbar: every filter control is the small control height */
   .filters {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
     padding: var(--space-3) var(--space-4);
     background: var(--bg-base);
@@ -378,7 +390,7 @@
   }
 
   .filters select {
-    padding: var(--space-1) var(--space-2);
+    padding: 0 var(--space-2);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     background: var(--bg-surface);
@@ -393,13 +405,15 @@
 
   .status-filter {
     display: flex;
+    height: var(--control-height-sm);
+    box-sizing: border-box;
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     overflow: hidden;
   }
 
   .status-filter button {
-    padding: var(--space-1) var(--space-3);
+    padding: 0 var(--space-3);
     background: var(--bg-surface);
     border: none;
     border-right: 1px solid var(--border-default);

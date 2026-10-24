@@ -290,11 +290,12 @@
   }
 
   /* Column Header */
+  /* Same columns and left inset as the rows, so each heading sits over its values */
   .column-header {
     display: grid;
     grid-template-columns: 1fr 90px 130px 150px 80px;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 12px 16px 12px 32px;
     background: var(--bg-elevated);
     border-bottom: 2px solid var(--border-default);
     font-size: 0.6875rem;
@@ -357,6 +358,11 @@
     font-style: italic;
   }
 
+  .column-header .col-amount,
+  .column-header .col-actions {
+    text-align: right;
+  }
+
   /* Income Row */
   .income-row {
     display: grid;
@@ -368,12 +374,6 @@
     border-bottom: 1px solid var(--border-subtle);
     cursor: pointer;
     transition: background 0.15s ease;
-  }
-
-  .income-row.has-metadata {
-    align-items: start;
-    padding-top: 10px;
-    padding-bottom: 10px;
   }
 
   .income-row:hover {
@@ -539,7 +539,7 @@
 
   .btn-icon.btn-danger:hover {
     background: var(--error);
-    color: var(--text-on-error, #fff);
+    color: var(--text-on-error);
   }
 
   /* Total Row */

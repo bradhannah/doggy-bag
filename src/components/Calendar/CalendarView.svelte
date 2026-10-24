@@ -1,5 +1,6 @@
 <script lang="ts">
   import MonthPickerHeader from '../MonthPickerHeader.svelte';
+  import PageHeader from '../shared/PageHeader.svelte';
   import CalendarGrid from './CalendarGrid.svelte';
   import CalendarLegend from './CalendarLegend.svelte';
   import Spinner from '../shared/Spinner.svelte';
@@ -42,30 +43,31 @@
     class:size-medium={$calendarSize === 'medium'}
     class:size-large={$calendarSize === 'large'}
   >
-    <!-- Calendar toolbar with size toggle -->
-    <div class="calendar-toolbar">
+    <PageHeader title="Calendar" subtitle="Bills, income, goals and todos by day.">
       <button
+        slot="actions"
         type="button"
-        class="size-toggle"
+        class="btn btn-sm btn-secondary"
         onclick={handleSizeToggle}
         title="Calendar size: {sizeLabels[$calendarSize]} (click to change)"
       >
         <svg
-          width="16"
-          height="16"
+          width="14"
+          height="14"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
+          aria-hidden="true"
         >
           <rect x="3" y="3" width="7" height="7" rx="1" />
           <rect x="14" y="3" width="7" height="7" rx="1" />
           <rect x="3" y="14" width="7" height="7" rx="1" />
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
-        <span class="size-label">{sizeLabels[$calendarSize]}</span>
+        Size: {sizeLabels[$calendarSize]}
       </button>
-    </div>
+    </PageHeader>
 
     {#if $calendarLoading}
       <div class="loading-state">
@@ -114,43 +116,6 @@
 
   .calendar-content.size-large {
     max-width: 1400px;
-  }
-
-  /* Calendar toolbar */
-  .calendar-toolbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: var(--space-3);
-  }
-
-  .size-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .size-toggle:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-hover);
-    color: var(--text-primary);
-  }
-
-  .size-toggle svg {
-    flex-shrink: 0;
-  }
-
-  .size-label {
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
   /* Loading and error states */

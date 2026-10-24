@@ -420,7 +420,7 @@
   $: apiBankBalances = $leftoverSummary?.bankBalances ?? 0;
   $: apiRemainingIncome = $leftoverSummary?.remainingIncome ?? 0;
   $: apiRemainingExpenses = $leftoverSummary?.remainingExpenses ?? 0;
-  $: _apiIsValid = $leftoverSummary?.isValid ?? false;
+  $: apiIsValid = $leftoverSummary?.isValid ?? false;
   $: isPositive = apiLeftover >= 0;
 </script>
 
@@ -461,35 +461,63 @@
         </div>
       {/if}
 
-      <!-- Equation Bar (Hero Summary) -->
-      <div class="equation-bar">
-        <div class="equation-box positive">
-          <span class="eq-amount">{formatCurrency(apiBankBalances)}</span>
-          <span class="eq-label">Bank Balances</span>
+      <!-- Equation Bar (Hero Summary); without every balance the result would be a misleading $0 -->
+      {#if apiIsValid}
+        <div class="equation-bar">
+          <div class="equation-box positive">
+            <span class="eq-amount">{formatCurrency(apiBankBalances)}</span>
+            <span class="eq-label">Bank Balances</span>
+          </div>
+          <span class="eq-operator">+</span>
+          <div class="equation-box positive">
+            <span class="eq-amount">{formatCurrency(apiRemainingIncome)}</span>
+            <span class="eq-label">Remaining Income</span>
+          </div>
+          <span class="eq-operator negative">−</span>
+          <div class="equation-box negative">
+            <span class="eq-amount">{formatCurrency(apiRemainingExpenses)}</span>
+            <span class="eq-label">Remaining Expenses</span>
+          </div>
+          <span class="eq-equals">=</span>
+          <div class="equation-box result" class:positive={isPositive} class:negative={!isPositive}>
+            <span class="eq-amount">{formatCurrency(apiLeftover)}</span>
+            <span class="eq-label">LEFTOVER</span>
+          </div>
         </div>
-        <span class="eq-operator">+</span>
-        <div class="equation-box positive">
-          <span class="eq-amount">{formatCurrency(apiRemainingIncome)}</span>
-          <span class="eq-label">Remaining Income</span>
+      {:else}
+        <div class="equation-warning" role="status">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
+            />
+          </svg>
+          <div class="warning-copy">
+            <p class="warning-title">Leftover can't be calculated yet</p>
+            <p class="warning-text">
+              {$leftoverSummary?.errorMessage ?? 'Enter bank balances to calculate leftover.'}
+            </p>
+          </div>
+          <a class="btn btn-sm btn-secondary" href="/month/{$currentMonth}">Enter balances</a>
         </div>
-        <span class="eq-operator negative">−</span>
-        <div class="equation-box negative">
-          <span class="eq-amount">{formatCurrency(apiRemainingExpenses)}</span>
-          <span class="eq-label">Remaining Expenses</span>
-        </div>
-        <span class="eq-equals">=</span>
-        <div class="equation-box result" class:positive={isPositive} class:negative={!isPositive}>
-          <span class="eq-amount">{formatCurrency(apiLeftover)}</span>
-          <span class="eq-label">LEFTOVER</span>
-        </div>
-      </div>
+      {/if}
 
-      <!-- Starting Cash Section -->
+      <!-- Starting Cash Section (an empty operator column keeps it aligned with + and −) -->
       <div class="math-section">
         <div class="section-header">
+          <span class="section-operator" aria-hidden="true"></span>
           <span class="section-title">STARTING CASH</span>
         </div>
-        <div class="section-items">
+        <div class="section-items indented">
           {#each assetAccounts as account (account.id)}
             <div class="item-row">
               <span class="item-name">{account.name}</span>
@@ -858,16 +886,17 @@
 
   .section-header {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--space-2);
     margin-bottom: var(--space-2);
   }
 
   .section-operator {
+    flex-shrink: 0;
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--success);
-    width: 20px;
+    width: var(--space-5);
     text-align: center;
   }
 
@@ -896,13 +925,15 @@
     gap: var(--space-1);
   }
 
+  /* Items start under the section title, past the operator column */
   .section-items.indented {
-    padding-left: 28px;
+    padding-left: calc(var(--space-5) + var(--space-2));
   }
 
+  /* Baseline alignment puts the leader dots on the text line, not mid-row */
   .item-row {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     font-size: 0.875rem;
     color: var(--text-primary);
   }
@@ -919,15 +950,15 @@
   .item-dots {
     flex: 1;
     border-bottom: 1px dotted var(--border-hover);
-    margin: 0 8px;
-    min-width: 20px;
+    margin: 0 var(--space-2);
+    min-width: var(--space-5);
   }
 
   .item-amount {
     flex-shrink: 0;
     font-weight: 500;
     text-align: right;
-    min-width: 80px;
+    min-width: calc(var(--space-8) * 2.5);
   }
 
   .item-amount.complete {
@@ -939,25 +970,25 @@
     color: var(--success);
   }
 
+  /* The sum rule sits above the total, like a hand-written addition */
   .section-total {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
+    flex-direction: column;
+    align-items: flex-end;
     margin-top: var(--space-2);
-    padding-right: 0;
   }
 
   .total-line {
-    width: 100px;
+    width: calc(var(--space-8) * 3);
     border-top: 1px solid var(--border-hover);
-    margin-right: 8px;
+    margin-bottom: var(--space-1);
   }
 
   .total-amount {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-primary);
-    min-width: 80px;
+    min-width: calc(var(--space-8) * 2.5);
     text-align: right;
   }
 
@@ -981,6 +1012,39 @@
     padding-left: var(--space-3);
   }
 
+  .equation-warning {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-6);
+    padding: var(--space-4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    border-radius: var(--radius-lg);
+    color: var(--warning);
+  }
+
+  .equation-warning svg {
+    flex-shrink: 0;
+  }
+
+  .warning-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .warning-title {
+    margin: 0;
+    font-size: var(--font-size-md);
+    font-weight: 600;
+  }
+
+  .warning-text {
+    margin: var(--space-1) 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
   /* Equation Bar */
   .equation-bar {
     display: flex;
@@ -988,7 +1052,7 @@
     justify-content: center;
     gap: var(--space-2);
     padding: var(--space-5) var(--space-3);
-    margin: var(--space-8) 0;
+    margin: 0 0 var(--space-6);
     background: var(--bg-elevated);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
@@ -1288,7 +1352,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
   }
 
   .modal-content {
@@ -1330,7 +1394,7 @@
   .modal-actions {
     display: flex;
     gap: var(--space-3);
-    justify-content: center;
+    justify-content: flex-end;
   }
 
   .btn-secondary {

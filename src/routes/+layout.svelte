@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import '$lib/styles/controls.css';
+  import '$lib/styles/ledger.css';
   import Navigation from '../components/Navigation.svelte';
   import ToastContainer from '../components/shared/ToastContainer.svelte';
   import Spinner from '../components/shared/Spinner.svelte';
   import SplashScreen from '../components/SplashScreen.svelte';
   import { isTauri, loadZoom, zoomIn, zoomOut, resetZoom } from '../stores/settings';
-  import { sidebarCollapsed } from '../stores/ui';
+  import { navCollapsed } from '../stores/ui';
   import { initializeTheme } from '../stores/theme';
   import { setApiPort, apiClient } from '../lib/api/client';
   import { createLogger } from '../lib/logger';
@@ -228,7 +230,7 @@
     </div>
   </div>
 {:else if backendReady || !inTauriMode}
-  <div class="app-layout" class:sidebar-collapsed={$sidebarCollapsed}>
+  <div class="app-layout" class:sidebar-collapsed={$navCollapsed}>
     <Navigation />
     <main class="main-content">
       <slot />
@@ -244,11 +246,15 @@
     outline-offset: calc(var(--space-1) / 2);
   }
   :global(:root) {
-    /* Typography */
-    font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+    /* Typography: the platform UI font, with fixed-width digits so amounts line up */
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial,
+      sans-serif;
     font-size: 16px;
     line-height: 1.5;
     font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    accent-color: var(--accent);
 
     /* Base Colors - Use CSS variables set by theme system, with fallbacks */
     color: var(--text-primary, #e4e4e7);
@@ -304,17 +310,50 @@
     --content-padding: 24px;
     --content-padding-mobile: 16px;
 
-    /* Component Sizes */
-    --button-height: 44px;
-    --button-height-sm: 32px;
-    --input-height: 44px;
-    --icon-button-size: 36px;
+    /* Font Sizes */
+    --font-size-2xs: 0.6875rem; /* 11px: badges, column labels */
+    --font-size-xs: 0.75rem; /* 12px: captions, hints */
+    --font-size-sm: 0.8125rem; /* 13px: secondary text, table rows */
+    --font-size-md: 0.875rem; /* 14px: body text, controls */
+    --font-size-lg: 1rem; /* 16px: emphasis, section titles */
+    --font-size-xl: 1.375rem; /* 22px: page titles */
+
+    /* Component Sizes: every control in a row shares one of two heights */
+    --control-height: 36px;
+    --control-height-sm: 28px; /* rows, inline edits, icon buttons */
+    --button-height: var(--control-height);
+    --button-height-sm: var(--control-height-sm);
+    --input-height: var(--control-height);
+    --icon-button-size: var(--control-height-sm);
+    --badge-height: 20px;
+    --header-height: 56px; /* sticky month bar */
 
     /* Border Radius */
+    --radius-xs: 4px;
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
+    --radius-pill: 999px;
+
+    /* Elevation */
+    --shadow-sm: 0 1px 2px var(--shadow-light);
+    --shadow-md: 0 var(--space-1) var(--space-3) var(--shadow-medium);
+    --shadow-lg: 0 var(--space-6) var(--space-8) var(--shadow-heavy);
+
+    /* Stacking order */
+    --z-sticky: 100;
+    --z-dropdown: 900;
+    --z-drawer: 1000;
+    --z-modal: 1100;
+    --z-dialog: 1150; /* confirmations opened from a modal */
+    --z-toast: 1200;
+    --z-splash: 1300;
+
+    /* Budget ledger columns (label | expected | paid | actions), shared by every
+       Budget row so amounts line up across categories, items and payments */
+    --ledger-amount-width: 6rem;
+    --ledger-actions-width: 9.5rem;
 
     /* Section Gaps */
     --section-gap: 24px;
@@ -323,6 +362,15 @@
 
     /* Sidebar Collapsed Width */
     --sidebar-collapsed-width: 60px;
+  }
+
+  /* Native controls (date pickers, scrollbars) follow the active theme, not the OS */
+  :global(:root[data-theme-is-dark='true']) {
+    color-scheme: dark;
+  }
+
+  :global(:root[data-theme-is-dark='false']) {
+    color-scheme: light;
   }
 
   :global(body) {
@@ -335,13 +383,36 @@
     box-sizing: border-box;
   }
 
-  :global(select),
+  /* Controls use the page font instead of the browser's control font */
+  :global(:where(button, input, select, textarea)) {
+    font-family: inherit;
+    font-size: var(--font-size-md);
+  }
+
+  /* One height for every text field and select. :where() keeps specificity at
+     zero, so a component opts into the compact size with .control-sm. */
   :global(
-    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color'])
+    :where(
+      select,
+      input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file'])
+    )
   ) {
-    height: var(--input-height) !important;
-    min-height: var(--input-height) !important;
+    height: var(--control-height) !important;
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     box-sizing: border-box;
+  }
+
+  :global(.control-sm) {
+    height: var(--control-height-sm) !important;
+  }
+
+  :global(:where(input[type='checkbox'], input[type='radio'])) {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    flex-shrink: 0;
   }
 
   :global(textarea) {
@@ -358,7 +429,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-splash);
   }
 
   .loading-content {
@@ -403,11 +474,5 @@
 
   .sidebar-collapsed .main-content {
     margin-left: var(--sidebar-collapsed-width);
-  }
-
-  @media (max-width: 768px) {
-    .main-content {
-      margin-left: 0;
-    }
   }
 </style>

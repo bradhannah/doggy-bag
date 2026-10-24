@@ -173,8 +173,8 @@
   }
 
   .type-badge.predefined {
-    background: var(--purple-muted, rgba(147, 51, 234, 0.1));
-    color: var(--purple, #9333ea);
+    background: var(--purple-muted);
+    color: var(--purple);
   }
 
   /* Status Badge */
@@ -224,7 +224,7 @@
 
   .btn-icon.btn-danger:hover {
     background: var(--error);
-    color: var(--text-on-error, #fff);
+    color: var(--text-on-error);
   }
 
   .btn-icon-placeholder {

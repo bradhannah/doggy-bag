@@ -230,7 +230,7 @@
     padding: var(--space-3);
     border-radius: var(--radius-md);
     border: 0.0625rem solid var(--border-default);
-    background: var(--input-bg, var(--bg-base));
+    background: var(--bg-base);
     color: var(--text-primary);
     font-size: 0.9375rem;
     box-sizing: border-box;

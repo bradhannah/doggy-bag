@@ -49,25 +49,25 @@
     {showColumnToggle}
     showHidePaid={true}
     showViewToggle={true}
+    showFind={true}
+    onFind={() => detailedView?.openFilter()}
     onRefresh={handleRefresh}
   />
   <div class="budget-actions">
     <button
-      class="review-button"
+      class="btn btn-primary"
       on:click={() => (showReview = true)}
       disabled={!$monthExists || $monthIsReadOnly}>Review budget updates</button
     >
+    <button
+      class="btn btn-secondary"
+      on:click={handleSyncMetadata}
+      disabled={isSyncingMetadata || !$monthExists || $monthIsReadOnly}
+      title="Copy names, categories and accounts from Manage into this month"
+    >
+      {isSyncingMetadata ? 'Refreshing details…' : 'Refresh bill and income details'}
+    </button>
     <a href="/savings">Savings totals</a>
-    <details>
-      <summary>More tools</summary>
-      <button
-        class="details-button"
-        on:click={handleSyncMetadata}
-        disabled={isSyncingMetadata || !$monthExists || $monthIsReadOnly}
-      >
-        {isSyncingMetadata ? 'Refreshing details…' : 'Refresh bill and income details'}
-      </button>
-    </details>
   </div>
   <DetailedMonthView {month} bind:this={detailedView} />
   {#if showReview}
@@ -90,37 +90,13 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-4);
-    padding: var(--space-3) var(--content-padding);
-  }
-  .review-button,
-  .details-button {
-    min-height: var(--button-height);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-  }
-  .review-button {
-    border: none;
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-  .details-button {
-    margin-top: var(--space-2);
-    border: thin solid var(--border-default);
-    background: var(--bg-surface);
-    color: var(--text-primary);
+    gap: var(--space-3);
+    padding: var(--space-4) var(--content-padding) 0;
   }
   .budget-actions a {
+    margin-left: var(--space-2);
+    font-size: var(--font-size-md);
     color: var(--accent);
-  }
-  summary {
-    color: var(--text-secondary);
-    cursor: pointer;
-  }
-  button:disabled {
-    opacity: 0.6;
-    cursor: default;
   }
   .error-page {
     text-align: center;

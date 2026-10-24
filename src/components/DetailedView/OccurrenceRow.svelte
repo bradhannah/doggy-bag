@@ -16,6 +16,7 @@
   import ConfirmDialog from '../shared/ConfirmDialog.svelte';
   import CopyMoveModal from './CopyMoveModal.svelte';
   import { formatCurrency } from '$lib/utils/format';
+  import { paymentSources } from '../../stores/payment-sources';
 
   export let occurrence: Occurrence;
   export let month: string;
@@ -51,7 +52,11 @@
   let showOverflowMenu = false;
   let overflowMenuRef: HTMLDivElement | null = null;
   let overflowBtnRef: HTMLButtonElement | null = null;
-  let menuPosition = { top: 0, left: 0 };
+  let menuStyle = '';
+
+  // Menus open below the button unless that would run off the bottom of the window.
+  const MENU_GAP = 4;
+  const MENU_ESTIMATED_HEIGHT = 120;
 
   // Navigate to insurance claim when clicking on a virtual insurance occurrence
   function handleOccurrenceClick() {
@@ -289,12 +294,13 @@
   function toggleOverflowMenu(event: MouseEvent) {
     event.stopPropagation();
     if (!showOverflowMenu && overflowBtnRef) {
-      // Calculate position based on button location
+      // Anchor the menu's right edge to the button so it never overhangs it
       const rect = overflowBtnRef.getBoundingClientRect();
-      menuPosition = {
-        top: rect.bottom + 4,
-        left: rect.right - 140, // Menu width is 140px, align right edge
-      };
+      const right = window.innerWidth - rect.right;
+      menuStyle =
+        rect.bottom + MENU_GAP + MENU_ESTIMATED_HEIGHT > window.innerHeight
+          ? `bottom: ${window.innerHeight - rect.top + MENU_GAP}px; right: ${right}px;`
+          : `top: ${rect.bottom + MENU_GAP}px; right: ${right}px;`;
     }
     showOverflowMenu = !showOverflowMenu;
   }
@@ -316,186 +322,213 @@
     confirmDelete();
   }
 
+  // The menu is fixed-position, so close it rather than let it drift when the page scrolls
+  function handleScroll() {
+    if (showOverflowMenu) showOverflowMenu = false;
+  }
+
   onMount(() => {
     document.addEventListener('click', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
   });
 
   onDestroy(() => {
     document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('scroll', handleScroll, true);
   });
+
+  function formatShortDate(dateStr: string): string {
+    const [year, monthNum, day] = dateStr.split('-').map(Number);
+    return new Date(year, monthNum - 1, day).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  $: statusLabel = occurrence.is_closed
+    ? occurrence.expected_amount === 0
+      ? 'Skipped'
+      : type === 'bill'
+        ? 'Paid'
+        : 'Received'
+    : type === 'bill'
+      ? 'Open'
+      : 'Expected';
+  $: sourceName = $paymentSources.find((ps) => ps.id === occurrence.payment_source_id)?.name;
+  $: closedNote =
+    occurrence.is_closed && occurrence.closed_date
+      ? [formatShortDate(occurrence.closed_date), sourceName].filter(Boolean).join(' · ')
+      : '';
 </script>
 
 <div
   class="occurrence-row-container"
   class:closed={occurrence.is_closed}
-  class:adhoc={occurrence.is_adhoc}
   class:clickable={isClickableInsuranceOccurrence}
 >
-  <div class="occurrence-row">
-    <!-- Date -->
-    <div class="occ-date">
-      {#if occurrence.is_closed && occurrence.closed_date}
-        <span class="closed-date">{formatDayOfMonth(occurrence.closed_date)}</span>
-      {:else if editingDate}
-        <div class="date-edit">
-          <input
-            type="number"
-            bind:this={dateInputEl}
-            bind:value={editingDateValue}
-            on:keydown={handleDateKeydown}
-            on:blur={saveDate}
-            min="1"
-            max={getMaxDayForMonth(month)}
+  <div class="ledger-row occurrence-row">
+    <div class="ledger-label occ-label">
+      <span class="occ-date">
+        {#if editingDate}
+          <span class="date-edit">
+            <input
+              type="number"
+              bind:this={dateInputEl}
+              bind:value={editingDateValue}
+              on:keydown={handleDateKeydown}
+              on:blur={saveDate}
+              min="1"
+              max={getMaxDayForMonth(month)}
+              disabled={savingDate}
+              class="date-input control-sm"
+              aria-label={`Due day for ${itemName}`}
+              aria-invalid={dateEditError ? true : undefined}
+              class:has-error={dateEditError}
+            />
+            {#if dateEditError}
+              <span class="date-edit-error" role="alert">{dateEditError}</span>
+            {/if}
+          </span>
+        {:else if canEditDate}
+          <button
+            class="date-value editable"
+            on:click|stopPropagation={startEditingDate}
             disabled={savingDate}
-            class="date-input"
-            aria-label={`Due day for ${itemName}`}
-            class:has-error={dateEditError}
-          />
-          {#if dateEditError}
-            <span class="date-edit-error">{dateEditError}</span>
-          {/if}
-        </div>
-      {:else if canEditDate}
-        <button
-          class="date-value editable"
-          on:click|stopPropagation={startEditingDate}
-          disabled={savingDate}
-        >
-          {formatDayOfMonth(occurrence.expected_date)}
-        </button>
-      {:else}
-        <span class="date-value">{formatDayOfMonth(occurrence.expected_date)}</span>
-      {/if}
-    </div>
-
-    <!-- Amount -->
-    <div class="amount-column">
-      <span class="amount-value" class:closed={occurrence.is_closed}>
-        {formatCurrency(occurrence.expected_amount)}
+            title="Change due day"
+          >
+            {formatDayOfMonth(occurrence.expected_date)}
+          </button>
+        {:else}
+          <span class="date-value">{formatDayOfMonth(occurrence.expected_date)}</span>
+        {/if}
       </span>
-    </div>
-
-    <!-- Status indicator -->
-    <div class="status-column">
-      {#if occurrence.is_closed}
-        <span class="status-badge closed-badge">
-          {occurrence.expected_amount === 0 ? 'Skipped' : type === 'bill' ? 'Paid' : 'Received'}
-        </span>
-      {:else}
-        <span class="status-badge open-badge">
-          {type === 'bill' ? 'Open' : 'Expected'}
-        </span>
-      {/if}
-    </div>
-
-    <!-- Badges column -->
-    <div class="badges-column">
+      <span
+        class="badge"
+        class:badge-success={occurrence.is_closed && occurrence.expected_amount > 0}
+      >
+        {statusLabel}
+      </span>
       {#if occurrence.plan_name}
-        <span class="badge plan-badge">{occurrence.plan_name}</span>
+        <span class="badge badge-accent">{occurrence.plan_name}</span>
       {/if}
-      {#if occurrence.is_adhoc}
-        <span class="badge adhoc-badge">ad-hoc</span>
+      {#if occurrence.is_adhoc && !instanceIsAdhoc}
+        <span class="badge badge-purple">Ad-hoc</span>
+      {/if}
+      {#if closedNote}
+        <span class="occ-meta">{closedNote}</span>
       {/if}
     </div>
 
-    <!-- Action buttons (right-aligned) -->
-    <div class="action-buttons">
+    <span class="ledger-amount occ-amount" data-col="expected">
+      {formatCurrency(occurrence.expected_amount)}
+    </span>
+    <span class="ledger-amount occ-amount" class:paid={occurrence.is_closed} data-col="paid">
+      {occurrence.is_closed ? formatCurrency(occurrence.expected_amount) : '—'}
+    </span>
+
+    <div class="ledger-actions">
       {#if isClickableInsuranceOccurrence}
-        <button class="action-btn edit" on:click={handleOccurrenceClick}>View claim</button>
+        <button class="btn btn-sm btn-secondary" on:click={handleOccurrenceClick}>View claim</button
+        >
       {:else if isProtected}
         <!-- Protected items (payoff bills, virtual insurance): no action buttons, state is auto-managed -->
       {:else if occurrence.is_closed}
-        <button class="action-btn reopen" on:click={handleReopen} disabled={saving || readOnly}>
+        <button
+          class="btn btn-sm btn-secondary"
+          on:click={handleReopen}
+          disabled={saving || readOnly}
+        >
           Reopen
         </button>
       {:else}
-        <button class="action-btn edit" on:click={openEditCloseModal} disabled={saving || readOnly}>
+        <button
+          class="btn btn-sm btn-primary"
+          on:click={openEditCloseModal}
+          disabled={saving || readOnly}
+        >
           {type === 'bill' ? 'Record payment' : 'Record receipt'}
         </button>
       {/if}
 
-      <!-- Overflow menu -->
       {#if !readOnly && ((!isProtected && !occurrence.is_closed) || canCopyToMonth || canDelete)}
         <div class="overflow-menu-container" bind:this={overflowMenuRef}>
           <button
-            class="overflow-btn"
+            class="icon-btn"
             bind:this={overflowBtnRef}
             on:click={toggleOverflowMenu}
             disabled={saving}
+            aria-label="More options for {itemName}"
             title="More options"
             aria-haspopup="true"
             aria-expanded={showOverflowMenu}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="12" cy="19" r="2" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="5" r="1.75" />
+              <circle cx="12" cy="12" r="1.75" />
+              <circle cx="12" cy="19" r="1.75" />
             </svg>
           </button>
 
           {#if showOverflowMenu}
-            <div
-              class="overflow-menu"
-              role="menu"
-              style="top: {menuPosition.top}px; left: {menuPosition.left}px;"
-            >
-              {#if isPayoffBill}
-                <span class="overflow-menu-empty">No actions available</span>
-              {:else}
-                {#if !occurrence.is_closed && !isProtected}
-                  <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    Edit plan
-                  </button>
-                {/if}
-                {#if canCopyToMonth}
-                  <button class="overflow-menu-item" on:click={handleCopyToMonth} role="menuitem">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    Copy to Next Month...
-                  </button>
-                {/if}
-                {#if canDelete}
-                  <button
-                    class="overflow-menu-item danger"
-                    on:click={handleDeleteFromMenu}
-                    role="menuitem"
+            <div class="overflow-menu" role="menu" style={menuStyle}>
+              {#if !occurrence.is_closed && !isProtected}
+                <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path
-                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                      />
-                    </svg>
-                    Delete
-                  </button>
-                {/if}
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                  </svg>
+                  Edit plan
+                </button>
+              {/if}
+              {#if canCopyToMonth}
+                <button class="overflow-menu-item" on:click={handleCopyToMonth} role="menuitem">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  Copy to next month…
+                </button>
+              {/if}
+              {#if canDelete}
+                <button
+                  class="overflow-menu-item danger"
+                  on:click={handleDeleteFromMenu}
+                  role="menuitem"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    />
+                  </svg>
+                  Delete
+                </button>
               {/if}
             </div>
           {/if}
@@ -550,68 +583,50 @@
 
 <style>
   .occurrence-row-container {
-    background: var(--bg-elevated);
     border-radius: var(--radius-sm);
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease;
   }
 
   .occurrence-row-container:hover {
-    background: var(--bg-surface);
+    background: var(--bg-hover);
   }
 
   .occurrence-row-container.clickable {
     cursor: pointer;
   }
 
-  .occurrence-row-container.clickable:hover {
-    background: var(--bg-hover-strong);
-  }
-
-  .occurrence-row-container.closed {
-    background: var(--success-bg);
-  }
-
   .occurrence-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-1) var(--space-3);
-    padding-left: var(--space-5);
-    font-size: 0.85rem;
+    min-height: var(--control-height);
+    padding-left: calc(var(--space-8) + var(--space-4));
+    font-size: var(--font-size-sm);
   }
 
   .occ-date {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
+    min-width: calc(var(--space-8) + var(--space-1));
   }
 
   .date-value {
-    font-size: 0.85rem;
     color: var(--text-secondary);
   }
 
-  .closed-date {
-    font-size: 0.85rem;
-    color: var(--success);
-  }
-
-  /* Editable date styles */
+  /* Editable dates keep the same text position as plain ones */
   .date-value.editable {
-    background: transparent;
+    margin-left: calc(var(--space-1) * -1);
+    padding: 0 var(--space-1);
+    height: var(--badge-height);
     border: none;
-    padding: calc(var(--space-1) / 2) var(--space-1);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-xs);
+    background: transparent;
+    font-size: inherit;
     cursor: pointer;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-family: inherit;
-    transition: background 0.15s ease;
+    transition: background-color 0.15s ease;
   }
 
   .date-value.editable:hover:not(:disabled) {
     background: var(--bg-hover);
+    color: var(--text-primary);
   }
 
   .date-value.editable:disabled {
@@ -619,23 +634,20 @@
     opacity: 0.6;
   }
 
+  /* The error floats below so editing never changes the row height */
   .date-edit {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--space-1) / 2);
+    position: relative;
+    display: inline-flex;
   }
 
   .date-input {
     width: calc(var(--space-8) + var(--space-3));
-    padding: calc(var(--space-1) / 2) var(--space-1);
+    padding: 0 var(--space-1);
     border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
     background: var(--bg-base);
     color: var(--text-primary);
-    font-size: 0.85rem;
-    font-family: inherit;
     text-align: center;
-    -moz-appearance: textfield;
     appearance: textfield;
   }
 
@@ -647,16 +659,11 @@
 
   .date-input:focus {
     outline: none;
-    border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-muted);
   }
 
   .date-input.has-error {
     border-color: var(--error);
-  }
-
-  .date-input.has-error:focus {
-    box-shadow: 0 0 0 2px var(--error-bg);
   }
 
   .date-input:disabled {
@@ -665,147 +672,57 @@
   }
 
   .date-edit-error {
-    font-size: 0.65rem;
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    left: 0;
+    z-index: 1;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow-md);
+    font-size: var(--font-size-xs);
     color: var(--error);
     white-space: nowrap;
   }
 
+  .occ-meta {
+    min-width: 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .occ-amount {
+    color: var(--text-primary);
+  }
+
+  .occ-amount.paid {
+    color: var(--success);
+  }
+
   .inline-note {
     margin: 0;
-    padding: 0 var(--space-3) var(--space-2) var(--space-5);
-    font-size: 0.75rem;
+    padding: 0 var(--space-3) var(--space-2) calc(var(--space-8) + var(--space-4));
+    font-size: var(--font-size-xs);
     color: var(--text-secondary);
-    line-height: 1.4;
     font-style: italic;
   }
 
-  .amount-column {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-  }
-
-  .amount-value {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .amount-value.closed {
-    color: var(--success);
-  }
-
-  .status-column {
-    display: flex;
-    justify-content: center;
-  }
-
-  .status-badge {
-    font-size: 0.65rem;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  .closed-badge {
-    background: var(--success-bg);
-    color: var(--success);
-  }
-
-  .open-badge {
-    background: var(--bg-surface);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-subtle);
-  }
-
-  .action-buttons {
-    display: flex;
-    gap: var(--space-2);
-    justify-content: flex-end;
-  }
-
-  .action-btn {
-    height: var(--button-height-sm);
-    box-sizing: border-box;
-    padding: 0 var(--space-3);
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-  }
-
-  .action-btn.edit {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .action-btn.edit:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-
-  .action-btn.reopen {
-    background: transparent;
-    border-color: var(--text-secondary);
-    color: var(--text-secondary);
-  }
-
-  .action-btn.reopen:hover:not(:disabled) {
-    border-color: var(--text-primary);
-    color: var(--text-primary);
-  }
-
-  .action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Overflow menu */
   .overflow-menu-container {
     position: relative;
   }
 
-  .overflow-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--button-height-sm);
-    height: var(--button-height-sm);
-    border-radius: var(--radius-sm);
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .overflow-btn:hover:not(:disabled) {
-    background: var(--bg-hover);
-    color: var(--text-secondary);
-  }
-
-  .overflow-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
   .overflow-menu {
     position: fixed;
-    min-width: calc(var(--space-5) * 7);
+    min-width: calc(var(--space-8) * 5);
+    padding: var(--space-1) 0;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-medium);
-    z-index: 1000;
-    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    z-index: var(--z-dropdown);
   }
 
   .overflow-menu-item {
@@ -813,14 +730,15 @@
     align-items: center;
     gap: var(--space-2);
     width: 100%;
-    padding: var(--space-2) var(--space-3);
+    height: var(--control-height-sm);
+    padding: 0 var(--space-3);
     border: none;
     background: transparent;
     color: var(--text-primary);
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     text-align: left;
+    white-space: nowrap;
     cursor: pointer;
-    transition: background 0.15s ease;
   }
 
   .overflow-menu-item:hover {
@@ -833,55 +751,5 @@
 
   .overflow-menu-item.danger:hover {
     background: var(--error-bg);
-  }
-
-  .overflow-menu-empty {
-    display: block;
-    padding: var(--space-2) var(--space-3);
-    color: var(--text-tertiary);
-    font-size: 0.8rem;
-    font-style: italic;
-    white-space: nowrap;
-  }
-
-  .badges-column {
-    display: flex;
-    grid-row: 2;
-    grid-column: 1 / -1;
-    align-items: center;
-    justify-content: flex-start;
-  }
-  .badges-column:empty {
-    display: none;
-  }
-
-  .badge {
-    font-size: 0.55rem;
-    padding: calc(var(--space-1) / 2) var(--space-1);
-    border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-  }
-
-  .adhoc-badge {
-    background: var(--purple-bg);
-    color: var(--purple);
-  }
-
-  .plan-badge {
-    background: var(--accent-muted);
-    color: var(--accent);
-  }
-
-  @media (max-width: 40rem) {
-    .occurrence-row {
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      gap: var(--space-2);
-    }
-    .action-buttons {
-      grid-column: 1 / -1;
-      justify-content: flex-end;
-    }
   }
 </style>

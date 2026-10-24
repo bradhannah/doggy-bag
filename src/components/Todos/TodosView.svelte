@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import MonthPickerHeader from '../MonthPickerHeader.svelte';
+  import PageHeader from '../shared/PageHeader.svelte';
   import TodoItem from './TodoItem.svelte';
   import QuickAddTodo from './QuickAddTodo.svelte';
   import Spinner from '../shared/Spinner.svelte';
   import { currentMonth, getPreviousMonth, formatMonthDisplay } from '../../stores/ui';
   import {
-    todoInstances,
     todoInstancesLoading,
     todoInstancesError,
     pendingInstances,
@@ -87,6 +86,25 @@
   <MonthPickerHeader />
 
   <div class="todos-content">
+    <PageHeader title="Todos" subtitle="One-off and recurring tasks for this month.">
+      <button
+        slot="actions"
+        class="btn btn-primary"
+        on:click={() => (showQuickAdd = !showQuickAdd)}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 5V19M5 12H19"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Add todo
+      </button>
+    </PageHeader>
+
     {#if $todoInstancesLoading}
       <div class="loading-state">
         <Spinner label="Loading todos..." />
@@ -97,22 +115,6 @@
         <button on:click={() => loadTodoInstancesForMonth($currentMonth)}>Retry</button>
       </div>
     {:else}
-      <!-- Action bar -->
-      <div class="action-bar">
-        <button class="add-btn" on:click={() => (showQuickAdd = !showQuickAdd)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 5V19M5 12H19"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          Add Todo
-        </button>
-      </div>
-
       <!-- Quick add form -->
       {#if showQuickAdd}
         <QuickAddTodo
@@ -274,31 +276,6 @@
   }
 
   /* Action bar */
-  .action-bar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: var(--space-4);
-  }
-
-  .add-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    background: var(--accent);
-    color: var(--text-inverse);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .add-btn:hover {
-    background: var(--accent-hover);
-  }
-
   /* Loading and error states */
   .loading-state,
   .error-state {

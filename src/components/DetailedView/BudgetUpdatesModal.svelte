@@ -298,19 +298,29 @@
     margin: 0 0 var(--space-2);
     font-size: 1rem;
   }
+  /* Side padding gives the "skipped" shading room around the text */
   .update-row {
     display: flex;
     justify-content: space-between;
     gap: var(--space-4);
-    padding: var(--space-3) 0;
+    padding: var(--space-3) var(--space-2);
     border-bottom: thin solid var(--border-subtle);
+    border-radius: var(--radius-sm);
   }
+  /* Checkbox shares the name's line; the reason wraps under the name */
   .item-choice {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-3);
     flex: 1;
     min-width: 0;
+  }
+  .item-choice > span {
+    display: contents;
+  }
+  .item-choice small {
+    grid-column: 2;
   }
   .item-choice strong {
     overflow-wrap: anywhere;

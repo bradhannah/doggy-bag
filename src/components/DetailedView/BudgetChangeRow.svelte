@@ -41,6 +41,9 @@
               chooseField(change.key, event.currentTarget.checked ? 'add' : undefined);
           }}
         />
+      {:else}
+        <!-- Keeps names aligned with rows that have a checkbox -->
+        <span class="checkbox-slot" aria-hidden="true"></span>
       {/if}
       <strong>{item.name}</strong>
     </label>
@@ -150,8 +153,9 @@
 
 <style>
   .change-row {
-    padding: var(--space-4) 0;
+    padding: var(--space-4) var(--space-2);
     border-bottom: thin solid var(--border-subtle);
+    border-radius: var(--radius-sm);
   }
   .kept {
     background: var(--bg-elevated);
@@ -164,8 +168,12 @@
   }
   label {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--space-2);
+  }
+  .checkbox-slot {
+    width: 1rem;
+    flex-shrink: 0;
   }
   input {
     accent-color: var(--accent);

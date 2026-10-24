@@ -633,13 +633,6 @@
 
           <div class="form-field">
             <label for="targetDate">Target Date</label>
-            <input
-              type="date"
-              id="targetDate"
-              bind:value={targetDate}
-              min={minDate}
-              disabled={goal.status === 'bought' || goal.status === 'abandoned' || isOpenEnded}
-            />
             <label class="checkbox-field open-ended-checkbox">
               <input
                 type="checkbox"
@@ -648,6 +641,13 @@
               />
               <span>No target date</span>
             </label>
+            <input
+              type="date"
+              id="targetDate"
+              bind:value={targetDate}
+              min={minDate}
+              disabled={goal.status === 'bought' || goal.status === 'abandoned' || isOpenEnded}
+            />
           </div>
         </div>
 
@@ -697,7 +697,7 @@
               <div class="schedule-actions">
                 <a
                   href="/setup?tab=bills&edit={activeBill.id}"
-                  class="btn-secondary-outline"
+                  class="btn btn-sm btn-secondary-outline"
                   title="Edit bill details in Manage"
                 >
                   <svg
@@ -715,7 +715,7 @@
                 </a>
                 <button
                   type="button"
-                  class="btn-danger-outline"
+                  class="btn btn-sm btn-danger-outline"
                   on:click={() =>
                     (confirmModal = { type: 'remove-schedule', billId: activeBill.id })}
                 >
@@ -974,25 +974,25 @@
                 </div>
               </div>
 
-              <!-- Action Buttons -->
-              <div class="schedule-actions">
+              <!-- Action Buttons: Cancel then the primary action, right-aligned like dialogs -->
+              <div class="schedule-form-actions">
                 <button
                   type="button"
-                  class="btn-primary"
-                  on:click={handleCreateScheduleFromSelection}
-                  disabled={creatingBill || !isScheduleSelectionValid}
-                >
-                  {creatingBill ? 'Creating...' : 'Create Schedule'}
-                </button>
-                <button
-                  type="button"
-                  class="btn-text"
+                  class="btn btn-ghost"
                   on:click={() => {
                     showScheduleForm = false;
                     selectedSchedule = null;
                   }}
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  on:click={handleCreateScheduleFromSelection}
+                  disabled={creatingBill || !isScheduleSelectionValid}
+                >
+                  {creatingBill ? 'Creating...' : 'Create Schedule'}
                 </button>
               </div>
             </div>
@@ -1232,7 +1232,8 @@
 
   .page-header h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
     color: var(--text-primary);
   }
 
@@ -1336,7 +1337,8 @@
     margin-bottom: var(--form-field-gap);
   }
 
-  .form-field label {
+  /* Plain field labels only; checkbox labels keep their own flex layout */
+  .form-field > label:not(.checkbox-field) {
     display: block;
     margin-bottom: var(--space-2);
     font-weight: 500;
@@ -1383,7 +1385,9 @@
 
   .input-with-prefix {
     display: flex;
-    align-items: center;
+    align-items: stretch;
+    height: var(--control-height);
+    box-sizing: border-box;
     background: var(--bg-base);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
@@ -1395,13 +1399,16 @@
   }
 
   .input-with-prefix .prefix {
-    padding: var(--space-3);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-3);
     color: var(--text-secondary);
     background: var(--bg-elevated);
     border-right: 1px solid var(--border-default);
   }
 
   .input-with-prefix input {
+    height: 100% !important;
     border: none;
     background: transparent;
   }
@@ -1539,7 +1546,7 @@
   }
 
   .open-ended-checkbox {
-    margin-top: var(--space-2);
+    margin-bottom: var(--space-2);
     font-size: 0.875rem;
   }
 
@@ -1763,20 +1770,12 @@
     font-weight: 500;
   }
 
-  /* Schedule Action Buttons */
-  .schedule-actions {
+  .schedule-form-actions {
     display: flex;
-    gap: var(--space-3);
+    justify-content: flex-end;
     align-items: center;
+    gap: var(--space-3);
     margin-top: var(--space-2);
-  }
-
-  .schedule-actions .btn-primary {
-    flex: 1;
-  }
-
-  .schedule-actions .btn-text {
-    flex-shrink: 0;
   }
 
   .no-schedule {
@@ -1941,7 +1940,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
   }
 
   .modal-content {

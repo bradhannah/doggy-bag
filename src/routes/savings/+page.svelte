@@ -5,6 +5,7 @@
   import { success, error as showError } from '../../stores/toast';
   import { formatCurrency, dollarsToCents } from '$lib/utils/format';
   import type { SavingsAccountSummary, SavingsMonthSummary } from '$lib/types/budget-workflow';
+  import PageHeader from '../../components/shared/PageHeader.svelte';
   import MonthPickerHeader from '../../components/MonthPickerHeader.svelte';
   import MonthNotCreated from '../../components/MonthNotCreated.svelte';
   import ConfirmDialog from '../../components/shared/ConfirmDialog.svelte';
@@ -209,26 +210,23 @@
 <MonthPickerHeader showRefresh={true} onRefresh={() => load()} />
 
 <div class="savings-page">
-  <header class="page-header">
-    <div>
-      <h2>Savings &amp; investments</h2>
-      <p>
-        Plan transfers in Budget, track recorded contributions here, and enter observed account
-        balances.
-      </p>
-    </div>
+  <PageHeader
+    title="Savings"
+    subtitle="Plan transfers in Budget, track recorded contributions here, and enter observed account balances."
+  >
     <button
-      class="primary"
+      slot="actions"
+      class="btn btn-primary"
       on:click={() => openPlan()}
       disabled={loading || !data?.accounts.some((account) => account.is_active)}
       >Plan a transfer</button
     >
-  </header>
+  </PageHeader>
   {#if loading}
     <p role="status">Loading savings…</p>
   {:else if error}
     <p class="error" role="alert">{error}</p>
-    <button class="secondary" on:click={() => load()}>Retry</button>
+    <button class="btn btn-secondary" on:click={() => load()}>Retry</button>
   {:else if data}
     {#if !data.exists}
       <MonthNotCreated
@@ -247,7 +245,7 @@
       <div class="actions">
         <a href="/month/{$currentMonth}">Open this month’s Budget</a>
         <button
-          class="secondary"
+          class="btn btn-secondary"
           on:click={() => {
             initialSelected = [];
             showReview = true;
@@ -255,7 +253,7 @@
           disabled={data.is_read_only}>Review budget updates</button
         >
         <button
-          class="secondary"
+          class="btn btn-secondary"
           on:click={() => pushFinalBalances()}
           disabled={pushing || pendingSaves > 0}
         >
@@ -293,9 +291,8 @@
                     {@const closing = edits && final(account)}
                     <tr class="account-row">
                       <th scope="row"
-                        ><span>{account.name}</span>{#if !account.is_active}<small
-                            >Archived account</small
-                          >{/if}
+                        ><span class="account-name">{account.name}</span
+                        >{#if !account.is_active}<small>Archived account</small>{/if}
                         {#if account.is_active}<button
                             class="text-button"
                             on:click={() => openPlan(account.id)}>Plan transfer</button
@@ -442,21 +439,8 @@
     margin: 0 auto;
     padding: var(--space-4) var(--content-padding);
   }
-  .page-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-    margin-bottom: var(--space-5);
-  }
-  h2,
   h3 {
     margin: 0;
-  }
-  .page-header p {
-    color: var(--text-secondary);
-    margin-bottom: 0;
   }
   .actions {
     display: flex;
@@ -490,6 +474,17 @@
     padding: var(--space-3) var(--space-2);
     text-align: right;
     vertical-align: top;
+  }
+  /* Plain values share the inputs' centreline: their first line is one control tall */
+  .account-row > td {
+    line-height: var(--control-height);
+  }
+  /* Names may wrap, so pad the first line to the control height instead */
+  .account-name {
+    display: block;
+    padding-block: calc((var(--control-height) - 1.5em) / 2);
+    line-height: 1.5;
+    font-weight: 600;
   }
   th:first-child {
     width: var(--tab-sidebar-width);
@@ -526,8 +521,8 @@
     display: block;
     color: var(--text-secondary);
     font-weight: 400;
-    font-size: 0.75rem;
-    margin-top: var(--space-1);
+    font-size: var(--font-size-xs);
+    line-height: 1.4;
   }
   .legacy {
     color: var(--warning);
@@ -578,22 +573,6 @@
   }
   button {
     cursor: pointer;
-  }
-  .primary,
-  .secondary {
-    min-height: var(--button-height);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-  }
-  .primary {
-    border: none;
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-  .secondary {
-    border: thin solid var(--border-default);
-    background: var(--bg-surface);
-    color: var(--text-primary);
   }
   .text-button {
     display: block;

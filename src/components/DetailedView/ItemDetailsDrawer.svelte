@@ -389,7 +389,7 @@
     background: var(--overlay-bg);
     display: flex;
     justify-content: flex-end;
-    z-index: 1000;
+    z-index: var(--z-drawer);
   }
 
   .drawer {

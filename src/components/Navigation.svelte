@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { currentMonth, sidebarCollapsed } from '../stores/ui';
+  import { currentMonth, sidebarCollapsed, navCollapsed, narrowWindow } from '../stores/ui';
   import {
     isTauri,
     zoomLevel,
@@ -32,6 +32,8 @@
   // Check if we're on the calendar page
   $: isCalendarActive = currentPath.startsWith('/calendar');
 
+  $: isManageActive = currentPath.startsWith('/setup');
+
   // Check if in Tauri environment (for zoom controls)
   const inTauri = isTauri();
 
@@ -41,565 +43,466 @@
   $: canZoomOut = $zoomLevel > ZOOM_CONFIG.min;
 </script>
 
-<nav class="sidebar" class:collapsed={$sidebarCollapsed}>
+<nav class="sidebar" class:collapsed={$navCollapsed} aria-label="Main">
   <div class="sidebar-header">
-    <div class="header-row">
-      <h2 class="app-title">Doggy Bag</h2>
+    <span class="app-title">Doggy Bag</span>
+    {#if !$narrowWindow}
       <button
-        class="collapse-toggle"
+        class="icon-btn collapse-toggle"
         on:click={() => sidebarCollapsed.toggle()}
+        aria-label={$sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={$sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          {#if $sidebarCollapsed}
-            <!-- Chevron right (expand) -->
-            <path
-              d="M9 18L15 12L9 6"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          {:else}
-            <!-- Chevron left (collapse) -->
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          {/if}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d={$sidebarCollapsed ? 'M9 18L15 12L9 6' : 'M15 18L9 12L15 6'}
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </button>
-    </div>
+    {/if}
   </div>
 
-  <!-- Main navigation -->
-  <ul class="nav-list">
-    <li>
-      <a href="/" class="nav-item" class:active={currentPath === '/'} title="Dashboard">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-          <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
-        </svg>
-        <span>Dashboard</span>
-      </a>
-    </li>
-  </ul>
+  <div class="nav-scroll">
+    <ul class="nav-list">
+      <li>
+        <a href="/" class="nav-item" class:active={currentPath === '/'} title="Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+            <rect
+              x="14"
+              y="14"
+              width="7"
+              height="7"
+              rx="1"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </svg>
+          <span>Dashboard</span>
+        </a>
+      </li>
+    </ul>
 
-  <div class="nav-separator"></div>
+    <p class="group-label">Money</p>
+    <ul class="nav-list">
+      <li>
+        <a
+          href="/month/{$currentMonth}"
+          class="nav-item"
+          class:active={isDetailsActive}
+          title="Budget"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2" />
+            <path
+              d="M9 12h6M9 16h4"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Budget</span>
+        </a>
+      </li>
+      <li>
+        <a href="/savings" class="nav-item" class:active={isSavingsActive} title="Savings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M20 7H5a2 2 0 0 1 0-4h13v4"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M3 5v14a2 2 0 0 0 2 2h15V7"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
+            <circle cx="16" cy="14" r="1.5" fill="currentColor" />
+          </svg>
+          <span>Savings</span>
+        </a>
+      </li>
+      <li>
+        <a href="/goals" class="nav-item" class:active={isGoalsActive} title="Goals">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
+            <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
+            <circle cx="12" cy="12" r="1" fill="currentColor" />
+          </svg>
+          <span>Goals</span>
+        </a>
+      </li>
+      <li>
+        <a
+          href="/projections"
+          class="nav-item"
+          class:active={isProjectionsActive}
+          title="Projections"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M3 17l6-6 4 4 8-8"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M15 7h6v6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Projections</span>
+        </a>
+      </li>
+      <li>
+        <a href="/calendar" class="nav-item" class:active={isCalendarActive} title="Calendar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="16"
+              rx="2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M3 10h18M8 3v4M16 3v4"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Calendar</span>
+        </a>
+      </li>
+    </ul>
 
-  <ul class="nav-list">
-    <li>
-      <a
-        href="/month/{$currentMonth}"
-        class="nav-item"
-        class:active={isDetailsActive}
-        title="Budget"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-          <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2" />
-          <path d="M9 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M9 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
-        <span>Budget</span>
-      </a>
-    </li>
-    <li>
-      <a href="/notes" class="nav-item" class:active={isNotesActive} title="Notes">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <polyline
-            points="14 2 14 8 20 8"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <line
-            x1="16"
-            y1="13"
-            x2="8"
-            y2="13"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-          <line
-            x1="16"
-            y1="17"
-            x2="8"
-            y2="17"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-        <span>Notes</span>
-      </a>
-    </li>
-    <li>
-      <a href="/todos" class="nav-item" class:active={isTodosActive} title="Todos">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M9 11L12 14L22 4"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <span>Todos</span>
-      </a>
-    </li>
-    <li>
-      <a href="/savings" class="nav-item" class:active={isSavingsActive} title="Savings">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <text
-            x="12"
-            y="16"
-            text-anchor="middle"
-            fill="currentColor"
-            font-size="16"
-            font-weight="bold"
-            font-family="system-ui, sans-serif">$</text
-          >
-        </svg>
-        <span>Savings</span>
-      </a>
-    </li>
-    <li>
-      <a href="/goals" class="nav-item" class:active={isGoalsActive} title="Goals">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
-          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
-          <circle cx="12" cy="12" r="1" fill="currentColor" />
-        </svg>
-        <span>Goals</span>
-      </a>
-    </li>
-    <li>
-      <a href="/insurance" class="nav-item" class:active={isInsuranceActive} title="Insurance">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 2L4 6v6c0 5.5 3.5 10.6 8 12 4.5-1.4 8-6.5 8-12V6l-8-4z"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M9 12l2 2 4-4"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <span>Insurance</span>
-      </a>
-    </li>
-    <li>
-      <a
-        href="/projections"
-        class="nav-item"
-        class:active={isProjectionsActive}
-        title="Projections"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M4 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M4 19H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path
-            d="M7 15L11 11L14 14L19 9"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <circle cx="7" cy="15" r="1" fill="currentColor" />
-          <circle cx="11" cy="11" r="1" fill="currentColor" />
-          <circle cx="14" cy="14" r="1" fill="currentColor" />
-          <circle cx="19" cy="9" r="1" fill="currentColor" />
-        </svg>
-        <span>Projections</span>
-      </a>
-    </li>
-    <li>
-      <a href="/calendar" class="nav-item" class:active={isCalendarActive} title="Calendar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
-          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M3 10H21" stroke="currentColor" stroke-width="2" />
-          <rect x="7" y="14" width="3" height="3" rx="0.5" fill="currentColor" />
-          <rect x="14" y="14" width="3" height="3" rx="0.5" fill="currentColor" />
-        </svg>
-        <span>Calendar</span>
-      </a>
-    </li>
-  </ul>
+    <p class="group-label">Organize</p>
+    <ul class="nav-list">
+      <li>
+        <a href="/todos" class="nav-item" class:active={isTodosActive} title="Todos">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M8 12l3 3 5-6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Todos</span>
+        </a>
+      </li>
+      <li>
+        <a href="/notes" class="nav-item" class:active={isNotesActive} title="Notes">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
+            <path d="M14 3v6h6" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+          </svg>
+          <span>Notes</span>
+        </a>
+      </li>
+      <li>
+        <a href="/insurance" class="nav-item" class:active={isInsuranceActive} title="Insurance">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 21s8-4 8-10V5l-8-3-8 3v6c0 6 8 10 8 10z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Insurance</span>
+        </a>
+      </li>
+    </ul>
 
-  <!-- Separator and secondary nav items -->
-  <div class="nav-separator"></div>
+    <!-- Manage and Settings stay at the bottom when there is room -->
+    <ul class="nav-list bottom-nav">
+      <li>
+        <a href="/setup" class="nav-item" class:active={isManageActive} title="Manage">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Manage</span>
+        </a>
+      </li>
+      <li>
+        <a href="/settings" class="nav-item" class:active={isSettingsActive} title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Settings</span>
+        </a>
+      </li>
+    </ul>
 
-  <ul class="nav-list bottom-nav">
-    <li>
-      <a href="/setup" class="nav-item" class:active={currentPath === '/setup'} title="Manage">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-          <path
-            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-            stroke="currentColor"
-            stroke-width="2"
-          />
-        </svg>
-        <span>Manage</span>
-      </a>
-    </li>
-  </ul>
-
-  <!-- Footer with Zoom and Settings -->
-  <div class="sidebar-footer">
     <!-- Zoom Control (Tauri only) -->
     {#if inTauri}
       <div class="zoom-control">
-        <button
-          class="zoom-button"
-          on:click={() => zoomOut()}
-          disabled={!canZoomOut}
-          title="Zoom out (Ctrl+-)"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </button>
-        <button class="zoom-percentage" on:click={() => resetZoom()} title="Reset to 100% (Ctrl+0)">
-          {zoomPercentage}
-        </button>
-        <button
-          class="zoom-button"
-          on:click={() => zoomIn()}
-          disabled={!canZoomIn}
-          title="Zoom in (Ctrl++)"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </button>
+        <span class="zoom-label">Zoom</span>
+        <div class="zoom-buttons">
+          <button
+            class="icon-btn bordered"
+            on:click={() => zoomOut()}
+            disabled={!canZoomOut}
+            aria-label="Zoom out"
+            title="Zoom out (Ctrl+-)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button
+            class="zoom-percentage"
+            on:click={() => resetZoom()}
+            title="Reset to 100% (Ctrl+0)"
+          >
+            {zoomPercentage}
+          </button>
+          <button
+            class="icon-btn bordered"
+            on:click={() => zoomIn()}
+            disabled={!canZoomIn}
+            aria-label="Zoom in"
+            title="Zoom in (Ctrl++)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 5V19M5 12H19"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="footer-separator"></div>
     {/if}
-
-    <!-- Settings link in footer -->
-    <a
-      href="/settings"
-      class="settings-footer-link"
-      class:active={isSettingsActive}
-      title="Settings"
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-      <span>Settings</span>
-    </a>
   </div>
 </nav>
 
 <style>
+  /* The whole column scrolls when the window is short, so every link stays reachable */
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    background: var(--bg-surface);
-    border-right: 1px solid var(--border-default);
-    padding: var(--section-gap) 0;
     display: flex;
     flex-direction: column;
-    position: fixed;
-    left: 0;
-    top: 0;
+    box-sizing: border-box;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-default);
     transition: width 0.2s ease;
-    overflow: hidden;
   }
 
   .sidebar-header {
-    padding: 0 var(--space-4) var(--space-4);
-    border-bottom: 1px solid var(--border-default);
-  }
-
-  .header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-2);
+    height: var(--header-height);
+    padding: 0 var(--space-3) 0 var(--space-5);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--border-default);
+    flex-shrink: 0;
   }
 
   .app-title {
-    font-size: 1.125rem;
+    font-size: 1.0625rem;
     font-weight: 700;
     color: var(--accent);
-    margin: 0;
     white-space: nowrap;
     overflow: hidden;
-    transition: opacity 0.2s ease;
+  }
+
+  .nav-scroll {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3) var(--space-2);
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .nav-list {
     list-style: none;
-    padding: var(--space-3);
     margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: calc(var(--space-1) / 2);
   }
 
-  .nav-separator {
-    margin: 0 var(--space-3);
-    border-top: 1px solid var(--border-default);
+  .group-label {
+    margin: var(--space-4) 0 var(--space-1);
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    white-space: nowrap;
   }
 
   .bottom-nav {
+    margin-top: auto;
     padding-top: var(--space-3);
+    border-top: 1px solid var(--border-default);
   }
 
   .nav-item {
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
+    height: var(--control-height);
+    padding: 0 var(--space-3);
     border-radius: var(--radius-md);
     color: var(--text-secondary);
     text-decoration: none;
+    font-size: var(--font-size-md);
     font-weight: 500;
-    transition: all 0.2s;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
   }
 
   .nav-item:hover {
-    background: var(--accent-muted);
+    background: var(--bg-hover);
     color: var(--text-primary);
   }
 
   .nav-item.active {
-    background: var(--accent);
-    color: var(--text-inverse);
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .nav-item svg {
     flex-shrink: 0;
   }
 
-  /* Footer with zoom and settings */
-  .sidebar-footer {
-    margin-top: auto;
-    padding: var(--space-3);
-    border-top: 1px solid var(--border-default);
-  }
-
-  /* Zoom control */
   .zoom-control {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-1);
-    margin-bottom: var(--space-2);
+    justify-content: space-between;
+    height: var(--control-height);
+    margin-top: var(--space-2);
+    padding: 0 var(--space-1) 0 var(--space-3);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
   }
 
-  .zoom-button {
+  .zoom-buttons {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .zoom-button:hover:not(:disabled) {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-    color: var(--text-primary);
-  }
-
-  .zoom-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+    gap: var(--space-1);
   }
 
   .zoom-percentage {
-    min-width: 50px;
-    padding: var(--space-1) var(--space-2);
+    min-width: calc(var(--space-8) + var(--space-1));
+    height: var(--control-height-sm);
+    padding: 0;
     border: none;
     border-radius: var(--radius-sm);
     background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    font-weight: 500;
-    font-family: inherit;
+    color: var(--text-primary);
+    font-size: var(--font-size-xs);
     cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
   }
 
   .zoom-percentage:hover {
-    background: var(--accent-muted);
-    color: var(--accent);
-  }
-
-  .footer-separator {
-    border-top: 1px solid var(--border-default);
-    margin: 0 0 var(--space-2) 0;
-  }
-
-  /* Settings link in footer */
-  .settings-footer-link {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    color: var(--text-tertiary);
-    text-decoration: none;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    margin-top: var(--space-1);
-  }
-
-  .settings-footer-link:hover {
-    background: var(--accent-muted);
-    color: var(--text-secondary);
-  }
-
-  .settings-footer-link.active {
-    background: var(--accent-muted);
-    color: var(--accent);
-  }
-
-  .settings-footer-link svg {
-    flex-shrink: 0;
-  }
-
-  /* Collapse toggle button */
-  .collapse-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-
-  .collapse-toggle:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-    color: var(--text-primary);
+    background: var(--bg-hover);
   }
 
   /* ========================================
-     COLLAPSED SIDEBAR STYLES
+     COLLAPSED (icon rail)
      ======================================== */
 
   .sidebar.collapsed {
     width: var(--sidebar-collapsed-width);
   }
 
-  /* Header adjustments when collapsed */
   .sidebar.collapsed .sidebar-header {
-    padding: 0 var(--space-2) var(--space-4);
-  }
-
-  .sidebar.collapsed .header-row {
     justify-content: center;
+    padding: 0;
   }
 
-  .sidebar.collapsed .app-title {
+  .sidebar.collapsed .app-title,
+  .sidebar.collapsed .nav-item span,
+  .sidebar.collapsed .zoom-label {
     display: none;
   }
 
-  /* Nav list adjustments when collapsed */
-  .sidebar.collapsed .nav-list {
-    padding: var(--space-3) var(--space-2);
+  /* Group labels become plain dividers in the icon rail */
+  .sidebar.collapsed .group-label {
+    margin: var(--space-3) var(--space-2);
+    padding: 0;
+    font-size: 0;
+    line-height: 0;
+    border-top: 1px solid var(--border-default);
   }
 
   .sidebar.collapsed .nav-item {
     justify-content: center;
-    padding: var(--space-3);
-  }
-
-  .sidebar.collapsed .nav-item span {
-    display: none;
-  }
-
-  .sidebar.collapsed .nav-separator {
-    margin: 0 var(--space-2);
-  }
-
-  /* Footer adjustments when collapsed */
-  .sidebar.collapsed .sidebar-footer {
-    padding: var(--space-3) var(--space-2);
+    padding: 0;
   }
 
   .sidebar.collapsed .zoom-control {
-    flex-direction: column;
-  }
-
-  .sidebar.collapsed .zoom-percentage {
-    min-width: auto;
-    font-size: 0.65rem;
-  }
-
-  .sidebar.collapsed .settings-footer-link {
+    height: auto;
     justify-content: center;
-    padding: var(--space-2);
+    padding: 0;
   }
 
-  .sidebar.collapsed .settings-footer-link span {
-    display: none;
+  .sidebar.collapsed .zoom-buttons {
+    flex-direction: column;
   }
 </style>

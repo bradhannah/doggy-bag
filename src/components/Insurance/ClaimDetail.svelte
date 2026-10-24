@@ -271,10 +271,6 @@
         <span class="info-value">{claim.description}</span>
       </div>
     {/if}
-    <div class="info-row">
-      <span class="info-label">Total Amount:</span>
-      <span class="info-value amount">{formatCurrency(claim.total_amount)}</span>
-    </div>
   </div>
 
   <!-- Financial Summary -->
@@ -483,10 +479,6 @@
   .info-value {
     color: var(--text-primary);
     font-size: 0.875rem;
-  }
-
-  .info-value.amount {
-    font-weight: 600;
   }
 
   .financial-summary {

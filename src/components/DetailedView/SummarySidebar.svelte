@@ -231,7 +231,7 @@
                   type="number"
                   step="0.01"
                   aria-label={`${source.name} balance`}
-                  class="balance-input"
+                  class="balance-input control-sm"
                   bind:this={balanceInputEl}
                   bind:value={editingBalanceValue}
                   on:keydown={handleBalanceKeydown}
@@ -329,7 +329,7 @@
                 <span class="balance-name">
                   {source.name}
                   {#if isPayOffMonthly(source)}
-                    <span class="payoff-indicator" title="Pay off monthly">payoff</span>
+                    <span class="badge badge-purple" title="Pay off monthly">Payoff</span>
                   {/if}
                 </span>
                 {#if getBalance(source) !== null}<small class="balance-updated"
@@ -349,7 +349,7 @@
                     step="0.01"
                     min="0"
                     aria-label={`${source.name} balance`}
-                    class="balance-input"
+                    class="balance-input control-sm"
                     bind:this={balanceInputEl}
                     bind:value={editingBalanceValue}
                     on:keydown={handleBalanceKeydown}
@@ -474,25 +474,25 @@
           <span class="calc-value">{formatCurrency(leftoverBreakdown?.bankBalances ?? 0)}</span>
         </div>
         <div class="calc-row">
-          <span class="calc-label">+ Remaining Income</span>
+          <span class="calc-label">Income still to come</span>
           <span class="calc-value income"
             >{formatCurrencyWithSign(leftoverBreakdown?.remainingIncome ?? 0)}</span
           >
         </div>
         <div class="calc-row">
-          <span class="calc-label">- Remaining Expenses</span>
+          <span class="calc-label">Bills still to pay</span>
           <span class="calc-value expense"
             >{formatCurrency(-(leftoverBreakdown?.remainingExpenses ?? 0))}</span
           >
         </div>
       </div>
       <div class="leftover-total" class:negative={leftoverBreakdown?.leftover < 0}>
-        <span class="leftover-label">Left Over</span>
+        <span class="leftover-label">Total</span>
         <span class="leftover-value">{formatCurrency(leftoverBreakdown?.leftover ?? 0)}</span>
       </div>
     {:else}
       <div class="error-message">
-        <span class="error-icon">!</span>
+        <span class="error-icon" aria-hidden="true">!</span>
         <span class="error-text"
           >{leftoverBreakdown?.errorMessage ?? 'Enter bank balances to calculate leftover'}</span
         >
@@ -517,7 +517,7 @@
               stroke-linecap="round"
             />
           </svg>
-          Add Expense
+          Add bill
         </button>
         <button
           class="quick-add-btn income"
@@ -531,7 +531,7 @@
               stroke-linecap="round"
             />
           </svg>
-          Add Income
+          Add income
         </button>
       </div>
     </div>
@@ -542,7 +542,7 @@
   .snapshot-note,
   .balance-updated {
     color: var(--text-secondary);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.4;
   }
   .snapshot-note {
@@ -555,12 +555,13 @@
   .balance-info {
     min-width: 0;
   }
+  /* Sticks just below the sticky month header */
   .summary-sidebar {
     width: var(--summary-sidebar-width);
     min-width: var(--summary-sidebar-width);
     position: sticky;
-    top: var(--content-padding);
-    max-height: calc(100vh - var(--content-padding) * 2);
+    top: calc(var(--header-height) + var(--space-4));
+    max-height: calc(100vh - var(--header-height) - var(--space-4) * 2);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -607,13 +608,13 @@
     margin: var(--space-1) 0;
   }
 
+  /* Right padding matches the balance pills so all amounts share one edge */
   .section-subtotal {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 6px;
+    padding: var(--space-2) calc(var(--space-2) + 1px) 0 0;
     border-top: 1px dashed var(--border-hover);
-    margin-top: 2px;
   }
 
   .subtotal-label {
@@ -639,97 +640,72 @@
     gap: var(--space-2);
   }
 
+  /* The amount sits on the account name's line; extra lines wrap underneath.
+     The name's line box is the compact control height so the pill and name share a centreline. */
   .balance-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    font-size: 0.85rem;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
   }
 
   .balance-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-height-sm);
     color: var(--text-secondary);
-  }
-
-  .balance-value {
-    font-weight: 500;
-    color: var(--text-primary);
   }
 
   .balance-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-  }
-
-  .payoff-indicator {
-    font-size: 0.55rem;
-    padding: 1px var(--space-1);
-    background: var(--purple-bg);
-    color: var(--purple);
-    border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    font-weight: 600;
-    margin-left: var(--space-2);
   }
 
   .payoff-progress {
-    font-size: 0.7rem;
+    font-size: var(--font-size-xs);
     color: var(--success);
   }
 
-  .balance-row.payoff-mode {
-    padding: var(--space-2) 0;
-  }
-
-  /* Editable balance styles */
-  .balance-value.editable {
-    background: none;
-    border: none;
-    padding: 2px var(--space-1);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
+  .balance-value {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-1);
-    transition:
-      background 0.2s,
-      color 0.2s,
-      border-color 0.2s;
+    justify-content: flex-end;
+    height: var(--control-height-sm);
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
   }
 
-  /* Yellow/amber highlight for editable values */
+  .balance-value.editable {
+    cursor: pointer;
+  }
+
+  /* Amber outline marks balances you can click to update */
   .balance-value.editable-highlight {
+    min-width: calc(var(--space-8) * 2.5);
+    padding: 0 var(--space-2);
     background: var(--warning-bg);
     border: 1px solid var(--warning-border);
-    padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
+    transition: border-color 0.15s;
   }
 
   .balance-value.editable-highlight:hover {
-    background: var(--warning-bg);
-    border-color: var(--warning-border);
-    color: var(--warning);
+    border-color: var(--warning);
   }
 
-  .balance-value.editable:hover {
-    background: var(--accent-muted);
-    color: var(--accent);
-  }
-
-  /* Color coding for balance types */
   .balance-value.credit {
     color: var(--success);
   }
 
   .balance-value.debt {
     color: var(--error);
-  }
-
-  /* Right-justify text in editable highlight boxes */
-  .balance-value.editable-highlight {
-    text-align: right;
-    justify-content: flex-end;
-    min-width: 80px;
   }
 
   .balance-edit {
@@ -740,13 +716,13 @@
 
   .currency-prefix {
     color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
   }
 
   .balance-input {
-    width: 70px;
-    padding: var(--space-1) var(--space-2);
-    font-size: 0.8rem;
+    width: 6rem;
+    padding: 0 var(--space-2);
+    font-size: var(--font-size-sm);
     background: var(--bg-surface);
     border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
@@ -780,8 +756,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: var(--control-height-sm);
+    height: var(--control-height-sm);
     background: transparent;
     border: 1px solid var(--border-hover);
     border-radius: var(--radius-sm);
@@ -948,8 +924,8 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--orange-bg);
-    color: var(--orange);
+    background: var(--orange);
+    color: var(--text-inverse);
     font-weight: 700;
     font-size: 0.9rem;
     flex-shrink: 0;
@@ -995,8 +971,10 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-1);
-    padding: var(--space-2) var(--space-3);
-    font-size: 0.8rem;
+    height: var(--control-height);
+    padding: 0 var(--space-2);
+    white-space: nowrap;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     border-radius: var(--radius-md);
     cursor: pointer;

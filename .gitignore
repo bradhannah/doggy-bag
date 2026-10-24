@@ -22,6 +22,7 @@ coverage/
 # Playwright test artifacts
 playwright-report/
 test-results/
+ui-audit/
 
 # OpenCode local config
 .opencode/

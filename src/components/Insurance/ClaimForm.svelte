@@ -307,7 +307,7 @@
 
   .error-message {
     background: var(--error);
-    color: var(--text-on-error, #fff);
+    color: var(--text-on-error);
     padding: 12px;
     border-radius: 6px;
   }
@@ -342,7 +342,7 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--border-default);
-    background: var(--input-bg, var(--bg-base));
+    background: var(--bg-base);
     color: var(--text-primary);
     font-size: 0.9375rem;
     height: 46px;
@@ -366,7 +366,7 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--border-default);
-    background: var(--input-bg, var(--bg-base));
+    background: var(--bg-base);
     color: var(--text-primary);
     font-size: 0.9375rem;
     font-family: inherit;

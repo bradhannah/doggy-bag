@@ -277,12 +277,15 @@
   }
 
   .category-item:hover {
-    background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+    background: var(--bg-hover);
     border-color: var(--border-default);
   }
 
+  /* Flex so the icon centres on the row instead of sitting on the text baseline */
   .drag-handle {
-    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-secondary);
     cursor: grab;
   }
 
@@ -304,7 +307,7 @@
   }
 
   .category-color:hover {
-    border-color: var(--border-hover, rgba(255, 255, 255, 0.3));
+    border-color: var(--border-hover);
     transform: scale(1.1);
   }
 
@@ -330,7 +333,7 @@
     letter-spacing: 0.05em;
     color: var(--text-tertiary);
     padding: 2px 6px;
-    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+    background: var(--bg-hover);
     border-radius: 4px;
   }
 
@@ -343,7 +346,8 @@
     transition: opacity 0.15s;
   }
 
-  .category-item:hover .item-actions {
+  .category-item:hover .item-actions,
+  .category-item:focus-within .item-actions {
     opacity: 1;
   }
 
@@ -395,11 +399,11 @@
 
   .btn-cancel {
     color: var(--text-secondary);
-    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+    background: var(--bg-hover);
   }
 
   .btn-cancel:hover {
-    background: var(--bg-hover-strong, rgba(255, 255, 255, 0.1));
+    background: var(--bg-hover-strong);
     color: var(--text-primary);
   }
 
