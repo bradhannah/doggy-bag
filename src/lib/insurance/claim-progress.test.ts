@@ -5,6 +5,7 @@ import {
   getNextStep,
   getPlanStage,
   getPlanTasks,
+  isMissingAmount,
   planRole,
 } from './claim-progress';
 import { getInsuranceLineDisplay } from './budget-line-status';
@@ -162,5 +163,43 @@ describe('getInsuranceLineDisplay', () => {
 
   it('old snapshot lines without a status keep the default display', () => {
     expect(getInsuranceLineDisplay(occ({}))).toBeNull();
+  });
+});
+
+describe('approvals saved without an amount (claim #2)', () => {
+  const claim2 = () =>
+    claim([
+      sub('cl', 'Canada Life AWS', {
+        status: 'paid',
+        amount_claimed: 13560,
+        amount_reimbursed: 11160,
+      }),
+      sub('em', 'Empire Life', {
+        status: 'approved',
+        amount_claimed: 2000,
+        date_resolved: '2026-03-01',
+      }),
+    ]);
+
+  it('is flagged, put first, and listed under Needs attention', () => {
+    const c = claim2();
+    expect(isMissingAmount(c.submissions[1])).toBe(true);
+    expect(isMissingAmount(c.submissions[0])).toBe(false);
+    expect(getClaimHeadline(c)).toEqual({ label: 'Needs an amount', tone: 'error' });
+    expect(getNextStep(c)).toMatchObject({ kind: 'enter_amount', index: 1 });
+    expect(getPlanTasks([c]).map((t) => [t.stage, t.amount])).toEqual([['needs_amount', 2000]]);
+  });
+
+  it('a denial is never missing an amount', () => {
+    expect(isMissingAmount(sub('em', 'Empire Life', { status: 'denied' }))).toBe(false);
+  });
+
+  it('the Budget line says the amount is missing instead of showing $0', () => {
+    const line = { expected_amount: 0, submission_status: 'approved', amount_missing: true };
+    expect(getInsuranceLineDisplay(line as Occurrence)).toEqual({
+      label: 'Amount missing',
+      tone: 'error',
+      showAmount: false,
+    });
   });
 });

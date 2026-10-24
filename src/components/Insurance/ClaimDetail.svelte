@@ -53,6 +53,10 @@
   $: next = getNextStep(claim);
   $: nextPortalUrl = next?.kind === 'submit' ? next.submission.plan_snapshot.portal_url : undefined;
   $: hasActivePlans = $activePlans.length > 0;
+  // The Budget counts the bill as paid once anything has been submitted (you can't claim
+  // a bill you haven't paid), so the tile shows the same
+  $: billPaidBySubmitting =
+    !claim.bill_paid && (claim.status === 'in_progress' || claim.status === 'closed');
   $: subtitle = [
     claim.provider_name,
     claim.family_member_name,
@@ -180,6 +184,7 @@
           class:badge-accent={headline.tone === 'accent'}
           class:badge-warning={headline.tone === 'warning'}
           class:badge-success={headline.tone === 'success'}
+          class:badge-error={headline.tone === 'error'}
         >
           {headline.label}
         </span>
@@ -222,10 +227,22 @@
   </header>
 
   {#if next && next.kind !== 'decide'}
-    <section class="next-step" aria-label="Next step">
+    <section
+      class="next-step"
+      class:attention={next.kind === 'enter_amount'}
+      aria-label="Next step"
+    >
       <div class="next-text">
-        <span class="next-label">Next step</span>
-        {#if next.kind === 'submit'}
+        <span class="next-label"
+          >{next.kind === 'enter_amount' ? 'Needs attention' : 'Next step'}</span
+        >
+        {#if next.kind === 'enter_amount'}
+          <span class="next-title">Enter the amount {planName(next.submission)} approved</span>
+          <span class="next-hint">
+            It was saved without one, so the Budget can't count it. Their statement or explanation
+            of benefits has the amount.
+          </span>
+        {:else if next.kind === 'submit'}
           <span class="next-title">
             Submit {next.index > 0 ? 'the remaining ' : ''}{formatCurrency(next.amount)} to {planName(
               next.submission
@@ -300,15 +317,21 @@
       <div class="money-cell">
         <span class="money-label">Cost</span>
         <span class="money-value">{formatCurrency(money.cost)}</span>
-        <button
-          class="money-note bill-toggle"
-          class:paid={claim.bill_paid}
-          on:click={toggleBillPaid}
-          disabled={busy}
-          title={claim.bill_paid ? 'Mark the clinic bill unpaid' : 'Mark the clinic bill paid'}
-        >
-          {claim.bill_paid ? 'Clinic bill paid ✓' : 'Mark clinic bill paid'}
-        </button>
+        {#if billPaidBySubmitting}
+          <span class="money-note paid" title="Counted as paid once the claim was submitted">
+            Clinic bill paid ✓
+          </span>
+        {:else}
+          <button
+            class="money-note bill-toggle"
+            class:paid={claim.bill_paid}
+            on:click={toggleBillPaid}
+            disabled={busy}
+            title={claim.bill_paid ? 'Mark the clinic bill unpaid' : 'Mark the clinic bill paid'}
+          >
+            {claim.bill_paid ? 'Clinic bill paid ✓' : 'Mark clinic bill paid'}
+          </button>
+        {/if}
       </div>
       <div class="money-cell">
         <span class="money-label">Approved</span>
@@ -472,6 +495,15 @@
     background: var(--accent-muted);
   }
 
+  .next-step.attention {
+    border-color: var(--error-border);
+    background: var(--error-bg);
+  }
+
+  .next-step.attention .next-label {
+    color: var(--error);
+  }
+
   .next-text {
     flex: 1;
     min-width: 0;
@@ -563,6 +595,7 @@
     cursor: pointer;
   }
 
+  .money-note.paid,
   .bill-toggle.paid {
     color: var(--success);
   }

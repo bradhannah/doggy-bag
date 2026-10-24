@@ -71,6 +71,13 @@
   $: tasks = getPlanTasks($insuranceClaims).sort((a, b) => byServiceDateDesc(a.claim, b.claim));
   $: groups = [
     {
+      id: 'needs_amount',
+      title: 'Needs attention',
+      hint: 'saved without an amount, so the Budget skips it',
+      tone: 'error',
+      tasks: tasks.filter((t) => t.stage === 'needs_amount'),
+    },
+    {
       id: 'to_submit',
       title: 'To submit',
       hint: "send each plan what's left after the one before",
@@ -111,6 +118,11 @@
 
   function taskMeta(task: PlanTask): string {
     const plan = planName(task.submission);
+    if (task.stage === 'needs_amount') {
+      const verb = task.submission.status === 'paid' ? 'received' : 'approved';
+      const decided = task.submission.date_resolved;
+      return `${plan} · ${verb}${decided ? ` ${shortDate(decided)}` : ''}, no amount`;
+    }
     if (task.stage === 'to_submit') return `${shortDate(task.claim.service_date)} · ${plan}`;
     if (task.stage === 'submitted') {
       const sent = task.submission.date_submitted;
@@ -247,8 +259,17 @@
                   </span>
                   <span class="row-meta">{taskMeta(task)}</span>
                 </button>
-                <span class="row-amount">{formatCurrency(task.amount)}</span>
-                {#if task.stage === 'to_submit'}
+                <span class="row-amount" class:muted={task.stage === 'needs_amount'}>
+                  {task.stage === 'needs_amount' ? '—' : formatCurrency(task.amount)}
+                </span>
+                {#if task.stage === 'needs_amount'}
+                  <button
+                    class="btn btn-sm btn-secondary row-action"
+                    on:click={() => openTask(task)}
+                  >
+                    Enter amount
+                  </button>
+                {:else if task.stage === 'to_submit'}
                   <button
                     class="btn btn-sm btn-primary row-action"
                     on:click={() => quickAction(task)}
@@ -332,6 +353,7 @@
                 class:badge-accent={headline.tone === 'accent'}
                 class:badge-warning={headline.tone === 'warning'}
                 class:badge-success={headline.tone === 'success'}
+                class:badge-error={headline.tone === 'error'}
               >
                 {headline.label}
               </span>
@@ -484,6 +506,10 @@
     color: var(--warning);
   }
 
+  .group-title.error {
+    color: var(--error);
+  }
+
   .group-hint {
     font-size: var(--font-size-xs);
     color: var(--text-tertiary);
@@ -555,6 +581,10 @@
     font-size: var(--font-size-md);
     font-variant-numeric: tabular-nums;
     color: var(--text-primary);
+  }
+
+  .row-amount.muted {
+    color: var(--text-secondary);
   }
 
   .row-action {

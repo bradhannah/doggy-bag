@@ -131,6 +131,7 @@ export interface InsuranceClaimsSummary {
   waiting_amount: number;
   awaiting_payment_count: number; // Approved, money not received yet
   awaiting_payment_amount: number;
+  needs_amount_count: number; // Approved or received but saved without an amount
   received_year: number;
   received_this_year_amount: number;
   received_this_year_claims: number;

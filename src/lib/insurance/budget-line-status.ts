@@ -11,6 +11,9 @@ export interface InsuranceLineDisplay {
 }
 
 export function getInsuranceLineDisplay(occurrence: Occurrence): InsuranceLineDisplay | null {
+  if (occurrence.amount_missing) {
+    return { label: 'Amount missing', tone: 'error', showAmount: false };
+  }
   if (occurrence.is_insurance_estimate) {
     return { label: 'Estimated', tone: 'neutral', showAmount: true };
   }

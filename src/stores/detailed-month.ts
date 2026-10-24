@@ -26,6 +26,7 @@ export interface Occurrence {
   submission_status?: SubmissionStatus; // That submission's status (drives the label)
   awaiting_plan_name?: string; // For awaiting_previous: the earlier plan it waits on
   is_insurance_estimate?: boolean; // Estimated reimbursement shown before any plan decides
+  amount_missing?: boolean; // Approved or received but saved without its amount
 }
 
 export type BillingPeriod = 'monthly' | 'bi_weekly' | 'weekly' | 'semi_annually';

@@ -184,4 +184,15 @@ describe('buildVirtualInsuranceEntries', () => {
     expect(november.incomeInstances[0].name).toBe('Massage Therapy - KTown Victoria');
     expect(buildVirtualInsuranceEntries([scheduled], '2026-12').billInstances).toHaveLength(0);
   });
+
+  test('an approval saved without an amount is flagged, not shown as $0 owed', () => {
+    const claim = makeClaim({
+      submissions: [
+        submission('em', 'Empire Life', { status: 'approved', date_resolved: '2026-10-01' }),
+      ],
+    });
+    const [line] = buildVirtualInsuranceEntries([claim], '2026-10').incomeInstances[0].occurrences;
+    expect(line.amount_missing).toBe(true);
+    expect(line.expected_amount).toBe(0);
+  });
 });

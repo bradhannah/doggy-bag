@@ -20,6 +20,7 @@
     STAGE_TONES,
     blockingPlanName,
     getPlanStage,
+    isMissingAmount,
     planName,
     planRole,
     shortDate,
@@ -38,6 +39,7 @@
   $: previousName = index > 0 ? planName(claim.submissions[index - 1]) : '';
   $: waitingOn = blockingPlanName(claim, index);
   $: approvedAmount = submission.amount_reimbursed;
+  $: missingAmount = isMissingAmount(submission);
   $: portalUrl = submission.plan_snapshot.portal_url;
 
   // Scroll into view when highlighted (navigating from the Budget)
@@ -60,9 +62,16 @@
     lastStage = stage;
     decisionAmount = centsToInput(suggestedApproval());
     decisionDate = getTodayDateString();
-    receivedDate = getTodayDateString();
+    // An old approval being fixed was most likely paid around when it was decided
+    receivedDate =
+      missingAmount && submission.date_resolved ? submission.date_resolved : getTodayDateString();
   }
   $: decisionCents = decisionAmount.trim() === '' ? null : dollarsToCents(decisionAmount);
+  // An insurer can't approve more than was claimed: usually a typo or the wrong claim
+  $: overClaimed =
+    decisionCents !== null &&
+    submission.amount_claimed > 0 &&
+    decisionCents > submission.amount_claimed;
 
   function centsToInput(cents: number | undefined): string {
     return cents === undefined ? '' : (cents / 100).toFixed(2);
@@ -105,12 +114,17 @@
 
   function markReceived() {
     const updates: SubmissionUpdate = { status: 'paid', date_paid: receivedDate };
-    // Old approvals saved without an amount need one before the money can be recorded
-    if (approvedAmount === undefined) {
+    // Approvals saved without an amount get one before the money can be recorded
+    if (missingAmount) {
       if (decisionCents === null) return;
       updates.amount_reimbursed = decisionCents;
     }
     save(updates, `${name} payment received`);
+  }
+
+  function saveAmount() {
+    if (decisionCents === null) return;
+    save({ amount_reimbursed: decisionCents }, `${name} amount saved`);
   }
 
   function undo() {
@@ -213,7 +227,10 @@
       decided = { label: 'Decided', detail: 'waiting', state: 'current' };
     if (currentStage === 'awaiting_payment' || currentStage === 'received') {
       decided = {
-        label: `Approved ${formatCurrency(sub.amount_reimbursed ?? 0)}`,
+        label:
+          typeof sub.amount_reimbursed === 'number'
+            ? `Approved ${formatCurrency(sub.amount_reimbursed)}`
+            : 'Approved, amount missing',
         detail: sub.date_resolved ? shortDate(sub.date_resolved) : '',
         state: 'done',
       };
@@ -272,12 +289,16 @@
     </div>
     <span
       class="badge"
-      class:badge-accent={STAGE_TONES[stage] === 'accent'}
-      class:badge-warning={STAGE_TONES[stage] === 'warning'}
-      class:badge-success={STAGE_TONES[stage] === 'success'}
-      class:badge-error={STAGE_TONES[stage] === 'error'}
+      class:badge-accent={!missingAmount && STAGE_TONES[stage] === 'accent'}
+      class:badge-warning={!missingAmount && STAGE_TONES[stage] === 'warning'}
+      class:badge-success={!missingAmount && STAGE_TONES[stage] === 'success'}
+      class:badge-error={missingAmount || STAGE_TONES[stage] === 'error'}
     >
-      {stage === 'waiting' && waitingOn ? `Waiting for ${waitingOn}` : STAGE_LABELS[stage]}
+      {missingAmount
+        ? 'Amount missing'
+        : stage === 'waiting' && waitingOn
+          ? `Waiting for ${waitingOn}`
+          : STAGE_LABELS[stage]}
     </span>
     {#if !readonly}
       <div class="plan-tools">
@@ -410,6 +431,7 @@
               bind:value={decisionAmount}
               size="sm"
               disabled={saving}
+              invalid={overClaimed}
               ariaLabel="Approved amount"
             />
           </label>
@@ -418,6 +440,11 @@
             <input class="control-sm" type="date" bind:value={decisionDate} disabled={saving} />
           </label>
         </div>
+        {#if overClaimed}
+          <p class="field-warning">
+            More than the {formatCurrency(submission.amount_claimed)} claimed. Check the amount.
+          </p>
+        {/if}
         <div class="panel-actions">
           <button class="btn btn-sm btn-secondary deny" on:click={deny} disabled={saving}>
             Denied
@@ -431,28 +458,65 @@
           </button>
         </div>
       </div>
-    {:else if stage === 'awaiting_payment'}
-      <div class="actions">
-        {#if approvedAmount === undefined}
-          <label class="inline-field">
-            <span>Approved amount</span>
+    {:else if missingAmount}
+      <div class="panel attention">
+        <span class="panel-title">Amount missing</span>
+        <p class="panel-text">
+          {name}'s {stage === 'received' ? 'payment' : 'approval'} was saved without an amount, so it
+          isn't counted anywhere. Enter what they {stage === 'received' ? 'paid' : 'approved'};
+          their statement or explanation of benefits has it.
+        </p>
+        <div class="field-grid">
+          <label class="field">
+            <span>{stage === 'received' ? 'Amount received' : 'Approved amount'}</span>
             <AmountInput
               bind:value={decisionAmount}
               size="sm"
               disabled={saving}
+              invalid={overClaimed}
               ariaLabel="Approved amount"
             />
           </label>
+          {#if stage === 'awaiting_payment'}
+            <label class="field">
+              <span>Received on</span>
+              <input class="control-sm" type="date" bind:value={receivedDate} disabled={saving} />
+            </label>
+          {/if}
+        </div>
+        {#if overClaimed}
+          <p class="field-warning">
+            More than the {formatCurrency(submission.amount_claimed)} claimed. Check the amount.
+          </p>
         {/if}
+        <div class="panel-actions">
+          <button
+            class="btn btn-sm"
+            class:btn-secondary={stage === 'awaiting_payment'}
+            class:btn-primary={stage !== 'awaiting_payment'}
+            on:click={saveAmount}
+            disabled={saving || decisionCents === null}
+          >
+            Save amount
+          </button>
+          {#if stage === 'awaiting_payment'}
+            <button
+              class="btn btn-sm btn-primary"
+              on:click={markReceived}
+              disabled={saving || decisionCents === null}
+            >
+              Save and mark received
+            </button>
+          {/if}
+        </div>
+      </div>
+    {:else if stage === 'awaiting_payment'}
+      <div class="actions">
         <label class="inline-field">
           <span>Received on</span>
           <input class="control-sm" type="date" bind:value={receivedDate} disabled={saving} />
         </label>
-        <button
-          class="btn btn-sm btn-primary"
-          on:click={markReceived}
-          disabled={saving || (approvedAmount === undefined && decisionCents === null)}
-        >
+        <button class="btn btn-sm btn-primary" on:click={markReceived} disabled={saving}>
           Mark received
         </button>
       </div>
@@ -665,6 +729,27 @@
     padding: var(--space-3);
     border-radius: var(--radius-sm);
     background: var(--bg-surface);
+  }
+
+  .panel.attention {
+    border: 1px solid var(--error-border);
+    background: var(--error-bg);
+  }
+
+  .panel.attention .panel-title {
+    color: var(--error);
+  }
+
+  .panel-text {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .field-warning {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--warning);
   }
 
   .panel-title {

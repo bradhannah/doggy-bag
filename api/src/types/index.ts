@@ -147,6 +147,7 @@ interface Occurrence {
   submission_status?: SubmissionStatus; // That submission's status (drives the Budget label)
   awaiting_plan_name?: string; // For awaiting_previous: the earlier plan it waits on
   is_insurance_estimate?: boolean; // Estimated reimbursement shown before any plan decides
+  amount_missing?: boolean; // Approved or received but saved without its amount
 }
 
 // ============================================================================
@@ -488,6 +489,7 @@ interface InsuranceClaimsSummary {
   waiting_amount: number;
   awaiting_payment_count: number; // Approved, money not received yet
   awaiting_payment_amount: number;
+  needs_amount_count: number; // Approved or received but saved without an amount
   received_year: number; // Calendar year the received totals cover
   received_this_year_amount: number;
   received_this_year_claims: number;

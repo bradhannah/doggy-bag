@@ -32,6 +32,11 @@
           · {plural($claimsSummary.waiting_count, 'decision', 'decisions')} pending
         {/if}
       </div>
+      {#if $claimsSummary.needs_amount_count > 0}
+        <div class="summary-note attention">
+          {plural($claimsSummary.needs_amount_count, 'plan is', 'plans are')} missing an amount
+        </div>
+      {/if}
     </div>
     <div class="summary-card">
       <div class="summary-label">Received in {$claimsSummary.received_year}</div>
@@ -106,6 +111,11 @@
   .summary-note {
     font-size: var(--font-size-xs);
     color: var(--text-secondary);
+  }
+
+  .summary-note.attention {
+    color: var(--error);
+    font-weight: 500;
   }
 
   .summary-note a {

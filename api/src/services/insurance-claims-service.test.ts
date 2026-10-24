@@ -2007,6 +2007,9 @@ describe('InsuranceClaimsService', () => {
       await writeFile(join(testDir, 'entities', 'insurance-claims.json'), JSON.stringify(raw));
 
       expect((await service.getById(claim.id))!.status).toBe('in_progress');
+      const summary = await service.getSummary();
+      expect(summary.needs_amount_count).toBe(1);
+      expect(summary.awaiting_payment_count).toBe(1); // only the approval with an amount
       const edited = await service.updateSubmission(claim.id, primary.id, { notes: 'Check EOB' });
       expect(edited!.notes).toBe('Check EOB');
       await expect(

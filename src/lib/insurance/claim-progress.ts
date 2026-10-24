@@ -38,6 +38,17 @@ export function isDecided(status: SubmissionStatus): boolean {
   return status === 'approved' || status === 'paid' || status === 'denied';
 }
 
+/**
+ * Approved or received, but saved without the amount (possible before amounts were
+ * required). The Budget can't count it until the amount is entered.
+ */
+export function isMissingAmount(submission: ClaimSubmission): boolean {
+  return (
+    (submission.status === 'approved' || submission.status === 'paid') &&
+    typeof submission.amount_reimbursed !== 'number'
+  );
+}
+
 /** The claim total minus what earlier plans approved or paid. */
 export function remainingToClaim(claim: InsuranceClaim, index: number): number {
   const covered = claim.submissions
@@ -129,6 +140,7 @@ export interface ClaimHeadline {
 /** One status for the whole claim, from the plan that needs attention first. */
 export function getClaimHeadline(claim: InsuranceClaim): ClaimHeadline {
   if (claim.is_expected) return { label: 'Scheduled', tone: 'neutral' };
+  if (claim.submissions.some(isMissingAmount)) return { label: 'Needs an amount', tone: 'error' };
   if (claim.status === 'closed') return { label: 'Done', tone: 'success' };
   const stages = claim.submissions.map((_, i) => getPlanStage(claim, i));
   if (stages.includes('to_submit')) return { label: 'To submit', tone: 'accent' };
@@ -140,6 +152,7 @@ export function getClaimHeadline(claim: InsuranceClaim): ClaimHeadline {
 export type NextStep =
   | { kind: 'convert' }
   | { kind: 'add_plan' }
+  | { kind: 'enter_amount'; submission: ClaimSubmission; index: number }
   | { kind: 'submit'; submission: ClaimSubmission; index: number; amount: number }
   | { kind: 'decide'; submission: ClaimSubmission; index: number }
   | { kind: 'receive'; submission: ClaimSubmission; index: number; amount: number };
@@ -148,6 +161,10 @@ export type NextStep =
 export function getNextStep(claim: InsuranceClaim): NextStep | null {
   if (claim.is_expected) return { kind: 'convert' };
   if (claim.submissions.length === 0) return { kind: 'add_plan' };
+  const missing = claim.submissions.findIndex(isMissingAmount);
+  if (missing >= 0) {
+    return { kind: 'enter_amount', submission: claim.submissions[missing], index: missing };
+  }
   for (const [index, submission] of claim.submissions.entries()) {
     const stage = getPlanStage(claim, index);
     if (stage === 'to_submit') {
@@ -168,8 +185,8 @@ export interface PlanTask {
   claim: InsuranceClaim;
   submission: ClaimSubmission;
   index: number;
-  stage: 'to_submit' | 'submitted' | 'awaiting_payment';
-  amount: number;
+  stage: 'needs_amount' | 'to_submit' | 'submitted' | 'awaiting_payment';
+  amount: number; // what was claimed while it needs an amount, else what's moving
 }
 
 export function getPlanTasks(claims: InsuranceClaim[]): PlanTask[] {
@@ -178,7 +195,15 @@ export function getPlanTasks(claims: InsuranceClaim[]): PlanTask[] {
     if (claim.is_expected) continue;
     claim.submissions.forEach((submission, index) => {
       const stage = getPlanStage(claim, index);
-      if (stage === 'to_submit' || stage === 'submitted') {
+      if (isMissingAmount(submission)) {
+        tasks.push({
+          claim,
+          submission,
+          index,
+          stage: 'needs_amount',
+          amount: submission.amount_claimed,
+        });
+      } else if (stage === 'to_submit' || stage === 'submitted') {
         tasks.push({ claim, submission, index, stage, amount: submission.amount_claimed });
       } else if (stage === 'awaiting_payment') {
         tasks.push({

@@ -569,6 +569,7 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
       waiting_amount: 0,
       awaiting_payment_count: 0,
       awaiting_payment_amount: 0,
+      needs_amount_count: 0,
       received_year: receivedYear,
       received_this_year_amount: 0,
       received_this_year_claims: 0,
@@ -600,10 +601,16 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
               summary.pending_amount += sub.amount_claimed;
               break;
             case 'approved':
-              summary.awaiting_payment_count++;
-              summary.awaiting_payment_amount += reimbursed;
+              // An approval saved without its amount needs fixing before it can be awaited
+              if (typeof sub.amount_reimbursed !== 'number') {
+                summary.needs_amount_count++;
+              } else {
+                summary.awaiting_payment_count++;
+                summary.awaiting_payment_amount += reimbursed;
+              }
               break;
             case 'paid':
+              if (typeof sub.amount_reimbursed !== 'number') summary.needs_amount_count++;
               if (claim.status === 'closed') summary.reimbursed_amount += reimbursed;
               if (sub.date_paid?.startsWith(String(receivedYear))) {
                 summary.received_this_year_amount += reimbursed;

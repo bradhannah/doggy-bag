@@ -134,6 +134,8 @@ function submissionOccurrences(claim: InsuranceClaim, month: string): Occurrence
       submission_status: submission.status,
       awaiting_plan_name:
         submission.status === 'awaiting_previous' ? blockingPlanName(claim, index) : undefined,
+      amount_missing:
+        hasMoney && typeof submission.amount_reimbursed !== 'number' ? true : undefined,
     });
   });
   return occurrences;
