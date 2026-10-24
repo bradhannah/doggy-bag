@@ -62,6 +62,7 @@ export const DARK_THEME_COLORS: ThemeColors = {
   'error-bg': 'rgba(248, 113, 113, 0.1)',
   'error-muted': 'rgba(248, 113, 113, 0.05)',
   'error-border': 'rgba(248, 113, 113, 0.3)',
+  'text-on-error': '#000000',
 
   // Optional: Warning
   warning: '#e5a91f',
@@ -81,6 +82,7 @@ export const DARK_THEME_COLORS: ThemeColors = {
   'purple-hover': '#8b5cf6',
   'purple-bg': 'rgba(139, 92, 246, 0.2)',
   'purple-muted': 'rgba(139, 92, 246, 0.1)',
+  'purple-border': 'rgba(139, 92, 246, 0.4)',
 
   // Optional: Orange
   orange: '#fb923c',
@@ -158,6 +160,7 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   'error-bg': 'rgba(220, 38, 38, 0.1)',
   'error-muted': 'rgba(220, 38, 38, 0.05)',
   'error-border': 'rgba(220, 38, 38, 0.3)',
+  'text-on-error': '#ffffff',
 
   // Optional: Warning
   warning: '#d97706',
@@ -177,6 +180,7 @@ export const LIGHT_THEME_COLORS: ThemeColors = {
   'purple-hover': '#6d28d9',
   'purple-bg': 'rgba(124, 58, 237, 0.1)',
   'purple-muted': 'rgba(124, 58, 237, 0.05)',
+  'purple-border': 'rgba(124, 58, 237, 0.3)',
 
   // Optional: Orange
   orange: '#ea580c',

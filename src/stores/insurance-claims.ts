@@ -91,18 +91,17 @@ export interface ExpectedExpenseData {
   payment_source_id: string; // Where to create the bill
 }
 
+/** Reload claims. Without `filters`, the last filters are kept; pass `{}` to clear them. */
 export async function loadInsuranceClaims(filters?: ClaimFilters) {
-  store.update((s) => ({
-    ...s,
-    loading: true,
-    error: null,
-    filters: filters || s.filters,
-  }));
+  let activeFilters: ClaimFilters = {};
+  store.update((s) => {
+    activeFilters = filters || s.filters;
+    return { ...s, loading: true, error: null, filters: activeFilters };
+  });
 
   try {
     // Build query string from filters
     const params = new URLSearchParams();
-    const activeFilters = filters || initialState.filters;
     if (activeFilters.status) params.append('status', activeFilters.status);
     if (activeFilters.category_id) params.append('category_id', activeFilters.category_id);
     if (activeFilters.year) params.append('year', String(activeFilters.year));
@@ -268,7 +267,7 @@ export async function cancelExpectedExpense(id: string): Promise<void> {
 
 export interface ConvertToClaimData {
   actual_cost: number; // Actual cost in cents
-  update_bill_amount?: boolean; // Update the linked bill amount to match
+  bill_paid?: boolean; // Whether the clinic bill has already been paid
 }
 
 export async function convertExpectedToClaim(
@@ -412,14 +411,15 @@ export interface SubmissionData {
   documents_sent?: string[];
 }
 
+/** Fields to change on a submission; `null` clears a field. */
 export interface SubmissionUpdate {
   status?: SubmissionStatus;
-  amount_reimbursed?: number;
-  date_submitted?: string;
-  date_resolved?: string;
-  date_paid?: string;
-  eob_document_id?: string;
-  notes?: string;
+  amount_reimbursed?: number | null;
+  date_submitted?: string | null;
+  date_resolved?: string | null;
+  date_paid?: string | null;
+  eob_document_id?: string | null;
+  notes?: string | null;
 }
 
 export async function createSubmission(

@@ -1,342 +1,367 @@
 <script lang="ts">
   /**
-   * ClaimsList - Filterable list of insurance claims
-   * Shows expected expenses and regular claims in a unified list with distinct styling
+   * ClaimsList - Claims grouped by what they need next. "Open" lists each plan's next
+   * step (submit, wait for a decision, wait for the money) with the button for it;
+   * "Done" and "All" list whole claims.
    */
-  import type { InsuranceClaim, SubmissionStatus } from '../../types/insurance';
+  import type { InsuranceClaim } from '../../types/insurance';
   import {
     insuranceClaims,
     insuranceClaimsLoading,
     loadInsuranceClaims,
+    updateSubmission,
   } from '../../stores/insurance-claims';
   import { activeCategories } from '../../stores/insurance-categories';
+  import { success, error as showError } from '../../stores/toast';
   import { createEventDispatcher } from 'svelte';
-  import { formatCurrency, formatDate } from '$lib/utils/format';
+  import { formatCurrency, getTodayDateString } from '$lib/utils/format';
+  import {
+    getClaimHeadline,
+    getClaimMoney,
+    getPlanTasks,
+    planName,
+    shortDate,
+    type PlanTask,
+  } from '$lib/insurance/claim-progress';
 
   export let selectedClaim: InsuranceClaim | null = null;
 
   const dispatch = createEventDispatcher<{
     select: InsuranceClaim;
+    open: { claimId: string; submissionId?: string };
+    changed: void;
     create: void;
     createExpected: void;
   }>();
 
-  // Filter state - status uses display values, not internal ClaimStatus
-  type StatusFilter = 'all' | 'in_progress' | 'closed';
-  let filterStatus: StatusFilter = 'all';
+  type Tab = 'open' | 'done' | 'all';
+  let tab: Tab = 'open';
   let filterCategory = '';
   let filterYear = '';
+  let busyId: string | null = null;
+  let expanded: Record<string, boolean> = {};
+  const GROUP_PREVIEW = 5;
 
-  // Get available years from claims
   $: availableYears = [
-    ...new Set($insuranceClaims.map((c) => new Date(c.service_date + 'T00:00:00').getFullYear())),
+    ...new Set($insuranceClaims.map((c) => Number(c.service_date.substring(0, 4)))),
   ].sort((a, b) => b - a);
 
-  // Apply filters
-  async function applyFilters() {
-    const filters: {
-      status?: 'draft' | 'in_progress' | 'closed';
-      category_id?: string;
-      year?: number;
-    } = {};
-    // Map filter status to backend status values
-    // 'in_progress' filter shows both draft and in_progress claims (handled by backend or client-side)
-    // For now, we filter client-side since backend may not support this mapping
-    if (filterCategory) filters.category_id = filterCategory;
-    if (filterYear) filters.year = parseInt(filterYear);
-    await loadInsuranceClaims(filters);
-  }
-
-  // Set status filter and apply
-  function setStatusFilter(status: StatusFilter) {
-    filterStatus = status;
-    applyFilters();
+  function applyFilters() {
+    loadInsuranceClaims({
+      category_id: filterCategory || undefined,
+      year: filterYear ? parseInt(filterYear) : undefined,
+    });
   }
 
   function clearFilters() {
-    filterStatus = 'all';
     filterCategory = '';
     filterYear = '';
-    loadInsuranceClaims();
+    loadInsuranceClaims({});
   }
 
-  function getStatusColor(status: 'expected' | 'draft' | 'in_progress' | 'closed'): string {
-    switch (status) {
-      case 'expected':
-      case 'draft':
-      case 'in_progress':
-        return 'var(--warning)';
-      case 'closed':
-        return 'var(--success)';
-      default:
-        return 'var(--text-primary)';
+  $: hasFilters = !!(filterCategory || filterYear);
+
+  const byServiceDateDesc = (a: InsuranceClaim, b: InsuranceClaim) =>
+    b.service_date.localeCompare(a.service_date) || b.claim_number - a.claim_number;
+
+  $: openClaims = $insuranceClaims.filter((c) => c.status !== 'closed');
+  $: doneClaims = $insuranceClaims.filter((c) => c.status === 'closed').sort(byServiceDateDesc);
+  $: allClaims = [...$insuranceClaims].sort(byServiceDateDesc);
+
+  $: tasks = getPlanTasks($insuranceClaims).sort((a, b) => byServiceDateDesc(a.claim, b.claim));
+  $: groups = [
+    {
+      id: 'needs_amount',
+      title: 'Needs attention',
+      hint: 'saved without an amount, so the Budget skips it',
+      tone: 'error',
+      tasks: tasks.filter((t) => t.stage === 'needs_amount'),
+    },
+    {
+      id: 'to_submit',
+      title: 'To submit',
+      hint: "send each plan what's left after the one before",
+      tone: 'accent',
+      tasks: tasks.filter((t) => t.stage === 'to_submit'),
+    },
+    {
+      id: 'submitted',
+      title: 'Waiting on insurer',
+      hint: 'submitted, no decision yet',
+      tone: 'neutral',
+      tasks: tasks.filter((t) => t.stage === 'submitted'),
+    },
+    {
+      id: 'awaiting_payment',
+      title: 'Awaiting payment',
+      hint: 'approved, money not in yet',
+      tone: 'warning',
+      tasks: tasks.filter((t) => t.stage === 'awaiting_payment'),
+    },
+  ];
+  $: scheduled = openClaims.filter((c) => c.is_expected).sort(byServiceDateDesc);
+  $: notStarted = openClaims
+    .filter((c) => !c.is_expected && c.submissions.length === 0)
+    .sort(byServiceDateDesc);
+  $: nothingOpen =
+    groups.every((g) => g.tasks.length === 0) && scheduled.length === 0 && notStarted.length === 0;
+
+  function categoryIcon(categoryId: string): string {
+    return $activeCategories.find((c) => c.id === categoryId)?.icon || '📋';
+  }
+
+  function claimTitle(claim: InsuranceClaim): string {
+    return claim.is_expected
+      ? claim.category_name
+      : `#${claim.claim_number} ${claim.category_name}`;
+  }
+
+  function taskMeta(task: PlanTask): string {
+    const plan = planName(task.submission);
+    if (task.stage === 'needs_amount') {
+      const verb = task.submission.status === 'paid' ? 'received' : 'approved';
+      const decided = task.submission.date_resolved;
+      return `${plan} · ${verb}${decided ? ` ${shortDate(decided)}` : ''}, no amount`;
+    }
+    if (task.stage === 'to_submit') return `${shortDate(task.claim.service_date)} · ${plan}`;
+    if (task.stage === 'submitted') {
+      const sent = task.submission.date_submitted;
+      return sent ? `${plan} · submitted ${shortDate(sent)}` : plan;
+    }
+    const decided = task.submission.date_resolved;
+    return decided ? `${plan} · approved ${shortDate(decided)}` : plan;
+  }
+
+  function claimMeta(claim: InsuranceClaim): string {
+    const parts = [shortDate(claim.service_date), claim.provider_name ?? claim.family_member_name];
+    if (claim.is_expected && claim.expected_reimbursement) {
+      parts.push(`est. ${formatCurrency(claim.expected_reimbursement)} back`);
+    } else if (claim.status === 'closed') {
+      const received = getClaimMoney(claim).received;
+      parts.push(received > 0 ? `received ${formatCurrency(received)}` : 'nothing received');
+    }
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  function openTask(task: PlanTask) {
+    dispatch('open', { claimId: task.claim.id, submissionId: task.submission.id });
+  }
+
+  async function quickAction(task: PlanTask) {
+    const plan = planName(task.submission);
+    busyId = task.submission.id;
+    try {
+      if (task.stage === 'to_submit') {
+        await updateSubmission(task.claim.id, task.submission.id, {
+          status: 'pending',
+          date_submitted: getTodayDateString(),
+        });
+        success(`Submitted to ${plan}`);
+      } else {
+        await updateSubmission(task.claim.id, task.submission.id, {
+          status: 'paid',
+          date_paid: getTodayDateString(),
+        });
+        success(`${plan} payment received`);
+      }
+      dispatch('changed');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to update the claim');
+    } finally {
+      busyId = null;
     }
   }
-
-  function getStatusLabel(status: 'expected' | 'draft' | 'in_progress' | 'closed'): string {
-    switch (status) {
-      case 'expected':
-      case 'draft':
-      case 'in_progress':
-        return 'In Progress';
-      case 'closed':
-        return 'Closed';
-      default:
-        return status;
-    }
-  }
-
-  function getCategoryIcon(categoryId: string): string {
-    const category = $activeCategories.find((c) => c.id === categoryId);
-    return category?.icon || '📋';
-  }
-
-  function getSubmissionStatusColor(status: SubmissionStatus): string {
-    switch (status) {
-      case 'draft':
-        return 'var(--text-secondary)';
-      case 'pending':
-        return 'var(--warning)';
-      case 'approved':
-        return 'var(--success)';
-      case 'paid':
-        return 'var(--accent)';
-      case 'denied':
-        return 'var(--error)';
-      default:
-        return 'var(--text-primary)';
-    }
-  }
-
-  function getSubmissionStatusLabel(status: SubmissionStatus): string {
-    switch (status) {
-      case 'draft':
-        return 'Draft';
-      case 'pending':
-        return 'Pending';
-      case 'approved':
-        return 'Approved';
-      case 'paid':
-        return 'Paid';
-      case 'denied':
-        return 'Denied';
-      default:
-        return status;
-    }
-  }
-
-  function selectClaim(claim: InsuranceClaim) {
-    dispatch('select', claim);
-  }
-
-  function handleCreate() {
-    dispatch('create');
-  }
-
-  function handleCreateExpected() {
-    dispatch('createExpected');
-  }
-
-  $: hasFilters = filterStatus !== 'all' || filterCategory || filterYear;
-
-  // Client-side status filtering (in_progress includes expected, draft, and in_progress)
-  $: filteredClaims = $insuranceClaims.filter((claim) => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'in_progress') {
-      return (
-        claim.status === 'expected' || claim.status === 'draft' || claim.status === 'in_progress'
-      );
-    }
-    return claim.status === filterStatus;
-  });
-
-  // Sort claims: in_progress (including expected) first by service_date descending, then closed
-  $: sortedClaims = [...filteredClaims].sort((a, b) => {
-    // Closed claims go to the bottom
-    const aIsClosed = a.status === 'closed';
-    const bIsClosed = b.status === 'closed';
-    if (aIsClosed && !bIsClosed) return 1;
-    if (!aIsClosed && bIsClosed) return -1;
-    // Within the same group, sort by service_date descending (most recent first)
-    return new Date(b.service_date).getTime() - new Date(a.service_date).getTime();
-  });
 </script>
 
 <div class="claims-list-container">
-  <!-- Header with create buttons -->
   <div class="list-header">
     <h2>Claims</h2>
     <div class="header-actions">
-      <button class="btn btn-secondary" on:click={handleCreateExpected}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        Schedule Expected
+      <button class="btn btn-sm btn-secondary" on:click={() => dispatch('createExpected')}>
+        Schedule expected
       </button>
-      <button class="btn btn-primary" on:click={handleCreate}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 5v14M5 12h14"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-        New Claim
+      <button class="btn btn-sm btn-primary" on:click={() => dispatch('create')}>
+        New claim
       </button>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="filters">
-    <div class="status-filter">
-      <button class:active={filterStatus === 'all'} on:click={() => setStatusFilter('all')}>
-        All
+  <div class="toolbar">
+    <div class="tabs" role="tablist" aria-label="Claims">
+      <button role="tab" aria-selected={tab === 'open'} on:click={() => (tab = 'open')}>
+        Open{openClaims.length > 0 ? ` · ${openClaims.length}` : ''}
       </button>
-      <button
-        class:active={filterStatus === 'in_progress'}
-        on:click={() => setStatusFilter('in_progress')}
-      >
-        In Progress
+      <button role="tab" aria-selected={tab === 'done'} on:click={() => (tab = 'done')}>
+        Done
       </button>
-      <button class:active={filterStatus === 'closed'} on:click={() => setStatusFilter('closed')}>
-        Closed
-      </button>
+      <button role="tab" aria-selected={tab === 'all'} on:click={() => (tab = 'all')}> All </button>
     </div>
-
-    <select bind:value={filterCategory} on:change={applyFilters}>
-      <option value="">All Categories</option>
+    <select
+      class="control-sm"
+      aria-label="Filter by category"
+      bind:value={filterCategory}
+      on:change={applyFilters}
+    >
+      <option value="">All categories</option>
       {#each $activeCategories as cat (cat.id)}
         <option value={cat.id}>{cat.icon} {cat.name}</option>
       {/each}
     </select>
-
-    <select bind:value={filterYear} on:change={applyFilters}>
-      <option value="">All Years</option>
+    <select
+      class="control-sm"
+      aria-label="Filter by year"
+      bind:value={filterYear}
+      on:change={applyFilters}
+    >
+      <option value="">All years</option>
       {#each availableYears as year (year)}
         <option value={year}>{year}</option>
       {/each}
     </select>
-
     {#if hasFilters}
-      <button class="btn-link" on:click={clearFilters}>Clear</button>
+      <button class="btn btn-sm btn-link" on:click={clearFilters}>Clear</button>
     {/if}
   </div>
 
-  <!-- Claims list -->
   <div class="claims-list">
-    {#if $insuranceClaimsLoading}
-      <div class="loading-state">Loading claims...</div>
-    {:else if sortedClaims.length === 0}
+    {#if $insuranceClaimsLoading && $insuranceClaims.length === 0}
+      <div class="empty-state">Loading claims…</div>
+    {:else if $insuranceClaims.length === 0}
       <div class="empty-state">
         {#if hasFilters}
           <p>No claims match your filters.</p>
-          <button class="btn-link" on:click={clearFilters}>Clear filters</button>
+          <button class="btn btn-sm btn-link" on:click={clearFilters}>Clear filters</button>
         {:else}
           <p>No claims yet.</p>
           <p class="hint">Create your first claim or schedule an expected expense.</p>
         {/if}
       </div>
-    {:else}
-      {#each sortedClaims as claim (claim.id)}
-        <button
-          class="claim-card"
-          class:selected={selectedClaim?.id === claim.id}
-          class:expected={claim.status === 'expected'}
-          on:click={() => selectClaim(claim)}
-        >
-          <div class="claim-header">
-            <span class="claim-title">
-              {#if claim.status === 'expected'}
-                <span class="title-expected-icon">📅</span>
-                <span class="title-name">{claim.family_member_name}</span>
-                <span class="title-connector">for</span>
-                <span class="title-category"
-                  >{getCategoryIcon(claim.category_id)} {claim.category_name}</span
-                >
-                <span class="title-connector">on</span>
-                <span class="title-date">{formatDate(claim.service_date)}</span>
-              {:else}
-                <span class="title-number">#{claim.claim_number}</span>
-                <span class="title-name">{claim.family_member_name}</span>
-                <span class="title-connector">for</span>
-                <span class="title-category"
-                  >{getCategoryIcon(claim.category_id)} {claim.category_name}</span
-                >
-                <span class="title-connector">on</span>
-                <span class="title-date">{formatDate(claim.service_date)}</span>
-              {/if}
-            </span>
-            <span class="claim-status" style="color: {getStatusColor(claim.status)}">
-              {getStatusLabel(claim.status)}
-            </span>
-          </div>
-          {#if claim.provider_name && claim.status === 'expected'}
-            <div class="claim-body">
-              <span class="claim-provider">{claim.provider_name}</span>
+    {:else if tab === 'open'}
+      {#if nothingOpen}
+        <div class="empty-state">
+          <p>Nothing needs you.</p>
+          <p class="hint">Every claim is done.</p>
+        </div>
+      {/if}
+      {#each groups as group (group.id)}
+        {#if group.tasks.length > 0}
+          <section class="group" aria-label={group.title}>
+            <div class="group-header">
+              <span class="group-title {group.tone}">{group.title} · {group.tasks.length}</span>
+              <span class="group-hint">{group.hint}</span>
             </div>
-          {:else if claim.description}
-            <div class="claim-body">
-              <span class="claim-description">{claim.description}</span>
-            </div>
-          {/if}
-          <div class="claim-footer">
-            {#if claim.status === 'expected'}
-              <!-- Expected expense shows estimated cost and reimbursement -->
-              <div class="expected-amounts">
-                <span class="expected-cost">Est: {formatCurrency(claim.expected_cost || 0)}</span>
-                <span class="expected-arrow">→</span>
-                <span class="expected-reimbursement"
-                  >{formatCurrency(claim.expected_reimbursement || 0)} back</span
-                >
-              </div>
-            {:else}
-              <div class="claim-footer-left">
-                {#if claim.bill_paid}
-                  <span class="bill-paid-badge">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M5 13l4 4L19 7"
-                        stroke="currentColor"
-                        stroke-width="3"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                    Paid
+            {#each expanded[group.id] ? group.tasks : group.tasks.slice(0, GROUP_PREVIEW) as task (task.submission.id)}
+              <div class="row" class:selected={selectedClaim?.id === task.claim.id}>
+                <button class="row-main" on:click={() => openTask(task)}>
+                  <span class="row-title">
+                    <span aria-hidden="true">{categoryIcon(task.claim.category_id)}</span>
+                    {claimTitle(task.claim)}
                   </span>
-                {/if}
-                {#if claim.expected_reimbursement}
-                  <span class="expected-return-badge">
-                    ~{formatCurrency(claim.expected_reimbursement)} back
-                  </span>
-                {/if}
-                {#if claim.submissions.length > 0}
-                  <div class="submission-badges">
-                    {#each claim.submissions as sub (sub.id)}
-                      <span
-                        class="submission-badge"
-                        style="color: {getSubmissionStatusColor(
-                          sub.status
-                        )}; border-color: {getSubmissionStatusColor(sub.status)}"
-                      >
-                        {getSubmissionStatusLabel(sub.status)}
-                      </span>
-                    {/each}
-                  </div>
+                  <span class="row-meta">{taskMeta(task)}</span>
+                </button>
+                <span class="row-amount" class:muted={task.stage === 'needs_amount'}>
+                  {task.stage === 'needs_amount' ? '—' : formatCurrency(task.amount)}
+                </span>
+                {#if task.stage === 'needs_amount'}
+                  <button
+                    class="btn btn-sm btn-secondary row-action"
+                    on:click={() => openTask(task)}
+                  >
+                    Enter amount
+                  </button>
+                {:else if task.stage === 'to_submit'}
+                  <button
+                    class="btn btn-sm btn-primary row-action"
+                    on:click={() => quickAction(task)}
+                    disabled={busyId === task.submission.id}
+                  >
+                    Mark submitted
+                  </button>
+                {:else if task.stage === 'submitted'}
+                  <button
+                    class="btn btn-sm btn-secondary row-action"
+                    on:click={() => openTask(task)}
+                  >
+                    Record decision
+                  </button>
+                {:else}
+                  <button
+                    class="btn btn-sm btn-secondary row-action"
+                    on:click={() => quickAction(task)}
+                    disabled={busyId === task.submission.id}
+                  >
+                    Mark received
+                  </button>
                 {/if}
               </div>
+            {/each}
+            {#if group.tasks.length > GROUP_PREVIEW}
+              <button
+                class="btn btn-sm btn-link show-more"
+                on:click={() => (expanded = { ...expanded, [group.id]: !expanded[group.id] })}
+              >
+                {expanded[group.id]
+                  ? 'Show fewer'
+                  : `Show ${group.tasks.length - GROUP_PREVIEW} more`}
+              </button>
             {/if}
-            <span class="claim-amount">{formatCurrency(claim.total_amount)}</span>
-          </div>
-        </button>
+          </section>
+        {/if}
       {/each}
+
+      {#each [{ id: 'scheduled', title: 'Scheduled', hint: 'appointments still to come', claims: scheduled }, { id: 'not_started', title: 'No plans yet', hint: 'add the plans to claim from', claims: notStarted }] as group (group.id)}
+        {#if group.claims.length > 0}
+          <section class="group" aria-label={group.title}>
+            <div class="group-header">
+              <span class="group-title">{group.title} · {group.claims.length}</span>
+              <span class="group-hint">{group.hint}</span>
+            </div>
+            {#each group.claims as claim (claim.id)}
+              <div class="row" class:selected={selectedClaim?.id === claim.id}>
+                <button class="row-main" on:click={() => dispatch('select', claim)}>
+                  <span class="row-title">
+                    <span aria-hidden="true">{categoryIcon(claim.category_id)}</span>
+                    {claimTitle(claim)}
+                  </span>
+                  <span class="row-meta">{claimMeta(claim)}</span>
+                </button>
+                <span class="row-amount">{formatCurrency(getClaimMoney(claim).cost)}</span>
+              </div>
+            {/each}
+          </section>
+        {/if}
+      {/each}
+    {:else}
+      {@const claims = tab === 'done' ? doneClaims : allClaims}
+      {#if claims.length === 0}
+        <div class="empty-state"><p>No finished claims yet.</p></div>
+      {/if}
+      <section class="group">
+        {#each claims as claim (claim.id)}
+          {@const headline = getClaimHeadline(claim)}
+          <div class="row" class:selected={selectedClaim?.id === claim.id}>
+            <button class="row-main" on:click={() => dispatch('select', claim)}>
+              <span class="row-title">
+                <span aria-hidden="true">{categoryIcon(claim.category_id)}</span>
+                {claimTitle(claim)}
+              </span>
+              <span class="row-meta">{claimMeta(claim)}</span>
+            </button>
+            {#if tab === 'all'}
+              <span
+                class="badge"
+                class:badge-accent={headline.tone === 'accent'}
+                class:badge-warning={headline.tone === 'warning'}
+                class:badge-success={headline.tone === 'success'}
+                class:badge-error={headline.tone === 'error'}
+              >
+                {headline.label}
+              </span>
+            {/if}
+            <span class="row-amount">{formatCurrency(getClaimMoney(claim).cost)}</span>
+          </div>
+        {/each}
+      </section>
     {/if}
   </div>
 </div>
@@ -346,19 +371,21 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    container-type: inline-size;
   }
 
   .list-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-4);
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--border-default);
   }
 
   .list-header h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--font-size-lg);
     font-weight: 600;
     color: var(--text-primary);
   }
@@ -368,71 +395,55 @@
     gap: var(--space-2);
   }
 
-  .filters {
+  .toolbar {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-4);
     background: var(--bg-base);
     border-bottom: 1px solid var(--border-default);
   }
 
-  .filters select {
-    padding: var(--space-1) var(--space-2);
+  .toolbar select {
+    padding: 0 var(--space-2);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     background: var(--bg-surface);
     color: var(--text-primary);
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
   }
 
-  .filters select:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .status-filter {
-    display: flex;
+  .tabs {
+    display: inline-flex;
+    gap: var(--space-1);
+    padding: calc(var(--space-1) / 2);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-
-  .status-filter button {
-    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
     background: var(--bg-surface);
+  }
+
+  .tabs button {
+    height: calc(var(--control-height-sm) - var(--space-1));
+    padding: 0 var(--space-3);
     border: none;
-    border-right: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--text-secondary);
-    font-size: 0.8125rem;
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
   }
 
-  .status-filter button:last-child {
-    border-right: none;
-  }
-
-  .status-filter button:hover:not(.active) {
-    background: var(--bg-hover);
-  }
-
-  .status-filter button.active {
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .btn-link {
-    background: none;
-    border: none;
+  .tabs button[aria-selected='true'] {
+    background: var(--accent-muted);
     color: var(--accent);
-    font-size: 0.8125rem;
-    cursor: pointer;
-    padding: var(--space-1) var(--space-2);
+    font-weight: 600;
   }
 
-  .btn-link:hover {
-    text-decoration: underline;
+  .tabs button:hover:not([aria-selected='true']) {
+    color: var(--text-primary);
   }
 
   .claims-list {
@@ -441,256 +452,174 @@
     padding: var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-3);
   }
 
-  .loading-state,
   .empty-state {
     text-align: center;
     padding: var(--space-8) var(--space-4);
     color: var(--text-secondary);
   }
 
+  .empty-state p {
+    margin: 0;
+  }
+
   .empty-state .hint {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--text-tertiary);
     margin-top: var(--space-2);
   }
 
-  .claim-card {
+  .group {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    background: var(--bg-surface);
+    padding: 0 var(--space-3) var(--space-1);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s;
-    width: 100%;
+    background: var(--bg-surface);
   }
 
-  .claim-card:hover {
-    border-color: var(--accent);
-    background: var(--accent-muted);
-  }
-
-  .claim-card.selected {
-    border-color: var(--accent);
-    background: var(--accent-muted);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
-
-  .claim-header {
+  .group-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-2);
-  }
-
-  .claim-title {
-    display: flex;
-    flex-wrap: wrap;
     align-items: baseline;
-    gap: 0.25em;
-    font-size: 0.875rem;
-    line-height: 1.4;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-3) 0 var(--space-2);
+    border-bottom: 1px solid var(--border-default);
   }
 
-  .title-number {
-    font-weight: 700;
-    color: var(--accent);
-  }
-
-  .title-name {
+  .group-title {
+    font-size: var(--font-size-2xs);
     font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .title-connector {
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-
-  .title-category {
-    font-weight: 600;
-    color: var(--accent);
-  }
-
-  .title-date {
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .claim-status {
-    font-size: 0.6875rem;
-    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 2px 6px;
-    background: var(--bg-elevated);
-    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    white-space: nowrap;
   }
 
-  .claim-body {
+  .group-title.accent {
+    color: var(--accent);
+  }
+
+  .group-title.warning {
+    color: var(--warning);
+  }
+
+  .group-title.error {
+    color: var(--error);
+  }
+
+  .group-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    text-align: right;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--control-height);
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .row:last-of-type {
+    border-bottom: none;
+  }
+
+  .row.selected .row-title {
+    color: var(--accent);
+  }
+
+  .row-main {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: flex-start;
+    gap: calc(var(--space-1) / 2);
+    padding: var(--space-1) 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
-  .claim-description {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+  .row-main:hover .row-title {
+    color: var(--accent);
+  }
+
+  .row-title {
+    display: flex;
+    gap: var(--space-1);
+    max-width: 100%;
+    font-size: var(--font-size-md);
+    font-weight: 500;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .claim-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--border-subtle);
-    gap: var(--space-2);
-  }
-
-  .submission-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-  }
-
-  .submission-badge {
-    font-size: 0.625rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    padding: 2px 6px;
-    background: var(--bg-elevated);
-    border: 1px solid;
-    border-radius: var(--radius-sm);
-  }
-
-  .claim-amount {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-  }
-
-  /* Button */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    border: none;
-    cursor: pointer;
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
-
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-
-  .btn-secondary {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    border: 1px solid var(--border-default);
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: var(--bg-hover);
-    border-color: var(--accent);
-  }
-
-  /* Expected claim card styling - distinct appearance but uses warning palette */
-  .claim-card.expected {
-    background: var(--warning-muted);
-    border-color: var(--warning-border);
-    border-style: dashed;
-  }
-
-  .claim-card.expected:hover {
-    background: var(--warning-muted);
-    border-color: var(--warning);
-  }
-
-  .claim-card.expected.selected {
-    background: var(--warning-muted);
-    border-color: var(--warning);
-    border-style: solid;
-  }
-
-  .title-expected-icon {
-    font-size: 1rem;
-    margin-right: 0.25em;
-  }
-
-  .claim-provider {
-    font-size: 0.75rem;
+  .row-meta {
+    max-width: 100%;
+    font-size: var(--font-size-xs);
     color: var(--text-secondary);
-    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .expected-amounts {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: 0.75rem;
+  .row-amount {
+    flex-shrink: 0;
+    min-width: var(--ledger-amount-width);
+    text-align: right;
+    font-size: var(--font-size-md);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
   }
 
-  .expected-cost {
+  .row-amount.muted {
     color: var(--text-secondary);
   }
 
-  .expected-arrow {
-    color: var(--text-tertiary);
+  .row-action {
+    flex-shrink: 0;
+    min-width: 8.5rem;
   }
 
-  .expected-reimbursement {
-    color: var(--success);
-    font-weight: 500;
+  .show-more {
+    align-self: center;
+    margin: var(--space-1) 0;
   }
 
-  .claim-footer-left {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-  }
+  /* Beside an open claim the list is narrow: amount and button go under the title */
+  @container (max-width: 30rem) {
+    .row {
+      flex-wrap: wrap;
+      row-gap: 0;
+    }
 
-  .bill-paid-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 0.625rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--success);
-    background: var(--success-bg);
-    border: 1px solid var(--success-border);
-    border-radius: var(--radius-sm);
-    padding: 2px 6px;
-  }
+    .row-main {
+      flex-basis: 100%;
+    }
 
-  .expected-return-badge {
-    font-size: 0.625rem;
-    font-weight: 500;
-    color: var(--accent);
-    background: var(--accent-muted);
-    border-radius: var(--radius-sm);
-    padding: 2px 6px;
+    .row-amount {
+      margin-left: auto;
+      min-width: 0;
+    }
+
+    .row-action {
+      min-width: 0;
+      margin-bottom: var(--space-1);
+    }
+
+    .group-hint {
+      display: none;
+    }
   }
 </style>

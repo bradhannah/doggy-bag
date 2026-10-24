@@ -32,7 +32,7 @@
   import Spinner from '../shared/Spinner.svelte';
 
   const BUDGET_TABS: { id: string; label: string }[] = [
-    { id: 'expenses', label: 'Expenses' },
+    { id: 'expenses', label: 'Bills' },
     { id: 'income', label: 'Income' },
     { id: 'combined', label: 'Combined' },
   ];
@@ -315,7 +315,8 @@
   $: filterHasQuery = filterQuery.trim().length > 0;
   $: hasMatches = totalMatchCount > 0;
 
-  function openFilter() {
+  // Exported so the month header's Find button can open the same filter as Cmd/Ctrl+F
+  export function openFilter() {
     if (!isFilterOpen) {
       isFilterOpen = true;
     }
@@ -627,83 +628,87 @@
                   <div class="section-header">
                     <h2>Bills</h2>
                     {#if totalBills > 0}
-                      <span class="section-status"
-                        >{totalBills - closedBills}/{totalBills} Left</span
-                      >
+                      <span class="section-status">{closedBills} of {totalBills} paid</span>
                     {/if}
                   </div>
+                  <div class="ledger-row ledger-column-labels" aria-hidden="true">
+                    <span></span>
+                    <span class="ledger-amount">Expected</span>
+                    <span class="ledger-amount">Paid</span>
+                    <span></span>
+                  </div>
 
+                  <!-- Insurance items still show when there are no bill categories -->
                   {#if sortedBillSections.length === 0}
                     <p class="empty-text">
                       No bill categories. <a href="/setup">Add categories in Manage.</a>
                     </p>
-                  {:else}
-                    {#each filteredActiveBillSections as section (section.category.id)}
+                  {/if}
+                  {#each filteredActiveBillSections as section (section.category.id)}
+                    <CategorySection
+                      {section}
+                      type="bills"
+                      {month}
+                      readOnly={$monthIsReadOnly}
+                      hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
+                      collapsed={false}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/each}
+
+                  {#if filteredInsuranceExpenseSection && filteredInsuranceExpenseSection.items.length > 0}
+                    <div class="insurance-divider">
+                      <svg
+                        class="insurance-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Insurance Expenses</span>
+                    </div>
+                    <CategorySection
+                      section={filteredInsuranceExpenseSection}
+                      type="bills"
+                      {month}
+                      readOnly={$monthIsReadOnly}
+                      hiddenCount={0}
+                      collapsed={false}
+                      isInsuranceSection={true}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/if}
+
+                  {#if filteredCompletedBillSections.length > 0}
+                    <div class="completed-divider">
+                      <span>Completed</span>
+                    </div>
+
+                    {#each filteredCompletedBillSections as section (section.category.id)}
                       <CategorySection
                         {section}
                         type="bills"
                         {month}
                         readOnly={$monthIsReadOnly}
-                        hiddenCount={billHiddenCounts.get(section.category.id) ?? 0}
-                        collapsed={false}
+                        hiddenCount={0}
+                        collapsed={$hidePaidItems}
                         on:refresh={refreshData}
                         on:reopened={handleReopened}
                         on:closed={handleClosed}
                       />
                     {/each}
-
-                    {#if filteredInsuranceExpenseSection && filteredInsuranceExpenseSection.items.length > 0}
-                      <div class="insurance-divider">
-                        <svg
-                          class="insurance-icon"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                        <span>Insurance Expenses</span>
-                      </div>
-                      <CategorySection
-                        section={filteredInsuranceExpenseSection}
-                        type="bills"
-                        {month}
-                        readOnly={true}
-                        hiddenCount={0}
-                        collapsed={false}
-                        isInsuranceSection={true}
-                        on:refresh={refreshData}
-                        on:reopened={handleReopened}
-                        on:closed={handleClosed}
-                      />
-                    {/if}
-
-                    {#if filteredCompletedBillSections.length > 0}
-                      <div class="completed-divider">
-                        <span>Completed</span>
-                      </div>
-
-                      {#each filteredCompletedBillSections as section (section.category.id)}
-                        <CategorySection
-                          {section}
-                          type="bills"
-                          {month}
-                          readOnly={$monthIsReadOnly}
-                          hiddenCount={0}
-                          collapsed={$hidePaidItems}
-                          on:refresh={refreshData}
-                          on:reopened={handleReopened}
-                          on:closed={handleClosed}
-                        />
-                      {/each}
-                    {/if}
                   {/if}
                 </section>
               {/if}
@@ -714,81 +719,87 @@
                   <div class="section-header">
                     <h2>Income</h2>
                     {#if totalIncomes > 0}
-                      <span class="section-status">{closedIncomes}/{totalIncomes} Received</span>
+                      <span class="section-status">{closedIncomes} of {totalIncomes} received</span>
                     {/if}
                   </div>
+                  <div class="ledger-row ledger-column-labels" aria-hidden="true">
+                    <span></span>
+                    <span class="ledger-amount">Expected</span>
+                    <span class="ledger-amount">Received</span>
+                    <span></span>
+                  </div>
 
+                  <!-- Insurance items still show when there are no income categories -->
                   {#if sortedIncomeSections.length === 0}
                     <p class="empty-text">
                       No income categories. <a href="/setup">Add categories in Manage.</a>
                     </p>
-                  {:else}
-                    {#each filteredActiveIncomeSections as section (section.category.id)}
+                  {/if}
+                  {#each filteredActiveIncomeSections as section (section.category.id)}
+                    <CategorySection
+                      {section}
+                      type="income"
+                      {month}
+                      readOnly={$monthIsReadOnly}
+                      hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
+                      collapsed={false}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/each}
+
+                  {#if filteredInsuranceReimbursementSection && filteredInsuranceReimbursementSection.items.length > 0}
+                    <div class="insurance-divider">
+                      <svg
+                        class="insurance-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Insurance Reimbursements</span>
+                    </div>
+                    <CategorySection
+                      section={filteredInsuranceReimbursementSection}
+                      type="income"
+                      {month}
+                      readOnly={$monthIsReadOnly}
+                      hiddenCount={0}
+                      collapsed={false}
+                      isInsuranceSection={true}
+                      on:refresh={refreshData}
+                      on:reopened={handleReopened}
+                      on:closed={handleClosed}
+                    />
+                  {/if}
+
+                  {#if filteredCompletedIncomeSections.length > 0}
+                    <div class="completed-divider">
+                      <span>Completed</span>
+                    </div>
+
+                    {#each filteredCompletedIncomeSections as section (section.category.id)}
                       <CategorySection
                         {section}
                         type="income"
                         {month}
                         readOnly={$monthIsReadOnly}
-                        hiddenCount={incomeHiddenCounts.get(section.category.id) ?? 0}
-                        collapsed={false}
+                        hiddenCount={0}
+                        collapsed={$hidePaidItems}
                         on:refresh={refreshData}
                         on:reopened={handleReopened}
                         on:closed={handleClosed}
                       />
                     {/each}
-
-                    {#if filteredInsuranceReimbursementSection && filteredInsuranceReimbursementSection.items.length > 0}
-                      <div class="insurance-divider">
-                        <svg
-                          class="insurance-icon"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                        <span>Insurance Reimbursements</span>
-                      </div>
-                      <CategorySection
-                        section={filteredInsuranceReimbursementSection}
-                        type="income"
-                        {month}
-                        readOnly={true}
-                        hiddenCount={0}
-                        collapsed={false}
-                        isInsuranceSection={true}
-                        on:refresh={refreshData}
-                        on:reopened={handleReopened}
-                        on:closed={handleClosed}
-                      />
-                    {/if}
-
-                    {#if filteredCompletedIncomeSections.length > 0}
-                      <div class="completed-divider">
-                        <span>Completed</span>
-                      </div>
-
-                      {#each filteredCompletedIncomeSections as section (section.category.id)}
-                        <CategorySection
-                          {section}
-                          type="income"
-                          {month}
-                          readOnly={$monthIsReadOnly}
-                          hiddenCount={0}
-                          collapsed={$hidePaidItems}
-                          on:refresh={refreshData}
-                          on:reopened={handleReopened}
-                          on:closed={handleClosed}
-                        />
-                      {/each}
-                    {/if}
                   {/if}
                 </section>
               {/if}
@@ -799,16 +810,12 @@
               <div class="alt-view-container">
                 {#if $budgetTab === 'expenses' || $budgetTab === 'combined'}
                   <div class="alt-view-section">
-                    {#if $budgetTab === 'combined'}
-                      <div class="alt-section-header">
-                        <h2>Bills</h2>
-                        {#if totalBills > 0}
-                          <span class="section-status"
-                            >{totalBills - closedBills}/{totalBills} Left</span
-                          >
-                        {/if}
-                      </div>
-                    {/if}
+                    <div class="alt-section-header">
+                      <h2>Bills</h2>
+                      {#if totalBills > 0}
+                        <span class="section-status">{closedBills} of {totalBills} paid</span>
+                      {/if}
+                    </div>
                     <DataTableView
                       sections={filteredActiveBillSections}
                       completedSections={filteredCompletedBillSections}
@@ -825,23 +832,16 @@
                   </div>
                 {/if}
 
-                {#if $budgetTab === 'combined'}
-                  <div class="section-type-divider">
-                    <span>Income</span>
-                  </div>
-                {/if}
-
                 {#if $budgetTab === 'income' || $budgetTab === 'combined'}
                   <div class="alt-view-section">
-                    {#if $budgetTab === 'combined'}
-                      <div class="alt-section-header">
-                        <h2>Income</h2>
-                        {#if totalIncomes > 0}
-                          <span class="section-status">{closedIncomes}/{totalIncomes} Received</span
-                          >
-                        {/if}
-                      </div>
-                    {/if}
+                    <div class="alt-section-header">
+                      <h2>Income</h2>
+                      {#if totalIncomes > 0}
+                        <span class="section-status"
+                          >{closedIncomes} of {totalIncomes} received</span
+                        >
+                      {/if}
+                    </div>
                     <DataTableView
                       sections={filteredActiveIncomeSections}
                       completedSections={filteredCompletedIncomeSections}
@@ -987,7 +987,7 @@
     background: var(--bg-surface);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-default);
-    padding: var(--space-6);
+    padding: var(--space-5);
     width: 100%;
     min-width: 0;
     max-width: 100%;
@@ -1003,10 +1003,14 @@
   .section-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: var(--section-gap);
+    align-items: baseline;
+    margin-bottom: var(--space-3);
     flex-wrap: wrap;
     gap: var(--space-4);
+  }
+
+  .section .ledger-column-labels {
+    margin-bottom: var(--space-2);
   }
 
   .section-header h2 {
@@ -1187,7 +1191,7 @@
   .alt-section-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: baseline;
     margin-bottom: var(--space-3);
     flex-wrap: wrap;
     gap: var(--space-4);
@@ -1198,26 +1202,5 @@
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-primary);
-  }
-
-  /* Divider between expenses and income in combined alt views */
-  .section-type-divider {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2) 0;
-    color: var(--text-tertiary);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .section-type-divider::before,
-  .section-type-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border-default);
   }
 </style>

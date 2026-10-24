@@ -418,4 +418,76 @@ describe('ProjectionsService', () => {
       projection.days.flatMap((day) => day.events).filter((event) => event.kind === 'actual')
     ).toHaveLength(1);
   });
+
+  test('an approval this month is scheduled income and undecided plans add no events', async () => {
+    const today = getTodayLocalDateString();
+    const month = today.slice(0, 7);
+    const stamp = new Date().toISOString();
+    await writeFile(
+      join(testDir, 'months', `${month}.json`),
+      JSON.stringify({
+        month,
+        bill_instances: [],
+        income_instances: [],
+        variable_expenses: [],
+        free_flowing_expenses: [],
+        bank_balances: { 'ps-checking-001': 100000 },
+        is_read_only: false,
+        created_at: stamp,
+        updated_at: stamp,
+      })
+    );
+    await writeFile(
+      join(testDir, 'entities', 'insurance-claims.json'),
+      JSON.stringify([
+        {
+          id: 'claim-23',
+          claim_number: 23,
+          family_member_id: 'person',
+          family_member_name: 'Person',
+          category_id: 'massage',
+          category_name: 'Massage Therapy',
+          service_date: `${month}-01`,
+          total_amount: 13560,
+          status: 'in_progress',
+          is_expected: false,
+          bill_paid: true,
+          bill_paid_date: `${month}-01`,
+          documents: [],
+          submissions: [
+            {
+              id: 'cl',
+              plan_id: 'cl',
+              plan_snapshot: { name: 'Canada Life AWS' },
+              status: 'approved',
+              amount_claimed: 13560,
+              amount_reimbursed: 12400,
+              date_resolved: today,
+              documents_sent: [],
+            },
+            {
+              id: 'em',
+              plan_id: 'em',
+              plan_snapshot: { name: 'Empire Life' },
+              status: 'draft',
+              amount_claimed: 1160,
+              documents_sent: [],
+            },
+          ],
+          created_at: stamp,
+          updated_at: stamp,
+        },
+      ])
+    );
+
+    const budget = await new DetailedViewServiceImpl().getDetailedMonth(month);
+    const projection = await service.getProjection(month);
+    const events = projection.days.flatMap((day) => day.events);
+
+    expect(events.filter((e) => e.type === 'income')).toEqual([
+      { name: '#23 Massage Therapy', amount: 12400, type: 'income', kind: 'scheduled' },
+    ]);
+    expect(projection.days.at(-1)?.balance).toBe(112400);
+    expect(projection.days.at(-1)?.balance).toBe(budget.leftover);
+  });
 });

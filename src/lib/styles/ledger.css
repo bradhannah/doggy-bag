@@ -1,0 +1,60 @@
+/*
+ * Budget ledger rows: category headers, items and payments share one column
+ * template, so every amount sits in the same EXPECTED / PAID column.
+ *
+ *   label (flexible) | expected | paid | actions
+ *
+ * Rows nest by left padding only; the right edge and column widths never change.
+ */
+
+.ledger-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) var(--ledger-amount-width) var(--ledger-amount-width)
+    var(--ledger-actions-width);
+  column-gap: var(--space-3);
+  align-items: center;
+  padding: 0 var(--space-3);
+  box-sizing: border-box;
+}
+
+.ledger-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ledger-amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ledger-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.ledger-column-labels {
+  min-height: var(--control-height-sm);
+  border-bottom: 1px solid var(--border-default);
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Narrow windows: the label takes its own line; the columns stay aligned beneath it */
+@media (max-width: 40rem) {
+  .ledger-row {
+    row-gap: var(--space-1);
+    padding-block: var(--space-1);
+  }
+
+  .ledger-label {
+    grid-column: 1 / -1;
+  }
+}

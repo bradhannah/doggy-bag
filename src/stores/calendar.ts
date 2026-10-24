@@ -21,6 +21,7 @@ export interface CalendarEvent {
   source_id: string;
   instance_id: string;
   occurrence_id?: string;
+  is_insurance?: boolean; // source_id is then the insurance claim ID
 }
 
 export interface CalendarSummary {

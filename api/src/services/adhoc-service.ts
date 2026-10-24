@@ -19,7 +19,7 @@ import type {
   DateString,
   MonthlyData,
 } from '../types';
-import { getTodayLocalDateString } from '../utils/due-date';
+import { getTodayLocalDateString, todayOrFirstOfMonth } from '../utils/due-date';
 import { excludeBudgetInstance } from '../utils/savings';
 
 // Request types
@@ -230,8 +230,8 @@ export class AdhocServiceImpl implements AdhocService {
     const categoryId = data.category_id || (await this.getAdhocBillCategory());
 
     const now = new Date().toISOString();
-    const today = now.split('T')[0];
-    const expectedDate = data.date || today;
+    // Default to a date inside the target month, so items added to other months aren't overdue
+    const expectedDate = data.date || todayOrFirstOfMonth(month);
     const isClosed = !!data.date;
 
     const occurrence = this.createBaseOccurrence(data.amount, expectedDate, isClosed);
@@ -497,8 +497,8 @@ export class AdhocServiceImpl implements AdhocService {
     const categoryId = data.category_id || (await this.getAdhocIncomeCategory());
 
     const now = new Date().toISOString();
-    const today = now.split('T')[0];
-    const expectedDate = data.date || today;
+    // Default to a date inside the target month, so items added to other months aren't overdue
+    const expectedDate = data.date || todayOrFirstOfMonth(month);
     const isClosed = !!data.date;
 
     const occurrence = this.createBaseOccurrence(data.amount, expectedDate, isClosed);

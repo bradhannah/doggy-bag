@@ -244,15 +244,18 @@
     cursor: pointer;
     text-align: left;
     color: var(--text-primary);
-    font-size: 0.875rem;
+    font-size: var(--font-size-md);
     line-height: 1.5;
     min-width: 0;
+    /* First text line sits on the action buttons' centreline */
+    padding-block: calc((var(--control-height-sm) - 1.5em) / 2);
   }
 
+  /* One line tall, so the icon centres on the first line of text */
   .chevron {
     flex-shrink: 0;
-    margin-top: 2px;
-    color: var(--text-tertiary);
+    height: 1.5em;
+    color: var(--text-secondary);
     transition: transform 0.2s;
   }
 

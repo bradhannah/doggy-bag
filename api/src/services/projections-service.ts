@@ -5,7 +5,7 @@ import { MonthsServiceImpl } from './months-service';
 import type { ProjectionResponse, BillInstanceDetailed, IncomeInstanceDetailed } from '../types';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { getOverdueBills } from '../utils/overdue-bills';
-import { getTodayLocalDateString } from '../utils/due-date';
+import { getTodayLocalDateString, todayOrFirstOfMonth } from '../utils/due-date';
 import { ValidationError } from '../utils/errors';
 
 export interface ProjectionsService {
@@ -28,8 +28,7 @@ export class ProjectionsServiceImpl implements ProjectionsService {
     const todayStr = getTodayLocalDateString();
 
     const displayStartDate = `${month}-01`;
-    const isCurrentMonth = todayStr.startsWith(month);
-    const balanceStartDate = isCurrentMonth ? todayStr : displayStartDate;
+    const balanceStartDate = todayOrFirstOfMonth(month, todayStr);
 
     // Determine end date (last day of month)
     const [year, monthNum] = month.split('-').map(Number);
@@ -156,6 +155,9 @@ export class ProjectionsServiceImpl implements ProjectionsService {
 
       for (const occ of occurrences) {
         const dueDate = occ.expected_date;
+
+        // An insurance plan that hasn't decided (or denied) moves no money
+        if (income.is_insurance_reimbursement && occ.expected_amount === 0) continue;
 
         // In occurrence-only model, closed = received
         if (occ.is_closed) {

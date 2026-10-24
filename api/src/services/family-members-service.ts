@@ -119,7 +119,8 @@ export class FamilyMembersServiceImpl implements FamilyMembersService {
         ...data,
         name: data.name.trim(),
         id: crypto.randomUUID(),
-        plans: [], // Default to empty plans for new members
+        // Plan order decides which plan is claimed first (primary, then secondary)
+        plans: [...new Set(data.plans ?? [])],
         is_active: true,
         created_at: now,
         updated_at: now,
@@ -215,6 +216,13 @@ export class FamilyMembersServiceImpl implements FamilyMembersService {
     // Name should be reasonable length
     if (data.name && data.name.trim().length > 100) {
       errors.push('Name must be 100 characters or less');
+    }
+
+    if (
+      data.plans !== undefined &&
+      (!Array.isArray(data.plans) || data.plans.some((id) => typeof id !== 'string'))
+    ) {
+      errors.push('Plans must be a list of plan IDs');
     }
 
     return {

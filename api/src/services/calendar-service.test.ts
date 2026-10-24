@@ -1,5 +1,5 @@
 // Calendar Service Tests
-import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
+import { describe, test, expect, beforeAll, beforeEach, afterAll, afterEach } from 'bun:test';
 import { CalendarServiceImpl } from './calendar-service';
 import { StorageServiceImpl } from './storage';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
@@ -586,6 +586,108 @@ describe('CalendarService', () => {
 
       // 2 goal contributions (1 ad-hoc, 1 recurring)
       expect(response.summary.goals).toBe(2);
+    });
+  });
+
+  describe('insurance', () => {
+    const claim = {
+      id: 'claim-5',
+      claim_number: 5,
+      family_member_id: 'fm',
+      family_member_name: 'Brad',
+      category_id: 'massage',
+      category_name: 'Massage Therapy',
+      provider_name: 'KTown',
+      service_date: '2026-02-10',
+      total_amount: 13560,
+      status: 'in_progress',
+      is_expected: false,
+      bill_paid: true,
+      bill_paid_date: '2026-02-10',
+      documents: [],
+      submissions: [
+        {
+          id: 'cl',
+          plan_id: 'cl',
+          plan_snapshot: { name: 'Canada Life' },
+          status: 'approved',
+          amount_claimed: 13560,
+          amount_reimbursed: 12400,
+          date_resolved: '2026-02-20',
+          documents_sent: [],
+        },
+        {
+          id: 'em',
+          plan_id: 'em',
+          plan_snapshot: { name: 'Empire Life' },
+          status: 'draft',
+          amount_claimed: 1160,
+          documents_sent: [],
+        },
+      ],
+      created_at: '2026-02-10T00:00:00.000Z',
+      updated_at: '2026-02-20T00:00:00.000Z',
+    };
+
+    beforeEach(async () => {
+      await writeFile(join(testDir, 'entities', 'insurance-claims.json'), JSON.stringify([claim]));
+    });
+
+    afterEach(async () => {
+      await writeFile(join(testDir, 'entities', 'insurance-claims.json'), JSON.stringify([]));
+    });
+
+    test('shows the clinic bill and approved reimbursement, not plans with no amount', async () => {
+      const { events } = await service.getEventsForMonth('2026-02');
+      const insurance = events.filter((e) => e.is_insurance);
+      expect(insurance.map((e) => [e.type, e.date, e.title, e.amount])).toEqual([
+        ['bill', '2026-02-10', '#5 Massage Therapy - KTown', 13560],
+        ['income', '2026-02-20', '#5 Massage Therapy - KTown · Canada Life', 12400],
+      ]);
+      expect(insurance.every((e) => e.source_id === 'claim-5')).toBe(true);
+    });
+
+    test('a locked month uses the snapshot taken when it was locked', async () => {
+      const snapshotIncome = {
+        id: 'virtual-income-claim-5',
+        income_id: null,
+        month: '2026-02',
+        billing_period: 'monthly',
+        expected_amount: 9900,
+        occurrences: [
+          {
+            id: 'snap-occ',
+            sequence: 1,
+            expected_date: '2026-02-18',
+            expected_amount: 9900,
+            is_closed: false,
+            is_adhoc: false,
+            plan_name: 'Canada Life',
+            created_at: '2026-02-01T00:00:00.000Z',
+            updated_at: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+        is_default: false,
+        is_closed: false,
+        is_adhoc: true,
+        is_virtual: true,
+        is_insurance_reimbursement: true,
+        claim_id: 'claim-5',
+        name: '#5 Massage Therapy - KTown',
+        created_at: '2026-02-01T00:00:00.000Z',
+        updated_at: '2026-02-01T00:00:00.000Z',
+      };
+      await writeFile(
+        join(testDir, 'months', '2026-02.json'),
+        JSON.stringify({
+          ...sampleMonthlyData,
+          is_read_only: true,
+          insurance_snapshot: { billInstances: [], incomeInstances: [snapshotIncome] },
+        })
+      );
+      const { events } = await service.getEventsForMonth('2026-02');
+      const insurance = events.filter((e) => e.is_insurance);
+      expect(insurance.map((e) => [e.date, e.amount])).toEqual([['2026-02-18', 9900]]);
     });
   });
 });

@@ -328,7 +328,7 @@
     background: var(--bg-surface);
     border-radius: var(--radius-lg);
     padding: var(--space-4);
-    box-shadow: var(--shadow-light);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
   }
 
@@ -349,11 +349,11 @@
     color: var(--text-primary);
     border-radius: var(--radius-md);
     padding: var(--space-3);
-    box-shadow: var(--shadow-medium);
+    box-shadow: var(--shadow-md);
     pointer-events: none;
     z-index: 2;
-    min-width: var(--panel-width-sm);
-    max-width: var(--panel-width-md);
+    min-width: calc(var(--space-8) * 6);
+    max-width: calc(var(--space-8) * 10);
   }
 
   .tooltip-below {

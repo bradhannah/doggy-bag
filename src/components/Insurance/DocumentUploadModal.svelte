@@ -297,7 +297,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9998;
+    z-index: var(--z-modal);
     animation: fadeIn 0.15s ease-out;
   }
 

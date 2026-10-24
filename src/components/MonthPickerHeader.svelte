@@ -28,6 +28,8 @@
   export let isSyncingMetadata: boolean = false;
   export let onRefresh: (() => void) | undefined = undefined;
   export let onSyncMetadata: (() => void) | undefined = undefined;
+  export let showFind: boolean = false;
+  export let onFind: (() => void) | undefined = undefined;
 
   // Check if we're viewing the current calendar month
   $: isCurrentMonth = $currentMonth === getCurrentMonth();
@@ -75,7 +77,8 @@
     showColumnToggle ||
     showHidePaid ||
     showSyncMetadata ||
-    showViewToggle;
+    showViewToggle ||
+    showFind;
 
   const VIEW_MODE_LABELS: Record<ViewMode, string> = {
     classic: 'Classic',
@@ -116,20 +119,42 @@
         />
       </svg>
     </button>
-
-    <button
-      class="today-btn"
-      on:click={handleToday}
-      disabled={isCurrentMonth}
-      aria-label="Go to current month"
-    >
-      Today
-    </button>
   </div>
 
   <div class="spacer controls-spacer">
-    {#if hasControls}
-      <div class="header-controls">
+    <div class="header-controls">
+      <button
+        class="today-btn"
+        on:click={handleToday}
+        disabled={isCurrentMonth}
+        aria-label="Go to current month"
+      >
+        Today
+      </button>
+      {#if hasControls}
+        {#if showFind}
+          <button
+            class="control-btn"
+            on:click={() => onFind?.()}
+            aria-label="Find bills and income"
+            title="Find (Ctrl/⌘ F)"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+          </button>
+        {/if}
+
         {#if showWidthToggle}
           <!-- Width toggle (toggles: medium <-> wide) -->
           <button
@@ -386,125 +411,121 @@
             </svg>
           </button>
         {/if}
-      </div>
-    {/if}
+      {/if}
+    </div>
   </div>
 </div>
 
 <style>
+  /* Three columns keep the month title centred; the controls column may grow
+     past its share on narrow windows instead of overlapping the title. */
   .month-picker-header {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
     align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-4);
+    gap: var(--space-3);
+    height: var(--header-height);
+    padding: 0 var(--space-4);
+    box-sizing: border-box;
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border-default);
-    /* Sticky positioning */
     position: sticky;
     top: 0;
-    z-index: 100;
-  }
-
-  .spacer {
-    flex: 1;
-    min-width: 0; /* Prevent flex overflow */
+    z-index: var(--z-sticky);
   }
 
   .controls-spacer {
     display: flex;
     justify-content: flex-end;
-    flex: 1 0 auto;
   }
 
   .center-group {
     display: flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
   .nav-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--button-height);
-    height: var(--button-height);
+    width: var(--control-height);
+    height: var(--control-height);
+    padding: 0;
     background: transparent;
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     color: var(--text-primary);
     cursor: pointer;
-    transition: all 0.2s;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s;
   }
 
   .nav-btn:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--text-inverse);
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
   }
 
+  /* Fixed width so the arrows stay put as month names change length */
   .month-title {
+    width: 8.5em;
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
+    line-height: 1.2;
     color: var(--text-primary);
-    min-width: 12ch;
     text-align: center;
   }
 
-  .today-btn {
-    padding: var(--space-2) var(--space-4);
-    background: transparent;
-    border: 1px solid var(--accent);
-    border-radius: var(--radius-md);
-    color: var(--accent);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .today-btn:hover:not(:disabled) {
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .today-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    border-color: var(--text-tertiary);
-    color: var(--text-tertiary);
-  }
-
-  /* Header controls */
   .header-controls {
     display: flex;
     align-items: center;
     gap: var(--space-2);
   }
 
+  .today-btn {
+    height: var(--control-height-sm);
+    padding: 0 var(--space-3);
+    background: transparent;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .today-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .today-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .control-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: var(--button-height-sm);
+    min-width: var(--control-height-sm);
+    height: var(--control-height-sm);
     padding: 0 var(--space-1);
-    height: var(--button-height-sm);
-    background: var(--bg-hover);
+    background: transparent;
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.2s;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
   }
 
   .control-btn:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-    color: var(--accent);
+    background: var(--bg-hover);
+    color: var(--text-primary);
   }
 
   .control-btn.active {
@@ -522,14 +543,12 @@
     animation: spin 1s linear infinite;
   }
 
-  /* Column number display */
   .column-number {
-    font-size: 0.875rem;
-    font-weight: 700;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
     line-height: 1;
   }
 
-  /* View mode button */
   .view-mode-btn {
     position: relative;
   }
@@ -543,46 +562,20 @@
     }
   }
 
-  @media (max-width: 80rem) {
+  /* Small windows: month on the left, controls on the right */
+  @media (max-width: 40rem) {
+    .month-picker-header {
+      grid-template-columns: auto minmax(max-content, 1fr);
+      padding: 0 var(--space-3);
+    }
+
     .spacer:not(.controls-spacer) {
       display: none;
     }
-    .controls-spacer {
-      flex-grow: 1;
-    }
-  }
-
-  @media (max-width: 30rem) {
-    .month-picker-header {
-      padding: var(--space-3) var(--space-3);
-    }
-
-    .center-group {
-      gap: var(--space-2);
-    }
 
     .month-title {
-      font-size: 1rem;
-      min-width: 10ch;
-    }
-
-    .nav-btn {
-      width: var(--space-8);
-      height: var(--space-8);
-    }
-
-    .today-btn {
-      padding: var(--space-1) var(--space-3);
-      font-size: 0.75rem;
-    }
-
-    .header-controls {
-      gap: var(--space-1);
-    }
-
-    .control-btn {
-      min-width: var(--button-height-sm);
-      height: var(--button-height-sm);
+      width: 7.5em;
+      font-size: var(--font-size-lg);
     }
   }
 </style>

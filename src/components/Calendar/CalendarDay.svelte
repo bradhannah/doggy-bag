@@ -76,7 +76,7 @@
     min-width: 0; /* Allow shrinking below content width in grid */
     padding: var(--space-1);
     background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
+    /* Grid gaps draw the cell lines; states use inset outlines so lines never double */
     transition: all 0.15s ease;
     overflow: hidden; /* Clip content that exceeds cell bounds */
   }
@@ -96,7 +96,6 @@
 
   .calendar-day:hover {
     background: var(--bg-hover);
-    border-color: var(--border-default);
   }
 
   .calendar-day.other-month {
@@ -104,13 +103,12 @@
     opacity: 0.5;
   }
 
-  .calendar-day.today {
-    border-color: var(--accent);
-    box-shadow: inset 0 0 0 1px var(--accent);
+  .calendar-day.has-overdue {
+    box-shadow: inset 0 0 0 1px var(--error);
   }
 
-  .calendar-day.has-overdue {
-    border-color: var(--error);
+  .calendar-day.today {
+    box-shadow: inset 0 0 0 2px var(--accent);
   }
 
   .day-header {
@@ -120,13 +118,16 @@
     margin-bottom: var(--space-1);
   }
 
+  /* Fixed square so the "today" highlight is a true circle */
   .day-number {
-    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--space-6);
+    height: var(--space-6);
+    font-size: var(--font-size-md);
     font-weight: 500;
     color: var(--text-secondary);
-    padding: var(--space-1);
-    min-width: 24px;
-    text-align: center;
     line-height: 1;
   }
 
@@ -180,9 +181,9 @@
     }
 
     .day-number {
-      font-size: 0.75rem;
-      padding: 2px;
-      min-width: 20px;
+      width: var(--space-5);
+      height: var(--space-5);
+      font-size: var(--font-size-xs);
     }
 
     .event-count {

@@ -84,13 +84,14 @@ Themes work by setting CSS custom properties on `:root`. Components use these va
 
 **Semantic: Error:**
 
-| Variable         | Description             |
-| ---------------- | ----------------------- |
-| `--error`        | Error/danger color      |
-| `--error-hover`  | Error color on hover    |
-| `--error-bg`     | Error background (~0.1) |
-| `--error-muted`  | Subtle error background |
-| `--error-border` | Error border            |
+| Variable          | Description                             |
+| ----------------- | --------------------------------------- |
+| `--error`         | Error/danger color                      |
+| `--error-hover`   | Error color on hover                    |
+| `--error-bg`      | Error background (~0.1)                 |
+| `--error-muted`   | Subtle error background                 |
+| `--error-border`  | Error border                            |
+| `--text-on-error` | Text on a solid `--error` fill (button) |
 
 **Semantic: Warning:**
 
@@ -113,12 +114,13 @@ Themes work by setting CSS custom properties on `:root`. Components use these va
 
 **Special: Purple (credit cards, etc.):**
 
-| Variable         | Description              |
-| ---------------- | ------------------------ |
-| `--purple`       | Purple accent            |
-| `--purple-hover` | Purple on hover          |
-| `--purple-bg`    | Purple background        |
-| `--purple-muted` | Subtle purple background |
+| Variable          | Description              |
+| ----------------- | ------------------------ |
+| `--purple`        | Purple accent            |
+| `--purple-hover`  | Purple on hover          |
+| `--purple-bg`     | Purple background        |
+| `--purple-muted`  | Subtle purple background |
+| `--purple-border` | Purple border (~0.3-0.4) |
 
 **Special: Orange:**
 

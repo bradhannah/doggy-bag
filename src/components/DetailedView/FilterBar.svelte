@@ -39,8 +39,8 @@
       if (scopeOpen) {
         scopeOpen = false;
       } else {
-        // Close the filter bar when Enter is pressed outside scope dropdown
-        dispatch('escape');
+        // Enter keeps the filter applied and leaves the field; Escape clears it
+        inputEl?.blur();
       }
     }
   }

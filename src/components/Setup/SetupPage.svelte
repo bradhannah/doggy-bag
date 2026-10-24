@@ -835,6 +835,7 @@
             >Review updates to {$currentMonthDisplay}’s budget</a
           >.
           <button
+            class="btn btn-sm btn-ghost"
             on:click={() => (recurringItemSaved = false)}
             aria-label="Dismiss budget update reminder">Dismiss</button
           >
@@ -1272,18 +1273,21 @@
   }
 
   /* Header */
+  /* Same height as the month bar on other pages, so header rules line up with the nav */
   .setup-header {
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    padding: var(--space-4) var(--content-padding);
+    height: var(--header-height);
+    padding: 0 var(--content-padding);
+    box-sizing: border-box;
     background: var(--bg-elevated);
     border-bottom: 1px solid var(--border-default);
   }
 
   .setup-header h1 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--font-size-xl);
     font-weight: 600;
   }
 
@@ -1294,7 +1298,7 @@
   /* Layout */
   .setup-layout {
     display: flex;
-    min-height: calc(100vh - 70px);
+    min-height: calc(100vh - var(--header-height));
   }
 
   /* Sidebar */
@@ -1321,13 +1325,14 @@
   }
 
   .tab-button:hover {
-    background: var(--accent-muted);
+    background: var(--bg-hover);
     color: var(--text-primary);
   }
 
   .tab-button.active {
-    background: var(--accent);
-    color: var(--text-inverse);
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-weight: 600;
   }
 
   /* Main Content */
@@ -1337,10 +1342,12 @@
     overflow-y: auto;
   }
 
+  /* Same height with or without an Add button, so lists don't jump between tabs */
   .content-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: var(--control-height);
     margin-bottom: var(--section-gap);
     max-width: var(--content-max-setup);
     margin-left: auto;
@@ -1349,7 +1356,7 @@
 
   .content-header h2 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.125rem;
     font-weight: 600;
   }
 
@@ -1567,7 +1574,7 @@
 
   .btn-danger:hover:not(:disabled) {
     background: var(--error);
-    color: var(--text-on-error, #fff);
+    color: var(--text-on-error);
   }
 
   .btn:disabled {

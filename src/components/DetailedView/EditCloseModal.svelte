@@ -10,6 +10,7 @@
   import { success, error as showError } from '../../stores/toast';
   import { apiClient } from '../../lib/api/client';
   import SplitConfirmModal from './SplitConfirmModal.svelte';
+  import AmountInput from '../shared/AmountInput.svelte';
   import { formatCurrency, parseDollarsToCents, getTodayDateString } from '$lib/utils/format';
 
   export let open = false;
@@ -281,16 +282,11 @@
     <div class="field-row">
       <label class="field">
         <span>Amount</span>
-        <div class="amount-input-group">
-          <span class="prefix">$</span>
-          <input
-            type="text"
-            bind:value={amount}
-            placeholder="0.00"
-            disabled={saving}
-            class:error={formError && parseDollarsToCents(amount) <= 0}
-          />
-        </div>
+        <AmountInput
+          bind:value={amount}
+          disabled={saving}
+          invalid={!!formError && parseDollarsToCents(amount) <= 0}
+        />
       </label>
 
       <label class="field">
@@ -309,56 +305,49 @@
       <!-- Close Options -->
       <p class="section-label">How would you like to handle this?</p>
 
+      <!-- Each radio sits on its title's line; the description wraps under the title -->
       <div class="radio-group">
-        <label class="radio-option" class:selected={closeOption === 'paid_full'}>
-          <input type="radio" bind:group={closeOption} value="paid_full" disabled={saving} />
-          <div class="radio-content">
+        <div class="radio-option" class:selected={closeOption === 'paid_full'}>
+          <label class="radio-label">
+            <input type="radio" bind:group={closeOption} value="paid_full" disabled={saving} />
             <span class="radio-title"
               >{type === 'bill' ? 'Full payment' : 'Full receipt'} ({formatCurrency(
                 parseDollarsToCents(amount)
               )})</span
             >
             <span class="radio-desc">Mark as complete. No remaining balance.</span>
-          </div>
-        </label>
+          </label>
+        </div>
 
-        <label class="radio-option" class:selected={closeOption === 'paid_nothing'}>
-          <input type="radio" bind:group={closeOption} value="paid_nothing" disabled={saving} />
-          <div class="radio-content">
+        <div class="radio-option" class:selected={closeOption === 'paid_nothing'}>
+          <label class="radio-label">
+            <input type="radio" bind:group={closeOption} value="paid_nothing" disabled={saving} />
             <span class="radio-title">Skip this {type === 'bill' ? 'payment' : 'receipt'} ($0)</span
             >
             <span class="radio-desc">Mark as complete. Waived or skipped this period.</span>
-          </div>
-        </label>
+          </label>
+        </div>
 
-        <label class="radio-option" class:selected={closeOption === 'partial'}>
-          <input type="radio" bind:group={closeOption} value="partial" disabled={saving} />
-          <div class="radio-content">
+        <div class="radio-option" class:selected={closeOption === 'partial'}>
+          <label class="radio-label">
+            <input type="radio" bind:group={closeOption} value="partial" disabled={saving} />
             <span class="radio-title">Partial {type === 'bill' ? 'payment' : 'receipt'}</span>
             <span class="radio-desc">Record part now; keep the remaining amount planned.</span>
-            {#if closeOption === 'partial'}
-              <div class="partial-input">
-                <label>
-                  <span>Amount {type === 'bill' ? 'paid' : 'received'}:</span>
-                  <div class="amount-input-group small">
-                    <span class="prefix">$</span>
-                    <input
-                      type="text"
-                      bind:value={partialAmount}
-                      placeholder="0.00"
-                      disabled={saving}
-                    />
-                  </div>
-                </label>
-                {#if partialCents > 0 && remainingCents > 0}
-                  <p class="remaining-note">
-                    Remaining {remainingDisplay} will become new occurrence
-                  </p>
-                {/if}
-              </div>
-            {/if}
-          </div>
-        </label>
+          </label>
+          {#if closeOption === 'partial'}
+            <div class="partial-input">
+              <label class="partial-label">
+                <span>Amount {type === 'bill' ? 'paid' : 'received'}</span>
+                <AmountInput bind:value={partialAmount} size="sm" disabled={saving} />
+              </label>
+              {#if partialCents > 0 && remainingCents > 0}
+                <p class="remaining-note">
+                  Remaining {remainingDisplay} will become new occurrence
+                </p>
+              {/if}
+            </div>
+          {/if}
+        </div>
       </div>
 
       <div class="divider"></div>
@@ -408,7 +397,7 @@
 
   <svelte:fragment slot="footer">
     <button
-      class="button-secondary"
+      class="btn {mode === 'plan' ? 'btn-primary' : 'btn-secondary'}"
       type="button"
       on:click={handleSaveWithoutClosing}
       disabled={saving}
@@ -416,11 +405,11 @@
       Save plan changes
     </button>
     <div class="footer-right">
-      <button class="button-ghost" type="button" on:click={handleClose} disabled={saving}>
+      <button class="btn btn-ghost" type="button" on:click={handleClose} disabled={saving}>
         Cancel
       </button>
       {#if mode === 'record'}<button
-          class="button-primary"
+          class="btn btn-primary"
           type="button"
           on:click={handleCloseAction}
           disabled={saving}
@@ -444,7 +433,7 @@
   .snapshot-note {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .modal-content {
     display: grid;
@@ -468,51 +457,17 @@
     display: grid;
     gap: var(--space-2);
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
   }
 
   .field span {
     font-weight: 500;
   }
 
-  .amount-input-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .amount-input-group .prefix {
-    color: var(--text-secondary);
-    font-size: 1rem;
-  }
-
-  .amount-input-group input {
-    flex: 1;
-    padding: var(--space-2) var(--space-3);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-size: 1rem;
-  }
-
-  .amount-input-group.small input {
-    font-size: 0.9rem;
-    padding: var(--space-1) var(--space-2);
-  }
-
-  .amount-input-group input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .amount-input-group input.error {
-    border-color: var(--error);
-  }
-
   select,
-  textarea {
-    padding: var(--space-2) var(--space-3);
+  textarea,
+  input[type='date'] {
+    padding: 0 var(--space-3);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-default);
     background: var(--bg-base);
@@ -521,13 +476,15 @@
   }
 
   select:focus,
-  textarea:focus {
+  textarea:focus,
+  input[type='date']:focus {
     outline: 2px solid var(--border-focus);
     outline-offset: 1px;
   }
 
   textarea {
-    min-height: calc(var(--input-height, 40px) * 2);
+    padding: var(--space-2) var(--space-3);
+    min-height: calc(var(--control-height) * 2);
     resize: vertical;
   }
 
@@ -550,14 +507,10 @@
   }
 
   .radio-option {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
     padding: var(--space-3);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
     background: var(--bg-base);
-    cursor: pointer;
     transition: all 0.15s ease;
   }
 
@@ -571,39 +524,40 @@
     background: var(--accent-muted);
   }
 
-  .radio-option input[type='radio'] {
-    margin-top: var(--space-1);
-    accent-color: var(--accent);
-  }
-
-  .radio-content {
-    flex: 1;
+  /* Radio and title share row 1; the description starts under the title */
+  .radio-label {
     display: grid;
-    gap: var(--space-1);
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    cursor: pointer;
   }
 
   .radio-title {
     font-weight: 500;
     color: var(--text-primary);
-    font-size: 0.95rem;
+    font-size: var(--font-size-md);
   }
 
   .radio-desc {
-    font-size: 0.85rem;
+    grid-column: 2;
+    font-size: var(--font-size-sm);
     color: var(--text-secondary);
   }
 
   .partial-input {
-    margin-top: var(--space-3);
+    margin: var(--space-3) 0 0 calc(1rem + var(--space-3));
     display: grid;
     gap: var(--space-2);
   }
 
-  .partial-input label {
+  .partial-label {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
   }
 
   .remaining-note {
@@ -623,55 +577,6 @@
     display: flex;
     gap: var(--space-3);
     margin-left: auto;
-  }
-
-  .button-secondary,
-  .button-ghost,
-  .button-primary {
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-    font-weight: 500;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .button-secondary {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    border: 1px solid var(--border-default);
-  }
-
-  .button-secondary:hover:not(:disabled) {
-    background: var(--bg-hover);
-  }
-
-  .button-ghost {
-    background: transparent;
-    color: var(--text-secondary);
-    border: none;
-  }
-
-  .button-ghost:hover:not(:disabled) {
-    color: var(--text-primary);
-    background: var(--bg-hover);
-  }
-
-  .button-primary {
-    background: var(--accent);
-    color: var(--text-inverse);
-    border: none;
-  }
-
-  .button-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-
-  .button-secondary:disabled,
-  .button-ghost:disabled,
-  .button-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   @media (max-width: 480px) {

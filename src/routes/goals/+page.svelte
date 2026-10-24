@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '../../components/shared/PageHeader.svelte';
   import ContributionScope from '../../components/Goals/ContributionScope.svelte';
   import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
   const confirmTitleId = dialogTitleId();
@@ -267,16 +268,15 @@
 </script>
 
 <div class="goals-page">
-  <header class="page-header">
-    <h1>Savings Goals</h1>
-    <a href="/goals/new" class="create-button">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+  <PageHeader title="Goals" subtitle="Things you're saving toward, and how close you are.">
+    <a slot="actions" href="/goals/new" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
       </svg>
-      New Goal
+      New goal
     </a>
-  </header>
+  </PageHeader>
 
   <!-- Filters -->
   <div class="filters">
@@ -317,7 +317,7 @@
       </div>
       <h2>No Savings Goals Yet</h2>
       <p>Start saving for something you want! Create your first goal to track your progress.</p>
-      <a href="/goals/new" class="create-button large">
+      <a href="/goals/new" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -585,27 +585,28 @@
 
           <!-- Action buttons -->
           <div class="goal-actions">
+            <!-- Same order for every status: History, then lifecycle actions, then the main action -->
+            <button
+              class="action-btn view"
+              on:click|stopPropagation={() => (viewPaymentsModal = goal)}
+              disabled={actionLoading === goal.id}
+            >
+              History
+            </button>
             {#if goal.status === 'saving'}
-              <button
-                class="action-btn payment"
-                on:click|stopPropagation={() => (makePaymentModal = goal)}
-                disabled={actionLoading === goal.id}
-              >
-                + Extra contribution
-              </button>
-              <button
-                class="action-btn view"
-                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
-                disabled={actionLoading === goal.id}
-              >
-                History
-              </button>
               <button
                 class="action-btn success"
                 on:click={() => openConfirmModal('complete', goal)}
                 disabled={actionLoading === goal.id}
               >
                 Complete goal
+              </button>
+              <button
+                class="action-btn payment"
+                on:click|stopPropagation={() => (makePaymentModal = goal)}
+                disabled={actionLoading === goal.id}
+              >
+                + Extra contribution
               </button>
             {:else if goal.status === 'paused'}
               <button
@@ -620,20 +621,13 @@
               >
                 Resume contributions
               </button>
-              <button
-                class="action-btn view"
-                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
-                disabled={actionLoading === goal.id}
-              >
-                History
-              </button>
             {:else if goal.status === 'bought' || goal.status === 'abandoned'}
               <button
-                class="action-btn view"
-                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
+                class="action-btn danger-outline"
+                on:click={() => openConfirmModal('delete', goal)}
                 disabled={actionLoading === goal.id}
               >
-                History
+                Delete
               </button>
               <button
                 class="action-btn secondary"
@@ -642,20 +636,13 @@
               >
                 Archive
               </button>
+            {:else if goal.status === 'archived'}
               <button
                 class="action-btn danger-outline"
                 on:click={() => openConfirmModal('delete', goal)}
                 disabled={actionLoading === goal.id}
               >
                 Delete
-              </button>
-            {:else if goal.status === 'archived'}
-              <button
-                class="action-btn view"
-                on:click|stopPropagation={() => (viewPaymentsModal = goal)}
-                disabled={actionLoading === goal.id}
-              >
-                History
               </button>
               <button
                 class="action-btn primary"
@@ -663,13 +650,6 @@
                 disabled={actionLoading === goal.id}
               >
                 Unarchive
-              </button>
-              <button
-                class="action-btn danger-outline"
-                on:click={() => openConfirmModal('delete', goal)}
-                disabled={actionLoading === goal.id}
-              >
-                Delete
               </button>
             {/if}
           </div>
@@ -885,43 +865,6 @@
     max-width: var(--content-max-setup);
     margin: 0 auto;
     padding: var(--content-padding);
-  }
-
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--section-gap);
-  }
-
-  .page-header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: var(--text-primary);
-  }
-
-  .create-button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    background: var(--accent);
-    color: var(--text-inverse);
-    border: none;
-    border-radius: var(--radius-md);
-    font-weight: 500;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .create-button:hover {
-    background: var(--accent-hover);
-  }
-
-  .create-button.large {
-    padding: var(--space-3) var(--space-6);
-    font-size: 1rem;
   }
 
   /* Filters */
@@ -1426,14 +1369,26 @@
   .goal-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
     gap: var(--space-2);
     margin-top: auto;
     padding-top: var(--space-3);
     border-top: 1px solid var(--border-subtle);
   }
 
+  /* Compact buttons at their natural width; History sits alone on the left */
   .goal-actions .action-btn {
-    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    height: var(--control-height-sm);
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+  }
+
+  .goal-actions .action-btn.view {
+    margin-right: auto;
   }
 
   /* Modal */
@@ -1447,7 +1402,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
   }
 
   .modal-content {
@@ -1484,6 +1439,8 @@
 
   .modal-actions {
     display: flex;
+    justify-content: flex-end;
+    align-items: center;
     gap: var(--space-3);
     margin-top: var(--section-gap);
   }
@@ -1496,10 +1453,13 @@
     margin: var(--space-4) 0;
   }
 
+  /* Radio shares the title's line; the description wraps under the title */
   .unarchive-option {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
     padding: var(--space-3);
     background: var(--bg-elevated);
     border-radius: var(--radius-md);
@@ -1511,15 +1471,8 @@
     background: var(--bg-hover);
   }
 
-  .unarchive-option input[type='radio'] {
-    margin-top: 2px;
-    accent-color: var(--accent);
-  }
-
   .option-label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    display: contents;
   }
 
   .option-label strong {
@@ -1528,7 +1481,8 @@
   }
 
   .option-desc {
+    grid-column: 2;
     color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
   }
 </style>

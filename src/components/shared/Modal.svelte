@@ -14,6 +14,7 @@
    */
 
   import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  import { portal } from '$lib/actions/portal';
 
   const titleId = dialogTitleId();
   export let open = false;
@@ -34,7 +35,7 @@
 </script>
 
 {#if open}
-  <div class="modal-backdrop" role="presentation" on:click={handleBackdropClick}>
+  <div class="modal-backdrop" role="presentation" use:portal on:click={handleBackdropClick}>
     <div
       class="modal modal-{size}"
       use:modalFocus={onClose}
@@ -46,25 +47,25 @@
       tabindex="-1"
     >
       <header class="modal-header">
-        <div class="modal-title-group">
-          {#if $$slots.eyebrow}
-            <p class="eyebrow"><slot name="eyebrow" /></p>
-          {/if}
+        {#if $$slots.eyebrow}
+          <p class="eyebrow"><slot name="eyebrow" /></p>
+        {/if}
+        <div class="title-row">
           <h2 id={titleId}>{title}</h2>
-          {#if subtitle}
-            <p class="modal-subtitle">{subtitle}</p>
-          {/if}
+          <button class="icon-btn close-btn" on:click={onClose} aria-label="Close modal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M18 6L6 18M6 6L18 18"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
         </div>
-        <button class="close-btn" on:click={onClose} aria-label="Close modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M18 6L6 18M6 6L18 18"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
+        {#if subtitle}
+          <p class="modal-subtitle">{subtitle}</p>
+        {/if}
       </header>
 
       <div class="modal-body">
@@ -88,7 +89,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1200;
+    z-index: var(--z-modal);
   }
 
   .modal {
@@ -126,54 +127,44 @@
   }
 
   .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
     padding: var(--space-4) var(--space-5);
     border-bottom: thin solid var(--border-default);
   }
 
-  .modal-title-group {
-    flex: 1;
+  /* The close button shares the title's centreline, with or without an eyebrow */
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
   }
 
   .eyebrow {
     margin: 0 0 var(--space-1) 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
   }
 
   h2 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
+    line-height: 1.3;
     color: var(--text-primary);
   }
 
   .modal-subtitle {
     margin: var(--space-1) 0 0 0;
-    font-size: 0.9rem;
+    font-size: var(--font-size-md);
     color: var(--text-secondary);
   }
 
+  /* Pull the icon's hit area into the padding so the X lines up with the footer edge */
   .close-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: var(--space-1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s;
-  }
-
-  .close-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
+    margin-right: calc(var(--space-1) * -1);
   }
 
   .modal-body {
@@ -185,6 +176,7 @@
     padding: var(--space-4) var(--space-5);
     border-top: thin solid var(--border-default);
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: var(--space-3);
   }

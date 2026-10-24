@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
+  import PageHeader from '../../components/shared/PageHeader.svelte';
   import { addToast } from '../../stores/toast';
   import { apiClient } from '../../lib/api/client';
   import {
@@ -403,11 +403,6 @@
     pendingImportData = null;
   }
 
-  // Go back to previous page
-  function goBack() {
-    goto('/');
-  }
-
   // Toggle debug mode (devtools)
   async function handleToggleDebugMode() {
     debugModeLoading = true;
@@ -429,21 +424,7 @@
 </script>
 
 <div class="settings-page">
-  <header class="settings-header">
-    <button class="back-button" on:click={goBack}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M19 12H5M12 19L5 12L12 5"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-      Back
-    </button>
-    <h1>Settings</h1>
-  </header>
+  <PageHeader title="Settings" subtitle="Where your data lives, backups, and how the app looks." />
 
   {#if $loading}
     <div class="loading">Loading settings...</div>
@@ -666,7 +647,7 @@
                 </div>
                 <div class="backup-actions">
                   <button
-                    class="button-secondary"
+                    class="btn btn-sm btn-secondary"
                     on:click={() => initiateRestore(backup)}
                     disabled={restoreInProgress}
                   >
@@ -837,7 +818,16 @@
     >
       <div class="modal-header">
         <h3>Move Data to New Location?</h3>
-        <button class="modal-close" on:click={closeModals}>&times;</button>
+        <button class="icon-btn modal-close" aria-label="Close" on:click={closeModals}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+            ><path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            /></svg
+          >
+        </button>
       </div>
       <div class="modal-body">
         <p>You're changing your data directory from:</p>
@@ -952,7 +942,16 @@
           />
         </svg>
         <h3>Data Moved Successfully</h3>
-        <button class="modal-close" on:click={handleDone}>&times;</button>
+        <button class="icon-btn modal-close" aria-label="Close" on:click={handleDone}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+            ><path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            /></svg
+          >
+        </button>
       </div>
       <div class="modal-body">
         <p>Your data has been copied to:</p>
@@ -1006,7 +1005,16 @@
           <circle cx="12" cy="16" r="1" fill="currentColor" />
         </svg>
         <h3>Cannot Use This Directory</h3>
-        <button class="modal-close" on:click={closeModals}>&times;</button>
+        <button class="icon-btn modal-close" aria-label="Close" on:click={closeModals}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+            ><path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            /></svg
+          >
+        </button>
       </div>
       <div class="modal-body">
         <p>The selected directory cannot be used:</p>
@@ -1100,7 +1108,16 @@
           />
         </svg>
         <h3>Restore Backup?</h3>
-        <button class="modal-close" on:click={cancelRestore}>&times;</button>
+        <button class="icon-btn modal-close" aria-label="Close" on:click={cancelRestore}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+            ><path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            /></svg
+          >
+        </button>
       </div>
       <div class="modal-body">
         <p>You are about to restore a backup from:</p>
@@ -1163,7 +1180,16 @@
     >
       <div class="modal-header">
         <h3>Add Backup Note</h3>
-        <button class="modal-close" on:click={cancelBackupNote}>&times;</button>
+        <button class="icon-btn modal-close" aria-label="Close" on:click={cancelBackupNote}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+            ><path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            /></svg
+          >
+        </button>
       </div>
       <div class="modal-body">
         <p>Optionally add a note to describe this backup:</p>
@@ -1207,41 +1233,6 @@
     }
   }
 
-  .settings-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-8);
-  }
-
-  .settings-header h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-  }
-
-  .back-button {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    height: var(--button-height);
-    padding: 0 var(--space-4);
-    background: transparent;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .back-button:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-    color: var(--text-primary);
-  }
-
   .loading,
   .error-message {
     text-align: center;
@@ -1283,7 +1274,6 @@
     margin-bottom: 0;
   }
 
-  .setting-item label,
   .setting-label {
     display: block;
     font-size: 0.875rem;
@@ -1421,7 +1411,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
   }
 
   .modal {
@@ -1435,7 +1425,7 @@
   }
 
   .modal-small {
-    max-width: 350px;
+    max-width: var(--modal-width-sm);
   }
 
   .modal-header {
@@ -1470,17 +1460,7 @@
   }
 
   .modal-close {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-  }
-
-  .modal-close:hover {
-    color: var(--text-primary);
+    margin-right: calc(var(--space-1) * -1);
   }
 
   .modal-body {
@@ -1577,10 +1557,12 @@
     gap: var(--space-3);
   }
 
+  /* Radio shares the title's line; the description wraps under the title */
   .radio-option {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-3);
     padding: var(--space-3);
     background: var(--bg-base);
     border: 1px solid var(--border-default);
@@ -1598,15 +1580,8 @@
     cursor: not-allowed;
   }
 
-  .radio-option input {
-    margin-top: 2px;
-    accent-color: var(--accent);
-  }
-
   .radio-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    display: contents;
   }
 
   .radio-title {
@@ -1616,8 +1591,10 @@
   }
 
   .radio-desc {
+    grid-column: 2;
+    margin-top: var(--space-1);
     color: var(--text-secondary);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .progress-bar {
@@ -1752,7 +1729,7 @@
   /* Toggle Switch Styles */
   .toggle-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-6);
   }

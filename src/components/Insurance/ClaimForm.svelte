@@ -12,7 +12,7 @@
   import { dollarsToCents } from '$lib/utils/format';
 
   export let editingItem: InsuranceClaim | null = null;
-  export let onSave: () => void = () => {};
+  export let onSave: (saved?: InsuranceClaim) => void = () => {};
   export let onCancel: () => void = () => {};
 
   // Form state
@@ -156,14 +156,15 @@
         claimData.expected_reimbursement = reimbursementCents;
       }
 
+      let saved: InsuranceClaim;
       if (editingItem) {
-        await updateClaim(editingItem.id, claimData);
+        saved = await updateClaim(editingItem.id, claimData);
         success(`Claim #${editingItem.claim_number} updated`);
       } else {
-        const newClaim = await createClaim(claimData);
-        success(`Claim #${newClaim.claim_number} created`);
+        saved = await createClaim(claimData);
+        success(`Claim #${saved.claim_number} created`);
       }
-      onSave();
+      onSave(saved);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save claim';
       showError(error);
@@ -307,7 +308,7 @@
 
   .error-message {
     background: var(--error);
-    color: var(--text-on-error, #fff);
+    color: var(--text-on-error);
     padding: 12px;
     border-radius: 6px;
   }
@@ -342,7 +343,7 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--border-default);
-    background: var(--input-bg, var(--bg-base));
+    background: var(--bg-base);
     color: var(--text-primary);
     font-size: 0.9375rem;
     height: 46px;
@@ -366,7 +367,7 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--border-default);
-    background: var(--input-bg, var(--bg-base));
+    background: var(--bg-base);
     color: var(--text-primary);
     font-size: 0.9375rem;
     font-family: inherit;

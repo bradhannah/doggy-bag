@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '../shared/PageHeader.svelte';
   /**
    * InsuranceClaimsPage - Main page component for insurance claims management
    * Layout: Left panel (claims list) + Right panel (claim detail or form)
@@ -43,7 +44,7 @@
       loadInsurancePlans(),
       loadInsuranceCategories(),
       loadInsuranceProviders(),
-      loadInsuranceClaims(),
+      loadInsuranceClaims({}), // the list's filters start cleared
       loadClaimsSummary(),
     ]);
 
@@ -88,7 +89,7 @@
     showNewExpectedDrawer = true;
   }
 
-  async function handleClaimSaved() {
+  async function handleClaimSaved(saved?: InsuranceClaim) {
     showNewClaimDrawer = false;
     showEditClaimDrawer = false;
     showNewExpectedDrawer = false;
@@ -96,11 +97,13 @@
     await loadInsuranceClaims();
     await loadClaimsSummary();
 
-    // If editing, refresh the selected claim
-    if (editingClaim && selectedClaim) {
-      const updated = await getClaimById(editingClaim.id);
+    // Open the claim that was just created or edited
+    const id = saved?.id ?? editingClaim?.id;
+    if (id) {
+      const updated = await getClaimById(id);
       if (updated) {
         selectedClaim = updated;
+        highlightSubmissionId = null;
       }
     }
     editingClaim = null;
@@ -127,12 +130,21 @@
     }
   }
 
-  async function handleClaimConverted() {
+  async function handleClaimConverted(event: CustomEvent<{ claim: InsuranceClaim }>) {
     showConvertModal = false;
     convertingClaim = null;
-    selectedClaim = null;
     await loadInsuranceClaims();
     await loadClaimsSummary();
+    // Open the new claim so its first plan can be submitted
+    selectedClaim = (await getClaimById(event.detail.claim.id)) ?? event.detail.claim;
+  }
+
+  async function handleOpenClaim(event: CustomEvent<{ claimId: string; submissionId?: string }>) {
+    const claim = await getClaimById(event.detail.claimId);
+    if (claim) {
+      selectedClaim = claim;
+      highlightSubmissionId = event.detail.submissionId ?? null;
+    }
   }
 
   function closeConvertModal() {
@@ -160,11 +172,7 @@
 </script>
 
 <div class="insurance-page">
-  <!-- Page Header -->
-  <header class="page-header">
-    <h1>Insurance Claims</h1>
-    <p class="subtitle">Track medical expenses and reimbursements</p>
-  </header>
+  <PageHeader title="Insurance" subtitle="Claims, what each plan owes you, and what has arrived" />
 
   <!-- Summary Cards -->
   <ClaimsSummary />
@@ -174,7 +182,12 @@
     <div class="setup-notice">
       <h3>Get Started</h3>
       <p>Before you can track claims, you need to set up your insurance plans and categories.</p>
-      <a href="/setup" class="btn btn-primary">Go to Manage Page</a>
+      <a
+        href={$activePlans.length === 0
+          ? '/setup?tab=insurance-plans'
+          : '/setup?tab=insurance-categories'}
+        class="btn btn-primary">Set up insurance</a
+      >
     </div>
   {/if}
 
@@ -185,6 +198,8 @@
       <ClaimsList
         {selectedClaim}
         on:select={handleSelectClaim}
+        on:open={handleOpenClaim}
+        on:changed={handleClaimUpdated}
         on:create={handleCreateClaim}
         on:createExpected={handleCreateExpected}
       />
@@ -193,18 +208,6 @@
     <!-- Detail Panel (shown when a claim is selected) -->
     {#if selectedClaim}
       <div class="detail-panel">
-        <div class="detail-header-bar">
-          <button class="close-btn" on:click={closeDetail} title="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M18 6L6 18M6 6l12 12"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-          </button>
-        </div>
         <div class="detail-content">
           <ClaimDetail
             claim={selectedClaim}
@@ -297,29 +300,12 @@
 
 <style>
   .insurance-page {
-    max-width: 1400px;
+    max-width: var(--content-max-md);
     margin: 0 auto;
     padding: var(--content-padding);
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--header-height, 0px));
-  }
-
-  .page-header {
-    margin-bottom: var(--space-4);
-  }
-
-  .page-header h1 {
-    margin: 0 0 var(--space-1);
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .subtitle {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.9375rem;
+    height: 100vh;
   }
 
   .setup-notice {
@@ -350,7 +336,7 @@
   }
 
   .main-content.with-detail {
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
   }
 
   .list-panel {
@@ -372,71 +358,16 @@
     flex-direction: column;
   }
 
-  .detail-header-bar {
-    display: flex;
-    justify-content: flex-end;
-    padding: var(--space-2);
-    border-bottom: 1px solid var(--border-default);
-    background: var(--bg-elevated);
-  }
-
-  .close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .close-btn:hover {
-    background: var(--accent-muted);
-    color: var(--text-primary);
-  }
-
   .detail-content {
     flex: 1;
     overflow-y: auto;
     padding: var(--space-4);
   }
 
-  /* Button styles */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-sm);
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 500;
-    text-decoration: none;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: var(--text-inverse);
-  }
-
-  .btn-primary:hover {
-    background: var(--accent-hover);
-  }
-
-  /* Responsive */
+  /* Narrow windows show one panel at a time: the list, or the open claim */
   @media (max-width: 900px) {
     .main-content.with-detail {
       grid-template-columns: 1fr;
-    }
-
-    .list-panel {
-      display: none;
     }
 
     .main-content.with-detail .list-panel {

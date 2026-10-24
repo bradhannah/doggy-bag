@@ -165,9 +165,7 @@
     box-shadow: 0 0 0 2px var(--accent-muted);
   }
 
-  /* Fix date input styling for dark themes */
   .date-input::-webkit-calendar-picker-indicator {
-    filter: invert(0.6);
     cursor: pointer;
   }
 

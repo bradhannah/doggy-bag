@@ -144,6 +144,10 @@ interface Occurrence {
   plan_name?: string; // Insurance plan name (e.g., "Canada Life AWS")
   claim_id?: string; // Link to InsuranceClaim
   claim_submission_id?: string; // Link to specific ClaimSubmission
+  submission_status?: SubmissionStatus; // That submission's status (drives the Budget label)
+  awaiting_plan_name?: string; // For awaiting_previous: the earlier plan it waits on
+  is_insurance_estimate?: boolean; // Estimated reimbursement shown before any plan decides
+  amount_missing?: boolean; // Approved or received but saved without its amount
 }
 
 // ============================================================================
@@ -475,10 +479,20 @@ interface InsuranceClaim {
 }
 
 interface InsuranceClaimsSummary {
-  pending_count: number;
-  pending_amount: number;
+  pending_count: number; // Claims in progress
+  pending_amount: number; // Claimed on submissions waiting for a decision
   closed_count: number;
-  reimbursed_amount: number;
+  reimbursed_amount: number; // Received on closed claims
+  to_submit_count: number; // Plans ready to send (earlier plans decided, something left to claim)
+  to_submit_amount: number;
+  waiting_count: number; // Submitted, no decision yet
+  waiting_amount: number;
+  awaiting_payment_count: number; // Approved, money not received yet
+  awaiting_payment_amount: number;
+  needs_amount_count: number; // Approved or received but saved without an amount
+  received_year: number; // Calendar year the received totals cover
+  received_this_year_amount: number;
+  received_this_year_claims: number;
 }
 
 // ============================================================================

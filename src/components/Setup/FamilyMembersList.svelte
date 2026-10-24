@@ -181,7 +181,7 @@
 
   .btn-icon.btn-danger:hover {
     background: var(--error);
-    color: var(--text-on-error, #fff);
+    color: var(--text-on-error);
   }
 
   /* Empty State */

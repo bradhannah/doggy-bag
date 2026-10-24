@@ -19,8 +19,8 @@
     switch (event.type) {
       case 'bill':
       case 'income':
-        // Navigate to the month view for bills/incomes
-        goto(`/month/${eventMonth}`);
+        // Insurance items open their claim; other bills/incomes open the month view
+        goto(event.is_insurance ? `/insurance?claim=${event.source_id}` : `/month/${eventMonth}`);
         break;
       case 'goal':
         // Navigate to savings goals page

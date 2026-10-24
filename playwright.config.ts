@@ -40,6 +40,21 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /ui[.-]/,
+    },
+    // Layout checks seed their own month, so they run after the functional flows
+    // to avoid changing the budgets those flows assert against.
+    {
+      name: 'ui-setup',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /ui\.setup\.ts/,
+      dependencies: ['chromium'],
+    },
+    {
+      name: 'ui',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /ui-.*\.spec\.ts/,
+      dependencies: ['ui-setup'],
     },
     // Uncomment to test on more browsers:
     // {

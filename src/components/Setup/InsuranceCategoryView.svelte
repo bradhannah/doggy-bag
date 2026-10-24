@@ -120,8 +120,8 @@
   }
 
   .type-badge.predefined {
-    background: var(--purple-muted, rgba(147, 51, 234, 0.1));
-    color: var(--purple, #9333ea);
+    background: var(--purple-muted);
+    color: var(--purple);
   }
 
   .status-badge {

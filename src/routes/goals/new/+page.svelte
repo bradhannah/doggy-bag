@@ -341,6 +341,10 @@
 
         <div class="form-field">
           <label for="targetDate">Target Date</label>
+          <label class="checkbox-field open-ended-checkbox">
+            <input type="checkbox" bind:checked={isOpenEnded} />
+            <span>No target date</span>
+          </label>
           <input
             type="date"
             id="targetDate"
@@ -348,10 +352,6 @@
             min={today}
             disabled={isOpenEnded}
           />
-          <label class="checkbox-field open-ended-checkbox">
-            <input type="checkbox" bind:checked={isOpenEnded} />
-            <span>No target date</span>
-          </label>
         </div>
       </div>
 
@@ -731,7 +731,8 @@
 
   .page-header h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
     color: var(--text-primary);
   }
 
@@ -759,7 +760,8 @@
     margin-bottom: var(--form-field-gap);
   }
 
-  .form-field label {
+  /* Plain field labels only; checkbox labels keep their own flex layout */
+  .form-field > label:not(.checkbox-field) {
     display: block;
     margin-bottom: var(--space-2);
     font-weight: 500;
@@ -805,7 +807,9 @@
 
   .input-with-prefix {
     display: flex;
-    align-items: center;
+    align-items: stretch;
+    height: var(--control-height);
+    box-sizing: border-box;
     background: var(--bg-base);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
@@ -817,13 +821,16 @@
   }
 
   .input-with-prefix .prefix {
-    padding: var(--space-3);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-3);
     color: var(--text-secondary);
     background: var(--bg-elevated);
     border-right: 1px solid var(--border-default);
   }
 
   .input-with-prefix input {
+    height: 100% !important;
     border: none;
     background: transparent;
   }
@@ -882,7 +889,7 @@
   }
 
   .open-ended-checkbox {
-    margin-top: var(--space-2);
+    margin-bottom: var(--space-2);
     font-size: 0.875rem;
   }
 
@@ -1098,7 +1105,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
     padding: var(--space-4);
   }
 

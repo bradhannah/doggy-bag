@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import Modal from '../shared/Modal.svelte';
+  import AmountInput from '../shared/AmountInput.svelte';
   import { apiClient } from '$lib/api/client';
   import { parseDollarsToCents } from '$lib/utils/format';
   import { categories, loadCategories } from '../../stores/categories';
@@ -271,8 +273,9 @@
         }
 
         const amountCents = parseDollarsToCents(amount);
-        if (amountCents < 0 || isNaN(amountCents)) {
-          error = 'Amount must be $0 or greater';
+        // The API rejects $0 ad-hoc items, so check the same rule here
+        if (amountCents <= 0 || isNaN(amountCents)) {
+          error = 'Amount is required and must be greater than $0';
           saving = false;
           return;
         }
@@ -312,288 +315,158 @@
     }
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      handleClose();
-    }
-  }
-
-  function handleBackdropClick(event: MouseEvent) {
-    if (event.target === event.currentTarget) {
-      handleClose();
-    }
-  }
+  // Footer buttons sit outside the form, so they submit it by id
+  const formId = `adhoc-form-${crypto.randomUUID()}`;
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
-{#if open}
-  <div
-    class="modal-backdrop"
-    role="presentation"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && handleClose()}
-  >
-    <div
-      class="modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="adhoc-form-title"
-      tabindex="-1"
-    >
-      <header class="modal-header">
-        <h3 id="adhoc-form-title">Add {type === 'bill' ? 'Bill' : 'Income'}</h3>
-        <button class="close-btn" on:click={handleClose} aria-label="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M18 6L6 18M6 6L18 18"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
-      </header>
-
-      <div class="modal-content">
-        <form on:submit|preventDefault={handleSubmit}>
-          <!-- Mode Selection - Always visible -->
-          <div class="mode-toggle">
-            <label class="mode-option" class:selected={mode === 'adhoc'}>
-              <input type="radio" value="adhoc" bind:group={mode} disabled={saving} />
-              <span class="mode-label">New ad-hoc {type === 'bill' ? 'expense' : 'income'}</span>
-            </label>
-            <label
-              class="mode-option"
-              class:selected={mode === 'existing'}
-              class:disabled={filteredExistingItems.length === 0}
-            >
-              <input
-                type="radio"
-                value="existing"
-                bind:group={mode}
-                disabled={saving || filteredExistingItems.length === 0}
-              />
-              <span class="mode-label">
-                Add to existing
-                {#if filteredExistingItems.length === 0}
-                  <span class="mode-hint">(none available)</span>
-                {/if}
-              </span>
-            </label>
-          </div>
-
-          <!-- Form fields based on mode -->
-          {#if mode === 'adhoc'}
-            <!-- Ad-hoc mode: Create new one-time item -->
-            <p class="mode-description">
-              Add a one-time {type === 'bill' ? 'expense' : 'income'} for this month only.
-            </p>
-
-            <div class="form-group">
-              <label for="name">Name <span class="required">*</span></label>
-              <input
-                id="name"
-                type="text"
-                bind:value={name}
-                placeholder={type === 'bill' ? 'e.g., Car Repair' : 'e.g., Bonus'}
-                disabled={saving}
-                class:error={!!error && !name.trim()}
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="amount">Amount <span class="required">*</span></label>
-              <div class="amount-input-group">
-                <span class="prefix">$</span>
-                <input
-                  id="amount"
-                  type="text"
-                  bind:value={amount}
-                  placeholder="0.00"
-                  disabled={saving}
-                  class:error={!!error && parseDollarsToCents(amount) <= 0}
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="adhoc-payment-source"
-                >Payment Source <span class="required">*</span></label
-              >
-              <select
-                id="adhoc-payment-source"
-                bind:value={paymentSourceId}
-                disabled={saving}
-                class:error={!!error && !paymentSourceId}
-              >
-                <option value="">-- Select Payment Source --</option>
-                {#each filteredPaymentSources as source (source.id)}
-                  <option value={source.id}>{source.name}</option>
-                {/each}
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="category">Category (Optional)</label>
-              <select id="category" bind:value={categoryId} disabled={saving}>
-                <option value="">-- Select Category --</option>
-                {#each filteredCategories as category (category.id)}
-                  <option value={category.id}>{category.name}</option>
-                {/each}
-              </select>
-            </div>
-          {:else}
-            <!-- Existing mode: Add occurrence to existing item -->
-            <p class="mode-description">
-              Add another occurrence of an existing {type === 'bill' ? 'bill' : 'income'} for this month.
-            </p>
-
-            <div class="form-group">
-              <label for="existing-item"
-                >Select {type === 'bill' ? 'Bill' : 'Income'} <span class="required">*</span></label
-              >
-              <select
-                id="existing-item"
-                bind:value={selectedExistingId}
-                disabled={saving}
-                class:error={!!error && !selectedExistingId}
-              >
-                <option value="">-- Select --</option>
-                {#each filteredExistingItems as item (item.instanceId)}
-                  <option value={item.instanceId}>
-                    {item.master.name}
-                  </option>
-                {/each}
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="existing-amount">Amount <span class="required">*</span></label>
-              <div class="amount-input-group">
-                <span class="prefix">$</span>
-                <input
-                  id="existing-amount"
-                  type="text"
-                  bind:value={existingAmount}
-                  placeholder="0.00"
-                  disabled={saving}
-                  class:error={!!error && parseDollarsToCents(existingAmount) <= 0}
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="existing-payment-source"
-                >Payment Source <span class="required">*</span></label
-              >
-              <select
-                id="existing-payment-source"
-                bind:value={paymentSourceId}
-                disabled={saving}
-                class:error={!!error && !paymentSourceId}
-              >
-                <option value="">-- Select Payment Source --</option>
-                {#each filteredPaymentSources as source (source.id)}
-                  <option value={source.id}>{source.name}</option>
-                {/each}
-              </select>
-            </div>
+<Modal {open} title="Add {type === 'bill' ? 'bill' : 'income'}" onClose={handleClose}>
+  <form id={formId} on:submit|preventDefault={handleSubmit}>
+    <!-- Mode Selection - Always visible -->
+    <div class="mode-toggle">
+      <label class="mode-option" class:selected={mode === 'adhoc'}>
+        <input type="radio" value="adhoc" bind:group={mode} disabled={saving} />
+        <span class="mode-label">New ad-hoc {type === 'bill' ? 'expense' : 'income'}</span>
+      </label>
+      <label
+        class="mode-option"
+        class:selected={mode === 'existing'}
+        class:disabled={filteredExistingItems.length === 0}
+      >
+        <input
+          type="radio"
+          value="existing"
+          bind:group={mode}
+          disabled={saving || filteredExistingItems.length === 0}
+        />
+        <span class="mode-label">
+          Add to existing
+          {#if filteredExistingItems.length === 0}
+            <span class="mode-hint">(none available)</span>
           {/if}
-
-          {#if error}
-            <p class="error-message">{error}</p>
-          {/if}
-
-          <div class="form-actions">
-            <button type="button" class="cancel-btn" on:click={handleClose} disabled={saving}>
-              Cancel
-            </button>
-            <button type="submit" class="submit-btn" disabled={saving}>
-              {saving ? 'Adding...' : `Add ${type === 'bill' ? 'Expense' : 'Income'}`}
-            </button>
-          </div>
-        </form>
-      </div>
+        </span>
+      </label>
     </div>
-  </div>
-{/if}
+
+    <!-- Form fields based on mode -->
+    {#if mode === 'adhoc'}
+      <!-- Ad-hoc mode: Create new one-time item -->
+      <p class="mode-description">
+        Add a one-time {type === 'bill' ? 'expense' : 'income'} for this month only.
+      </p>
+
+      <div class="form-group">
+        <label for="name">Name <span class="required">*</span></label>
+        <input
+          id="name"
+          type="text"
+          bind:value={name}
+          placeholder={type === 'bill' ? 'e.g., Car Repair' : 'e.g., Bonus'}
+          disabled={saving}
+          class:error={!!error && !name.trim()}
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Amount <span class="required">*</span></label>
+        <AmountInput
+          id="amount"
+          bind:value={amount}
+          disabled={saving}
+          invalid={!!error && parseDollarsToCents(amount) <= 0}
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="adhoc-payment-source">Payment Source <span class="required">*</span></label>
+        <select
+          id="adhoc-payment-source"
+          bind:value={paymentSourceId}
+          disabled={saving}
+          class:error={!!error && !paymentSourceId}
+        >
+          <option value="">-- Select Payment Source --</option>
+          {#each filteredPaymentSources as source (source.id)}
+            <option value={source.id}>{source.name}</option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category (Optional)</label>
+        <select id="category" bind:value={categoryId} disabled={saving}>
+          <option value="">-- Select Category --</option>
+          {#each filteredCategories as category (category.id)}
+            <option value={category.id}>{category.name}</option>
+          {/each}
+        </select>
+      </div>
+    {:else}
+      <!-- Existing mode: Add occurrence to existing item -->
+      <p class="mode-description">
+        Add another occurrence of an existing {type === 'bill' ? 'bill' : 'income'} for this month.
+      </p>
+
+      <div class="form-group">
+        <label for="existing-item"
+          >Select {type === 'bill' ? 'Bill' : 'Income'} <span class="required">*</span></label
+        >
+        <select
+          id="existing-item"
+          bind:value={selectedExistingId}
+          disabled={saving}
+          class:error={!!error && !selectedExistingId}
+        >
+          <option value="">-- Select --</option>
+          {#each filteredExistingItems as item (item.instanceId)}
+            <option value={item.instanceId}>
+              {item.master.name}
+            </option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="existing-amount">Amount <span class="required">*</span></label>
+        <AmountInput
+          id="existing-amount"
+          bind:value={existingAmount}
+          disabled={saving}
+          invalid={!!error && parseDollarsToCents(existingAmount) <= 0}
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="existing-payment-source">Payment Source <span class="required">*</span></label>
+        <select
+          id="existing-payment-source"
+          bind:value={paymentSourceId}
+          disabled={saving}
+          class:error={!!error && !paymentSourceId}
+        >
+          <option value="">-- Select Payment Source --</option>
+          {#each filteredPaymentSources as source (source.id)}
+            <option value={source.id}>{source.name}</option>
+          {/each}
+        </select>
+      </div>
+    {/if}
+
+    {#if error}
+      <p class="error-message">{error}</p>
+    {/if}
+  </form>
+
+  <svelte:fragment slot="footer">
+    <button type="button" class="btn btn-secondary" on:click={handleClose} disabled={saving}>
+      Cancel
+    </button>
+    <button type="submit" form={formId} class="btn btn-primary" disabled={saving}>
+      {saving ? 'Adding...' : `Add ${type === 'bill' ? 'bill' : 'income'}`}
+    </button>
+  </svelte:fragment>
+</Modal>
 
 <style>
-  .modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--overlay-bg);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-
-  .modal {
-    width: 100%;
-    max-width: 500px;
-    max-height: 90vh;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    display: flex;
-    flex-direction: column;
-    animation: fadeIn 0.2s ease-out;
-    box-shadow: var(--shadow-heavy);
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-5);
-    border-bottom: 1px solid var(--border-default);
-  }
-
-  .modal-header h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: var(--space-1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
-  }
-
-  .close-btn:hover {
-    color: var(--text-primary);
-  }
-
-  .modal-content {
-    flex: 1;
-    padding: var(--space-5);
-    overflow-y: auto;
-  }
-
   /* Mode toggle styles */
   .mode-toggle {
     display: flex;
@@ -671,13 +544,11 @@
   .form-group input[type='text'],
   .form-group select {
     width: 100%;
-    padding: var(--space-2) var(--space-3);
+    padding: 0 var(--space-3);
     background: var(--bg-base);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     color: var(--text-primary);
-    font-size: 1rem;
-    height: 42px;
     box-sizing: border-box;
   }
 
@@ -692,83 +563,9 @@
     border-color: var(--error);
   }
 
-  .amount-input-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .amount-input-group .prefix {
-    color: var(--text-secondary);
-    font-size: 1rem;
-  }
-
-  .amount-input-group input {
-    flex: 1;
-    padding: var(--space-2) var(--space-3);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-size: 1rem;
-  }
-
-  .amount-input-group input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .amount-input-group input.error {
-    border-color: var(--error);
-  }
-
   .error-message {
     color: var(--error);
     font-size: 0.875rem;
     margin: 0 0 var(--space-4) 0;
-  }
-
-  .form-actions {
-    display: flex;
-    gap: var(--space-3);
-    margin-top: var(--space-6);
-  }
-
-  .cancel-btn,
-  .submit-btn {
-    flex: 1;
-    padding: var(--space-3);
-    border-radius: var(--radius-md);
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .cancel-btn {
-    background: transparent;
-    border: 1px solid var(--border-default);
-    color: var(--text-secondary);
-  }
-
-  .cancel-btn:hover:not(:disabled) {
-    border-color: var(--text-primary);
-    color: var(--text-primary);
-  }
-
-  .submit-btn {
-    background: var(--accent);
-    border: none;
-    color: var(--text-inverse);
-  }
-
-  .submit-btn:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .cancel-btn:disabled,
-  .submit-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 </style>

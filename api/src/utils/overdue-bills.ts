@@ -1,5 +1,5 @@
 import type { BillInstanceDetailed } from '../types';
-import { getTodayLocalDateString } from './due-date';
+import { getTodayLocalDateString, todayOrFirstOfMonth } from './due-date';
 
 export type OverdueBillItem = {
   name: string;
@@ -7,12 +7,8 @@ export type OverdueBillItem = {
   due_date: string;
 };
 
-function isCurrentMonth(month: string, todayStr: string): boolean {
-  return todayStr.startsWith(month);
-}
-
 export function getProjectionBalanceStartDate(month: string, todayStr: string): string {
-  return isCurrentMonth(month, todayStr) ? todayStr : `${month}-01`;
+  return todayOrFirstOfMonth(month, todayStr);
 }
 
 export function getOverdueBills(

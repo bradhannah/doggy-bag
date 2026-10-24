@@ -10,6 +10,7 @@
    */
   import UnsavedChangesDialog from './UnsavedChangesDialog.svelte';
   import { modalFocus, dialogTitleId } from '$lib/actions/modal-focus';
+  import { portal } from '$lib/actions/portal';
   const titleId = dialogTitleId();
 
   export let isOpen = false;
@@ -66,7 +67,7 @@
 </script>
 
 {#if isOpen}
-  <div class="drawer-backdrop" on:click={handleBackdropClick} role="presentation">
+  <div class="drawer-backdrop" use:portal on:click={handleBackdropClick} role="presentation">
     <div
       class="drawer"
       on:click={handleDrawerClick}
@@ -79,8 +80,15 @@
     >
       <div class="drawer-header">
         <h2 id={titleId}>{title}</h2>
-        <button class="close-btn" on:click={attemptClose} aria-label="Close drawer">
-          &times;
+        <button class="icon-btn close-btn" on:click={attemptClose} aria-label="Close drawer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M18 6L6 18M6 6L18 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
         </button>
       </div>
       <div class="drawer-content">
@@ -105,7 +113,7 @@
     right: 0;
     bottom: 0;
     background: var(--overlay-bg);
-    z-index: 1000;
+    z-index: var(--z-drawer);
     display: flex;
     justify-content: flex-end;
   }
@@ -147,30 +155,24 @@
   }
 
   .close-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.75rem;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-    width: var(--button-height-sm);
-    height: var(--button-height-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-  }
-
-  .close-btn:hover {
-    background: var(--accent-muted);
-    color: var(--text-primary);
+    margin-right: calc(var(--space-1) * -1);
   }
 
   .drawer-content {
     flex: 1;
     overflow-y: auto;
     padding: var(--space-4);
+  }
+
+  /* A form's Save/Cancel row stays visible at the bottom while the form scrolls */
+  .drawer .drawer-content :global(.form-actions) {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: var(--space-5) calc(var(--space-4) * -1) calc(var(--space-4) * -1);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-default);
   }
 
   /* Mobile: full width drawer from bottom */

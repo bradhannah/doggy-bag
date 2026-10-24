@@ -204,7 +204,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
   }
 
   .modal-content {
@@ -212,7 +212,7 @@
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
     padding: var(--section-gap);
-    max-width: var(--modal-width-md);
+    max-width: var(--panel-width-medium);
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;

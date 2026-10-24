@@ -62,6 +62,7 @@ export const OPTIONAL_COLOR_KEYS = [
   'error-bg',
   'error-muted',
   'error-border',
+  'text-on-error',
 
   // Semantic: Warning
   'warning',
@@ -81,6 +82,7 @@ export const OPTIONAL_COLOR_KEYS = [
   'purple-hover',
   'purple-bg',
   'purple-muted',
+  'purple-border',
 
   // Special: Orange
   'orange',

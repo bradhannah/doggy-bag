@@ -18,6 +18,7 @@
   export let hiddenCount: number = 0; // Number of hidden closed items (for partial categories)
   export let collapsed: boolean = false; // Show collapsed single-line view (for completed categories)
   export let isInsuranceSection: boolean = false; // True for insurance sections (hides ad-hoc button)
+  export let variant: 'card' | 'flat' = 'card'; // 'flat' = Table view: items collapse to one line
 
   const dispatch = createEventDispatcher();
 
@@ -45,7 +46,7 @@
   }
 
   $: occurrenceStats = countOccurrences(section.items);
-  const statsLabel = 'complete';
+  $: doneLabel = type === 'bills' ? 'paid' : 'received';
 
   $: showAmber =
     section.subtotal.actual > 0 && section.subtotal.actual !== section.subtotal.expected;
@@ -57,7 +58,6 @@
   $: isComplete = allClosed;
 
   $: headerBgColor = hexToRgba(section.category.color, 0.08);
-  $: containerBgColor = hexToRgba(section.category.color, 0.04);
 
   function handleRefresh() {
     dispatch('refresh');
@@ -73,85 +73,61 @@
   }
 </script>
 
-{#if collapsed}
-  <!-- Collapsed single-line view for completed categories -->
-  <div
-    class="category-collapsed"
-    style="border-left-color: {section.category.color}; background: {headerBgColor}"
-  >
-    <span class="collapse-chevron">▸</span>
-    <span class="category-color" style="background-color: {section.category.color}"></span>
-    <span class="category-name">{section.category.name}</span>
-    <span class="checkmark">✓</span>
-    <span class="item-count">
-      {section.items.length} item{section.items.length !== 1 ? 's' : ''}
-    </span>
-    {#if occurrenceStats.total > 0}
-      <span class="occurrence-stats complete">
-        {occurrenceStats.closed}/{occurrenceStats.total}
-        {statsLabel}
-      </span>
-    {/if}
-    {#if !isInsuranceSection}
-      <button
-        class="add-adhoc-btn"
-        on:click={openAdHocForm}
-        title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
-        disabled={readOnly}
-      >
-        +
-      </button>
-    {/if}
-  </div>
-{:else}
-  <!-- Expanded view -->
-  <div
-    class="category-section"
-    class:complete={isComplete}
-    style="background: {containerBgColor}; border-left-color: {section.category.color}"
-  >
-    <div class="category-header" style="background: {headerBgColor}">
-      <div class="category-title">
-        <span class="category-color" style="background-color: {section.category.color}"></span>
-        <h4 class:crossed-out={isComplete}>{section.category.name}</h4>
-        {#if hiddenCount > 0}
-          <span class="hidden-count">{hiddenCount} hidden</span>
-        {/if}
-        {#if occurrenceStats.total > 0}
-          <span
-            class="occurrence-stats"
-            class:complete={occurrenceStats.closed === occurrenceStats.total}
-          >
-            {occurrenceStats.closed}/{occurrenceStats.total}
-            {statsLabel}
-          </span>
-        {/if}
-        {#if !isInsuranceSection}
-          <button
-            class="add-adhoc-btn"
-            on:click={openAdHocForm}
-            title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
-            disabled={readOnly}
-          >
-            +
-          </button>
-        {/if}
-      </div>
-
-      <div class="category-subtotal">
-        <span class="subtotal-item">
-          <span class="subtotal-label">Expected</span>
-          <span class="subtotal-value">{formatCurrency(section.subtotal.expected)}</span>
+<div class="category-section" class:complete={isComplete || collapsed} data-category>
+  <div class="ledger-row category-header" style="background: {headerBgColor}">
+    <div class="ledger-label category-title">
+      <span class="category-color" style="background-color: {section.category.color}"></span>
+      <h4>{section.category.name}</h4>
+      {#if collapsed}
+        <span class="category-progress complete">
+          {section.items.length} item{section.items.length !== 1 ? 's' : ''}, all {doneLabel}
         </span>
-        <span class="subtotal-item">
-          <span class="subtotal-label">Actual</span>
-          <span class="subtotal-value" class:amber={showAmber}>
-            {section.subtotal.actual > 0 ? formatCurrency(section.subtotal.actual) : '-'}
-          </span>
+      {:else if occurrenceStats.total > 0}
+        <span
+          class="category-progress"
+          class:complete={occurrenceStats.closed === occurrenceStats.total}
+        >
+          {occurrenceStats.closed} of {occurrenceStats.total}
+          {doneLabel}
         </span>
-      </div>
+      {/if}
+      {#if hiddenCount > 0}
+        <span class="category-progress">· {hiddenCount} hidden</span>
+      {/if}
     </div>
+    <span class="ledger-amount subtotal" data-col="expected">
+      {formatCurrency(section.subtotal.expected)}
+    </span>
+    <span class="ledger-amount subtotal" class:amber={showAmber} data-col="paid">
+      {section.subtotal.actual > 0 ? formatCurrency(section.subtotal.actual) : '—'}
+    </span>
+    <div class="ledger-actions">
+      {#if !isInsuranceSection}
+        <button
+          class="icon-btn bordered"
+          on:click={openAdHocForm}
+          aria-label="Add ad-hoc {type === 'bills' ? 'bill' : 'income'} to {section.category.name}"
+          title="Add ad-hoc {type === 'bills' ? 'bill' : 'income'}"
+          disabled={readOnly}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      {/if}
+    </div>
+  </div>
 
+  {#if !collapsed}
     <div class="category-items">
       {#if isEmpty}<p class="empty-category">No entries yet</p>{/if}
       {#each section.items as item (item.id)}
@@ -160,12 +136,14 @@
           type={type === 'bills' ? 'bill' : 'income'}
           {month}
           {readOnly}
+          {variant}
+          categoryName={section.category.name}
           on:refresh={handleRefresh}
         />
       {/each}
     </div>
-  </div>
-{/if}
+  {/if}
+</div>
 
 <!-- Ad-hoc Form Drawer -->
 <AdHocForm
@@ -178,242 +156,69 @@
 />
 
 <style>
-  .empty-category {
-    padding: var(--space-3);
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-  }
   .category-section {
-    margin-bottom: var(--space-3);
-    border-radius: var(--radius-lg);
-    border-left: 4px solid var(--border-default);
-    padding: var(--space-2);
-  }
-
-  /* Complete/empty category state: use muted colors instead of opacity
-     (opacity creates a stacking context which breaks position:fixed modals).
-     Only the header gets opacity - the items section is not dimmed because
-     OccurrenceRow contains modals that would be trapped in the stacking context.
-     Each row handles its own "closed" styling. */
-  .category-section.complete .category-header {
-    opacity: 0.6;
-  }
-
-  /* Keep add button fully visible in complete state */
-  .category-section.complete .add-adhoc-btn {
-    opacity: 1.67; /* Counteract parent opacity: 1/0.6 ≈ 1.67 */
-  }
-
-  /* Crossed out category name */
-  .crossed-out {
-    text-decoration: line-through;
+    margin-bottom: var(--space-4);
   }
 
   .category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px var(--space-3);
+    min-height: calc(var(--control-height) + var(--space-1));
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-1);
-  }
-
-  .category-title {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
   }
 
   .category-color {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
+    width: calc(var(--space-2) + var(--space-1) / 2);
+    height: calc(var(--space-2) + var(--space-1) / 2);
+    border-radius: var(--radius-xs);
     flex-shrink: 0;
   }
 
   .category-title h4 {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--font-size-md);
     font-weight: 600;
     color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .occurrence-stats {
-    font-size: 0.65rem;
-    font-weight: 500;
+  .complete .category-title h4 {
     color: var(--text-secondary);
-    padding: 1px 6px;
-    background: var(--bg-elevated);
-    border-radius: 10px;
   }
 
-  .occurrence-stats.complete {
+  .category-progress {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .category-progress.complete {
     color: var(--success);
-    background: var(--success-bg);
   }
 
-  .add-adhoc-btn {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    border: 1px dashed var(--border-default);
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    margin-left: var(--space-1);
-  }
-
-  .add-adhoc-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-muted);
-  }
-
-  .category-subtotal {
-    display: flex;
-    gap: var(--space-5);
-  }
-
-  .subtotal-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
-  .subtotal-label {
-    font-size: 0.55rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .subtotal-value {
-    font-size: 0.8rem;
+  .subtotal {
+    font-size: var(--font-size-md);
     font-weight: 600;
     color: var(--text-primary);
   }
 
-  .subtotal-value.amber {
+  .complete .subtotal {
+    color: var(--text-secondary);
+  }
+
+  .subtotal.amber {
     color: var(--warning);
   }
 
-  .category-items {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  /* Hairline between items; cards are separate components, so the rule lives here */
+  .category-items :global(.occurrence-card + .occurrence-card) {
+    border-top: 1px solid var(--border-subtle);
   }
 
-  @media (max-width: 640px) {
-    .category-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--space-3);
-    }
-
-    .category-subtotal {
-      width: 100%;
-      justify-content: space-between;
-    }
-  }
-
-  /* Hidden count badge for partially complete categories */
-  .hidden-count {
-    font-size: 0.7rem;
+  .empty-category {
+    margin: 0;
+    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-8);
     color: var(--text-secondary);
-    padding: 2px 8px;
-    background: var(--bg-elevated);
-    border-radius: 10px;
-    font-style: italic;
-  }
-
-  /* Collapsed category row for completed categories */
-  .category-collapsed {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 6px var(--space-3);
-    border-radius: var(--radius-md);
-    border-left: 4px solid var(--border-default);
-    margin-bottom: var(--space-1);
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  }
-
-  .category-collapsed:hover {
-    opacity: 0.85;
-  }
-
-  .collapse-chevron {
-    color: var(--text-tertiary);
-    font-size: 0.7rem;
-    width: 10px;
-    flex-shrink: 0;
-  }
-
-  .category-collapsed .category-color {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
-
-  .category-collapsed .category-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.85rem;
-  }
-
-  .category-collapsed .checkmark {
-    color: var(--success);
-    font-weight: bold;
-    font-size: 0.8rem;
-  }
-
-  .category-collapsed .item-count {
-    color: var(--text-secondary);
-    font-size: 0.7rem;
-    margin-left: auto;
-  }
-
-  .category-collapsed .occurrence-stats {
-    font-size: 0.65rem;
-    font-weight: 500;
-    color: var(--success);
-    padding: 1px 6px;
-    background: var(--success-bg);
-    border-radius: 10px;
-  }
-
-  .category-collapsed .add-adhoc-btn {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    border: 1px dashed var(--border-default);
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    margin-left: var(--space-2);
-    /* Counteract parent opacity */
-    opacity: 1.43;
-  }
-
-  .category-collapsed .add-adhoc-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-muted);
+    font-size: var(--font-size-sm);
   }
 </style>
