@@ -122,12 +122,13 @@ export function resetIncomesInitialized(): void {
   inFlightPromise = null;
 }
 
-export async function createIncome(data: IncomeData) {
+export async function createIncome(data: IncomeData): Promise<Income> {
   store.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    await apiClient.post('/api/incomes', data);
+    const created = (await apiClient.post('/api/incomes', data)) as Income;
     await loadIncomes();
+    return created;
   } catch (e) {
     const err = e instanceof Error ? e : new Error('Failed to create income');
     store.update((s) => ({ ...s, loading: false, error: err.message }));

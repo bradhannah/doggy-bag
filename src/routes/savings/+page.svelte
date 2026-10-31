@@ -4,12 +4,15 @@
   import { currentMonth, formatMonthDisplay } from '../../stores/ui';
   import { success, error as showError } from '../../stores/toast';
   import { formatCurrency, dollarsToCents } from '$lib/utils/format';
-  import type { SavingsAccountSummary, SavingsMonthSummary } from '$lib/types/budget-workflow';
+  import type {
+    SavingsAccountSummary,
+    SavingsMonthSummary,
+    SavingsPlanResult,
+  } from '$lib/types/budget-workflow';
   import PageHeader from '../../components/shared/PageHeader.svelte';
   import MonthPickerHeader from '../../components/MonthPickerHeader.svelte';
   import MonthNotCreated from '../../components/MonthNotCreated.svelte';
   import ConfirmDialog from '../../components/shared/ConfirmDialog.svelte';
-  import BudgetUpdatesModal from '../../components/DetailedView/BudgetUpdatesModal.svelte';
   import SavingsPlanModal from '../../components/Savings/SavingsPlanModal.svelte';
 
   let data: SavingsMonthSummary | null = null;
@@ -22,8 +25,6 @@
   let pendingSaves = 0;
   let showPlan = false;
   let planAccount = '';
-  let showReview = false;
-  let initialSelected: string[] = [];
   let pushing = false;
   let showPushConfirmation = false;
   let pushDestinationMonth = '';
@@ -52,7 +53,6 @@
     loading = true;
     error = '';
     if (month !== loadedMonth) {
-      showReview = false;
       showPlan = false;
       showPushConfirmation = false;
     }
@@ -162,15 +162,12 @@
     planAccount = accountId;
     showPlan = true;
   }
-  function planSaved(result: { recurring: boolean; key?: string }) {
+  function planSaved(result: SavingsPlanResult) {
     showPlan = false;
-    success(
-      result.recurring ? 'Recurring savings plan saved' : 'Savings transfer added to this budget'
-    );
-    if (result.recurring && data?.exists && !data.is_read_only) {
-      initialSelected = result.key ? [result.key] : [];
-      showReview = true;
-    }
+    if (!result.recurring) success('Savings transfer added to this budget');
+    else if (result.added)
+      success(`Recurring plan saved and added to ${formatMonthDisplay(result.month)}’s budget`);
+    else success('Recurring savings plan saved. New budgets will include it.');
     void load();
   }
 
@@ -246,14 +243,6 @@
         <a href="/month/{$currentMonth}">Open this month’s Budget</a>
         <button
           class="btn btn-secondary"
-          on:click={() => {
-            initialSelected = [];
-            showReview = true;
-          }}
-          disabled={data.is_read_only}>Review budget updates</button
-        >
-        <button
-          class="btn btn-secondary"
           on:click={() => pushFinalBalances()}
           disabled={pushing || pendingSaves > 0}
         >
@@ -265,8 +254,8 @@
         </p>{/if}
       {#if hasLegacy}
         <p class="notice">
-          Some previous Savings amounts are not linked to this budget yet. Review budget updates to
-          include them. Estimates include these unlinked amounts until you review them.
+          Some older Savings amounts are not linked to budget entries. Estimates include these
+          unlinked amounts.
         </p>
       {/if}
       {#each groups as group (group.name)}
@@ -407,17 +396,6 @@
       initialAccount={planAccount}
       onClose={() => (showPlan = false)}
       onSaved={planSaved}
-    />{/key}
-{/if}
-{#if showReview}
-  {#key $currentMonth}<BudgetUpdatesModal
-      month={$currentMonth}
-      {initialSelected}
-      onClose={() => {
-        showReview = false;
-        initialSelected = [];
-      }}
-      onApplied={() => load()}
     />{/key}
 {/if}
 <ConfirmDialog

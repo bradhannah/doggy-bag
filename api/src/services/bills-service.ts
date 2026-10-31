@@ -2,7 +2,7 @@
 
 import { StorageServiceImpl } from './storage';
 import { ValidationServiceImpl } from './validation';
-import { preserveSourceHistory, recurringRevisions } from './source-history';
+import { preserveSourceHistory } from './source-history';
 import type { StorageService } from './storage';
 import type { ValidationService } from './validation';
 import type { Bill, SavingsGoal, ValidationResult } from '../types';
@@ -121,7 +121,6 @@ export class BillsServiceImpl implements BillsService {
         ...updates,
         updated_at: now,
       };
-      updatedBill.recurring_revisions = recurringRevisions(bills[index], updatedBill);
       // An explicit stop or reassignment supersedes the goal's automatic resume.
       if (
         (updates.is_active === false && !updates.paused_by_goal_id) ||

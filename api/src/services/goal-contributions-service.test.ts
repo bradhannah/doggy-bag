@@ -7,7 +7,6 @@ import type { StorageService } from './storage';
 import { SavingsGoalsServiceImpl } from './savings-goals-service';
 import { BillsServiceImpl } from './bills-service';
 import { MonthsServiceImpl } from './months-service';
-import { BudgetUpdatesService } from './budget-updates-service';
 import { updateGoalContributions } from './goal-contributions-service';
 import { createBillInstance } from '../utils/monthly-instances';
 import { getTodayLocalDateString } from '../utils/due-date';
@@ -208,10 +207,10 @@ describe('Goal contributions follow lifecycle actions', () => {
     expect((await read()).savings_contributions?.savings).toBe(-5000);
   });
 
-  test('old paused/closed goals are excluded from generation and review even if their source is still active', async () => {
+  test('old paused/closed goals are excluded from generation and add-to-month even if their source is still active', async () => {
     await storage.writeJSON('data/entities/savings-goals.json', [{ ...goal, status: 'paused' }]);
     const target = relativeMonth(3);
     expect((await months.createMonth(target)).bill_instances).toHaveLength(0);
-    expect((await new BudgetUpdatesService().preview(target)).items).toHaveLength(0);
+    expect((await months.addSourceToMonth(target, 'bill', source.id)).added).toBe(false);
   });
 });

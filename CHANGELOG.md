@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Budget page's **Review budget updates** and **Refresh bill and income details** buttons are gone, along with the review flow. A new recurring bill, income or savings plan is added to the month you are viewing straight away (if it exists and is unlocked); editing an existing recurring item never changes existing months. Bank transaction name, URL and notes are now read live from Manage.
 - Insurance reimbursements still on their way (submitted, or approved but unpaid) no longer sit in a locked month. They appear in the earliest unlocked month, dated the 1st, as expected income: a submitted claim shows the amount claimed instead of $0. Locking a month carries its open reimbursements forward; its frozen snapshot keeps only the bill and settled lines. Submitted claims no longer appear on the calendar until the insurer decides.
 
 ### Fixed

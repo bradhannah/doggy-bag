@@ -1,24 +1,6 @@
 import type { Bill, Income, MonthlyData } from '../types';
 import type { StorageService } from './storage';
 
-// Field-specific generations distinguish A→B→A from an unchanged source, while
-// unrelated metadata edits do not invalidate a monthly keep decision.
-export function recurringRevisions(before: Bill | Income, after: Bill | Income) {
-  const revisions: NonNullable<Bill['recurring_revisions']> = { ...before.recurring_revisions };
-  if (before.amount !== after.amount) revisions.amount = crypto.randomUUID();
-  const schedule = (source: Bill | Income) => [
-    source.billing_period,
-    source.start_date,
-    source.day_of_month,
-    source.recurrence_week,
-    source.recurrence_day,
-    source.effective_from,
-  ];
-  if (JSON.stringify(schedule(before)) !== JSON.stringify(schedule(after)))
-    revisions.schedule = crypto.randomUUID();
-  return revisions;
-}
-
 export function sourceSnapshot(source: Bill | Income) {
   return {
     name: source.name,

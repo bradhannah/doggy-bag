@@ -403,7 +403,6 @@ function recalcOccurrenceDates(
     if (
       !occ.is_closed &&
       !occ.recurring_origin &&
-      !occ.recurring_review?.expected_date &&
       i < correctDates.length &&
       occ.expected_date !== correctDates[i]
     ) {

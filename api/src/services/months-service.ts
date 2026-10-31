@@ -45,6 +45,7 @@ import {
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
 import { loadLockedMonths, type IsMonthLocked } from '../utils/locked-months';
+import type { AddToMonthResult } from '../types/budget-workflow';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { ValidationError, ReadOnlyError, ConflictError } from '../utils/errors';
 import {
@@ -91,7 +92,7 @@ export interface MonthsService {
   generateMonthlyData(month: string): Promise<MonthlyData>;
   syncMonthlyData(month: string): Promise<MonthlyData>;
   syncManualPaymentSource(month: string, sourceId: string): Promise<void>;
-  syncMetadata(month: string): Promise<MonthlyData>;
+  addSourceToMonth(month: string, kind: 'bill' | 'income', id: string): Promise<AddToMonthResult>;
   updateBankBalances(month: string, balances: Record<string, number>): Promise<MonthlyData>;
   updateSavingsBalances(
     month: string,
@@ -693,87 +694,50 @@ export class MonthsServiceImpl implements MonthsService {
   }
 
   /**
-   * Sync metadata from source bills/incomes to existing month instances.
-   * This updates metadata without regenerating the month or losing payment data.
+   * Put one recurring bill or income into an existing, unlocked month. Used when a
+   * recurring item is created after the month was generated: new months pick it up
+   * on their own, existing ones get it through this. Changes to an existing recurring
+   * item never touch existing months; the month is edited directly.
    */
-  public async syncMetadata(month: string): Promise<MonthlyData> {
-    console.log(`[MonthsService] Syncing metadata for ${month}`);
-
-    try {
-      const data = await this.getMonthlyData(month);
-
-      if (!data) {
-        throw new Error(`Monthly data for ${month} not found`);
-      }
-
-      const bills = await this.billsService.getAll();
-      const incomes = await this.incomesService.getAll();
-
-      // Create lookup maps for quick access
-      const billMap = new Map(bills.map((b) => [b.id, b]));
-      const incomeMap = new Map(incomes.map((i) => [i.id, i]));
-
-      const now = new Date().toISOString();
-      let updated = false;
-
-      // Update bill instances with source metadata
-      for (let i = 0; i < data.bill_instances.length; i++) {
-        const bi = data.bill_instances[i];
-        if (bi.bill_id) {
-          const sourceBill = billMap.get(bi.bill_id);
-          if (sourceBill) {
-            // Only update if metadata has changed
-            const currentMeta = JSON.stringify(bi.metadata ?? null);
-            const sourceMeta = JSON.stringify(sourceBill.metadata ?? null);
-            if (currentMeta !== sourceMeta) {
-              data.bill_instances[i] = {
-                ...bi,
-                metadata: sourceBill.metadata,
-                updated_at: now,
-              };
-              updated = true;
-            }
-          }
-        }
-      }
-
-      // Update income instances with source metadata
-      for (let i = 0; i < data.income_instances.length; i++) {
-        const ii = data.income_instances[i];
-        if (ii.income_id) {
-          const sourceIncome = incomeMap.get(ii.income_id);
-          if (sourceIncome) {
-            // Only update if metadata has changed
-            const currentMeta = JSON.stringify(ii.metadata ?? null);
-            const sourceMeta = JSON.stringify(sourceIncome.metadata ?? null);
-            if (currentMeta !== sourceMeta) {
-              data.income_instances[i] = {
-                ...ii,
-                metadata: sourceIncome.metadata,
-                updated_at: now,
-              };
-              updated = true;
-            }
-          }
-        }
-      }
-
-      if (updated) {
-        data.updated_at = now;
-        await this.saveMonthlyData(month, data);
-        console.log(`[MonthsService] Metadata synced for ${month}`);
-      } else {
-        console.log(`[MonthsService] No metadata changes for ${month}`);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('[MonthsService] Failed to sync metadata:', error);
-      throw error;
+  public async addSourceToMonth(
+    month: string,
+    kind: 'bill' | 'income',
+    id: string
+  ): Promise<AddToMonthResult> {
+    const data = await this.getMonthlyData(month);
+    if (!data) return { added: false, reason: 'month_missing' };
+    if (data.is_read_only) return { added: false, reason: 'locked' };
+    if (data.excluded_budget_sources?.includes(`${kind}:${id}`)) {
+      return { added: false, reason: 'excluded' };
     }
+
+    if (kind === 'bill') {
+      if (data.bill_instances.some((instance) => instance.bill_id === id)) {
+        return { added: false, reason: 'already_present' };
+      }
+      const bill = await this.billsService.getById(id);
+      if (!bill) return { added: false, reason: 'not_found' };
+      const instance = createBillInstance(bill, month);
+      if (!instance) return { added: false, reason: 'no_occurrences' };
+      data.bill_instances.push(instance);
+    } else {
+      if (data.income_instances.some((instance) => instance.income_id === id)) {
+        return { added: false, reason: 'already_present' };
+      }
+      const income = await this.incomesService.getById(id);
+      if (!income) return { added: false, reason: 'not_found' };
+      const instance = createIncomeInstance(income, month);
+      if (!instance) return { added: false, reason: 'no_occurrences' };
+      data.income_instances.push(instance);
+    }
+
+    data.updated_at = new Date().toISOString();
+    await this.saveMonthlyData(month, data);
+    console.log(`[MonthsService] Added ${kind} ${id} to ${month}`);
+    return { added: true };
   }
 
-  /** Add only the requested card, leaving recurring-plan changes for budget review. */
+  /** Add only the requested card; other recurring changes never touch an existing month. */
   public async syncManualPaymentSource(month: string, sourceId: string): Promise<void> {
     const data = await this.getMonthlyData(month);
     if (

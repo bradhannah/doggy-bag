@@ -1,4 +1,4 @@
-// Months Service syncMetadata Tests
+// Months Service savings balance tests
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
 import { MonthsServiceImpl } from './months-service';
 import { StorageServiceImpl } from './storage';
@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Bill, Income, PaymentSource, Category, MonthlyData } from '../types';
 
-describe('MonthsService - syncMetadata', () => {
+describe('MonthsService - savings balances', () => {
   let service: MonthsServiceImpl;
   let testDir: string;
   const testMonth = '2025-03';
@@ -258,184 +258,6 @@ describe('MonthsService - syncMetadata', () => {
     } catch {
       // Ignore cleanup errors
     }
-  });
-
-  describe('syncMetadata', () => {
-    test('syncs metadata from source bills to bill instances', async () => {
-      const result = await service.syncMetadata(testMonth);
-
-      expect(result).toBeDefined();
-
-      // Find the rent bill instance
-      const rentInstance = result.bill_instances.find((bi) => bi.bill_id === 'bill-rent-001');
-      expect(rentInstance).toBeDefined();
-      expect(rentInstance?.metadata).toBeDefined();
-      expect(rentInstance?.metadata?.bank_transaction_name).toBe('RENT PAYMENT LANDLORD');
-      expect(rentInstance?.metadata?.account_number).toBe('12345');
-      expect(rentInstance?.metadata?.account_url).toBe('https://rentpayment.com');
-      expect(rentInstance?.metadata?.notes).toBe('Due on the 1st, 5-day grace period');
-
-      // Find the electric bill instance
-      const electricInstance = result.bill_instances.find(
-        (bi) => bi.bill_id === 'bill-electric-002'
-      );
-      expect(electricInstance).toBeDefined();
-      expect(electricInstance?.metadata).toBeDefined();
-      expect(electricInstance?.metadata?.bank_transaction_name).toBe('ELECTRIC UTILITY CO');
-      expect(electricInstance?.metadata?.notes).toBe('Variable amount monthly');
-    });
-
-    test('syncs metadata from source incomes to income instances', async () => {
-      const result = await service.syncMetadata(testMonth);
-
-      expect(result).toBeDefined();
-
-      // Find the salary income instance
-      const salaryInstance = result.income_instances.find(
-        (ii) => ii.income_id === 'income-salary-001'
-      );
-      expect(salaryInstance).toBeDefined();
-      expect(salaryInstance?.metadata).toBeDefined();
-      expect(salaryInstance?.metadata?.bank_transaction_name).toBe('EMPLOYER DIRECT DEP');
-      expect(salaryInstance?.metadata?.account_url).toBe('https://payroll.employer.com');
-      expect(salaryInstance?.metadata?.notes).toBe('Bi-weekly on Fridays');
-    });
-
-    test('does not update instances when metadata has not changed', async () => {
-      // First sync - should update
-      const firstResult = await service.syncMetadata(testMonth);
-      const _firstUpdatedAt = firstResult.updated_at;
-
-      // Wait a tiny bit to ensure timestamp would change if modified
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Second sync - should not update (metadata already matches)
-      const secondResult = await service.syncMetadata(testMonth);
-
-      // Since metadata hasn't changed, updated_at should be the same
-      // (Note: the service only updates if metadata actually changed)
-      expect(secondResult.bill_instances[0].metadata).toEqual(
-        firstResult.bill_instances[0].metadata
-      );
-    });
-
-    test('handles instances without source entity (ad-hoc)', async () => {
-      // Add an ad-hoc bill instance with no bill_id
-      const monthlyDataWithAdhoc = {
-        ...sampleMonthlyData,
-        bill_instances: [
-          ...sampleMonthlyData.bill_instances,
-          {
-            id: 'bi-adhoc-001',
-            bill_id: null, // No source bill
-            name: 'Ad-hoc Expense',
-            billing_period: 'monthly' as const,
-            expected_amount: 5000,
-            actual_amount: null,
-            occurrences: [],
-            occurrence_count: 0,
-            closed_date: undefined,
-            payment_source_id: 'ps-checking-001',
-            category_id: 'cat-housing-001',
-            is_active: true,
-            is_adhoc: true,
-            created_at: '2025-01-01T00:00:00.000Z',
-            updated_at: '2025-01-01T00:00:00.000Z',
-          },
-        ],
-      };
-      await writeFile(
-        join(testDir, 'months', `${testMonth}.json`),
-        JSON.stringify(monthlyDataWithAdhoc, null, 2)
-      );
-
-      service = new MonthsServiceImpl();
-      const result = await service.syncMetadata(testMonth);
-
-      // Ad-hoc instance should still exist and not throw error
-      const adhocInstance = result.bill_instances.find((bi) => bi.id === 'bi-adhoc-001');
-      expect(adhocInstance).toBeDefined();
-      expect(adhocInstance?.is_adhoc).toBe(true);
-      expect(adhocInstance?.occurrences.length).toBe(1);
-      // Should have no metadata (source doesn't exist)
-      expect(adhocInstance?.metadata).toBeUndefined();
-    });
-
-    test('throws error for non-existent month', async () => {
-      await expect(service.syncMetadata('2099-12')).rejects.toThrow('not found');
-    });
-
-    test('updates metadata when source metadata changes', async () => {
-      // First sync
-      await service.syncMetadata(testMonth);
-
-      // Update source bill metadata
-      const updatedBills: Bill[] = [
-        {
-          ...sampleBills[0],
-          metadata: {
-            bank_transaction_name: 'UPDATED RENT NAME',
-            account_number: '99999',
-            notes: 'Updated notes',
-          },
-        },
-        sampleBills[1],
-      ];
-      await writeFile(
-        join(testDir, 'entities', 'bills.json'),
-        JSON.stringify(updatedBills, null, 2)
-      );
-
-      // Second sync - should pick up changes
-      service = new MonthsServiceImpl();
-      const result = await service.syncMetadata(testMonth);
-
-      const rentInstance = result.bill_instances.find((bi) => bi.bill_id === 'bill-rent-001');
-      expect(rentInstance?.metadata?.bank_transaction_name).toBe('UPDATED RENT NAME');
-      expect(rentInstance?.metadata?.account_number).toBe('99999');
-      expect(rentInstance?.metadata?.notes).toBe('Updated notes');
-      // account_url was removed from source, should be undefined
-      expect(rentInstance?.metadata?.account_url).toBeUndefined();
-    });
-
-    test('preserves closed state when syncing metadata', async () => {
-      // Add closed occurrence data to the monthly file
-      const monthlyDataWithClosedOccurrence = {
-        ...sampleMonthlyData,
-        bill_instances: [
-          {
-            ...sampleMonthlyData.bill_instances[0],
-            is_closed: true,
-            closed_date: '2025-03-01',
-            occurrences: [
-              {
-                ...sampleMonthlyData.bill_instances[0].occurrences[0],
-                is_closed: true,
-                closed_date: '2025-03-01',
-                actual_amount: 150000,
-              },
-            ],
-          },
-          sampleMonthlyData.bill_instances[1],
-        ],
-      };
-      await writeFile(
-        join(testDir, 'months', `${testMonth}.json`),
-        JSON.stringify(monthlyDataWithClosedOccurrence, null, 2)
-      );
-
-      service = new MonthsServiceImpl();
-      const result = await service.syncMetadata(testMonth);
-
-      // Closed state should be preserved
-      const rentInstance = result.bill_instances.find((bi) => bi.bill_id === 'bill-rent-001');
-      expect(rentInstance?.is_closed).toBe(true);
-      expect(rentInstance?.occurrences[0]?.is_closed).toBe(true);
-      expect(rentInstance?.occurrences[0]?.closed_date).toBe('2025-03-01');
-
-      // And metadata should be synced
-      expect(rentInstance?.metadata?.bank_transaction_name).toBe('RENT PAYMENT LANDLORD');
-    });
   });
 
   describe('pushSavingsBalancesToNextMonth', () => {

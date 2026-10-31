@@ -73,7 +73,6 @@ interface PaymentSourceMetadata {
 // ============================================================================
 
 interface Bill {
-  recurring_revisions?: { amount?: string; schedule?: string };
   savings_account_id?: string; // Destination account for a savings contribution
   id: string;
   name: string;
@@ -98,7 +97,6 @@ interface Bill {
 }
 
 interface Income {
-  recurring_revisions?: { amount?: string; schedule?: string };
   savings_account_id?: string; // Savings account funding a withdrawal into the budget
   id: string;
   name: string;
@@ -126,9 +124,6 @@ interface Income {
 
 interface Occurrence {
   recurring_origin?: { index: number; amount: number; date: string };
-  recurring_review?: Partial<
-    Record<'expected_amount' | 'expected_date', { version: string; value: number | string }>
-  >;
   id: string;
   sequence: number; // 1, 2, 3... for ordering within the month
   expected_date: string; // YYYY-MM-DD - calculated from day_of_month/start_date, overridable
@@ -155,7 +150,6 @@ interface Occurrence {
 // ============================================================================
 
 interface BillInstance {
-  kept_recurring_revision?: string;
   savings_account_id?: string;
   legacy_savings_account_id?: string; // Imported standalone monthly savings plan
   source_snapshot?: Bill;
@@ -186,7 +180,6 @@ interface BillInstance {
 }
 
 interface IncomeInstance {
-  kept_recurring_revision?: string;
   savings_account_id?: string;
   legacy_savings_account_id?: string;
   source_snapshot?: Income;
@@ -513,7 +506,6 @@ interface MonthlyData {
   occurrence_dates_migrated?: boolean;
   paused_goal_contributions?: { instance: BillInstance; legacy_hint_adjusted: boolean }[];
   excluded_budget_sources?: string[]; // Explicit exclusions for this month (kind:source ID)
-  last_budget_update?: { request_key: string }; // Idempotent retry of the latest review/apply
   month: string;
   bill_instances: BillInstance[];
   income_instances: IncomeInstance[];

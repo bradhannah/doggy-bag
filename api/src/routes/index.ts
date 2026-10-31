@@ -12,6 +12,7 @@ import {
 
 import {
   createBillsHandlerGET,
+  createBillAddToMonthHandler,
   createBillsHandlerPOST,
   createBillsHandlerPUT,
   createBillsHandlerDELETE,
@@ -19,6 +20,7 @@ import {
 
 import {
   createIncomesHandlerGET,
+  createIncomeAddToMonthHandler,
   createIncomesHandlerPOST,
   createIncomesHandlerPUT,
   createIncomesHandlerDELETE,
@@ -29,7 +31,6 @@ import {
   createMonthsHandlerList,
   createMonthsHandlerGenerate,
   createMonthsHandlerSync,
-  createMonthsHandlerSyncMetadata,
   createMonthsHandlerUpdateBalances,
   createMonthsHandlerUpdateSavingsBalances,
   createMonthsHandlerPushSavingsBalances,
@@ -222,12 +223,7 @@ import {
 } from './handlers/todo-instances.handlers';
 
 import { createCalendarHandlerGET } from './handlers/calendar.handlers';
-import {
-  createBudgetUpdatesPreviewHandler,
-  createBudgetUpdatesApplyHandler,
-  createSavingsMonthHandler,
-  createSavingsPlanHandler,
-} from './handlers/budget-workflow.handlers';
+import { createSavingsMonthHandler, createSavingsPlanHandler } from './handlers/savings.handlers';
 
 // Route definition type
 interface RouteDefinition {
@@ -692,6 +688,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   },
 
   // Bills
+  {
+    path: '/api/bills/add-to-month',
+    definition: { method: 'POST', handler: createBillAddToMonthHandler(), hasPathParam: true },
+  },
   { path: '/api/bills', definition: { method: 'GET', handler: createBillsHandlerGET() } },
   { path: '/api/bills', definition: { method: 'POST', handler: createBillsHandlerPOST() } },
   {
@@ -704,6 +704,10 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   },
 
   // Incomes
+  {
+    path: '/api/incomes/add-to-month',
+    definition: { method: 'POST', handler: createIncomeAddToMonthHandler(), hasPathParam: true },
+  },
   { path: '/api/incomes', definition: { method: 'GET', handler: createIncomesHandlerGET() } },
   { path: '/api/incomes', definition: { method: 'POST', handler: createIncomesHandlerPOST() } },
   {
@@ -738,14 +742,6 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
 
   // Months - routes with sub-paths (generate, bank-balances, summary, detailed) first for proper matching
   {
-    path: '/api/months/budget-updates',
-    definition: { method: 'GET', handler: createBudgetUpdatesPreviewHandler(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/budget-updates',
-    definition: { method: 'POST', handler: createBudgetUpdatesApplyHandler(), hasPathParam: true },
-  },
-  {
     path: '/api/months/savings',
     definition: { method: 'GET', handler: createSavingsMonthHandler(), hasPathParam: true },
   },
@@ -764,10 +760,6 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   {
     path: '/api/months/sync',
     definition: { method: 'POST', handler: createMonthsHandlerSync(), hasPathParam: true },
-  },
-  {
-    path: '/api/months/sync-metadata',
-    definition: { method: 'POST', handler: createMonthsHandlerSyncMetadata(), hasPathParam: true },
   },
   {
     path: '/api/months/bank-balances',

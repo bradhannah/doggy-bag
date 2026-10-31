@@ -2,7 +2,7 @@
 
 import { StorageServiceImpl } from './storage';
 import { ValidationServiceImpl } from './validation';
-import { preserveSourceHistory, recurringRevisions } from './source-history';
+import { preserveSourceHistory } from './source-history';
 import type { StorageService } from './storage';
 import type { ValidationService } from './validation';
 import type { Income, ValidationResult } from '../types';
@@ -102,7 +102,6 @@ export class IncomesServiceImpl implements IncomesService {
         ...updates,
         updated_at: now,
       };
-      updatedIncome.recurring_revisions = recurringRevisions(incomes[index], updatedIncome);
 
       incomes[index] = updatedIncome;
       await this.storage.writeJSON('data/entities/incomes.json', incomes);

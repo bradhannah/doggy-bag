@@ -23,11 +23,8 @@
   export let showWidthToggle: boolean = false;
   export let showColumnToggle: boolean = false;
   export let showHidePaid: boolean = false;
-  export let showSyncMetadata: boolean = false;
   export let showViewToggle: boolean = false;
-  export let isSyncingMetadata: boolean = false;
   export let onRefresh: (() => void) | undefined = undefined;
-  export let onSyncMetadata: (() => void) | undefined = undefined;
   export let showFind: boolean = false;
   export let onFind: (() => void) | undefined = undefined;
 
@@ -65,18 +62,11 @@
     }
   }
 
-  function handleSyncMetadata() {
-    if (onSyncMetadata) {
-      onSyncMetadata();
-    }
-  }
-
   $: hasControls =
     showRefresh ||
     showWidthToggle ||
     showColumnToggle ||
     showHidePaid ||
-    showSyncMetadata ||
     showViewToggle ||
     showFind;
 
@@ -349,40 +339,6 @@
           </button>
         {/if}
 
-        {#if showSyncMetadata}
-          <!-- Sync metadata button -->
-          <button
-            class="control-btn"
-            class:syncing={isSyncingMetadata}
-            on:click={handleSyncMetadata}
-            disabled={isSyncingMetadata}
-            title="Sync metadata from source bills/incomes"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              class:spinning={isSyncingMetadata}
-            >
-              <path
-                d="M4 12a8 8 0 0 1 8-8V1l4 3-4 3V4a6 6 0 0 0-6 6H4z"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M20 12a8 8 0 0 1-8 8v3l-4-3 4-3v3a6 6 0 0 0 6-6h2z"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        {/if}
-
         {#if showRefresh}
           <!-- Refresh button -->
           <button class="control-btn" on:click={handleRefresh} title="Refresh data">
@@ -534,15 +490,6 @@
     color: var(--success);
   }
 
-  .control-btn.syncing {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-
-  .control-btn .spinning {
-    animation: spin 1s linear infinite;
-  }
-
   .column-number {
     font-size: var(--font-size-sm);
     font-weight: 600;
@@ -551,15 +498,6 @@
 
   .view-mode-btn {
     position: relative;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   /* Small windows: month on the left, controls on the right */

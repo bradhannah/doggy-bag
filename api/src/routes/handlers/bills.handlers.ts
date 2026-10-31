@@ -1,7 +1,8 @@
 // Bills API Handlers
 
 import { BillsService, BillsServiceImpl } from '../../services/bills-service';
-import { formatErrorForUser } from '../../utils/errors';
+import { formatErrorForUser, getErrorStatus } from '../../utils/errors';
+import { MonthsServiceImpl } from '../../services/months-service';
 
 const billsService: BillsService = new BillsServiceImpl();
 
@@ -163,6 +164,28 @@ export function createBillsHandlerDELETE() {
           status: 500,
         }
       );
+    }
+  };
+}
+
+/**
+ * POST /api/{kind}s/:id/add-to-month  body: { month }
+ * Puts a recurring item into an existing, unlocked month. A month that cannot take it
+ * answers { added: false, reason } rather than an error, so callers can stay quiet.
+ */
+export function createBillAddToMonthHandler() {
+  return async (request: Request) => {
+    try {
+      const id = new URL(request.url).pathname.match(/\/api\/bills\/([^/]+)\/add-to-month$/)?.[1];
+      const body = (await request.json().catch(() => ({}))) as { month?: string };
+      if (!id || typeof body.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(body.month)) {
+        return Response.json({ error: 'Choose a valid budget month' }, { status: 400 });
+      }
+      const result = await new MonthsServiceImpl().addSourceToMonth(body.month, 'bill', id);
+      return Response.json(result, { status: 200 });
+    } catch (error) {
+      console.error('[BillsHandler] add-to-month failed:', error);
+      return Response.json({ error: formatErrorForUser(error) }, { status: getErrorStatus(error) });
     }
   };
 }

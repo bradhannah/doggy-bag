@@ -16,7 +16,7 @@
   import { onMount } from 'svelte';
 
   export let editingItem: Bill | null = null;
-  export let onSave: () => void = () => {};
+  export let onSave: (created?: { kind: 'bill'; id: string }) => void = () => {};
   export let onCancel: () => void = () => {};
   $: categoryOptions = $categories.filter(
     (category) =>
@@ -253,11 +253,12 @@
       if (editingItem) {
         await updateBill(editingItem.id, billData);
         success(`Bill "${name}" updated`);
+        onSave();
       } else {
-        await createBill(billData);
+        const created = await createBill(billData);
         success(`Bill "${name}" added`);
+        onSave({ kind: 'bill', id: created.id });
       }
-      onSave();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save bill';
       showError(error);
