@@ -188,12 +188,15 @@ describe('Budget placement: money counts when it moves', () => {
   });
 });
 
-describe('Budget month: money still coming is carried past locked months', () => {
+describe('Budget month: money still coming sits in the newest open month', () => {
   const service = { service_date: '2026-09-02' };
-  const locked =
-    (...months: string[]) =>
-    (month: string) =>
-      months.includes(month);
+  const locked = (...months: string[]) => ({
+    isLocked: (month: string) => months.includes(month),
+  });
+  const ledger = (newest: string, ...lockedMonths: string[]) => ({
+    ...locked(...lockedMonths),
+    newest,
+  });
 
   test('a submitted plan in a locked month lands in the next unlocked month', () => {
     const pending = sub('pending', { date_submitted: '2026-09-03' });
@@ -218,6 +221,21 @@ describe('Budget month: money still coming is carried past locked months', () =>
     expect(getSubmissionBudgetMonth(service, sub('denied'), everything)).toBe('2026-09');
     expect(getSubmissionBudgetMonth(service, sub('draft'), everything)).toBe('2026-09');
     expect(getSubmissionBudgetMonth(service, sub('awaiting_previous'), everything)).toBe('2026-09');
+  });
+
+  test('a submitted plan is shown in the newest month, never earlier than its own', () => {
+    const pending = sub('pending', { date_submitted: '2026-09-03' });
+    expect(getSubmissionBudgetMonth(service, pending, ledger('2026-11'))).toBe('2026-11');
+    expect(getSubmissionBudgetMonth(service, pending, ledger('2026-08'))).toBe('2026-09');
+    // The newest month is locked and the next one does not exist yet: it goes there anyway
+    expect(getSubmissionBudgetMonth(service, pending, ledger('2026-11', '2026-11'))).toBe(
+      '2026-12'
+    );
+    const approved = sub('approved', { date_resolved: '2026-10-24' });
+    expect(getSubmissionBudgetMonth(service, approved, ledger('2026-11'))).toBe('2026-11');
+    expect(
+      getSubmissionBudgetMonth(service, sub('paid', { date_paid: '2026-10-28' }), ledger('2026-11'))
+    ).toBe('2026-10');
   });
 
   test('the estimate line moves only once something has been sent', () => {

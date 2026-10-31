@@ -20,7 +20,7 @@ import type {
 } from '../types';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
-import { loadLockedMonths } from '../utils/locked-months';
+import { loadMonthLedger } from '../utils/locked-months';
 
 // ============================================================================
 // Calendar Event Types
@@ -90,9 +90,9 @@ export class CalendarServiceImpl implements CalendarService {
     if (monthlyData.is_read_only && monthlyData.insurance_snapshot) {
       return monthlyData.insurance_snapshot;
     }
-    const isLocked = await loadLockedMonths(this.storage);
-    const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, isLocked);
-    return buildVirtualInsuranceEntries(claims, month, isLocked);
+    const ledger = await loadMonthLedger(this.storage);
+    const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, ledger);
+    return buildVirtualInsuranceEntries(claims, month, ledger);
   }
 
   private insuranceEvents(

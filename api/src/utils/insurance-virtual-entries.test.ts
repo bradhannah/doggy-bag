@@ -196,11 +196,10 @@ describe('buildVirtualInsuranceEntries', () => {
     expect(line.expected_amount).toBe(0);
   });
 
-  describe('money still on its way is carried past locked months', () => {
-    const locked =
-      (...months: string[]) =>
-      (month: string) =>
-        months.includes(month);
+  describe('money still on its way is carried into the newest open month', () => {
+    const locked = (...months: string[]) => ({
+      isLocked: (month: string) => months.includes(month),
+    });
     const submitted = () =>
       makeClaim({
         submissions: [
@@ -262,6 +261,22 @@ describe('buildVirtualInsuranceEntries', () => {
         .incomeInstances[0].occurrences;
       expect(line.plan_name).toBe('Canada Life AWS');
       expect(line.is_closed).toBe(true);
+    });
+
+    test('once a newer month exists, the submitted plan is shown there', () => {
+      const ledger = { ...locked(), newest: '2026-11' };
+      expect(
+        buildVirtualInsuranceEntries(
+          [submitted()],
+          '2026-09',
+          ledger
+        ).incomeInstances[0].occurrences.map((l) => l.plan_name)
+      ).toEqual(['Canada Life AWS']);
+      const [line] = buildVirtualInsuranceEntries([submitted()], '2026-11', ledger)
+        .incomeInstances[0].occurrences;
+      expect(line.plan_name).toBe('Empire Life');
+      expect(line.expected_amount).toBe(1160);
+      expect(line.expected_date).toBe('2026-11-01');
     });
 
     test('a pre-decision estimate follows the submitted claim into the next open month', () => {

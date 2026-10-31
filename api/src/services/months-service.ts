@@ -44,7 +44,7 @@ import {
 } from '../utils/occurrences';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
-import { loadLockedMonths, type IsMonthLocked } from '../utils/locked-months';
+import { loadMonthLedger, type MonthLedger } from '../utils/locked-months';
 import type { AddToMonthResult } from '../types/budget-workflow';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { ValidationError, ReadOnlyError, ConflictError } from '../utils/errors';
@@ -1507,11 +1507,11 @@ export class MonthsServiceImpl implements MonthsService {
       if (data.is_read_only) {
         // Freeze the insurance lines as they stand with this month locked: reimbursements
         // still on their way roll into the next open month rather than being frozen here.
-        const lockedBefore = await loadLockedMonths(this.storage);
-        const snapshot = await this.generateVirtualInsuranceEntries(
-          month,
-          (m) => m === month || lockedBefore(m)
-        );
+        const before = await loadMonthLedger(this.storage);
+        const snapshot = await this.generateVirtualInsuranceEntries(month, {
+          ...before,
+          isLocked: (m) => m === month || before.isLocked(m),
+        });
         data.insurance_snapshot = snapshot;
         data.bill_instances = [
           ...data.bill_instances.filter((instance) => !instance.is_virtual),
@@ -2441,15 +2441,15 @@ export class MonthsServiceImpl implements MonthsService {
    */
   private async generateVirtualInsuranceEntries(
     month: string,
-    isLocked?: IsMonthLocked
+    ledger?: MonthLedger
   ): Promise<{
     billInstances: BillInstance[];
     incomeInstances: IncomeInstance[];
   }> {
     try {
-      const locked = isLocked ?? (await loadLockedMonths(this.storage));
-      const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, locked);
-      return buildVirtualInsuranceEntries(claims, month, locked);
+      const months = ledger ?? (await loadMonthLedger(this.storage));
+      const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, months);
+      return buildVirtualInsuranceEntries(claims, month, months);
     } catch (error) {
       console.error('[MonthsService] Failed to generate virtual insurance entries:', error);
       return { billInstances: [], incomeInstances: [] };

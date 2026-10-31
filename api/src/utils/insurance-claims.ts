@@ -3,7 +3,7 @@
 // Pure functions only: no storage access.
 
 import type { ClaimStatus, ClaimSubmission, InsuranceClaim, SubmissionStatus } from '../types';
-import { noMonthsLocked, type IsMonthLocked } from './locked-months';
+import { emptyLedger, type MonthLedger } from './locked-months';
 
 type ClaimLike = Pick<InsuranceClaim, 'is_expected' | 'service_date' | 'total_amount'> & {
   submissions: ClaimSubmission[];
@@ -173,47 +173,50 @@ export function isStillComing(status: SubmissionStatus): boolean {
   return status === 'pending' || status === 'approved';
 }
 
-/** The first month at or after `month` that is not locked. */
-export function firstUnlockedMonth(month: string, isLocked: IsMonthLocked): string {
-  let candidate = month;
-  for (let i = 0; i < 240 && isLocked(candidate); i++) candidate = nextMonth(candidate);
+/**
+ * Where money still on its way is shown: the newest month (the one being worked on), never
+ * earlier than `month` itself, and never a locked month. Creating a new month or locking
+ * one is what carries it forward.
+ */
+export function carriedMonth(month: string, ledger: MonthLedger): string {
+  let candidate = ledger.newest && ledger.newest > month ? ledger.newest : month;
+  for (let i = 0; i < 240 && ledger.isLocked(candidate); i++) candidate = nextMonth(candidate);
   return candidate;
 }
 
 /**
  * The month a submission's Budget line sits in. Settled lines (paid, denied) and unsent
- * ones stay on their date. Money that is still coming is carried into the earliest
- * unlocked month at or after that date: locking a month is how it rolls forward.
+ * ones stay on their date. Money that is still coming is carried into the newest open month.
  */
 export function getSubmissionBudgetMonth(
   claim: Pick<InsuranceClaim, 'service_date'>,
   submission: ClaimSubmission,
-  isLocked: IsMonthLocked = noMonthsLocked
+  ledger: MonthLedger = emptyLedger
 ): string {
   const month = monthOf(getSubmissionBudgetDate(claim, submission));
-  return isStillComing(submission.status) ? firstUnlockedMonth(month, isLocked) : month;
+  return isStillComing(submission.status) ? carriedMonth(month, ledger) : month;
 }
 
 /**
  * Where a claim's estimate line sits while no plan has decided: the service month, carried
- * forward past locked months once something has been sent to an insurer.
+ * into the newest open month once something has been sent to an insurer.
  */
-export function getEstimateBudgetMonth(claim: ClaimLike, isLocked: IsMonthLocked): string {
+export function getEstimateBudgetMonth(claim: ClaimLike, ledger: MonthLedger): string {
   const month = monthOf(serviceDay(claim));
   const sent = claim.submissions.some((s) => s.status === 'pending');
-  return sent ? firstUnlockedMonth(month, isLocked) : month;
+  return sent ? carriedMonth(month, ledger) : month;
 }
 
 /** Months whose Budget shows something from this claim. */
 export function getClaimBudgetMonths(
   claim: ClaimLike,
-  isLocked: IsMonthLocked = noMonthsLocked
+  ledger: MonthLedger = emptyLedger
 ): Set<string> {
   const months = new Set<string>([monthOf(serviceDay(claim))]);
   if (!claim.is_expected) {
-    months.add(getEstimateBudgetMonth(claim, isLocked));
+    months.add(getEstimateBudgetMonth(claim, ledger));
     for (const submission of claim.submissions) {
-      months.add(getSubmissionBudgetMonth(claim, submission, isLocked));
+      months.add(getSubmissionBudgetMonth(claim, submission, ledger));
     }
   }
   return months;

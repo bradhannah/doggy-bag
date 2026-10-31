@@ -20,7 +20,7 @@ import {
   isDecided,
   recalculateDownstreamSubmissions,
 } from '../utils/insurance-claims';
-import { noMonthsLocked, type IsMonthLocked } from '../utils/locked-months';
+import { emptyLedger, type MonthLedger } from '../utils/locked-months';
 import type {
   InsuranceClaim,
   ClaimDocument,
@@ -154,7 +154,7 @@ export interface InsuranceClaimsService {
   // Expected Expenses (scheduled future insurance appointments)
   // Budget entries are virtual - injected by MonthsService, not stored
   getClaimsForMonth(month: string): Promise<InsuranceClaim[]>;
-  getClaimsWithBudgetActivity(month: string, isLocked?: IsMonthLocked): Promise<InsuranceClaim[]>;
+  getClaimsWithBudgetActivity(month: string, ledger?: MonthLedger): Promise<InsuranceClaim[]>;
   createExpectedExpense(data: {
     family_member_id: string;
     category_id: string;
@@ -1143,11 +1143,11 @@ export class InsuranceClaimsServiceImpl implements InsuranceClaimsService {
    */
   public async getClaimsWithBudgetActivity(
     month: string,
-    isLocked: IsMonthLocked = noMonthsLocked
+    ledger: MonthLedger = emptyLedger
   ): Promise<InsuranceClaim[]> {
     try {
       const claims = await this.getAllRaw();
-      return claims.filter((claim) => getClaimBudgetMonths(claim, isLocked).has(month));
+      return claims.filter((claim) => getClaimBudgetMonths(claim, ledger).has(month));
     } catch (error) {
       console.error('[InsuranceClaimsService] Failed to get claims for month:', error);
       return [];

@@ -4,10 +4,9 @@
 // - The clinic bill sits in the service month.
 // - Each plan's reimbursement sits in the month money moves (see getSubmissionBudgetDate):
 //   received → month paid, approved → month decided, everything else → service month.
-// - Money still on its way (submitted, or approved but unpaid) never sits in a locked month:
-//   it rolls into the earliest unlocked month, dated the 1st, showing the amount expected
-//   (claimed while submitted, approved amount once decided). Locking a month carries its
-//   open reimbursements forward.
+// - Money still on its way (submitted, or approved but unpaid) sits in the newest open month,
+//   dated the 1st when carried, showing the amount expected (claimed while submitted, approved
+//   amount once decided). Creating a new month or locking one carries it forward.
 // - Before any plan decides, a claim with an estimate shows one estimated line instead.
 
 import type { BillInstance, IncomeInstance, InsuranceClaim, Occurrence } from '../types';
@@ -20,7 +19,7 @@ import {
   isDecided,
   monthOf,
 } from './insurance-claims';
-import { noMonthsLocked, type IsMonthLocked } from './locked-months';
+import { emptyLedger, type MonthLedger } from './locked-months';
 
 /** "#{claim_number} {category} - {provider}"; expected claims have no number yet. */
 function claimLabel(claim: InsuranceClaim): string {
@@ -124,12 +123,12 @@ function dateIn(month: string, date: string): string {
 function submissionOccurrences(
   claim: InsuranceClaim,
   month: string,
-  isLocked: IsMonthLocked
+  ledger: MonthLedger
 ): Occurrence[] {
   const occurrences: Occurrence[] = [];
   claim.submissions.forEach((submission, index) => {
     if (hasNothingLeftToClaim(claim, index)) return;
-    if (getSubmissionBudgetMonth(claim, submission, isLocked) !== month) return;
+    if (getSubmissionBudgetMonth(claim, submission, ledger) !== month) return;
     const date = dateIn(month, getSubmissionBudgetDate(claim, submission));
 
     const hasMoney = submission.status === 'approved' || submission.status === 'paid';
@@ -171,7 +170,7 @@ function submissionOccurrences(
 export function buildVirtualInsuranceEntries(
   claims: InsuranceClaim[],
   month: string,
-  isLocked: IsMonthLocked = noMonthsLocked
+  ledger: MonthLedger = emptyLedger
 ): { billInstances: BillInstance[]; incomeInstances: IncomeInstance[] } {
   const billInstances: BillInstance[] = [];
   const incomeInstances: IncomeInstance[] = [];
@@ -215,7 +214,7 @@ export function buildVirtualInsuranceEntries(
     const estimate = claim.expected_reimbursement ?? 0;
     const occurrences =
       nothingDecided && estimate > 0
-        ? getEstimateBudgetMonth(claim, isLocked) === month
+        ? getEstimateBudgetMonth(claim, ledger) === month
           ? [
               estimateOccurrence(
                 claim,
@@ -225,7 +224,7 @@ export function buildVirtualInsuranceEntries(
               ),
             ]
           : []
-        : submissionOccurrences(claim, month, isLocked);
+        : submissionOccurrences(claim, month, ledger);
 
     if (occurrences.length > 0) {
       incomeInstances.push(incomeInstance(claim, month, occurrences));
