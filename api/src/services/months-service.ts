@@ -44,6 +44,7 @@ import {
 } from '../utils/occurrences';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
+import { loadLockedMonths, type IsMonthLocked } from '../utils/locked-months';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { ValidationError, ReadOnlyError, ConflictError } from '../utils/errors';
 import {
@@ -280,9 +281,14 @@ export class MonthsServiceImpl implements MonthsService {
 
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
     try {
-      const data = await this.storage.readJSON<MonthlyData>(`data/months/${month}.json`);
+      const stored = await this.storage.readJSON<MonthlyData>(`data/months/${month}.json`);
 
-      if (!data) return null;
+      if (!stored) return null;
+      // Work on a copy: the read is cached per request, and this method adds virtual
+      // insurance lines. Sharing the cached object would make a second call in the same
+      // request mistake those lines for persisted data and strip them from the first
+      // caller's result (and write the file back for nothing).
+      const data = structuredClone(stored);
 
       // Apply migration to instances if needed (002-detailed-monthly-view)
       let needsSave = false;
@@ -1550,14 +1556,22 @@ export class MonthsServiceImpl implements MonthsService {
       data.is_read_only = !data.is_read_only;
       data.updated_at = now;
       if (data.is_read_only) {
-        data.insurance_snapshot = {
-          billInstances: structuredClone(
-            data.bill_instances.filter((instance) => instance.is_virtual)
-          ),
-          incomeInstances: structuredClone(
-            data.income_instances.filter((instance) => instance.is_virtual)
-          ),
-        };
+        // Freeze the insurance lines as they stand with this month locked: reimbursements
+        // still on their way roll into the next open month rather than being frozen here.
+        const lockedBefore = await loadLockedMonths(this.storage);
+        const snapshot = await this.generateVirtualInsuranceEntries(
+          month,
+          (m) => m === month || lockedBefore(m)
+        );
+        data.insurance_snapshot = snapshot;
+        data.bill_instances = [
+          ...data.bill_instances.filter((instance) => !instance.is_virtual),
+          ...structuredClone(snapshot.billInstances),
+        ];
+        data.income_instances = [
+          ...data.income_instances.filter((instance) => !instance.is_virtual),
+          ...structuredClone(snapshot.incomeInstances),
+        ];
       } else {
         delete data.insurance_snapshot;
       }
@@ -2476,13 +2490,17 @@ export class MonthsServiceImpl implements MonthsService {
    * Virtual BillInstance and IncomeInstance entries for the month's insurance claims.
    * They are never persisted; see buildVirtualInsuranceEntries for what goes where.
    */
-  private async generateVirtualInsuranceEntries(month: string): Promise<{
+  private async generateVirtualInsuranceEntries(
+    month: string,
+    isLocked?: IsMonthLocked
+  ): Promise<{
     billInstances: BillInstance[];
     incomeInstances: IncomeInstance[];
   }> {
     try {
-      const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month);
-      return buildVirtualInsuranceEntries(claims, month);
+      const locked = isLocked ?? (await loadLockedMonths(this.storage));
+      const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, locked);
+      return buildVirtualInsuranceEntries(claims, month, locked);
     } catch (error) {
       console.error('[MonthsService] Failed to generate virtual insurance entries:', error);
       return { billInstances: [], incomeInstances: [] };

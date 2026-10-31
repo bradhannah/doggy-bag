@@ -23,6 +23,7 @@ import type {
 } from '../types';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
+import { loadLockedMonths } from '../utils/locked-months';
 
 // ============================================================================
 // Calendar Event Types
@@ -95,8 +96,9 @@ export class CalendarServiceImpl implements CalendarService {
     if (monthlyData.is_read_only && monthlyData.insurance_snapshot) {
       return monthlyData.insurance_snapshot;
     }
-    const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month);
-    return buildVirtualInsuranceEntries(claims, month);
+    const isLocked = await loadLockedMonths(this.storage);
+    const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, isLocked);
+    return buildVirtualInsuranceEntries(claims, month, isLocked);
   }
 
   private insuranceEvents(
@@ -110,8 +112,8 @@ export class CalendarServiceImpl implements CalendarService {
       occ: Occurrence,
       title: string
     ) => {
-      // A plan that hasn't decided, or denied, moves no money
-      if (occ.expected_amount === 0) return;
+      // A plan that hasn't decided, or denied, moves no money; a submitted one has no date yet
+      if (occ.expected_amount === 0 || occ.submission_status === 'pending') return;
       events.push({
         id: `${type}-${instance.id}-${occ.id}`,
         type,

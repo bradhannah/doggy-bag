@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Move to next month** on any open bill or income payment (row menu). The next month gets an ad-hoc copy named after the source month, e.g. "Rent (Oct)". An ad-hoc payment is removed from its month; a recurring one is recorded as skipped ($0) with a "Moved to …" note. This is the one change a locked month allows, so unfinished items can be carried out of a closed month.
+
+### Changed
+
+- Insurance reimbursements still on their way (submitted, or approved but unpaid) no longer sit in a locked month. They appear in the earliest unlocked month, dated the 1st, as expected income: a submitted claim shows the amount claimed instead of $0. Locking a month carries its open reimbursements forward; its frozen snapshot keeps only the bill and settled lines. Submitted claims no longer appear on the calendar until the insurer decides.
+
+### Fixed
+
+- Reading a month twice in one request (for example the Budget page's leftover calculation) stripped the insurance lines from the first result and rewrote the month file on every load.
+
 ## [0.13.1] - 2026-10-17
 
 ### Added

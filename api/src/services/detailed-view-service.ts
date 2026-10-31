@@ -376,10 +376,13 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
 
       // Determine if overdue (for income, this means "expected but not received").
-      // Insurance lines with no amount yet (plan hasn't decided) aren't money owed.
+      // Insurance lines aren't money owed until the plan has approved an amount: a
+      // submitted claim shows what was asked for, but has no due date.
       const awaitsMoney =
         !instance.is_insurance_reimbursement ||
-        (instance.occurrences || []).some((occ) => !occ.is_closed && occ.expected_amount > 0);
+        (instance.occurrences || []).some(
+          (occ) => !occ.is_closed && occ.expected_amount > 0 && occ.submission_status !== 'pending'
+        );
       const overdueStatus = awaitsMoney && isOverdue(dueDate || undefined, instance.is_closed);
 
       // Calculate total received from occurrence payments

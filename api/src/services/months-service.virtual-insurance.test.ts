@@ -5,14 +5,17 @@
 // - 'approved' submissions generate OPEN income occurrences in the month they were decided
 // - 'paid' submissions generate CLOSED income occurrences in the month the money arrived
 // - 'denied' submissions generate CLOSED $0 occurrences in the service month
-// - 'draft' and 'pending' submissions generate OPEN $0 occurrences in the service month
-// - Locked months keep the insurance snapshot taken when they were locked
+// - 'draft' submissions generate OPEN $0 occurrences in the service month
+// - 'pending' submissions show the amount claimed, in the earliest unlocked month
+// - Locked months keep the insurance snapshot taken when they were locked; money still
+//   on its way is not frozen there but carried into the next open month
 
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
 import { MonthsServiceImpl } from './months-service';
 import { InsuranceClaimsServiceImpl } from './insurance-claims-service';
 import { StorageServiceImpl } from './storage';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { runWithDataAccess } from './data-access';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type {
@@ -522,33 +525,79 @@ describe('MonthsService - Virtual Insurance Entries (Approved vs Paid)', () => {
       expect(income.occurrences[0].expected_date).toBe(`${july}-02`);
     });
 
-    test('a locked month keeps its snapshot until it is unlocked and locked again', async () => {
+    test('locking a month carries its awaited approval into the next open month', async () => {
       const { claimId, submissionId } = await createClaimWithSubmission({
         status: 'approved',
         amountReimbursed: 16000,
         dateResolved: `${testMonth}-20`,
       });
 
+      // Open June shows the approval on its decision date
+      const [awaited] = insuranceIncome(await monthsService.getMonthlyData(testMonth));
+      expect(awaited.occurrences[0].expected_date).toBe(`${testMonth}-20`);
+
       await monthsService.toggleReadOnly(testMonth); // lock June
+
+      // June's snapshot keeps the bill but not the money still owed
+      const lockedJune = await monthsService.getMonthlyData(testMonth);
+      expect(lockedJune!.bill_instances.filter((bi) => bi.is_insurance_expense)).toHaveLength(1);
+      expect(insuranceIncome(lockedJune)).toHaveLength(0);
+      expect(lockedJune!.insurance_snapshot!.incomeInstances).toHaveLength(0);
+
+      // July shows it as expected income on the 1st
+      const [carried] = insuranceIncome(await monthsService.getMonthlyData(july));
+      expect(carried.occurrences[0].is_closed).toBe(false);
+      expect(carried.occurrences[0].expected_amount).toBe(16000);
+      expect(carried.occurrences[0].expected_date).toBe(`${july}-01`);
+
+      // Paid in July: July shows the money received; June's snapshot is untouched
       await claimsService.updateSubmission(claimId, submissionId, {
         status: 'paid',
         date_paid: `${july}-05`,
       });
-
-      // June still shows the open approval it had when it was locked
-      const lockedJune = await monthsService.getMonthlyData(testMonth);
-      const [frozen] = insuranceIncome(lockedJune);
-      expect(frozen.occurrences[0].is_closed).toBe(false);
-      expect(frozen.occurrences[0].expected_amount).toBe(16000);
-
-      // July shows the money received
       const [received] = insuranceIncome(await monthsService.getMonthlyData(july));
       expect(received.occurrences[0].is_closed).toBe(true);
-
-      // Unlock and relock June: the payment has moved to July
-      await monthsService.toggleReadOnly(testMonth);
-      await monthsService.toggleReadOnly(testMonth);
+      expect(received.occurrences[0].expected_date).toBe(`${july}-05`);
       expect(insuranceIncome(await monthsService.getMonthlyData(testMonth))).toHaveLength(0);
+    });
+
+    test('two reads in one request each keep their virtual lines and nothing is written back', async () => {
+      await createClaimWithSubmission({ status: 'pending' });
+      const path = join(testDir, 'months', `${testMonth}.json`);
+      await monthsService.getMonthlyData(testMonth); // one-time read migrations run here
+      const before = await readFile(path, 'utf8');
+
+      await runWithDataAccess(async () => {
+        const first = await monthsService.getMonthlyData(testMonth);
+        const second = await monthsService.getMonthlyData(testMonth);
+        expect(insuranceIncome(first)).toHaveLength(1);
+        expect(insuranceIncome(second)).toHaveLength(1);
+        expect(first!.bill_instances.filter((bi) => bi.is_insurance_expense)).toHaveLength(1);
+      });
+
+      expect(await readFile(path, 'utf8')).toBe(before);
+    });
+
+    test('a submitted claim shows what was claimed and follows the open month', async () => {
+      await createClaimWithSubmission({ status: 'pending' });
+
+      const [open] = insuranceIncome(await monthsService.getMonthlyData(testMonth));
+      expect(open.occurrences[0].submission_status).toBe('pending');
+      expect(open.occurrences[0].expected_amount).toBe(20000);
+      expect(insuranceIncome(await monthsService.getMonthlyData(july))).toHaveLength(0);
+
+      await monthsService.toggleReadOnly(testMonth); // lock June
+
+      expect(insuranceIncome(await monthsService.getMonthlyData(testMonth))).toHaveLength(0);
+      const [carried] = insuranceIncome(await monthsService.getMonthlyData(july));
+      expect(carried.occurrences[0].submission_status).toBe('pending');
+      expect(carried.occurrences[0].expected_amount).toBe(20000);
+      expect(carried.occurrences[0].expected_date).toBe(`${july}-01`);
+
+      // Unlocking June brings it back to its service month
+      await monthsService.toggleReadOnly(testMonth);
+      expect(insuranceIncome(await monthsService.getMonthlyData(testMonth))).toHaveLength(1);
+      expect(insuranceIncome(await monthsService.getMonthlyData(july))).toHaveLength(0);
     });
   });
 });

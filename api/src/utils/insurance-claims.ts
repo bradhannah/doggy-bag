@@ -3,6 +3,7 @@
 // Pure functions only: no storage access.
 
 import type { ClaimStatus, ClaimSubmission, InsuranceClaim, SubmissionStatus } from '../types';
+import { noMonthsLocked, type IsMonthLocked } from './locked-months';
 
 type ClaimLike = Pick<InsuranceClaim, 'is_expected' | 'service_date' | 'total_amount'> & {
   submissions: ClaimSubmission[];
@@ -162,12 +163,57 @@ export function getSubmissionBudgetDate(
   return monthOf(date) < monthOf(service) ? service : date;
 }
 
+export function nextMonth(month: string): string {
+  const [year, m] = month.split('-').map(Number);
+  return m === 12 ? `${year + 1}-01` : `${year}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/** Money that is still on its way: sent and awaiting a decision, or approved and not yet paid. */
+export function isStillComing(status: SubmissionStatus): boolean {
+  return status === 'pending' || status === 'approved';
+}
+
+/** The first month at or after `month` that is not locked. */
+export function firstUnlockedMonth(month: string, isLocked: IsMonthLocked): string {
+  let candidate = month;
+  for (let i = 0; i < 240 && isLocked(candidate); i++) candidate = nextMonth(candidate);
+  return candidate;
+}
+
+/**
+ * The month a submission's Budget line sits in. Settled lines (paid, denied) and unsent
+ * ones stay on their date. Money that is still coming is carried into the earliest
+ * unlocked month at or after that date: locking a month is how it rolls forward.
+ */
+export function getSubmissionBudgetMonth(
+  claim: Pick<InsuranceClaim, 'service_date'>,
+  submission: ClaimSubmission,
+  isLocked: IsMonthLocked = noMonthsLocked
+): string {
+  const month = monthOf(getSubmissionBudgetDate(claim, submission));
+  return isStillComing(submission.status) ? firstUnlockedMonth(month, isLocked) : month;
+}
+
+/**
+ * Where a claim's estimate line sits while no plan has decided: the service month, carried
+ * forward past locked months once something has been sent to an insurer.
+ */
+export function getEstimateBudgetMonth(claim: ClaimLike, isLocked: IsMonthLocked): string {
+  const month = monthOf(serviceDay(claim));
+  const sent = claim.submissions.some((s) => s.status === 'pending');
+  return sent ? firstUnlockedMonth(month, isLocked) : month;
+}
+
 /** Months whose Budget shows something from this claim. */
-export function getClaimBudgetMonths(claim: ClaimLike): Set<string> {
+export function getClaimBudgetMonths(
+  claim: ClaimLike,
+  isLocked: IsMonthLocked = noMonthsLocked
+): Set<string> {
   const months = new Set<string>([monthOf(serviceDay(claim))]);
   if (!claim.is_expected) {
+    months.add(getEstimateBudgetMonth(claim, isLocked));
     for (const submission of claim.submissions) {
-      months.add(monthOf(getSubmissionBudgetDate(claim, submission)));
+      months.add(getSubmissionBudgetMonth(claim, submission, isLocked));
     }
   }
   return months;

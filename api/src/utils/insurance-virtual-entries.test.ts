@@ -195,4 +195,89 @@ describe('buildVirtualInsuranceEntries', () => {
     expect(line.amount_missing).toBe(true);
     expect(line.expected_amount).toBe(0);
   });
+
+  describe('money still on its way is carried past locked months', () => {
+    const locked =
+      (...months: string[]) =>
+      (month: string) =>
+        months.includes(month);
+    const submitted = () =>
+      makeClaim({
+        submissions: [
+          submission('cl', 'Canada Life AWS', {
+            status: 'paid',
+            amount_claimed: 13560,
+            amount_reimbursed: 12400,
+            date_paid: '2026-09-20',
+          }),
+          submission('em', 'Empire Life', {
+            status: 'pending',
+            amount_claimed: 1160,
+            date_submitted: '2026-09-25',
+          }),
+        ],
+      });
+
+    test('a submitted plan shows the amount claimed in its service month', () => {
+      const lines = buildVirtualInsuranceEntries([submitted()], '2026-09').incomeInstances[0]
+        .occurrences;
+      const empire = lines.find((l) => l.plan_name === 'Empire Life')!;
+      expect(empire.submission_status).toBe('pending');
+      expect(empire.expected_amount).toBe(1160);
+      expect(empire.expected_date).toBe('2026-09-02');
+      expect(empire.is_closed).toBe(false);
+    });
+
+    test('once the service month is locked, the submitted plan lands in the next open month on the 1st', () => {
+      const isLocked = locked('2026-09');
+      const september = buildVirtualInsuranceEntries([submitted()], '2026-09', isLocked);
+      expect(september.incomeInstances[0].occurrences.map((l) => l.plan_name)).toEqual([
+        'Canada Life AWS',
+      ]);
+
+      const october = buildVirtualInsuranceEntries([submitted()], '2026-10', isLocked);
+      expect(october.billInstances).toHaveLength(0);
+      const [line] = october.incomeInstances[0].occurrences;
+      expect(line.plan_name).toBe('Empire Life');
+      expect(line.expected_amount).toBe(1160);
+      expect(line.expected_date).toBe('2026-10-01');
+    });
+
+    test('an approval awaiting payment rolls forward too, keeping its approved amount', () => {
+      const isLocked = locked('2026-10');
+      const november = buildVirtualInsuranceEntries([claim23()], '2026-11', isLocked);
+      const [line] = november.incomeInstances[0].occurrences;
+      expect(line.plan_name).toBe('Canada Life AWS');
+      expect(line.submission_status).toBe('approved');
+      expect(line.expected_amount).toBe(12400);
+      expect(line.expected_date).toBe('2026-11-01');
+      expect(
+        buildVirtualInsuranceEntries([claim23()], '2026-10', isLocked).incomeInstances
+      ).toHaveLength(0);
+    });
+
+    test('received money stays in the month it arrived even when that month is locked', () => {
+      const isLocked = locked('2026-09');
+      const [line] = buildVirtualInsuranceEntries([submitted()], '2026-09', isLocked)
+        .incomeInstances[0].occurrences;
+      expect(line.plan_name).toBe('Canada Life AWS');
+      expect(line.is_closed).toBe(true);
+    });
+
+    test('a pre-decision estimate follows the submitted claim into the next open month', () => {
+      const claim = makeClaim({
+        expected_reimbursement: 12400,
+        submissions: [submission('cl', 'Canada Life AWS', { status: 'pending' })],
+      });
+      const isLocked = locked('2026-09');
+      expect(
+        buildVirtualInsuranceEntries([claim], '2026-09', isLocked).incomeInstances
+      ).toHaveLength(0);
+      const [line] = buildVirtualInsuranceEntries([claim], '2026-10', isLocked).incomeInstances[0]
+        .occurrences;
+      expect(line.is_insurance_estimate).toBe(true);
+      expect(line.expected_amount).toBe(12400);
+      expect(line.expected_date).toBe('2026-10-01');
+    });
+  });
 });

@@ -209,11 +209,13 @@ export function planSnapshotRefresh(
   months: MonthlyData[],
   claims: InsuranceClaim[]
 ): SnapshotRefresh[] {
+  const locked = new Set(months.filter((data) => data.is_read_only).map((data) => data.month));
+  const isLocked = (month: string) => locked.has(month);
   return months
     .filter((data) => data.is_read_only && data.insurance_snapshot)
     .map((data) => {
-      const relevant = claims.filter((c) => getClaimBudgetMonths(c).has(data.month));
-      const rebuilt = buildVirtualInsuranceEntries(relevant, data.month);
+      const relevant = claims.filter((c) => getClaimBudgetMonths(c, isLocked).has(data.month));
+      const rebuilt = buildVirtualInsuranceEntries(relevant, data.month, isLocked);
       const before = data.insurance_snapshot!;
       return {
         month: data.month,
