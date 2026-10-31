@@ -54,7 +54,7 @@ describe('Occurrence Utilities', () => {
       for (const billing_period of ['monthly', 'weekly', 'bi_weekly'] as const) {
         expect(
           generateBillOccurrences(
-            { ...source, billing_period, goal_id: 'goal', start_date: '2026-11-01' },
+            { ...source, billing_period, start_date: '2026-11-01', effective_from: '2026-11-01' },
             '2026-10'
           )
         ).toEqual([]);

@@ -85,15 +85,6 @@ describe('CalendarEventItem Component', () => {
       expect(eventItem?.classList.contains('income')).toBe(true);
     });
 
-    it('applies goal class for goal type', () => {
-      const { container } = render(CalendarEventItem, {
-        props: { event: { ...defaultEvent, type: 'goal' } },
-      });
-
-      const eventItem = container.querySelector('.calendar-event');
-      expect(eventItem?.classList.contains('goal')).toBe(true);
-    });
-
     it('applies todo class for todo type', () => {
       const { container } = render(CalendarEventItem, {
         props: { event: { ...defaultEvent, type: 'todo' } },
@@ -224,17 +215,6 @@ describe('CalendarEventItem Component', () => {
       await fireEvent.click(button!);
 
       expect(mockGoto).toHaveBeenCalledWith('/month/2026-03');
-    });
-
-    it('navigates to savings page when goal clicked', async () => {
-      const { container } = render(CalendarEventItem, {
-        props: { event: { ...defaultEvent, type: 'goal' } },
-      });
-
-      const button = container.querySelector('button.calendar-event');
-      await fireEvent.click(button!);
-
-      expect(mockGoto).toHaveBeenCalledWith('/savings');
     });
 
     it('navigates to todos page when todo clicked', async () => {

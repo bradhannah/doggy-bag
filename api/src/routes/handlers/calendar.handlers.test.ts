@@ -6,7 +6,7 @@ import { StorageServiceImpl } from '../../services/storage';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { MonthlyData, Bill, Income, SavingsGoal } from '../../types';
+import type { MonthlyData, Bill, Income } from '../../types';
 import { createCalendarHandlerGET } from './calendar.handlers';
 
 describe('CalendarHandlers', () => {
@@ -44,9 +44,6 @@ describe('CalendarHandlers', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     },
   ];
-
-  // Sample savings goals for testing
-  const sampleGoals: SavingsGoal[] = [];
 
   // Sample monthly data
   const sampleMonthlyData: MonthlyData = {
@@ -144,10 +141,6 @@ describe('CalendarHandlers', () => {
       JSON.stringify(sampleIncomes, null, 2)
     );
     await writeFile(
-      join(testDir, 'entities', 'savings-goals.json'),
-      JSON.stringify(sampleGoals, null, 2)
-    );
-    await writeFile(
       join(testDir, 'months', '2026-02.json'),
       JSON.stringify(sampleMonthlyData, null, 2)
     );
@@ -204,7 +197,6 @@ describe('CalendarHandlers', () => {
 
       expect(data.summary.bills).toBe(1);
       expect(data.summary.incomes).toBe(1);
-      expect(data.summary.goals).toBe(0);
       expect(data.summary.todos).toBe(1);
       expect(data.summary.total).toBe(3);
     });

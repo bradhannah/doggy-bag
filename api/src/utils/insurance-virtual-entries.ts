@@ -4,16 +4,22 @@
 // - The clinic bill sits in the service month.
 // - Each plan's reimbursement sits in the month money moves (see getSubmissionBudgetDate):
 //   received → month paid, approved → month decided, everything else → service month.
+// - Money still on its way (submitted, or approved but unpaid) sits in the newest open month,
+//   dated the 1st when carried, showing the amount expected (claimed while submitted, approved
+//   amount once decided). Creating a new month or locking one carries it forward.
 // - Before any plan decides, a claim with an estimate shows one estimated line instead.
 
 import type { BillInstance, IncomeInstance, InsuranceClaim, Occurrence } from '../types';
 import {
   blockingPlanName,
+  getEstimateBudgetMonth,
   getSubmissionBudgetDate,
+  getSubmissionBudgetMonth,
   hasNothingLeftToClaim,
   isDecided,
   monthOf,
 } from './insurance-claims';
+import { emptyLedger, type MonthLedger } from './locked-months';
 
 /** "#{claim_number} {category} - {provider}"; expected claims have no number yet. */
 function claimLabel(claim: InsuranceClaim): string {
@@ -88,11 +94,16 @@ function incomeInstance(
   };
 }
 
-function estimateOccurrence(claim: InsuranceClaim, id: string, amount: number): Occurrence {
+function estimateOccurrence(
+  claim: InsuranceClaim,
+  id: string,
+  amount: number,
+  date: string = claim.service_date
+): Occurrence {
   return {
     id,
     sequence: 1,
-    expected_date: claim.service_date,
+    expected_date: date,
     expected_amount: amount,
     is_closed: false,
     is_adhoc: false,
@@ -103,21 +114,36 @@ function estimateOccurrence(claim: InsuranceClaim, id: string, amount: number): 
   };
 }
 
+/** The date a line carried into a later month sits on: the 1st, so it never drifts. */
+function dateIn(month: string, date: string): string {
+  return monthOf(date) === month ? date : `${month}-01`;
+}
+
 /** One reimbursement line per plan whose money lands in `month`. */
-function submissionOccurrences(claim: InsuranceClaim, month: string): Occurrence[] {
+function submissionOccurrences(
+  claim: InsuranceClaim,
+  month: string,
+  ledger: MonthLedger
+): Occurrence[] {
   const occurrences: Occurrence[] = [];
   claim.submissions.forEach((submission, index) => {
     if (hasNothingLeftToClaim(claim, index)) return;
-    const date = getSubmissionBudgetDate(claim, submission);
-    if (monthOf(date) !== month) return;
+    if (getSubmissionBudgetMonth(claim, submission, ledger) !== month) return;
+    const date = dateIn(month, getSubmissionBudgetDate(claim, submission));
 
     const hasMoney = submission.status === 'approved' || submission.status === 'paid';
     const isClosed = submission.status === 'paid' || submission.status === 'denied';
+    const expectedAmount =
+      submission.status === 'pending'
+        ? submission.amount_claimed
+        : hasMoney
+          ? (submission.amount_reimbursed ?? 0)
+          : 0;
     occurrences.push({
       id: `virtual-occ-income-${claim.id}-${submission.id}`,
       sequence: occurrences.length + 1,
       expected_date: date,
-      expected_amount: hasMoney ? (submission.amount_reimbursed ?? 0) : 0,
+      expected_amount: expectedAmount,
       is_closed: isClosed,
       closed_date:
         submission.status === 'paid'
@@ -143,7 +169,8 @@ function submissionOccurrences(claim: InsuranceClaim, month: string): Occurrence
 
 export function buildVirtualInsuranceEntries(
   claims: InsuranceClaim[],
-  month: string
+  month: string,
+  ledger: MonthLedger = emptyLedger
 ): { billInstances: BillInstance[]; incomeInstances: IncomeInstance[] } {
   const billInstances: BillInstance[] = [];
   const incomeInstances: IncomeInstance[] = [];
@@ -187,10 +214,17 @@ export function buildVirtualInsuranceEntries(
     const estimate = claim.expected_reimbursement ?? 0;
     const occurrences =
       nothingDecided && estimate > 0
-        ? inServiceMonth
-          ? [estimateOccurrence(claim, `virtual-occ-income-expected-${claim.id}`, estimate)]
+        ? getEstimateBudgetMonth(claim, ledger) === month
+          ? [
+              estimateOccurrence(
+                claim,
+                `virtual-occ-income-expected-${claim.id}`,
+                estimate,
+                dateIn(month, claim.service_date)
+              ),
+            ]
           : []
-        : submissionOccurrences(claim, month);
+        : submissionOccurrences(claim, month, ledger);
 
     if (occurrences.length > 0) {
       incomeInstances.push(incomeInstance(claim, month, occurrences));

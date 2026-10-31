@@ -21,6 +21,13 @@ import type {
 } from '../types';
 import { getTodayLocalDateString, todayOrFirstOfMonth } from '../utils/due-date';
 import { excludeBudgetInstance } from '../utils/savings';
+import {
+  areAllOccurrencesClosed,
+  resequenceOccurrences,
+  sumOccurrenceExpectedAmounts,
+} from '../utils/occurrences';
+import { formatMonthString } from '../utils/formatters';
+import { NotFoundError, ReadOnlyError, ValidationError } from '../utils/errors';
 
 // Request types
 export interface CreateAdhocBillRequest {
@@ -37,15 +44,6 @@ export interface CreateAdhocIncomeRequest {
   category_id?: string;
   payment_source_id?: string;
   date?: DateString;
-}
-
-export interface CreateGoalContributionRequest {
-  goal_id: string;
-  goal_name: string;
-  amount: number;
-  category_id: string;
-  payment_source_id: string;
-  date: DateString; // Today or earlier within current month
 }
 
 export interface UpdateAdhocRequest {
@@ -70,6 +68,11 @@ export interface CopyToMonthRequest {
   action: 'copy' | 'move';
 }
 
+export interface MoveOccurrenceResult<T> {
+  instance: T; // the new ad-hoc instance in the target month
+  target_month: string;
+}
+
 export interface AdhocService {
   // Bills
   createAdhocBill(month: string, data: CreateAdhocBillRequest): Promise<BillInstance>;
@@ -90,9 +93,6 @@ export interface AdhocService {
     data: CopyToMonthRequest
   ): Promise<BillInstance>;
 
-  // Goal Contributions (one-time savings payments)
-  createGoalContribution(month: string, data: CreateGoalContributionRequest): Promise<BillInstance>;
-
   // Incomes
   createAdhocIncome(month: string, data: CreateAdhocIncomeRequest): Promise<IncomeInstance>;
   updateAdhocIncome(
@@ -111,6 +111,20 @@ export interface AdhocService {
     instanceId: string,
     data: CopyToMonthRequest
   ): Promise<IncomeInstance>;
+
+  // Carry an unfinished payment forward (works from a locked month)
+  moveBillOccurrenceToMonth(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    targetMonth: string
+  ): Promise<MoveOccurrenceResult<BillInstance>>;
+  moveIncomeOccurrenceToMonth(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    targetMonth: string
+  ): Promise<MoveOccurrenceResult<IncomeInstance>>;
 }
 
 // Default ad-hoc category IDs (will be created if they don't exist)
@@ -360,7 +374,6 @@ export class AdhocServiceImpl implements AdhocService {
       day_of_month?: number;
       start_date?: string;
       savings_account_id?: string;
-      goal_id?: string;
     } = {
       name: data.name,
       amount: data.amount,
@@ -368,7 +381,6 @@ export class AdhocServiceImpl implements AdhocService {
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
     };
 
     // Add day_of_month for monthly billing (required by validation)
@@ -387,7 +399,6 @@ export class AdhocServiceImpl implements AdhocService {
       ...instance,
       bill_id: newBill.id,
       source_snapshot: structuredClone(newBill),
-      legacy_savings_account_id: undefined,
       // Keep is_adhoc: true as historical record
       updated_at: now,
     };
@@ -399,82 +410,6 @@ export class AdhocServiceImpl implements AdhocService {
       `[AdhocService] Converted ad-hoc bill "${instance.name}" to regular bill "${newBill.name}"`
     );
     return { bill: newBill, billInstance: updatedInstance };
-  }
-
-  // ========================================================================
-  // Goal Contributions (one-time savings payments)
-  // ========================================================================
-
-  public async createGoalContribution(
-    month: string,
-    data: CreateGoalContributionRequest
-  ): Promise<BillInstance> {
-    // Validate
-    if (!data.goal_id) {
-      throw new Error('Goal ID is required');
-    }
-    if (!data.goal_name) {
-      throw new Error('Goal name is required');
-    }
-    if (!data.amount || data.amount <= 0) {
-      throw new Error('Amount must be positive');
-    }
-    if (!data.category_id) {
-      throw new Error('Category ID is required');
-    }
-    if (!data.payment_source_id) {
-      throw new Error('Payment source ID is required');
-    }
-    if (!data.date) {
-      throw new Error('Date is required');
-    }
-
-    // Validate date is not in the future and is within the specified month
-    const today = getTodayLocalDateString();
-    if (data.date > today) {
-      throw new Error('Payment date cannot be in the future');
-    }
-    const dateMonth = data.date.substring(0, 7);
-    if (dateMonth !== month) {
-      throw new Error('Payment date must be within the specified month');
-    }
-
-    const monthData = await this.ensureMonthData(month);
-    const now = new Date().toISOString();
-
-    // In occurrence-only model, a goal contribution is a closed occurrence
-    // (closing = payment, so we create a closed occurrence with the contribution amount)
-    const occurrence = this.createBaseOccurrence(data.amount, data.date, true);
-    // Set payment source on the occurrence for tracking
-    occurrence.payment_source_id = data.payment_source_id;
-
-    const newInstance: BillInstance = {
-      id: crypto.randomUUID(),
-      bill_id: null,
-      month,
-      billing_period: 'monthly',
-      expected_amount: data.amount,
-      occurrences: [occurrence],
-      is_default: false,
-      is_closed: true,
-      is_adhoc: true,
-      goal_id: data.goal_id,
-      savings_account_id: data.payment_source_id,
-      name: `Payment: ${data.goal_name}`,
-      category_id: data.category_id,
-      payment_source_id: data.payment_source_id,
-      closed_date: data.date,
-      created_at: now,
-      updated_at: now,
-    };
-
-    monthData.bill_instances.push(newInstance);
-    await this.monthsService.saveMonthlyData(month, monthData);
-
-    console.log(
-      `[AdhocService] Created goal contribution for "${data.goal_name}" ($${data.amount / 100}) in ${month}`
-    );
-    return newInstance;
   }
 
   // ========================================================================
@@ -627,7 +562,6 @@ export class AdhocServiceImpl implements AdhocService {
       day_of_month?: number;
       start_date?: string;
       savings_account_id?: string;
-      goal_id?: string;
     } = {
       name: data.name,
       amount: data.amount,
@@ -635,7 +569,6 @@ export class AdhocServiceImpl implements AdhocService {
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
     };
 
     // Add day_of_month for monthly billing (required by validation)
@@ -654,7 +587,6 @@ export class AdhocServiceImpl implements AdhocService {
       ...instance,
       income_id: newIncome.id,
       source_snapshot: structuredClone(newIncome),
-      legacy_savings_account_id: undefined,
       // Keep is_adhoc: true as historical record
       updated_at: now,
     };
@@ -738,7 +670,6 @@ export class AdhocServiceImpl implements AdhocService {
       is_adhoc: true,
       name: instance.name,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
       category_id: instance.category_id,
       payment_source_id: instance.payment_source_id,
       created_at: now,
@@ -815,7 +746,6 @@ export class AdhocServiceImpl implements AdhocService {
       is_adhoc: true,
       name: instance.name,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
       category_id: instance.category_id,
       payment_source_id: instance.payment_source_id,
       created_at: now,
@@ -835,5 +765,224 @@ export class AdhocServiceImpl implements AdhocService {
       `[AdhocService] ${actionLabel} ad-hoc income "${instance.name}" from ${month} to ${data.target_month}`
     );
     return newInstance;
+  }
+  // ========================================================================
+  // Move a single open occurrence to another month
+  // ========================================================================
+
+  /**
+   * Carry one unpaid/unreceived payment forward to another month.
+   *
+   * The target month gets a new ad-hoc item holding just that payment, named after the
+   * source month ("Rent (Oct)") so it is distinguishable from the regular entry.
+   *
+   * The source is then settled so nothing re-adds it:
+   * - an ad-hoc payment is removed (and its item, if that was the last payment);
+   * - a recurring payment is closed at $0 ("Skipped") with a note saying where it went.
+   *
+   * This is the one write allowed on a locked month: moving unfinished business out of a
+   * closed month is part of closing it. Two files are written (target first), not atomically,
+   * matching the existing copy/move behaviour.
+   */
+  public async moveBillOccurrenceToMonth(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    targetMonth: string
+  ): Promise<MoveOccurrenceResult<BillInstance>> {
+    const sourceData = await this.loadSourceMonth(month, targetMonth);
+    const instanceIndex = sourceData.bill_instances.findIndex((bi) => bi.id === instanceId);
+    const instance = sourceData.bill_instances[instanceIndex];
+    const occurrence = this.findMovableOccurrence(instance, occurrenceId, instanceId);
+    const now = new Date().toISOString();
+
+    const targetData = await this.loadTargetMonth(targetMonth);
+    const newInstance: BillInstance = {
+      id: crypto.randomUUID(),
+      bill_id: null,
+      month: targetMonth,
+      billing_period: instance.billing_period,
+      expected_amount: occurrence.expected_amount,
+      occurrences: [this.movedOccurrence(occurrence, targetMonth, now)],
+      is_default: false,
+      is_closed: false,
+      is_adhoc: true,
+      name: this.movedName(instance, month),
+      category_id: instance.category_id ?? instance.source_snapshot?.category_id,
+      payment_source_id: instance.payment_source_id ?? instance.source_snapshot?.payment_source_id,
+      savings_account_id: instance.savings_account_id,
+      metadata: instance.metadata,
+      created_at: now,
+      updated_at: now,
+    };
+    targetData.bill_instances.push(newInstance);
+    await this.monthsService.saveMonthlyData(targetMonth, targetData);
+
+    this.settleSourceOccurrence(
+      sourceData.bill_instances,
+      instanceIndex,
+      occurrence,
+      targetMonth,
+      now
+    );
+    sourceData.updated_at = now;
+    await this.monthsService.saveMonthlyData(month, sourceData, true);
+
+    console.log(
+      `[AdhocService] Moved bill payment "${newInstance.name}" from ${month} to ${targetMonth}`
+    );
+    return { instance: newInstance, target_month: targetMonth };
+  }
+
+  public async moveIncomeOccurrenceToMonth(
+    month: string,
+    instanceId: string,
+    occurrenceId: string,
+    targetMonth: string
+  ): Promise<MoveOccurrenceResult<IncomeInstance>> {
+    const sourceData = await this.loadSourceMonth(month, targetMonth);
+    const instanceIndex = sourceData.income_instances.findIndex((ii) => ii.id === instanceId);
+    const instance = sourceData.income_instances[instanceIndex];
+    const occurrence = this.findMovableOccurrence(instance, occurrenceId, instanceId);
+    const now = new Date().toISOString();
+
+    const targetData = await this.loadTargetMonth(targetMonth);
+    const newInstance: IncomeInstance = {
+      id: crypto.randomUUID(),
+      income_id: null,
+      month: targetMonth,
+      billing_period: instance.billing_period,
+      expected_amount: occurrence.expected_amount,
+      occurrences: [this.movedOccurrence(occurrence, targetMonth, now)],
+      is_default: false,
+      is_closed: false,
+      is_adhoc: true,
+      name: this.movedName(instance, month),
+      category_id: instance.category_id ?? instance.source_snapshot?.category_id,
+      payment_source_id: instance.payment_source_id ?? instance.source_snapshot?.payment_source_id,
+      savings_account_id: instance.savings_account_id,
+      metadata: instance.metadata,
+      created_at: now,
+      updated_at: now,
+    };
+    targetData.income_instances.push(newInstance);
+    await this.monthsService.saveMonthlyData(targetMonth, targetData);
+
+    this.settleSourceOccurrence(
+      sourceData.income_instances,
+      instanceIndex,
+      occurrence,
+      targetMonth,
+      now
+    );
+    sourceData.updated_at = now;
+    await this.monthsService.saveMonthlyData(month, sourceData, true);
+
+    console.log(
+      `[AdhocService] Moved income payment "${newInstance.name}" from ${month} to ${targetMonth}`
+    );
+    return { instance: newInstance, target_month: targetMonth };
+  }
+
+  private async loadSourceMonth(month: string, targetMonth: string): Promise<MonthlyData> {
+    if (!/^\d{4}-\d{2}$/.test(targetMonth)) {
+      throw new ValidationError('target_month must be YYYY-MM');
+    }
+    if (targetMonth === month) {
+      throw new ValidationError('Target month must be different from source month');
+    }
+    const data = await this.monthsService.getMonthlyData(month);
+    if (!data) throw new NotFoundError(`Month ${month} not found`);
+    return data;
+  }
+
+  private async loadTargetMonth(targetMonth: string): Promise<MonthlyData> {
+    const data = await this.ensureMonthData(targetMonth);
+    if (data.is_read_only) throw new ReadOnlyError(targetMonth);
+    return data;
+  }
+
+  private findMovableOccurrence(
+    instance: BillInstance | IncomeInstance | undefined,
+    occurrenceId: string,
+    instanceId: string
+  ): Occurrence {
+    if (!instance) throw new NotFoundError(`Instance ${instanceId} not found`);
+    if (instance.is_virtual) {
+      throw new ValidationError('Insurance lines follow their claim and cannot be moved');
+    }
+    if ((instance as BillInstance).is_payoff_bill) {
+      throw new ValidationError('Credit card payoff entries cannot be moved');
+    }
+    const occurrence = instance.occurrences.find((o) => o.id === occurrenceId);
+    if (!occurrence) throw new NotFoundError(`Occurrence ${occurrenceId} not found`);
+    if (occurrence.is_closed) {
+      throw new ValidationError('Only an open payment can be moved');
+    }
+    return occurrence;
+  }
+
+  private movedOccurrence(occurrence: Occurrence, targetMonth: string, now: string): Occurrence {
+    return {
+      id: crypto.randomUUID(),
+      sequence: 1,
+      expected_date: this.shiftDateToMonth(occurrence.expected_date, targetMonth),
+      expected_amount: occurrence.expected_amount,
+      is_closed: false,
+      is_adhoc: true,
+      notes: occurrence.notes,
+      payment_source_id: occurrence.payment_source_id,
+      created_at: now,
+      updated_at: now,
+    };
+  }
+
+  /** "TD Travel (Oct)" — the regular entry keeps its plain name in the target month. */
+  private movedName(instance: BillInstance | IncomeInstance, sourceMonth: string): string {
+    const base = instance.name ?? instance.source_snapshot?.name ?? 'Moved item';
+    const [year, m] = sourceMonth.split('-').map(Number);
+    const short = new Date(year, m - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+    return `${base} (${short})`;
+  }
+
+  /**
+   * Settle the moved payment in its source month. Ad-hoc payments are removed (mirroring
+   * occurrence deletion); recurring ones become a $0 "Skipped" payment with a note, so the
+   * month's history and completion counts stay honest and sync never re-adds the item.
+   */
+  private settleSourceOccurrence<T extends BillInstance | IncomeInstance>(
+    instances: T[],
+    instanceIndex: number,
+    occurrence: Occurrence,
+    targetMonth: string,
+    now: string
+  ): void {
+    const instance = instances[instanceIndex];
+    const occIndex = instance.occurrences.findIndex((o) => o.id === occurrence.id);
+    const movedNote = `Moved to ${formatMonthString(targetMonth)}`;
+
+    if (instance.is_adhoc || occurrence.is_adhoc) {
+      instance.occurrences.splice(occIndex, 1);
+      if (instance.occurrences.length === 0) {
+        // Mirror removeBillOccurrence: an empty ad-hoc item would be backfilled with a $0 placeholder.
+        instances.splice(instanceIndex, 1);
+        return;
+      }
+      instance.occurrences = resequenceOccurrences(instance.occurrences);
+    } else {
+      instance.occurrences[occIndex] = {
+        ...occurrence,
+        expected_amount: 0,
+        is_closed: true,
+        closed_date: getTodayLocalDateString(),
+        notes: occurrence.notes ? `${movedNote}. ${occurrence.notes}` : movedNote,
+        updated_at: now,
+      };
+      instance.is_default = false;
+    }
+
+    instance.expected_amount = sumOccurrenceExpectedAmounts(instance.occurrences);
+    instance.is_closed = areAllOccurrencesClosed(instance.occurrences);
+    instance.updated_at = now;
   }
 }

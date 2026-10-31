@@ -1,12 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { verifyGoalLifecycle } from './goal-lifecycle';
-import { verifyRecurringReview } from './recurring-review';
 
-// These flows share the disposable API's account list and must not add required
-// balances while another flow is asserting its available-budget preview.
-test.describe.configure({ mode: 'serial' });
-
-test('a savings plan added after budget creation is reviewed, recorded, and reflected in Savings', async ({
+test('a savings plan added after budget creation lands in that month and is reflected in Savings', async ({
   page,
   request,
 }) => {
@@ -38,16 +32,9 @@ test('a savings plan added after budget creation is reviewed, recorded, and refl
   await planner.getByLabel('From spending account').selectOption(checking.id);
   await planner.getByRole('spinbutton', { name: 'Amount ($)' }).fill('200.00');
   await planner.getByRole('button', { name: 'Save recurring plan' }).click();
+  await expect(planner).toBeHidden();
 
-  const review = page.getByRole('dialog', { name: 'Review budget updates' });
-  const addition = review.getByRole('checkbox', {
-    name: 'Add Savings: Workflow Emergency Fund',
-    exact: true,
-  });
-  await expect(addition).toBeChecked();
-  await expect(review.getByText('$800.00', { exact: true })).toBeVisible();
-  await review.getByRole('button', { name: 'Apply selected updates' }).click();
-  await expect(review).toBeHidden();
+  // The plan is in this month's budget straight away
   const initial = await (await request.get(`/api/months/${month}`)).json();
   expect(
     initial.bill_instances.filter(
@@ -76,16 +63,4 @@ test('a savings plan added after budget creation is reviewed, recorded, and refl
     planned: 20000,
     recorded: 20000,
   });
-  const preview = await (await request.get(`/api/months/${month}/budget-updates`)).json();
-  expect(preview.items).toHaveLength(0);
 });
-
-test(
-  'goal pause/resume/completion preserve records and Budget fits laptop widths in both themes',
-  verifyGoalLifecycle
-);
-
-test(
-  'review explicitly replaces a monthly override and applies its selected date',
-  verifyRecurringReview
-);

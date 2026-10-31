@@ -76,10 +76,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     const billsMap = new Map(bills.map((b) => [b.id, b]));
     const incomesMap = new Map(incomes.map((i) => [i.id, i]));
     const paymentSourcesMap = new Map(paymentSources.map((ps) => [ps.id, ps]));
-    // Include 'bill', 'variable', and 'savings_goal' category types for expenses
-    const billCategories = categories.filter(
-      (c) => c.type === 'bill' || c.type === 'variable' || c.type === 'savings_goal'
-    );
+    // Bill and variable categories both hold expenses
+    const billCategories = categories.filter((c) => c.type === 'bill' || c.type === 'variable');
     const incomeCategories = categories.filter((c) => c.type === 'income');
 
     // Build detailed bill instances
@@ -289,6 +287,8 @@ export class DetailedViewServiceImpl implements DetailedViewService {
     return instances.map((instance) => {
       const bill =
         instance.source_snapshot ?? (instance.bill_id ? billsMap.get(instance.bill_id) : null);
+      // Bank transaction name, URL and notes always come from Manage while the source exists
+      const liveMetadata = instance.bill_id ? billsMap.get(instance.bill_id)?.metadata : undefined;
       const paymentSourceId = instance.payment_source_id || bill?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
 
@@ -312,7 +312,6 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       return {
         id: instance.id,
         bill_id: instance.bill_id,
-        goal_id: instance.goal_id ?? bill?.goal_id,
         savings_account: instance.savings_account_id
           ? {
               id: instance.savings_account_id,
@@ -351,7 +350,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
         category_id: instance.category_id || bill?.category_id || '',
         payment_method: bill?.payment_method,
-        metadata: instance.metadata,
+        metadata: liveMetadata ?? instance.metadata,
       };
     });
   }
@@ -366,6 +365,9 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const income =
         instance.source_snapshot ??
         (instance.income_id ? incomesMap.get(instance.income_id) : null);
+      const liveMetadata = instance.income_id
+        ? incomesMap.get(instance.income_id)?.metadata
+        : undefined;
       const paymentSourceId = instance.payment_source_id || income?.payment_source_id;
       const paymentSource = paymentSourceId ? paymentSourcesMap.get(paymentSourceId) : null;
 
@@ -376,10 +378,13 @@ export class DetailedViewServiceImpl implements DetailedViewService {
       const dueDate = firstOccurrence?.expected_date || calculatedDueDate || null;
 
       // Determine if overdue (for income, this means "expected but not received").
-      // Insurance lines with no amount yet (plan hasn't decided) aren't money owed.
+      // Insurance lines aren't money owed until the plan has approved an amount: a
+      // submitted claim shows what was asked for, but has no due date.
       const awaitsMoney =
         !instance.is_insurance_reimbursement ||
-        (instance.occurrences || []).some((occ) => !occ.is_closed && occ.expected_amount > 0);
+        (instance.occurrences || []).some(
+          (occ) => !occ.is_closed && occ.expected_amount > 0 && occ.submission_status !== 'pending'
+        );
       const overdueStatus = awaitsMoney && isOverdue(dueDate || undefined, instance.is_closed);
 
       // Calculate total received from occurrence payments
@@ -427,7 +432,7 @@ export class DetailedViewServiceImpl implements DetailedViewService {
         is_overdue: overdueStatus,
         payment_source: paymentSource ? { id: paymentSource.id, name: paymentSource.name } : null,
         category_id: instance.category_id || income?.category_id || '',
-        metadata: instance.metadata,
+        metadata: liveMetadata ?? instance.metadata,
       };
     });
   }

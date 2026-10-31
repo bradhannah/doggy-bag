@@ -145,7 +145,6 @@
   export let initialEditId: string | null = null;
 
   let activeTab: TabId = 'months';
-  let recurringItemSaved = false;
 
   // ============ Months Tab State ============
   let months: MonthSummary[] = [];
@@ -649,9 +648,24 @@
     clearAllItems();
   }
 
-  function handleSave() {
-    if (activeTab === 'bills' || activeTab === 'incomes') recurringItemSaved = true;
+  function handleSave(created?: { kind: 'bill' | 'income'; id: string }) {
     closeDrawer();
+    if (created) void addToCurrentMonth(created);
+  }
+
+  // A new recurring item goes straight into the month being viewed when that month
+  // exists and is unlocked. Edits to an existing item never change existing months.
+  async function addToCurrentMonth(created: { kind: 'bill' | 'income'; id: string }) {
+    try {
+      const result = (await apiClient.post(`/api/${created.kind}s/${created.id}/add-to-month`, {
+        month: $currentMonth,
+      })) as { added: boolean; reason?: string };
+      if (result.added) success(`Added to ${$currentMonthDisplay}’s budget`);
+      else if (result.reason === 'locked')
+        addToast(`${$currentMonthDisplay} is locked, so it was not added there`, 'info');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to add to this month');
+    }
   }
 
   async function handleDelete(id: string) {
@@ -828,19 +842,6 @@
 
     <!-- Main Content Area -->
     <main class="setup-content">
-      {#if recurringItemSaved}
-        <p class="budget-review-notice">
-          Recurring item saved.
-          <a href="/month/{$currentMonth}?review=updates"
-            >Review updates to {$currentMonthDisplay}’s budget</a
-          >.
-          <button
-            class="btn btn-sm btn-ghost"
-            on:click={() => (recurringItemSaved = false)}
-            aria-label="Dismiss budget update reminder">Dismiss</button
-          >
-        </p>
-      {/if}
       {#if activeTab === 'months'}
         <!-- Months Tab Content -->
         <div class="content-header">
@@ -1250,22 +1251,6 @@
 </div>
 
 <style>
-  .budget-review-notice {
-    padding: var(--space-3);
-    background: var(--accent-muted);
-    border: thin solid var(--accent-border);
-    border-radius: var(--radius-md);
-  }
-  .budget-review-notice a {
-    color: var(--accent);
-  }
-  .budget-review-notice button {
-    margin-left: var(--space-3);
-    border: none;
-    color: var(--text-secondary);
-    background: transparent;
-    cursor: pointer;
-  }
   .setup-page {
     min-height: 100vh;
     background: var(--bg-surface);

@@ -6,11 +6,6 @@ import { StorageServiceImpl } from './storage';
 import { BillsServiceImpl } from './bills-service';
 import { MonthsServiceImpl } from './months-service';
 import { DetailedViewServiceImpl } from './detailed-view-service';
-import {
-  createSavingsGoalsHandlerGET,
-  createSavingsGoalsPaymentsHandler,
-  createSavingsGoalsRemoveScheduleHandler,
-} from '../routes/handlers/savings-goals.handlers';
 
 describe('Source-independent monthly history', () => {
   let directory: string;
@@ -37,9 +32,9 @@ describe('Source-independent monthly history', () => {
         amount: 10000,
         billing_period: 'monthly',
         day_of_month: 1,
-        goal_id: 'goal',
         category_id: 'savings',
         payment_source_id: 'account',
+        savings_account_id: 'account',
         is_active: true,
         created_at: stamp,
         updated_at: stamp,
@@ -56,19 +51,7 @@ describe('Source-independent monthly history', () => {
       },
     ]);
     await storage.writeJSON('data/entities/categories.json', [
-      { id: 'savings', name: 'Savings', type: 'savings_goal', sort_order: 0 },
-    ]);
-    await storage.writeJSON('data/entities/savings-goals.json', [
-      {
-        id: 'goal',
-        name: 'Emergency',
-        status: 'saving',
-        linked_account_id: 'account',
-        target_amount: 100000,
-        current_amount: 0,
-        created_at: '2025-01-01T00:00:00.000Z',
-        updated_at: stamp,
-      },
+      { id: 'savings', name: 'Savings', type: 'bill', sort_order: 0 },
     ]);
     await storage.writeJSON('data/months/2026-01.json', {
       month: '2026-01',
@@ -108,9 +91,9 @@ describe('Source-independent monthly history', () => {
     });
   });
 
-  test('editing then deleting a source preserves identity and paid goal progress', async () => {
+  test('editing then deleting a source preserves the monthly identity', async () => {
     const bills = new BillsServiceImpl();
-    await bills.update('bill', { name: 'Changed name', goal_id: 'different-goal' });
+    await bills.update('bill', { name: 'Changed name' });
     await bills.delete('bill');
     const historical = await new DetailedViewServiceImpl().getDetailedMonth('2026-01');
     expect(
@@ -118,18 +101,10 @@ describe('Source-independent monthly history', () => {
     ).toMatchObject({
       name: 'Savings: Emergency fund',
       category_id: 'savings',
-      goal_id: 'goal',
       payment_source: { id: 'account', name: 'Savings' },
       actual_amount: 10000,
+      savings_account: { id: 'account' },
     });
-    const response = await createSavingsGoalsHandlerGET()(
-      new Request('http://localhost/api/savings-goals/goal')
-    );
-    expect((await response.json()).saved_amount).toBe(10000);
-    const history = await createSavingsGoalsPaymentsHandler()(
-      new Request('http://localhost/api/savings-goals/goal/payments')
-    );
-    expect((await history.json()).payments[0].description).toBe('Savings: Emergency fund');
   });
 
   test('locked budgets reject edits and freeze insurance-derived values', async () => {
@@ -152,7 +127,7 @@ describe('Source-independent monthly history', () => {
     ]);
     await service.toggleReadOnly('2026-01');
     await expect(
-      service.updateSavingsBalances('2026-01', undefined, undefined, { account: 12300 })
+      service.updateSavingsBalances('2026-01', undefined, { account: 12300 })
     ).rejects.toThrow('read-only');
     await storage.writeJSON('data/entities/insurance-claims.json', []);
     expect(
@@ -165,81 +140,6 @@ describe('Source-independent monthly history', () => {
       (await service.getMonthlyData('2026-01'))?.bill_instances.some(
         (instance) => instance.claim_id === 'claim'
       )
-    ).toBe(false);
-  });
-
-  test('cancelling a schedule never counts future contributions as paid', async () => {
-    const storage = StorageServiceImpl.getInstance();
-    const stamp = new Date().toISOString();
-    await new BillsServiceImpl().delete('bill');
-    await storage.writeJSON('data/entities/bills.json', [
-      {
-        id: 'future-bill',
-        name: 'Future savings',
-        goal_id: 'goal',
-        amount: 10000,
-        billing_period: 'monthly',
-        day_of_month: 1,
-        category_id: 'savings',
-        payment_source_id: 'account',
-        is_active: true,
-        created_at: stamp,
-        updated_at: stamp,
-      },
-    ]);
-    for (const month of ['2099-01', '2099-02']) {
-      await storage.writeJSON(`data/months/${month}.json`, {
-        month,
-        bill_instances: [
-          {
-            id: `future-${month}`,
-            bill_id: 'future-bill',
-            month,
-            billing_period: 'monthly',
-            expected_amount: 10000,
-            is_default: true,
-            is_closed: false,
-            is_adhoc: false,
-            occurrences: [
-              {
-                id: `occ-${month}`,
-                sequence: 1,
-                expected_date: `${month}-01`,
-                expected_amount: 10000,
-                is_closed: false,
-                is_adhoc: false,
-                created_at: stamp,
-                updated_at: stamp,
-              },
-            ],
-            created_at: stamp,
-            updated_at: stamp,
-          },
-        ],
-        income_instances: [],
-        variable_expenses: [],
-        free_flowing_expenses: [],
-        bank_balances: {},
-        is_read_only: month === '2099-02',
-        created_at: stamp,
-        updated_at: stamp,
-      });
-    }
-    const response = await createSavingsGoalsRemoveScheduleHandler()(
-      new Request('http://localhost/api/savings-goals/goal/remove-schedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bill_id: 'future-bill' }),
-      })
-    );
-    expect(response.status).toBe(200);
-    const result = await response.json();
-    expect(result.goal.saved_amount).toBe(10000);
-    expect(result.closed_occurrences_count).toBe(1);
-    const months = new MonthsServiceImpl();
-    expect((await months.getMonthlyData('2099-01'))?.bill_instances[0].expected_amount).toBe(0);
-    expect(
-      (await months.getMonthlyData('2099-02'))?.bill_instances[0].occurrences[0].is_closed
     ).toBe(false);
   });
 });

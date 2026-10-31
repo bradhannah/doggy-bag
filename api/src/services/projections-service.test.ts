@@ -7,7 +7,7 @@
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
 import { ProjectionsServiceImpl } from './projections-service';
 import { StorageServiceImpl } from './storage';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { PaymentSource, MonthlyData, Category } from '../types';
@@ -423,6 +423,10 @@ describe('ProjectionsService', () => {
     const today = getTodayLocalDateString();
     const month = today.slice(0, 7);
     const stamp = new Date().toISOString();
+    // Money still on its way is shown in the newest month: leave no later months behind
+    for (const file of await readdir(join(testDir, 'months'))) {
+      await rm(join(testDir, 'months', file));
+    }
     await writeFile(
       join(testDir, 'months', `${month}.json`),
       JSON.stringify({

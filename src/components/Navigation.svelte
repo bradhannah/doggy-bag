@@ -23,8 +23,6 @@
   $: isInsuranceActive = currentPath.startsWith('/insurance');
   // Check if we're on the projections page
   $: isProjectionsActive = currentPath.startsWith('/projections');
-  // Check if we're on the goals page
-  $: isGoalsActive = currentPath.startsWith('/goals');
   // Check if we're on the todos page
   $: isTodosActive = currentPath.startsWith('/todos');
   // Check if we're on the notes page
@@ -134,16 +132,6 @@
             <circle cx="16" cy="14" r="1.5" fill="currentColor" />
           </svg>
           <span>Savings</span>
-        </a>
-      </li>
-      <li>
-        <a href="/goals" class="nav-item" class:active={isGoalsActive} title="Goals">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
-            <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
-            <circle cx="12" cy="12" r="1" fill="currentColor" />
-          </svg>
-          <span>Goals</span>
         </a>
       </li>
       <li>

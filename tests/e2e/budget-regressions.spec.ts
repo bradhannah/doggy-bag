@@ -47,7 +47,6 @@ async function savingsFixture(page: Page, missing = false) {
               end: 0,
               planned: 20000,
               recorded: 0,
-              unbudgeted_legacy: 0,
               entries: [],
             },
           ],

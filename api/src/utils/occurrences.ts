@@ -61,8 +61,7 @@ export function generateBillOccurrences(
     bill.recurrence_day
   );
   const effectiveFrom =
-    bill.effective_from ??
-    (bill.goal_id || bill.billing_period === 'monthly' ? bill.start_date : undefined);
+    bill.effective_from ?? (bill.billing_period === 'monthly' ? bill.start_date : undefined);
   return effectiveFrom
     ? occurrences.filter((occurrence) => occurrence.expected_date >= effectiveFrom)
     : occurrences;

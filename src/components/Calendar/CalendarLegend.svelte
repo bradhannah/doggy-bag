@@ -18,12 +18,6 @@
       <span class="legend-count">{summary.incomes}</span>
     </div>
 
-    <div class="legend-item goal">
-      <span class="legend-dot"></span>
-      <span class="legend-label">Goals</span>
-      <span class="legend-count">{summary.goals}</span>
-    </div>
-
     <div class="legend-item todo">
       <span class="legend-dot"></span>
       <span class="legend-label">Todos</span>
@@ -72,10 +66,6 @@
 
   .legend-item.income .legend-dot {
     background: var(--success);
-  }
-
-  .legend-item.goal .legend-dot {
-    background: var(--accent);
   }
 
   .legend-item.todo .legend-dot {

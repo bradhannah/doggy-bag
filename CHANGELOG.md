@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Move to next month** on any open bill or income payment (row menu). The next month gets an ad-hoc copy named after the source month, e.g. "Rent (Oct)". An ad-hoc payment is removed from its month; a recurring one is recorded as skipped ($0) with a "Moved to …" note. This is the one change a locked month allows, so unfinished items can be carried out of a closed month.
+
+### Removed
+
+- The **Goals** feature. Goals were a layer on top of recurring savings bills; the Savings page already shows each account's planned and recorded transfers. On first start the app backs up your data (into `backups/` in the data folder) and converts goal contribution schedules into ordinary savings plans: a schedule is linked to the goal's account when that account is a savings or investment account (a goal "linked" to a chequing account becomes a plain bill in the Savings category), schedules of goals that were paused, bought or abandoned are deactivated, and the "Savings" category becomes a plain bill category. Use **Plan a transfer** on the Savings page to link a plan to an account. The old "unlinked" legacy savings amounts are no longer shown.
+
+### Changed
+
+- The Budget page's **Review budget updates** and **Refresh bill and income details** buttons are gone, along with the review flow. A new recurring bill, income or savings plan is added to the month you are viewing straight away (if it exists and is unlocked); editing an existing recurring item never changes existing months. Bank transaction name, URL and notes are now read live from Manage.
+- Insurance reimbursements still on their way (submitted, or approved but unpaid) now appear in your newest month, dated the 1st, as expected income: a submitted claim shows the amount claimed instead of $0. They are never shown in a locked month, so locking a month or creating the next one carries them forward; a locked month's frozen snapshot keeps only the bill and settled lines. Submitted claims no longer appear on the calendar until the insurer decides.
+
+### Fixed
+
+- Reading a month twice in one request (for example the Budget page's leftover calculation) stripped the insurance lines from the first result and rewrote the month file on every load.
+
 ## [0.13.1] - 2026-10-17
 
 ### Added

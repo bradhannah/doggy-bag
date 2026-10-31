@@ -4,12 +4,15 @@
   import { currentMonth, formatMonthDisplay } from '../../stores/ui';
   import { success, error as showError } from '../../stores/toast';
   import { formatCurrency, dollarsToCents } from '$lib/utils/format';
-  import type { SavingsAccountSummary, SavingsMonthSummary } from '$lib/types/budget-workflow';
+  import type {
+    SavingsAccountSummary,
+    SavingsMonthSummary,
+    SavingsPlanResult,
+  } from '$lib/types/budget-workflow';
   import PageHeader from '../../components/shared/PageHeader.svelte';
   import MonthPickerHeader from '../../components/MonthPickerHeader.svelte';
   import MonthNotCreated from '../../components/MonthNotCreated.svelte';
   import ConfirmDialog from '../../components/shared/ConfirmDialog.svelte';
-  import BudgetUpdatesModal from '../../components/DetailedView/BudgetUpdatesModal.svelte';
   import SavingsPlanModal from '../../components/Savings/SavingsPlanModal.svelte';
 
   let data: SavingsMonthSummary | null = null;
@@ -22,8 +25,6 @@
   let pendingSaves = 0;
   let showPlan = false;
   let planAccount = '';
-  let showReview = false;
-  let initialSelected: string[] = [];
   let pushing = false;
   let showPushConfirmation = false;
   let pushDestinationMonth = '';
@@ -45,14 +46,12 @@
       accounts: data?.accounts.filter((account) => account.is_investment) ?? [],
     },
   ];
-  $: hasLegacy = data?.accounts.some((account) => account.unbudgeted_legacy !== 0) ?? false;
 
   async function load(month = $currentMonth) {
     const id = ++requestId;
     loading = true;
     error = '';
     if (month !== loadedMonth) {
-      showReview = false;
       showPlan = false;
       showPushConfirmation = false;
     }
@@ -81,7 +80,7 @@
     return dollarsToCents(edits[account.id]?.start || '0');
   }
   function estimate(account: SavingsAccountSummary): number {
-    return start(account) + account.planned + account.unbudgeted_legacy;
+    return start(account) + account.planned;
   }
   function final(account: SavingsAccountSummary): number {
     const value = edits[account.id]?.end?.trim() ?? '';
@@ -162,15 +161,12 @@
     planAccount = accountId;
     showPlan = true;
   }
-  function planSaved(result: { recurring: boolean; key?: string }) {
+  function planSaved(result: SavingsPlanResult) {
     showPlan = false;
-    success(
-      result.recurring ? 'Recurring savings plan saved' : 'Savings transfer added to this budget'
-    );
-    if (result.recurring && data?.exists && !data.is_read_only) {
-      initialSelected = result.key ? [result.key] : [];
-      showReview = true;
-    }
+    if (!result.recurring) success('Savings transfer added to this budget');
+    else if (result.added)
+      success(`Recurring plan saved and added to ${formatMonthDisplay(result.month)}’s budget`);
+    else success('Recurring savings plan saved. New budgets will include it.');
     void load();
   }
 
@@ -246,14 +242,6 @@
         <a href="/month/{$currentMonth}">Open this month’s Budget</a>
         <button
           class="btn btn-secondary"
-          on:click={() => {
-            initialSelected = [];
-            showReview = true;
-          }}
-          disabled={data.is_read_only}>Review budget updates</button
-        >
-        <button
-          class="btn btn-secondary"
           on:click={() => pushFinalBalances()}
           disabled={pushing || pendingSaves > 0}
         >
@@ -263,12 +251,6 @@
       {#if data.is_read_only}<p class="notice">
           This month is locked. Unlock it in Manage to edit balances or budget entries.
         </p>{/if}
-      {#if hasLegacy}
-        <p class="notice">
-          Some previous Savings amounts are not linked to this budget yet. Review budget updates to
-          include them. Estimates include these unlinked amounts until you review them.
-        </p>
-      {/if}
       {#each groups as group (group.name)}
         {#if group.accounts.length}
           {@const sum = edits && totals(group.accounts)}
@@ -308,13 +290,7 @@
                           disabled={data.is_read_only || pendingSaves > 0}
                         /></td
                       >
-                      <td data-label="Planned"
-                        >{formatCurrency(
-                          account.planned
-                        )}{#if account.unbudgeted_legacy !== 0}<small class="legacy"
-                            >{formatCurrency(account.unbudgeted_legacy)} unlinked</small
-                          >{/if}</td
-                      >
+                      <td data-label="Planned">{formatCurrency(account.planned)}</td>
                       <td data-label="Recorded">{formatCurrency(account.recorded)}</td>
                       <td data-label="Est. EOM">{formatCurrency(edits && estimate(account))}</td>
                       <td data-label="Final"
@@ -348,10 +324,7 @@
                             >
                             <ul>
                               {#each account.entries as entry (entry.id)}<li>
-                                  <span
-                                    >{entry.name}{#if entry.goal_id}
-                                      · <a href="/goals/edit/{entry.goal_id}">Goal</a>{/if}</span
-                                  ><span
+                                  <span>{entry.name}</span><span
                                     >Planned {formatCurrency(entry.planned)} · recorded {formatCurrency(
                                       entry.recorded
                                     )}</span
@@ -389,8 +362,8 @@
         </p>
       {/if}
       <p class="hint">
-        Planned and recorded amounts come from Budget, including goal contributions and withdrawals.
-        Edit or record a transfer there. Recording transfers does not update your bank balances.
+        Planned and recorded amounts come from Budget contributions and withdrawals. Edit or record
+        a transfer there. Recording transfers does not update your bank balances.
       </p>
       <p class="hint">
         Balances save when you leave a field. Leave Final blank to use the estimate; enter 0 for an
@@ -407,17 +380,6 @@
       initialAccount={planAccount}
       onClose={() => (showPlan = false)}
       onSaved={planSaved}
-    />{/key}
-{/if}
-{#if showReview}
-  {#key $currentMonth}<BudgetUpdatesModal
-      month={$currentMonth}
-      {initialSelected}
-      onClose={() => {
-        showReview = false;
-        initialSelected = [];
-      }}
-      onApplied={() => load()}
     />{/key}
 {/if}
 <ConfirmDialog
@@ -523,9 +485,6 @@
     font-weight: 400;
     font-size: var(--font-size-xs);
     line-height: 1.4;
-  }
-  .legacy {
-    color: var(--warning);
   }
   .positive {
     color: var(--success);

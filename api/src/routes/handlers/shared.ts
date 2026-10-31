@@ -29,10 +29,13 @@ export async function checkRequestReadOnly(request: Request): Promise<Response |
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) return null;
   const path = new URL(request.url).pathname.replace(/\/$/, '');
   const match = path.match(/^\/api\/months\/(\d{4}-\d{2})(?:\/|$)/);
+  // Moving an unfinished payment out of a locked month is the one edit a lock permits;
+  // the handler still refuses a locked destination.
   if (
     !match ||
     path === `/api/months/${match[1]}/lock` ||
-    path === `/api/months/${match[1]}/push-savings-balances`
+    path === `/api/months/${match[1]}/push-savings-balances` ||
+    path.endsWith('/move-to-next-month')
   )
     return null;
   return checkReadOnly(match[1]);

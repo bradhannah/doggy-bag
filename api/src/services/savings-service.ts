@@ -4,16 +4,19 @@ import { IncomesServiceImpl } from './incomes-service';
 import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import { CategoriesServiceImpl } from './categories-service';
 import { runWithDataAccess } from './data-access';
-import { validateBudgetMonth } from './budget-updates-service';
 import { createAdhocOccurrence } from '../utils/occurrences';
-import {
-  isSavingsAccount,
-  isSpendingAccount,
-  remainingLegacySavings,
-  savingsEntries,
-} from '../utils/savings';
+import { isSavingsAccount, isSpendingAccount, savingsEntries } from '../utils/savings';
 import { NotFoundError, ReadOnlyError, ValidationError } from '../utils/errors';
-import type { SavingsMonthSummary, SavingsPlanRequest } from '../types/budget-workflow';
+import type {
+  SavingsMonthSummary,
+  SavingsPlanRequest,
+  SavingsPlanResult,
+} from '../types/budget-workflow';
+
+export function validateBudgetMonth(month: string): void {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))
+    throw new ValidationError('Choose a valid budget month');
+}
 
 export class SavingsService {
   private months = new MonthsServiceImpl();
@@ -38,7 +41,6 @@ export class SavingsService {
       );
       for (const id of Object.keys(data?.savings_balances_start ?? {})) ids.add(id);
       for (const id of Object.keys(data?.savings_balances_end ?? {})) ids.add(id);
-      for (const id of Object.keys(data?.savings_contributions ?? {})) ids.add(id);
       for (const instance of [...(data?.bill_instances ?? []), ...(data?.income_instances ?? [])]) {
         if (instance.savings_account_id) ids.add(instance.savings_account_id);
       }
@@ -51,7 +53,6 @@ export class SavingsService {
           const account = accounts.find((account) => account.id === id);
           const entries = data ? savingsEntries(data, id) : [];
           const planned = entries.reduce((sum, entry) => sum + entry.planned, 0);
-          const legacy = data?.savings_contributions?.[id] ?? 0;
           return {
             id,
             name: account?.name ?? `Archived account (${id.slice(0, 8)})`,
@@ -61,9 +62,6 @@ export class SavingsService {
             end: data?.savings_balances_end?.[id],
             planned,
             recorded: entries.reduce((sum, entry) => sum + entry.recorded, 0),
-            unbudgeted_legacy: data?.excluded_budget_sources?.includes(`legacy-savings:${id}`)
-              ? 0
-              : remainingLegacySavings(legacy, planned),
             entries,
           };
         }),
@@ -71,9 +69,7 @@ export class SavingsService {
     });
   }
 
-  createPlan(
-    request: SavingsPlanRequest
-  ): Promise<{ month: string; recurring: boolean; key?: string }> {
+  createPlan(request: SavingsPlanRequest): Promise<SavingsPlanResult> {
     return runWithDataAccess(async () => {
       const { month, amount, date, direction, recurring, savings_account_id, spending_account_id } =
         request;
@@ -109,8 +105,8 @@ export class SavingsService {
       if (data?.is_read_only) throw new ReadOnlyError(month);
       const category =
         direction === 'contribution'
-          ? await this.categories.ensureGoalsCategoryExists()
-          : await this.categories.ensureGoalCompletionsCategoryExists();
+          ? await this.categories.ensureSavingsCategory()
+          : await this.categories.ensureSavingsWithdrawalsCategory();
       const name =
         request.name?.trim() ||
         `${direction === 'contribution' ? 'Savings' : 'Withdrawal'}: ${destination.name}`;
@@ -128,15 +124,14 @@ export class SavingsService {
           category_id: category.id,
           payment_method: 'manual' as const,
         };
+        const kind = direction === 'contribution' ? 'bill' : 'income';
         const saved =
-          direction === 'contribution'
+          kind === 'bill'
             ? await new BillsServiceImpl().create(source)
             : await new IncomesServiceImpl().create(source);
-        return {
-          month,
-          recurring,
-          key: `${direction === 'contribution' ? 'bill' : 'income'}:${saved.id}`,
-        };
+        // New months pick the plan up on their own; this month gets it now if it can.
+        const added = await this.months.addSourceToMonth(month, kind, saved.id);
+        return { month, recurring, ...added };
       }
       const now = new Date().toISOString();
       const common = {

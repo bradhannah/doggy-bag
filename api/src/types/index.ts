@@ -26,7 +26,7 @@ const DEBT_ACCOUNT_TYPES: PaymentSourceType[] = ['credit_card', 'line_of_credit'
 // Helper to determine if a payment source type is an investment account
 const INVESTMENT_ACCOUNT_TYPES: PaymentSourceType[] = ['investment'];
 
-type CategoryType = 'bill' | 'income' | 'variable' | 'savings_goal';
+type CategoryType = 'bill' | 'income' | 'variable';
 
 type PaymentMethod = 'auto' | 'manual';
 
@@ -73,7 +73,6 @@ interface PaymentSourceMetadata {
 // ============================================================================
 
 interface Bill {
-  recurring_revisions?: { amount?: string; schedule?: string };
   savings_account_id?: string; // Destination account for a savings contribution
   id: string;
   name: string;
@@ -89,16 +88,12 @@ interface Bill {
   category_id: string; // Required - reference to bill category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
-  goal_id?: string; // Optional link to SavingsGoal (for goal contributions)
-  paused_by_goal_id?: string; // Only schedules paused by this goal resume automatically
-  goal_status?: SavingsGoalStatus; // Resolved on reads; the goal is the source of truth
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 interface Income {
-  recurring_revisions?: { amount?: string; schedule?: string };
   savings_account_id?: string; // Savings account funding a withdrawal into the budget
   id: string;
   name: string;
@@ -114,7 +109,6 @@ interface Income {
   category_id: string; // Required - reference to income category
   payment_method?: PaymentMethod; // 'auto' for autopay, 'manual' for manual payment (default: 'auto')
   metadata?: EntityMetadata; // Optional metadata (bank name, account number, URL, notes)
-  goal_id?: string; // Optional link to SavingsGoal (for goal completion incomes)
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -126,9 +120,6 @@ interface Income {
 
 interface Occurrence {
   recurring_origin?: { index: number; amount: number; date: string };
-  recurring_review?: Partial<
-    Record<'expected_amount' | 'expected_date', { version: string; value: number | string }>
-  >;
   id: string;
   sequence: number; // 1, 2, 3... for ordering within the month
   expected_date: string; // YYYY-MM-DD - calculated from day_of_month/start_date, overridable
@@ -155,9 +146,7 @@ interface Occurrence {
 // ============================================================================
 
 interface BillInstance {
-  kept_recurring_revision?: string;
   savings_account_id?: string;
-  legacy_savings_account_id?: string; // Imported standalone monthly savings plan
   source_snapshot?: Bill;
   id: string;
   bill_id: string | null; // null for ad-hoc bills
@@ -170,7 +159,6 @@ interface BillInstance {
   is_adhoc: boolean; // True for one-time ad-hoc items
   is_payoff_bill?: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
-  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   // Insurance expected expense linking (protected like payoff bills)
   claim_id?: string; // Link to InsuranceClaim for expected expenses
   is_insurance_expense?: boolean; // True if auto-generated from expected insurance expense
@@ -186,11 +174,8 @@ interface BillInstance {
 }
 
 interface IncomeInstance {
-  kept_recurring_revision?: string;
   savings_account_id?: string;
-  legacy_savings_account_id?: string;
   source_snapshot?: Income;
-  goal_id?: string;
   id: string;
   income_id: string | null; // null for ad-hoc income
   month: string;
@@ -281,14 +266,6 @@ interface Category {
 }
 
 // ============================================================================
-// Savings Goal Interface
-// ============================================================================
-
-type SavingsGoalStatus = 'saving' | 'paused' | 'bought' | 'abandoned' | 'archived';
-
-// Temperature indicator for goal progress tracking
-type GoalTemperature = 'green' | 'yellow' | 'red';
-
 // ============================================================================
 // Todo Types
 // ============================================================================
@@ -296,23 +273,6 @@ type GoalTemperature = 'green' | 'yellow' | 'red';
 type TodoStatus = 'pending' | 'completed';
 
 type TodoRecurrence = 'none' | 'weekly' | 'bi_weekly' | 'monthly';
-
-interface SavingsGoal {
-  id: string;
-  name: string;
-  target_amount?: number; // Cents (optional for open-ended goals without a specific target)
-  current_amount: number; // Cents (calculated dynamically from closed occurrences)
-  target_date?: string; // YYYY-MM-DD (optional for open-ended goals)
-  linked_account_id: string; // Reference to PaymentSource (savings account)
-  status: SavingsGoalStatus;
-  previous_status?: 'bought' | 'abandoned'; // Status before archiving (for unarchive)
-  paused_at?: string; // ISO timestamp when goal was paused
-  completed_at?: string; // ISO timestamp when goal was bought/abandoned
-  archived_at?: string; // ISO timestamp when goal was archived
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 // ============================================================================
 // Todo Entity Interfaces
@@ -511,9 +471,7 @@ interface BackupMetadata {
 
 interface MonthlyData {
   occurrence_dates_migrated?: boolean;
-  paused_goal_contributions?: { instance: BillInstance; legacy_hint_adjusted: boolean }[];
   excluded_budget_sources?: string[]; // Explicit exclusions for this month (kind:source ID)
-  last_budget_update?: { request_key: string }; // Idempotent retry of the latest review/apply
   month: string;
   bill_instances: BillInstance[];
   income_instances: IncomeInstance[];
@@ -524,7 +482,6 @@ interface MonthlyData {
   bank_balances_updated_at?: Record<string, string>;
   savings_balances_start?: Record<string, number>; // Start-of-month balances for savings/investment accounts
   savings_balances_end?: Record<string, number>; // End-of-month balances for savings/investment accounts
-  savings_contributions?: Record<string, number>; // Legacy planning hints; linked transfers live in budget instances
   is_read_only: boolean; // Lock month from edits
   insurance_snapshot?: { billInstances: BillInstance[]; incomeInstances: IncomeInstance[] };
   created_at: string;
@@ -781,8 +738,6 @@ export type {
   ClaimStatus,
   SubmissionStatus,
   DocumentType,
-  SavingsGoalStatus,
-  GoalTemperature,
   TodoStatus,
   TodoRecurrence,
   EntityMetadata,
@@ -797,7 +752,6 @@ export type {
   FreeFlowingExpense,
   PaymentSource,
   Category,
-  SavingsGoal,
   Todo,
   TodoInstance,
   Note,

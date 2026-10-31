@@ -16,7 +16,7 @@
   import { onMount } from 'svelte';
 
   export let editingItem: Income | null = null;
-  export let onSave: () => void = () => {};
+  export let onSave: (created?: { kind: 'income'; id: string }) => void = () => {};
   export let onCancel: () => void = () => {};
 
   // Load categories on mount
@@ -236,11 +236,12 @@
       if (editingItem) {
         await updateIncome(editingItem.id, incomeData);
         success(`Income "${name}" updated`);
+        onSave();
       } else {
-        await createIncome(incomeData);
+        const created = await createIncome(incomeData);
         success(`Income "${name}" added`);
+        onSave({ kind: 'income', id: created.id });
       }
-      onSave();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save income';
       showError(error);

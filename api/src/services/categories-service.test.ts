@@ -372,53 +372,53 @@ describe('CategoriesService', () => {
     });
   });
 
-  describe('ensureGoalsCategoryExists', () => {
-    test('creates goals category if not exists', async () => {
-      const goals = await service.ensureGoalsCategoryExists();
-      expect(goals.name).toBe('Savings');
-      expect(goals.type).toBe('savings_goal');
-      expect(goals.is_predefined).toBe(true);
-      expect(goals.color).toBe('#10b981'); // Emerald green
+  describe('ensureSavingsCategory', () => {
+    test('creates the Savings bill category if it does not exist', async () => {
+      const savings = await service.ensureSavingsCategory();
+      expect(savings.name).toBe('Savings');
+      expect(savings.type).toBe('bill');
+      expect(savings.is_predefined).toBe(true);
+      expect(savings.color).toBe('#10b981'); // Emerald green
     });
 
-    test('returns existing goals category if exists', async () => {
-      const first = await service.ensureGoalsCategoryExists();
-      const second = await service.ensureGoalsCategoryExists();
+    test('returns the existing category and renames an old "Savings Goals" one', async () => {
+      const first = await service.ensureSavingsCategory();
+      const second = await service.ensureSavingsCategory();
       expect(first.id).toBe(second.id);
+
+      await service.update(first.id, { name: 'Savings Goals' });
+      const renamed = await service.ensureSavingsCategory();
+      expect(renamed.id).toBe(first.id);
+      expect(renamed.name).toBe('Savings');
     });
 
-    test('goals category appears after other bill categories', async () => {
-      // Get all bill categories before creating Savings Goals
+    test('appears after other bill categories', async () => {
       const beforeBills = await service.getByType('bill');
       const maxSortOrder = Math.max(...beforeBills.map((c) => c.sort_order));
-
-      const goals = await service.ensureGoalsCategoryExists();
-      expect(goals.sort_order).toBe(maxSortOrder + 1);
+      const savings = await service.ensureSavingsCategory();
+      expect(savings.sort_order).toBe(maxSortOrder + 1);
     });
   });
 
-  describe('ensureGoalCompletionsCategoryExists', () => {
-    test('creates goal completions category if not exists', async () => {
-      const goalCompletions = await service.ensureGoalCompletionsCategoryExists();
-      expect(goalCompletions.name).toBe('Savings withdrawals');
-      expect(goalCompletions.type).toBe('income');
-      expect(goalCompletions.is_predefined).toBe(true);
-      expect(goalCompletions.color).toBe('#10b981'); // Emerald green
+  describe('ensureSavingsWithdrawalsCategory', () => {
+    test('creates the income category if it does not exist', async () => {
+      const withdrawals = await service.ensureSavingsWithdrawalsCategory();
+      expect(withdrawals.name).toBe('Savings withdrawals');
+      expect(withdrawals.type).toBe('income');
+      expect(withdrawals.is_predefined).toBe(true);
     });
 
-    test('returns existing goal completions category if exists', async () => {
-      const first = await service.ensureGoalCompletionsCategoryExists();
-      const second = await service.ensureGoalCompletionsCategoryExists();
+    test('returns the existing category', async () => {
+      const first = await service.ensureSavingsWithdrawalsCategory();
+      const second = await service.ensureSavingsWithdrawalsCategory();
       expect(first.id).toBe(second.id);
     });
 
-    test('goal completions category appears after other income categories', async () => {
-      // Get all income categories before creating Goal Completions
+    test('appears after other income categories', async () => {
       const beforeIncomes = await service.getByType('income');
       const maxSortOrder = Math.max(...beforeIncomes.map((c) => c.sort_order));
-
-      const goalCompletions = await service.ensureGoalCompletionsCategoryExists();
-      expect(goalCompletions.sort_order).toBe(maxSortOrder + 1);
+      const withdrawals = await service.ensureSavingsWithdrawalsCategory();
+      expect(withdrawals.sort_order).toBe(maxSortOrder + 1);
     });
   });
 

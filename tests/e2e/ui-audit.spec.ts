@@ -17,7 +17,6 @@ const VIEWPORTS = [
 const NAV_PAGES = [
   'Dashboard',
   'Savings',
-  'Goals',
   'Insurance',
   'Projections',
   'Calendar',

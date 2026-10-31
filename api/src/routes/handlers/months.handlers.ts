@@ -246,62 +246,6 @@ export function createMonthsHandlerSync() {
   };
 }
 
-// POST /api/months/:month/sync-metadata - Sync metadata from source bills/incomes to month instances
-export function createMonthsHandlerSyncMetadata() {
-  return async (request: Request) => {
-    try {
-      const url = new URL(request.url);
-      // Extract month from /api/months/2025-01/sync-metadata
-      const match = url.pathname.match(/\/api\/months\/(\d{4}-\d{2})\/sync-metadata/);
-      const month = match ? match[1] : null;
-
-      if (!month) {
-        return new Response(
-          JSON.stringify({
-            error: 'Invalid month format. Expected YYYY-MM (e.g., 2025-01)',
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      const monthlyData = await monthsService.syncMetadata(month);
-
-      // Enrich with bill/income names and calculate leftover
-      const [enrichedData, leftoverResult] = await Promise.all([
-        enrichMonthlyData(monthlyData),
-        leftoverService.calculateLeftover(month),
-      ]);
-
-      return new Response(
-        JSON.stringify({
-          ...enrichedData,
-          summary: leftoverResult,
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
-    } catch (error) {
-      console.error('[MonthsHandler] Sync metadata failed:', error);
-
-      return new Response(
-        JSON.stringify({
-          error: formatErrorForUser(error),
-          message: 'Failed to sync metadata',
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
-    }
-  };
-}
-
 // PUT /api/months/:month/bank-balances - Update bank balances for a month
 export function createMonthsHandlerUpdateBalances() {
   return async (request: Request) => {
@@ -710,12 +654,11 @@ export function createMonthsHandlerUpdateSavingsBalances() {
 
       const body = await request.json();
 
-      // Validate body structure: { start: {id: amount}, end: {id: amount}, contributions: {id: amount} }
+      // Validate body structure: { start: {id: amount}, end: {id: amount} }
       if (typeof body !== 'object' || body === null) {
         return new Response(
           JSON.stringify({
-            error:
-              'Request body must be an object with start, end, and/or contributions balance maps',
+            error: 'Request body must be an object with start and/or end balance maps',
           }),
           {
             headers: { 'Content-Type': 'application/json' },
@@ -724,13 +667,12 @@ export function createMonthsHandlerUpdateSavingsBalances() {
         );
       }
 
-      const { start, end, contributions } = body as {
+      const { start, end } = body as {
         start?: Record<string, number>;
         end?: Record<string, number | null>;
-        contributions?: Record<string, number>;
       };
 
-      for (const [name, values] of Object.entries({ start, end, contributions })) {
+      for (const [name, values] of Object.entries({ start, end })) {
         if (values === undefined) continue;
         if (
           !values ||
@@ -749,19 +691,13 @@ export function createMonthsHandlerUpdateSavingsBalances() {
         }
       }
 
-      const monthlyData = await monthsService.updateSavingsBalances(
-        month,
-        start,
-        end,
-        contributions
-      );
+      const monthlyData = await monthsService.updateSavingsBalances(month, start, end);
 
       return new Response(
         JSON.stringify({
           month,
           savings_balances_start: monthlyData.savings_balances_start,
           savings_balances_end: monthlyData.savings_balances_end,
-          savings_contributions: monthlyData.savings_contributions,
           message: 'Savings balances updated successfully',
         }),
         {

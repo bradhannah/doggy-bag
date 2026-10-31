@@ -44,6 +44,8 @@ import {
 } from '../utils/occurrences';
 import { calculateUnifiedLeftover } from '../utils/leftover';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
+import { loadMonthLedger, type MonthLedger } from '../utils/locked-months';
+import type { AddToMonthResult } from '../types/budget-workflow';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { ValidationError, ReadOnlyError, ConflictError } from '../utils/errors';
 import {
@@ -51,11 +53,7 @@ import {
   createIncomeInstance,
   createManualPaymentInstance,
 } from '../utils/monthly-instances';
-import {
-  annotateSavingsAccounts,
-  excludeBudgetInstance,
-  retireCoveredLegacySavings,
-} from '../utils/savings';
+import { annotateSavingsAccounts, excludeBudgetInstance } from '../utils/savings';
 
 export interface OccurrencePaymentDetails extends OccurrenceEdits {
   closed_date?: string;
@@ -90,13 +88,12 @@ export interface MonthsService {
   generateMonthlyData(month: string): Promise<MonthlyData>;
   syncMonthlyData(month: string): Promise<MonthlyData>;
   syncManualPaymentSource(month: string, sourceId: string): Promise<void>;
-  syncMetadata(month: string): Promise<MonthlyData>;
+  addSourceToMonth(month: string, kind: 'bill' | 'income', id: string): Promise<AddToMonthResult>;
   updateBankBalances(month: string, balances: Record<string, number>): Promise<MonthlyData>;
   updateSavingsBalances(
     month: string,
     start?: Record<string, number>,
-    end?: Record<string, number | null>,
-    contributions?: Record<string, number>
+    end?: Record<string, number | null>
   ): Promise<MonthlyData>;
   pushSavingsBalancesToNextMonth(
     month: string,
@@ -107,7 +104,8 @@ export interface MonthsService {
     requiresConfirmation: boolean;
     monthlyData?: MonthlyData;
   }>;
-  saveMonthlyData(month: string, data: MonthlyData): Promise<void>;
+  /** `bypassLock` lets the one sanctioned exception (lock toggling, moving an item out) write a locked month. */
+  saveMonthlyData(month: string, data: MonthlyData, bypassLock?: boolean): Promise<void>;
 
   // Month management
   monthExists(month: string): Promise<boolean>;
@@ -279,9 +277,14 @@ export class MonthsServiceImpl implements MonthsService {
 
   public async getMonthlyData(month: string): Promise<MonthlyData | null> {
     try {
-      const data = await this.storage.readJSON<MonthlyData>(`data/months/${month}.json`);
+      const stored = await this.storage.readJSON<MonthlyData>(`data/months/${month}.json`);
 
-      if (!data) return null;
+      if (!stored) return null;
+      // Work on a copy: the read is cached per request, and this method adds virtual
+      // insurance lines. Sharing the cached object would make a second call in the same
+      // request mistake those lines for persisted data and strip them from the first
+      // caller's result (and write the file back for nothing).
+      const data = structuredClone(stored);
 
       // Apply migration to instances if needed (002-detailed-monthly-view)
       let needsSave = false;
@@ -686,87 +689,50 @@ export class MonthsServiceImpl implements MonthsService {
   }
 
   /**
-   * Sync metadata from source bills/incomes to existing month instances.
-   * This updates metadata without regenerating the month or losing payment data.
+   * Put one recurring bill or income into an existing, unlocked month. Used when a
+   * recurring item is created after the month was generated: new months pick it up
+   * on their own, existing ones get it through this. Changes to an existing recurring
+   * item never touch existing months; the month is edited directly.
    */
-  public async syncMetadata(month: string): Promise<MonthlyData> {
-    console.log(`[MonthsService] Syncing metadata for ${month}`);
-
-    try {
-      const data = await this.getMonthlyData(month);
-
-      if (!data) {
-        throw new Error(`Monthly data for ${month} not found`);
-      }
-
-      const bills = await this.billsService.getAll();
-      const incomes = await this.incomesService.getAll();
-
-      // Create lookup maps for quick access
-      const billMap = new Map(bills.map((b) => [b.id, b]));
-      const incomeMap = new Map(incomes.map((i) => [i.id, i]));
-
-      const now = new Date().toISOString();
-      let updated = false;
-
-      // Update bill instances with source metadata
-      for (let i = 0; i < data.bill_instances.length; i++) {
-        const bi = data.bill_instances[i];
-        if (bi.bill_id) {
-          const sourceBill = billMap.get(bi.bill_id);
-          if (sourceBill) {
-            // Only update if metadata has changed
-            const currentMeta = JSON.stringify(bi.metadata ?? null);
-            const sourceMeta = JSON.stringify(sourceBill.metadata ?? null);
-            if (currentMeta !== sourceMeta) {
-              data.bill_instances[i] = {
-                ...bi,
-                metadata: sourceBill.metadata,
-                updated_at: now,
-              };
-              updated = true;
-            }
-          }
-        }
-      }
-
-      // Update income instances with source metadata
-      for (let i = 0; i < data.income_instances.length; i++) {
-        const ii = data.income_instances[i];
-        if (ii.income_id) {
-          const sourceIncome = incomeMap.get(ii.income_id);
-          if (sourceIncome) {
-            // Only update if metadata has changed
-            const currentMeta = JSON.stringify(ii.metadata ?? null);
-            const sourceMeta = JSON.stringify(sourceIncome.metadata ?? null);
-            if (currentMeta !== sourceMeta) {
-              data.income_instances[i] = {
-                ...ii,
-                metadata: sourceIncome.metadata,
-                updated_at: now,
-              };
-              updated = true;
-            }
-          }
-        }
-      }
-
-      if (updated) {
-        data.updated_at = now;
-        await this.saveMonthlyData(month, data);
-        console.log(`[MonthsService] Metadata synced for ${month}`);
-      } else {
-        console.log(`[MonthsService] No metadata changes for ${month}`);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('[MonthsService] Failed to sync metadata:', error);
-      throw error;
+  public async addSourceToMonth(
+    month: string,
+    kind: 'bill' | 'income',
+    id: string
+  ): Promise<AddToMonthResult> {
+    const data = await this.getMonthlyData(month);
+    if (!data) return { added: false, reason: 'month_missing' };
+    if (data.is_read_only) return { added: false, reason: 'locked' };
+    if (data.excluded_budget_sources?.includes(`${kind}:${id}`)) {
+      return { added: false, reason: 'excluded' };
     }
+
+    if (kind === 'bill') {
+      if (data.bill_instances.some((instance) => instance.bill_id === id)) {
+        return { added: false, reason: 'already_present' };
+      }
+      const bill = await this.billsService.getById(id);
+      if (!bill) return { added: false, reason: 'not_found' };
+      const instance = createBillInstance(bill, month);
+      if (!instance) return { added: false, reason: 'no_occurrences' };
+      data.bill_instances.push(instance);
+    } else {
+      if (data.income_instances.some((instance) => instance.income_id === id)) {
+        return { added: false, reason: 'already_present' };
+      }
+      const income = await this.incomesService.getById(id);
+      if (!income) return { added: false, reason: 'not_found' };
+      const instance = createIncomeInstance(income, month);
+      if (!instance) return { added: false, reason: 'no_occurrences' };
+      data.income_instances.push(instance);
+    }
+
+    data.updated_at = new Date().toISOString();
+    await this.saveMonthlyData(month, data);
+    console.log(`[MonthsService] Added ${kind} ${id} to ${month}`);
+    return { added: true };
   }
 
-  /** Add only the requested card, leaving recurring-plan changes for budget review. */
+  /** Add only the requested card; other recurring changes never touch an existing month. */
   public async syncManualPaymentSource(month: string, sourceId: string): Promise<void> {
     const data = await this.getMonthlyData(month);
     if (
@@ -939,8 +905,7 @@ export class MonthsServiceImpl implements MonthsService {
   public async updateSavingsBalances(
     month: string,
     start?: Record<string, number>,
-    end?: Record<string, number | null>,
-    contributions?: Record<string, number>
+    end?: Record<string, number | null>
   ): Promise<MonthlyData> {
     try {
       const data = await this.getMonthlyData(month);
@@ -964,14 +929,6 @@ export class MonthsServiceImpl implements MonthsService {
           if (amount === null) delete data.savings_balances_end[accountId];
           else data.savings_balances_end[accountId] = amount;
         }
-      }
-      if (contributions !== undefined) {
-        // Legacy clients may still write planning hints. Review budget updates
-        // imports the uncovered amount into linked budget entries.
-        data.savings_contributions = {
-          ...(data.savings_contributions || {}),
-          ...contributions,
-        };
       }
       data.updated_at = now;
 
@@ -1025,11 +982,10 @@ export class MonthsServiceImpl implements MonthsService {
   public async saveMonthlyData(
     month: string,
     data: MonthlyData,
-    changingLock = false
+    bypassLock = false
   ): Promise<void> {
     try {
-      if (data.is_read_only && !changingLock) throw new ReadOnlyError(month);
-      if (!data.is_read_only) retireCoveredLegacySavings(data);
+      if (data.is_read_only && !bypassLock) throw new ReadOnlyError(month);
       // Filter out virtual entries before saving - they are generated on-the-fly from insurance claims
       // and should never be persisted to the JSON file
       const dataToSave: MonthlyData = {
@@ -1549,14 +1505,22 @@ export class MonthsServiceImpl implements MonthsService {
       data.is_read_only = !data.is_read_only;
       data.updated_at = now;
       if (data.is_read_only) {
-        data.insurance_snapshot = {
-          billInstances: structuredClone(
-            data.bill_instances.filter((instance) => instance.is_virtual)
-          ),
-          incomeInstances: structuredClone(
-            data.income_instances.filter((instance) => instance.is_virtual)
-          ),
-        };
+        // Freeze the insurance lines as they stand with this month locked: reimbursements
+        // still on their way roll into the next open month rather than being frozen here.
+        const before = await loadMonthLedger(this.storage);
+        const snapshot = await this.generateVirtualInsuranceEntries(month, {
+          ...before,
+          isLocked: (m) => m === month || before.isLocked(m),
+        });
+        data.insurance_snapshot = snapshot;
+        data.bill_instances = [
+          ...data.bill_instances.filter((instance) => !instance.is_virtual),
+          ...structuredClone(snapshot.billInstances),
+        ];
+        data.income_instances = [
+          ...data.income_instances.filter((instance) => !instance.is_virtual),
+          ...structuredClone(snapshot.incomeInstances),
+        ];
       } else {
         delete data.insurance_snapshot;
       }
@@ -2475,13 +2439,17 @@ export class MonthsServiceImpl implements MonthsService {
    * Virtual BillInstance and IncomeInstance entries for the month's insurance claims.
    * They are never persisted; see buildVirtualInsuranceEntries for what goes where.
    */
-  private async generateVirtualInsuranceEntries(month: string): Promise<{
+  private async generateVirtualInsuranceEntries(
+    month: string,
+    ledger?: MonthLedger
+  ): Promise<{
     billInstances: BillInstance[];
     incomeInstances: IncomeInstance[];
   }> {
     try {
-      const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month);
-      return buildVirtualInsuranceEntries(claims, month);
+      const months = ledger ?? (await loadMonthLedger(this.storage));
+      const claims = await this.insuranceClaimsService.getClaimsWithBudgetActivity(month, months);
+      return buildVirtualInsuranceEntries(claims, month, months);
     } catch (error) {
       console.error('[MonthsService] Failed to generate virtual insurance entries:', error);
       return { billInstances: [], incomeInstances: [] };

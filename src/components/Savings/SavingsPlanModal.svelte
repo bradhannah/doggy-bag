@@ -3,12 +3,16 @@
   import { apiClient } from '$lib/api/client';
   import { formatCurrency, getTodayDateString } from '$lib/utils/format';
   import { formatMonthDisplay } from '../../stores/ui';
-  import type { SavingsMonthSummary, SavingsPlanRequest } from '$lib/types/budget-workflow';
+  import type {
+    SavingsMonthSummary,
+    SavingsPlanRequest,
+    SavingsPlanResult,
+  } from '$lib/types/budget-workflow';
 
   export let summary: SavingsMonthSummary;
   export let initialAccount = '';
   export let onClose: () => void;
-  export let onSaved: (result: { recurring: boolean; key?: string }) => void;
+  export let onSaved: (result: SavingsPlanResult) => void;
 
   let accountId = initialAccount || summary.accounts.find((account) => account.is_active)?.id || '';
   let spendingId = summary.spending_accounts.length === 1 ? summary.spending_accounts[0].id : '';
@@ -42,7 +46,7 @@
         amount: cents,
         date,
         name,
-      } satisfies SavingsPlanRequest)) as { recurring: boolean; key?: string };
+      } satisfies SavingsPlanRequest)) as SavingsPlanResult;
       onSaved(result);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Could not save the savings plan';
@@ -136,13 +140,13 @@
     >
     {#if account && summary.exists}
       <p class="hint">
-        Already planned in this budget: {formatCurrency(account.planned)}, including goal
-        contributions. This form adds a plan; use Budget to change an existing entry.
+        Already planned in this budget: {formatCurrency(account.planned)}. This form adds a plan;
+        use Budget to change an existing entry.
       </p>
     {/if}
     <p class="hint">
       {frequency === 'monthly'
-        ? 'New budgets include recurring plans automatically. For an existing budget, choose the plan in Review budget updates.'
+        ? 'Added to this month’s budget now (if it exists and is unlocked) and to every new budget from its start date.'
         : 'This creates a planned budget entry. Record the transfer in Budget when it happens.'}
     </p>
     {#if error}<p class="error" role="alert">{error}</p>{/if}

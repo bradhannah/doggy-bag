@@ -156,8 +156,13 @@ export class ProjectionsServiceImpl implements ProjectionsService {
       for (const occ of occurrences) {
         const dueDate = occ.expected_date;
 
-        // An insurance plan that hasn't decided (or denied) moves no money
-        if (income.is_insurance_reimbursement && occ.expected_amount === 0) continue;
+        // An insurance plan that hasn't decided (or denied) moves no money; a submitted one
+        // shows what was asked for in Budget but has no date to project
+        if (
+          income.is_insurance_reimbursement &&
+          (occ.expected_amount === 0 || occ.submission_status === 'pending')
+        )
+          continue;
 
         // In occurrence-only model, closed = received
         if (occ.is_closed) {
