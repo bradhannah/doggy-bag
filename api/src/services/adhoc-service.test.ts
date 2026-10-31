@@ -5,7 +5,7 @@ import { StorageServiceImpl } from './storage';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { Category, MonthlyData, SavingsGoal } from '../types';
+import type { Category, MonthlyData } from '../types';
 import { getTodayLocalDateString } from '../utils/due-date';
 
 describe('AdhocService', () => {
@@ -15,9 +15,9 @@ describe('AdhocService', () => {
   // Sample categories for testing
   const sampleCategories: Category[] = [
     {
-      id: 'cat-savings-goals',
-      name: 'Savings Goals',
-      type: 'savings_goal',
+      id: 'cat-savings',
+      name: 'Savings',
+      type: 'bill',
       color: '#24c8db',
       sort_order: 0,
       is_predefined: true,
@@ -31,22 +31,6 @@ describe('AdhocService', () => {
       color: '#ff6b6b',
       sort_order: 1,
       is_predefined: true,
-      created_at: '2026-01-01T00:00:00.000Z',
-      updated_at: '2026-01-01T00:00:00.000Z',
-    },
-  ];
-
-  // Sample savings goal for testing
-  const sampleGoals: SavingsGoal[] = [
-    {
-      id: 'goal-winter-tires-001',
-      name: 'Winter Tires',
-      target_amount: 80000, // $800.00
-      current_amount: 20000,
-      target_date: '2026-10-01',
-      linked_account_id: 'ps-savings-001',
-      status: 'saving',
-      notes: 'For the SUV',
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     },
@@ -81,10 +65,6 @@ describe('AdhocService', () => {
       join(testDir, 'entities', 'categories.json'),
       JSON.stringify(sampleCategories, null, 2)
     );
-    await writeFile(
-      join(testDir, 'entities', 'savings-goals.json'),
-      JSON.stringify(sampleGoals, null, 2)
-    );
 
     // Create month data for current month
     const currentMonth = new Date().toISOString().substring(0, 7);
@@ -101,211 +81,6 @@ describe('AdhocService', () => {
     // Clean up test directory
     await rm(testDir, { recursive: true, force: true });
   });
-
-  // ============================================================================
-  // Goal Contribution Tests
-  // ============================================================================
-
-  describe('createGoalContribution', () => {
-    test('should create a goal contribution with payment', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      const contribution = await service.createGoalContribution(currentMonth, {
-        goal_id: 'goal-winter-tires-001',
-        goal_name: 'Winter Tires',
-        amount: 10000, // $100
-        category_id: 'cat-savings-goals',
-        payment_source_id: 'ps-savings-001',
-        date: today,
-      });
-
-      expect(contribution.id).toBeDefined();
-      expect(contribution.goal_id).toBe('goal-winter-tires-001');
-      expect(contribution.name).toBe('Payment: Winter Tires');
-      expect(contribution.expected_amount).toBe(10000);
-      expect(contribution.is_adhoc).toBe(true);
-      expect(contribution.is_closed).toBe(true);
-      expect(contribution.category_id).toBe('cat-savings-goals');
-      expect(contribution.payment_source_id).toBe('ps-savings-001');
-
-      // Should have a single closed occurrence (closing = payment in occurrence-only model)
-      expect(contribution.occurrences).toHaveLength(1);
-      expect(contribution.occurrences[0].is_closed).toBe(true);
-      expect(contribution.occurrences[0].closed_date).toBe(today);
-      expect(contribution.occurrences[0].expected_amount).toBe(10000);
-    });
-
-    test('should reject contribution without goal_id', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: '',
-          goal_name: 'Test',
-          amount: 10000,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: today,
-        })
-      ).rejects.toThrow('Goal ID is required');
-    });
-
-    test('should reject contribution without goal_name', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: '',
-          amount: 10000,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: today,
-        })
-      ).rejects.toThrow('Goal name is required');
-    });
-
-    test('should reject contribution with zero amount', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: 0,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: today,
-        })
-      ).rejects.toThrow('Amount must be positive');
-    });
-
-    test('should reject contribution with negative amount', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: -100,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: today,
-        })
-      ).rejects.toThrow('Amount must be positive');
-    });
-
-    test('should reject contribution without category_id', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: 10000,
-          category_id: '',
-          payment_source_id: 'ps-savings-001',
-          date: today,
-        })
-      ).rejects.toThrow('Category ID is required');
-    });
-
-    test('should reject contribution without payment_source_id', async () => {
-      const today = getTodayLocalDateString();
-      const currentMonth = today.substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: 10000,
-          category_id: 'cat-savings-goals',
-          payment_source_id: '',
-          date: today,
-        })
-      ).rejects.toThrow('Payment source ID is required');
-    });
-
-    test('should reject contribution without date', async () => {
-      const currentMonth = new Date().toISOString().substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: 10000,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: '',
-        })
-      ).rejects.toThrow('Date is required');
-    });
-
-    test('should reject contribution with future date', async () => {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 1);
-      const futureDateStr = futureDate.toISOString().split('T')[0];
-      const currentMonth = new Date().toISOString().substring(0, 7);
-
-      await expect(
-        service.createGoalContribution(currentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: 10000,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: futureDateStr,
-        })
-      ).rejects.toThrow('Payment date cannot be in the future');
-    });
-
-    test('should reject contribution with date in different month', async () => {
-      const today = getTodayLocalDateString();
-      const differentMonth = '2025-06'; // A month in the past
-
-      await expect(
-        service.createGoalContribution(differentMonth, {
-          goal_id: 'goal-winter-tires-001',
-          goal_name: 'Winter Tires',
-          amount: 10000,
-          category_id: 'cat-savings-goals',
-          payment_source_id: 'ps-savings-001',
-          date: today, // Today is not in 2025-06
-        })
-      ).rejects.toThrow('Payment date must be within the specified month');
-    });
-
-    test('should create month data if it does not exist', async () => {
-      // Use a date in the past that exists
-      const pastMonth = '2025-12';
-      const pastDate = '2025-12-15';
-
-      // This should work because createGoalContribution generates month if missing
-      // But the future date check will fail since 2025-12-15 is in the past
-      // So let's test with a date that IS in the past (not future)
-      const contribution = await service.createGoalContribution(pastMonth, {
-        goal_id: 'goal-winter-tires-001',
-        goal_name: 'Winter Tires',
-        amount: 5000,
-        category_id: 'cat-savings-goals',
-        payment_source_id: 'ps-savings-001',
-        date: pastDate,
-      });
-
-      expect(contribution.id).toBeDefined();
-      expect(contribution.month).toBe(pastMonth);
-    });
-  });
-
-  // ============================================================================
-  // Ad-hoc Bill Tests
-  // ============================================================================
 
   describe('createAdhocBill', () => {
     test('should create an ad-hoc bill', async () => {

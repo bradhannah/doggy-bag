@@ -9,6 +9,7 @@ import { routes } from './src/routes';
 import { StorageServiceImpl } from './src/services/storage';
 import { runWithDataAccess } from './src/services/data-access';
 import { checkRequestReadOnly } from './src/routes/handlers/shared';
+import { migrateGoalsToSavings } from './src/migrations/remove-goals';
 
 // Check for version flag (used by Makefile to distinguish runtime from compiled binary)
 if (process.argv.includes('--version')) {
@@ -20,6 +21,25 @@ if (process.argv.includes('--version')) {
 // In production, Tauri passes DATA_DIR when spawning the sidecar
 // In development, it defaults to './data' (project-relative)
 StorageServiceImpl.initialize();
+
+// One-time data migrations run before any request is served. A failure must not
+// start the server on half-converted data.
+try {
+  const migration = await runWithDataAccess(() =>
+    migrateGoalsToSavings(StorageServiceImpl.getInstance(), StorageServiceImpl.getConfig().basePath)
+  );
+  if (migration.changed) {
+    console.log(
+      `[Migration] Converted goal contributions to savings plans ` +
+        `(${migration.sources} sources, ${migration.months} months, ${migration.categories} categories); ` +
+        `backup at ${migration.backupPath}`
+    );
+  }
+} catch (error) {
+  console.log('PORT=ERROR');
+  console.error('[Migration] Failed to convert goals to savings plans:', error);
+  process.exit(1);
+}
 
 // Determine environment mode
 // Use DATA_DIR to detect mode — BUN_ENV is unreliable in compiled binaries

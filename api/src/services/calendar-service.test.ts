@@ -5,7 +5,7 @@ import { StorageServiceImpl } from './storage';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { MonthlyData, Bill, Income, SavingsGoal } from '../types';
+import type { MonthlyData, Bill, Income } from '../types';
 
 describe('CalendarService', () => {
   let service: CalendarServiceImpl;
@@ -37,7 +37,7 @@ describe('CalendarService', () => {
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     },
-    // Bill that is linked to a savings goal (recurring contribution)
+    // Recurring savings contribution
     {
       id: 'bill-goal-recurring-001',
       name: 'Monthly Vacation Savings',
@@ -46,7 +46,6 @@ describe('CalendarService', () => {
       payment_source_id: 'ps-checking-001',
       category_id: 'cat-savings-001',
       day_of_month: 5,
-      goal_id: 'goal-vacation-001', // Linked to savings goal
       is_active: true,
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
@@ -64,21 +63,6 @@ describe('CalendarService', () => {
       category_id: 'cat-income-001',
       start_date: '2026-01-03',
       is_active: true,
-      created_at: '2026-01-01T00:00:00.000Z',
-      updated_at: '2026-01-01T00:00:00.000Z',
-    },
-  ];
-
-  // Sample savings goals for testing
-  const sampleGoals: SavingsGoal[] = [
-    {
-      id: 'goal-vacation-001',
-      name: 'Vacation Fund',
-      target_amount: 300000,
-      current_amount: 100000,
-      target_date: '2026-07-01',
-      linked_account_id: 'ps-savings-001',
-      status: 'saving',
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     },
@@ -142,7 +126,7 @@ describe('CalendarService', () => {
           },
         ],
       },
-      // Ad-hoc goal contribution (instance has goal_id, no matching bill)
+      // Ad-hoc savings contribution (no matching bill)
       {
         id: 'bi-goal-adhoc-001',
         bill_id: null,
@@ -152,7 +136,6 @@ describe('CalendarService', () => {
         is_default: false,
         is_closed: false,
         is_adhoc: true,
-        goal_id: 'goal-vacation-001', // Ad-hoc contribution via instance.goal_id
         name: 'Extra Vacation Contribution',
         created_at: '2026-02-01T00:00:00.000Z',
         updated_at: '2026-02-01T00:00:00.000Z',
@@ -169,7 +152,7 @@ describe('CalendarService', () => {
           },
         ],
       },
-      // Recurring goal contribution (bill has goal_id, instance references that bill)
+      // Recurring savings contribution (instance references the bill)
       {
         id: 'bi-goal-recurring-001',
         bill_id: 'bill-goal-recurring-001', // References bill with goal_id
@@ -179,7 +162,6 @@ describe('CalendarService', () => {
         is_default: true,
         is_closed: false,
         is_adhoc: false,
-        // Note: NO goal_id on instance - it should be detected from the Bill
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
         occurrences: [
@@ -279,10 +261,6 @@ describe('CalendarService', () => {
       JSON.stringify(sampleIncomes, null, 2)
     );
     await writeFile(
-      join(testDir, 'entities', 'savings-goals.json'),
-      JSON.stringify(sampleGoals, null, 2)
-    );
-    await writeFile(
       join(testDir, 'months', '2026-02.json'),
       JSON.stringify(sampleMonthlyData, null, 2)
     );
@@ -312,7 +290,7 @@ describe('CalendarService', () => {
       const response = await service.getEventsForMonth('2026-02');
       const billEvents = response.events.filter((e) => e.type === 'bill');
 
-      expect(billEvents.length).toBe(2); // Rent and Internet (goal contribs are type 'goal')
+      expect(billEvents.length).toBe(4); // Rent, Internet and both savings contributions
       expect(billEvents.some((e) => e.title === 'Rent')).toBe(true);
       expect(billEvents.some((e) => e.title === 'Internet')).toBe(true);
     });
@@ -323,33 +301,6 @@ describe('CalendarService', () => {
 
       expect(incomeEvents.length).toBe(2); // Two salary occurrences
       expect(incomeEvents.every((e) => e.title === 'Salary')).toBe(true);
-    });
-
-    test('should include goal contribution events with type goal (ad-hoc via instance.goal_id)', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-      const goalEvents = response.events.filter((e) => e.type === 'goal');
-
-      // Should have 2 goal events: one ad-hoc, one recurring
-      expect(goalEvents.length).toBe(2);
-
-      // Find the ad-hoc contribution (from instance.goal_id)
-      const adhocGoal = goalEvents.find((e) => e.id.includes('bi-goal-adhoc-001'));
-      expect(adhocGoal).toBeDefined();
-      expect(adhocGoal?.title).toBe('Vacation Fund'); // Uses goal name
-      expect(adhocGoal?.amount).toBe(10000);
-      expect(adhocGoal?.date).toBe('2026-02-20');
-    });
-
-    test('should include goal contribution events with type goal (recurring via bill.goal_id)', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-      const goalEvents = response.events.filter((e) => e.type === 'goal');
-
-      // Find the recurring contribution (from bill.goal_id)
-      const recurringGoal = goalEvents.find((e) => e.id.includes('bi-goal-recurring-001'));
-      expect(recurringGoal).toBeDefined();
-      expect(recurringGoal?.title).toBe('Vacation Fund'); // Uses goal name, not bill name
-      expect(recurringGoal?.amount).toBe(25000);
-      expect(recurringGoal?.date).toBe('2026-02-05');
     });
 
     test('should include todo events', async () => {
@@ -390,9 +341,8 @@ describe('CalendarService', () => {
     test('should calculate summary correctly', async () => {
       const response = await service.getEventsForMonth('2026-02');
 
-      expect(response.summary.bills).toBe(2); // Rent + Internet
+      expect(response.summary.bills).toBe(4); // Rent, Internet, two savings contributions
       expect(response.summary.incomes).toBe(2); // 2 salary occurrences
-      expect(response.summary.goals).toBe(2); // 1 ad-hoc + 1 recurring
       expect(response.summary.todos).toBe(2);
       expect(response.summary.total).toBe(8);
     });
@@ -481,9 +431,6 @@ describe('CalendarService', () => {
       const incomeEvent = response.events.find((e) => e.type === 'income');
       expect(incomeEvent?.id.startsWith('income-')).toBe(true);
 
-      const goalEvent = response.events.find((e) => e.type === 'goal');
-      expect(goalEvent?.id.startsWith('goal-')).toBe(true);
-
       const todoEvent = response.events.find((e) => e.type === 'todo');
       expect(todoEvent?.id.startsWith('todo-')).toBe(true);
     });
@@ -506,86 +453,6 @@ describe('CalendarService', () => {
       const salaryEvent = response.events.find((e) => e.type === 'income');
 
       expect(salaryEvent?.source_id).toBe('income-salary-001');
-    });
-
-    test('should include goal_id as source_id for goal contributions (both ad-hoc and recurring)', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-      const goalEvents = response.events.filter((e) => e.type === 'goal');
-
-      // Both goal events should have the goal_id as source_id
-      expect(goalEvents.length).toBe(2);
-      goalEvents.forEach((e) => {
-        expect(e.source_id).toBe('goal-vacation-001');
-      });
-    });
-  });
-
-  // ============================================================================
-  // Goal Detection Tests (separating goals from bills)
-  // ============================================================================
-
-  describe('goal detection', () => {
-    test('should detect goal from instance.goal_id (ad-hoc contribution)', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-
-      // The ad-hoc contribution has goal_id on the instance
-      const adhocEvent = response.events.find((e) => e.instance_id === 'bi-goal-adhoc-001');
-      expect(adhocEvent).toBeDefined();
-      expect(adhocEvent?.type).toBe('goal');
-      expect(adhocEvent?.title).toBe('Vacation Fund');
-    });
-
-    test('should detect goal from bill.goal_id (recurring contribution)', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-
-      // The recurring contribution has goal_id on the Bill entity, not the instance
-      const recurringEvent = response.events.find((e) => e.instance_id === 'bi-goal-recurring-001');
-      expect(recurringEvent).toBeDefined();
-      expect(recurringEvent?.type).toBe('goal');
-      expect(recurringEvent?.title).toBe('Vacation Fund'); // Uses goal name
-    });
-
-    test('should NOT detect goal for regular bills without goal_id', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-
-      // Regular bills should remain as type 'bill'
-      const rentEvent = response.events.find((e) => e.instance_id === 'bi-rent-001');
-      expect(rentEvent?.type).toBe('bill');
-      expect(rentEvent?.title).toBe('Rent');
-
-      const internetEvent = response.events.find((e) => e.instance_id === 'bi-internet-001');
-      expect(internetEvent?.type).toBe('bill');
-      expect(internetEvent?.title).toBe('Internet');
-    });
-
-    test('should use goal name for title when goal_id is present', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-      const goalEvents = response.events.filter((e) => e.type === 'goal');
-
-      // Both goal events should use the goal name "Vacation Fund", not the bill/instance name
-      goalEvents.forEach((e) => {
-        expect(e.title).toBe('Vacation Fund');
-      });
-    });
-
-    test('should prioritize instance.goal_id over bill.goal_id', async () => {
-      // This test ensures that if both instance and bill have goal_id,
-      // the instance's goal_id takes precedence
-      const response = await service.getEventsForMonth('2026-02');
-
-      // The ad-hoc event has instance.goal_id set
-      const adhocEvent = response.events.find((e) => e.instance_id === 'bi-goal-adhoc-001');
-      expect(adhocEvent?.source_id).toBe('goal-vacation-001');
-    });
-
-    test('should correctly count goals vs bills in summary', async () => {
-      const response = await service.getEventsForMonth('2026-02');
-
-      // 2 regular bills (Rent, Internet)
-      expect(response.summary.bills).toBe(2);
-
-      // 2 goal contributions (1 ad-hoc, 1 recurring)
-      expect(response.summary.goals).toBe(2);
     });
   });
 

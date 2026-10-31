@@ -79,7 +79,6 @@ describe('BillsService', () => {
       day_of_month: 1,
       payment_source_id: 'ps-checking-001',
       category_id: 'cat-housing-001',
-      goal_id: 'goal-winter-tires-001', // Linked to a savings goal
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -92,7 +91,6 @@ describe('BillsService', () => {
       day_of_month: 15,
       payment_source_id: 'ps-checking-001',
       category_id: 'cat-housing-001',
-      goal_id: 'goal-winter-tires-001', // Same goal
       is_active: true,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z',
@@ -167,26 +165,6 @@ describe('BillsService', () => {
     test('returns null when not found', async () => {
       const bill = await service.getById('non-existent-id');
       expect(bill).toBeNull();
-    });
-  });
-
-  describe('getByGoalId', () => {
-    test('returns bills linked to a goal', async () => {
-      const bills = await service.getByGoalId('goal-winter-tires-001');
-      expect(bills).toHaveLength(2);
-      expect(bills.map((b) => b.name)).toContain('Winter Tires Contribution');
-      expect(bills.map((b) => b.name)).toContain('Winter Tires Extra');
-    });
-
-    test('returns empty array when no bills match goal', async () => {
-      const bills = await service.getByGoalId('non-existent-goal');
-      expect(bills).toHaveLength(0);
-    });
-
-    test('does not return bills without goal_id', async () => {
-      const bills = await service.getByGoalId('goal-winter-tires-001');
-      const rentBill = bills.find((b) => b.name === 'Rent');
-      expect(rentBill).toBeUndefined();
     });
   });
 

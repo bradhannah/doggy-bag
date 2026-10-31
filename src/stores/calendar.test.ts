@@ -21,7 +21,6 @@ import {
   calendarError,
   billEvents,
   incomeEvents,
-  goalEvents,
   todoEvents,
   overdueEvents,
   openEvents,
@@ -69,18 +68,6 @@ const sampleEvents: CalendarEvent[] = [
     occurrence_id: 'occ-2',
   },
   {
-    id: 'goal-vacation-001',
-    type: 'goal',
-    date: '2026-02-15',
-    title: 'Vacation Fund',
-    amount: 10000,
-    is_closed: false,
-    is_overdue: false,
-    source_id: 'goal-1',
-    instance_id: 'bi-2',
-    occurrence_id: 'occ-3',
-  },
-  {
     id: 'todo-taxes-001',
     type: 'todo',
     date: '2026-02-15',
@@ -108,9 +95,8 @@ const sampleEvents: CalendarEvent[] = [
 const sampleSummary: CalendarSummary = {
   bills: 2,
   incomes: 1,
-  goals: 1,
   todos: 1,
-  total: 5,
+  total: 4,
 };
 
 const sampleResponse = {
@@ -141,7 +127,7 @@ describe('Calendar Store', () => {
 
       expect(mockGet).toHaveBeenCalledWith('/api/calendar/2026-02');
       expect(get(calendarMonth)).toBe('2026-02');
-      expect(get(calendarEvents)).toHaveLength(5);
+      expect(get(calendarEvents)).toHaveLength(4);
       expect(get(calendarSummary)).toEqual(sampleSummary);
     });
 
@@ -214,12 +200,6 @@ describe('Calendar Store', () => {
       expect(incomes[0].title).toBe('Salary');
     });
 
-    it('should filter goal events', () => {
-      const goals = get(goalEvents);
-      expect(goals).toHaveLength(1);
-      expect(goals[0].title).toBe('Vacation Fund');
-    });
-
     it('should filter todo events', () => {
       const todos = get(todoEvents);
       expect(todos).toHaveLength(1);
@@ -234,7 +214,7 @@ describe('Calendar Store', () => {
 
     it('should filter open (not closed) events', () => {
       const open = get(openEvents);
-      expect(open).toHaveLength(3); // Rent, Vacation Fund, Pay Taxes
+      expect(open).toHaveLength(2); // Rent, Pay Taxes
       expect(open.every((e) => !e.is_closed)).toBe(true);
     });
 
@@ -244,7 +224,7 @@ describe('Calendar Store', () => {
 
       // Check Feb 15 has 2 events
       const feb15Events = byDate.get('2026-02-15');
-      expect(feb15Events).toHaveLength(2);
+      expect(feb15Events).toHaveLength(1);
     });
   });
 
@@ -264,9 +244,9 @@ describe('Calendar Store', () => {
       expect(events[0].title).toBe('Rent');
     });
 
-    it('should return multiple events for dates with multiple events', () => {
+    it('should return every event on a date', () => {
       const events = getEventsForDate('2026-02-15');
-      expect(events).toHaveLength(2);
+      expect(events).toHaveLength(1);
     });
 
     it('should return empty array for dates with no events', () => {
@@ -289,10 +269,6 @@ describe('Calendar Store', () => {
         expect(getEventTypeColor('income')).toBe('success');
       });
 
-      it('should return correct color for goal type', () => {
-        expect(getEventTypeColor('goal')).toBe('accent');
-      });
-
       it('should return correct color for todo type', () => {
         expect(getEventTypeColor('todo')).toBe('purple');
       });
@@ -305,10 +281,6 @@ describe('Calendar Store', () => {
 
       it('should return correct label for income type', () => {
         expect(getEventTypeLabel('income')).toBe('Income');
-      });
-
-      it('should return correct label for goal type', () => {
-        expect(getEventTypeLabel('goal')).toBe('Goal');
       });
 
       it('should return correct label for todo type', () => {

@@ -61,20 +61,19 @@ export function createBackup(
       }
     }
 
-    // Also backup monthly data subdirectory if it exists
-    const monthlyDir = join(dataDir, 'months');
-    if (existsSync(monthlyDir)) {
-      const monthlyBackupDir = join(backupPath, 'months');
-      mkdirSync(monthlyBackupDir, { recursive: true });
+    // Also backup the entities and months subdirectories if they exist
+    for (const subdirectory of ['entities', 'months']) {
+      const sourceDir = join(dataDir, subdirectory);
+      if (!existsSync(sourceDir)) continue;
+      const destDir = join(backupPath, subdirectory);
+      mkdirSync(destDir, { recursive: true });
 
-      const monthlyFiles = readdirSync(monthlyDir);
-      for (const file of monthlyFiles) {
-        const sourcePath = join(monthlyDir, file);
+      for (const file of readdirSync(sourceDir)) {
+        const sourcePath = join(sourceDir, file);
         const stat = statSync(sourcePath);
 
         if (stat.isFile() && file.endsWith('.json')) {
-          const destPath = join(monthlyBackupDir, file);
-          copyFileSync(sourcePath, destPath);
+          copyFileSync(sourcePath, join(destDir, file));
           filesBackedUp++;
         }
       }

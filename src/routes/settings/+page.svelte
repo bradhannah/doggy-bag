@@ -370,7 +370,7 @@
       pendingImportMessage =
         data.schema_version === 2
           ? `Restore the complete snapshot from ${data.export_date}? This replaces all entity data, monthly budgets, and uploaded documents with the backup contents.`
-          : `Import the legacy budget backup from ${data.export_date}? This restores its bills, incomes, accounts, categories, and included months. Goals, insurance, notes, other features, and months absent from this older backup retain their current data.`;
+          : `Import the legacy budget backup from ${data.export_date}? This restores its bills, incomes, accounts, categories, and included months. Insurance, notes, other features, and months absent from this older backup retain their current data.`;
       showImportConfirm = true;
     } catch {
       addToast('Failed to import backup: Invalid file format', 'error');

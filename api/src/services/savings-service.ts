@@ -5,12 +5,7 @@ import { PaymentSourcesServiceImpl } from './payment-sources-service';
 import { CategoriesServiceImpl } from './categories-service';
 import { runWithDataAccess } from './data-access';
 import { createAdhocOccurrence } from '../utils/occurrences';
-import {
-  isSavingsAccount,
-  isSpendingAccount,
-  remainingLegacySavings,
-  savingsEntries,
-} from '../utils/savings';
+import { isSavingsAccount, isSpendingAccount, savingsEntries } from '../utils/savings';
 import { NotFoundError, ReadOnlyError, ValidationError } from '../utils/errors';
 import type {
   SavingsMonthSummary,
@@ -46,7 +41,6 @@ export class SavingsService {
       );
       for (const id of Object.keys(data?.savings_balances_start ?? {})) ids.add(id);
       for (const id of Object.keys(data?.savings_balances_end ?? {})) ids.add(id);
-      for (const id of Object.keys(data?.savings_contributions ?? {})) ids.add(id);
       for (const instance of [...(data?.bill_instances ?? []), ...(data?.income_instances ?? [])]) {
         if (instance.savings_account_id) ids.add(instance.savings_account_id);
       }
@@ -59,7 +53,6 @@ export class SavingsService {
           const account = accounts.find((account) => account.id === id);
           const entries = data ? savingsEntries(data, id) : [];
           const planned = entries.reduce((sum, entry) => sum + entry.planned, 0);
-          const legacy = data?.savings_contributions?.[id] ?? 0;
           return {
             id,
             name: account?.name ?? `Archived account (${id.slice(0, 8)})`,
@@ -69,9 +62,6 @@ export class SavingsService {
             end: data?.savings_balances_end?.[id],
             planned,
             recorded: entries.reduce((sum, entry) => sum + entry.recorded, 0),
-            unbudgeted_legacy: data?.excluded_budget_sources?.includes(`legacy-savings:${id}`)
-              ? 0
-              : remainingLegacySavings(legacy, planned),
             entries,
           };
         }),
@@ -115,8 +105,8 @@ export class SavingsService {
       if (data?.is_read_only) throw new ReadOnlyError(month);
       const category =
         direction === 'contribution'
-          ? await this.categories.ensureGoalsCategoryExists()
-          : await this.categories.ensureGoalCompletionsCategoryExists();
+          ? await this.categories.ensureSavingsCategory()
+          : await this.categories.ensureSavingsWithdrawalsCategory();
       const name =
         request.name?.trim() ||
         `${direction === 'contribution' ? 'Savings' : 'Withdrawal'}: ${destination.name}`;

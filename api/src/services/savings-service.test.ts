@@ -65,14 +65,7 @@ describe('Savings plans and adding recurring items to an existing month', () => 
   beforeEach(async () => {
     await rm(join(directory, 'months'), { recursive: true, force: true });
     await mkdir(join(directory, 'months'));
-    for (const entity of [
-      'bills',
-      'incomes',
-      'insurance-claims',
-      'savings-goals',
-      'todos',
-      'categories',
-    ]) {
+    for (const entity of ['bills', 'incomes', 'insurance-claims', 'todos', 'categories']) {
       await storage().writeJSON(`data/entities/${entity}.json`, []);
     }
     await storage().writeJSON('data/entities/payment-sources.json', [

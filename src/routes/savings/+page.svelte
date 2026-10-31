@@ -46,7 +46,6 @@
       accounts: data?.accounts.filter((account) => account.is_investment) ?? [],
     },
   ];
-  $: hasLegacy = data?.accounts.some((account) => account.unbudgeted_legacy !== 0) ?? false;
 
   async function load(month = $currentMonth) {
     const id = ++requestId;
@@ -81,7 +80,7 @@
     return dollarsToCents(edits[account.id]?.start || '0');
   }
   function estimate(account: SavingsAccountSummary): number {
-    return start(account) + account.planned + account.unbudgeted_legacy;
+    return start(account) + account.planned;
   }
   function final(account: SavingsAccountSummary): number {
     const value = edits[account.id]?.end?.trim() ?? '';
@@ -252,12 +251,6 @@
       {#if data.is_read_only}<p class="notice">
           This month is locked. Unlock it in Manage to edit balances or budget entries.
         </p>{/if}
-      {#if hasLegacy}
-        <p class="notice">
-          Some older Savings amounts are not linked to budget entries. Estimates include these
-          unlinked amounts.
-        </p>
-      {/if}
       {#each groups as group (group.name)}
         {#if group.accounts.length}
           {@const sum = edits && totals(group.accounts)}
@@ -297,13 +290,7 @@
                           disabled={data.is_read_only || pendingSaves > 0}
                         /></td
                       >
-                      <td data-label="Planned"
-                        >{formatCurrency(
-                          account.planned
-                        )}{#if account.unbudgeted_legacy !== 0}<small class="legacy"
-                            >{formatCurrency(account.unbudgeted_legacy)} unlinked</small
-                          >{/if}</td
-                      >
+                      <td data-label="Planned">{formatCurrency(account.planned)}</td>
                       <td data-label="Recorded">{formatCurrency(account.recorded)}</td>
                       <td data-label="Est. EOM">{formatCurrency(edits && estimate(account))}</td>
                       <td data-label="Final"
@@ -337,10 +324,7 @@
                             >
                             <ul>
                               {#each account.entries as entry (entry.id)}<li>
-                                  <span
-                                    >{entry.name}{#if entry.goal_id}
-                                      · <a href="/goals/edit/{entry.goal_id}">Goal</a>{/if}</span
-                                  ><span
+                                  <span>{entry.name}</span><span
                                     >Planned {formatCurrency(entry.planned)} · recorded {formatCurrency(
                                       entry.recorded
                                     )}</span
@@ -378,8 +362,8 @@
         </p>
       {/if}
       <p class="hint">
-        Planned and recorded amounts come from Budget, including goal contributions and withdrawals.
-        Edit or record a transfer there. Recording transfers does not update your bank balances.
+        Planned and recorded amounts come from Budget contributions and withdrawals. Edit or record
+        a transfer there. Recording transfers does not update your bank balances.
       </p>
       <p class="hint">
         Balances save when you leave a field. Leave Final blank to use the estimate; enter 0 for an
@@ -501,9 +485,6 @@
     font-weight: 400;
     font-size: var(--font-size-xs);
     line-height: 1.4;
-  }
-  .legacy {
-    color: var(--warning);
   }
   .positive {
     color: var(--success);

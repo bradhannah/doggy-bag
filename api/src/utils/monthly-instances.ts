@@ -7,7 +7,7 @@ import {
 } from './occurrences';
 
 export function createBillInstance(bill: Bill, month: string): BillInstance | null {
-  if (!bill.is_active || (bill.goal_status && bill.goal_status !== 'saving')) return null;
+  if (!bill.is_active) return null;
   const occurrences = generateBillOccurrences(bill, month);
   occurrences.forEach((occurrence, index) => {
     occurrence.recurring_origin = {

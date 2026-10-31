@@ -1,5 +1,5 @@
 // Calendar Service
-// Aggregates events from bills, incomes, savings goals, and todos for calendar display
+// Aggregates events from bills, incomes, and todos for calendar display
 
 import { StorageServiceImpl } from './storage';
 import type { StorageService } from './storage';
@@ -7,8 +7,6 @@ import { BillsServiceImpl } from './bills-service';
 import type { BillsService } from './bills-service';
 import { IncomesServiceImpl } from './incomes-service';
 import type { IncomesService } from './incomes-service';
-import { SavingsGoalsServiceImpl } from './savings-goals-service';
-import type { SavingsGoalsService } from './savings-goals-service';
 import { InsuranceClaimsServiceImpl } from './insurance-claims-service';
 import type { InsuranceClaimsService } from './insurance-claims-service';
 import type {
@@ -19,7 +17,6 @@ import type {
   Occurrence,
   Bill,
   Income,
-  SavingsGoal,
 } from '../types';
 import { getTodayLocalDateString } from '../utils/due-date';
 import { buildVirtualInsuranceEntries } from '../utils/insurance-virtual-entries';
@@ -29,7 +26,7 @@ import { loadLockedMonths } from '../utils/locked-months';
 // Calendar Event Types
 // ============================================================================
 
-export type CalendarEventType = 'bill' | 'income' | 'goal' | 'todo';
+export type CalendarEventType = 'bill' | 'income' | 'todo';
 
 export interface CalendarEvent {
   id: string; // Unique identifier for the event
@@ -39,7 +36,7 @@ export interface CalendarEvent {
   amount?: number; // In cents (undefined for todos without amount)
   is_closed: boolean; // Whether the event is completed/paid
   is_overdue: boolean; // Whether the event is past due and not closed
-  source_id: string; // ID of the source entity (bill_id, income_id, goal_id, todo_id)
+  source_id: string; // ID of the source entity (bill_id, income_id, todo_id)
   instance_id: string; // ID of the instance (bill_instance_id, income_instance_id, todo_instance_id)
   occurrence_id?: string; // For bills/incomes: the specific occurrence ID
   is_insurance?: boolean; // Insurance bill or reimbursement; source_id is the claim ID
@@ -51,7 +48,6 @@ export interface CalendarResponse {
   summary: {
     bills: number;
     incomes: number;
-    goals: number;
     todos: number;
     total: number;
   };
@@ -74,14 +70,12 @@ export class CalendarServiceImpl implements CalendarService {
   private storage: StorageService;
   private billsService: BillsService;
   private incomesService: IncomesService;
-  private goalsService: SavingsGoalsService;
   private insuranceClaimsService: InsuranceClaimsService;
 
   constructor() {
     this.storage = StorageServiceImpl.getInstance();
     this.billsService = new BillsServiceImpl();
     this.incomesService = new IncomesServiceImpl();
-    this.goalsService = new SavingsGoalsServiceImpl();
     this.insuranceClaimsService = new InsuranceClaimsServiceImpl();
   }
 
@@ -163,15 +157,13 @@ export class CalendarServiceImpl implements CalendarService {
       // Load bills and incomes for name lookups
       const bills = await this.billsService.getAll();
       const incomes = await this.incomesService.getAll();
-      const goals = await this.goalsService.getAll();
 
       const billsMap = new Map<string, Bill>(bills.map((b) => [b.id, b]));
       const incomesMap = new Map<string, Income>(incomes.map((i) => [i.id, i]));
-      const goalsMap = new Map<string, SavingsGoal>(goals.map((g) => [g.id, g]));
 
       // Process bill instances
       for (const billInstance of monthlyData.bill_instances.filter((i) => !i.is_virtual)) {
-        const instanceEvents = this.processBillInstance(billInstance, billsMap, goalsMap, today);
+        const instanceEvents = this.processBillInstance(billInstance, billsMap, today);
         events.push(...instanceEvents);
       }
 
@@ -201,7 +193,6 @@ export class CalendarServiceImpl implements CalendarService {
     const summary = {
       bills: events.filter((e) => e.type === 'bill').length,
       incomes: events.filter((e) => e.type === 'income').length,
-      goals: events.filter((e) => e.type === 'goal').length,
       todos: events.filter((e) => e.type === 'todo').length,
       total: events.length,
     };
@@ -224,12 +215,10 @@ export class CalendarServiceImpl implements CalendarService {
   /**
    * Process a bill instance into calendar events
    * Each occurrence becomes a separate event
-   * Goal contributions are marked as type 'goal'
    */
   private processBillInstance(
     instance: BillInstance,
     billsMap: Map<string, Bill>,
-    goalsMap: Map<string, SavingsGoal>,
     today: string
   ): CalendarEvent[] {
     const events: CalendarEvent[] = [];
@@ -244,32 +233,17 @@ export class CalendarServiceImpl implements CalendarService {
       title = 'Unknown Bill';
     }
 
-    // Check if this is a savings goal contribution
-    // Either the instance has goal_id OR the underlying bill has goal_id
-    const bill =
-      instance.source_snapshot ?? (instance.bill_id ? billsMap.get(instance.bill_id) : null);
-    const isGoalContribution = !!(instance.goal_id || bill?.goal_id);
-    const effectiveGoalId = instance.goal_id || bill?.goal_id;
-    let goalTitle = title;
-    if (isGoalContribution && effectiveGoalId && goalsMap.has(effectiveGoalId)) {
-      goalTitle = goalsMap.get(effectiveGoalId)!.name;
-    }
-
     // Create an event for each occurrence
     for (const occ of instance.occurrences) {
-      const isOverdue = !occ.is_closed && occ.expected_date < today;
-
       events.push({
-        id: `${isGoalContribution ? 'goal' : 'bill'}-${instance.id}-${occ.id}`,
-        type: isGoalContribution ? 'goal' : 'bill',
+        id: `bill-${instance.id}-${occ.id}`,
+        type: 'bill',
         date: occ.expected_date,
-        title: isGoalContribution ? goalTitle : title,
+        title,
         amount: occ.expected_amount,
         is_closed: occ.is_closed,
-        is_overdue: isOverdue,
-        source_id: isGoalContribution
-          ? effectiveGoalId || instance.bill_id || ''
-          : instance.bill_id || instance.id,
+        is_overdue: !occ.is_closed && occ.expected_date < today,
+        source_id: instance.bill_id || instance.id,
         instance_id: instance.id,
         occurrence_id: occ.id,
       });

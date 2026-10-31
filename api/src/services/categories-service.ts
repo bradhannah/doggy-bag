@@ -28,8 +28,8 @@ export interface CategoriesService {
   reorder(type: CategoryType, orderedIds: string[]): Promise<Category[]>;
   ensurePayoffCategory(): Promise<Category>;
   ensureVariableExpensesCategory(): Promise<Category>;
-  ensureGoalsCategoryExists(): Promise<Category>;
-  ensureGoalCompletionsCategoryExists(): Promise<Category>;
+  ensureSavingsCategory(): Promise<Category>;
+  ensureSavingsWithdrawalsCategory(): Promise<Category>;
 
   validate(data: Partial<Category>): ValidationResult;
 }
@@ -337,120 +337,55 @@ export class CategoriesServiceImpl implements CategoriesService {
   }
 
   /**
-   * Ensure the shared savings category exists for contributions and goals.
-   * Creates it if not found. This is a system category for savings goal contributions.
-   * @returns The savings goals category
+   * The predefined "Savings" bill category that savings contributions live in.
+   * Older data called it "Savings Goals" or "Goals"; those are renamed.
    */
-  public async ensureGoalsCategoryExists(): Promise<Category> {
-    const GOALS_CATEGORY_NAME = 'Savings';
-    const GOALS_CATEGORY_COLOR = '#10b981'; // Emerald green
-
-    try {
-      const categories = await this.getAll();
-
-      // Look for existing savings goals category by type or name (for migration)
-      const goalsCategory = categories.find(
-        (c) => c.type === 'savings_goal' || (c.name === 'Goals' && c.type === 'bill')
-      );
-
-      if (goalsCategory) {
-        // Migrate old "Goals" category to new type if needed
-        if (
-          goalsCategory.type !== 'savings_goal' ||
-          goalsCategory.name === 'Savings Goals' ||
-          goalsCategory.name === 'Goals'
-        ) {
-          const updatedCategory = await this.update(goalsCategory.id, {
-            name: GOALS_CATEGORY_NAME,
-            type: 'savings_goal',
-          });
-          return updatedCategory || goalsCategory;
-        }
-        return goalsCategory;
-      }
-
-      // Create the category - appears after other bill categories but before variable
-      const billCategories = categories.filter((c) => c.type === 'bill');
-      const maxSortOrder =
-        billCategories.length > 0 ? Math.max(...billCategories.map((c) => c.sort_order)) : -1;
-
-      const now = new Date().toISOString();
-      const newCategory: Category = {
-        id: crypto.randomUUID(),
-        name: GOALS_CATEGORY_NAME,
-        type: 'savings_goal',
-        color: GOALS_CATEGORY_COLOR,
-        sort_order: maxSortOrder + 1,
-        is_predefined: true, // Cannot be deleted
-        created_at: now,
-        updated_at: now,
-      };
-
-      categories.push(newCategory);
-      await this.storage.writeJSON('data/entities/categories.json', categories);
-
-      console.log('[CategoriesService] Created Savings Goals category');
-      return newCategory;
-    } catch (error) {
-      console.error('[CategoriesService] Failed to ensure savings goals category:', error);
-      throw error;
-    }
+  public async ensureSavingsCategory(): Promise<Category> {
+    return this.ensurePredefinedCategory('Savings', 'bill', ['Savings Goals', 'Goals']);
   }
 
-  /**
-   * Ensure the "Goal Completions" category exists for income categories.
-   * Creates it if not found. This is a system category for "Buy That Thing" income entries.
-   * @returns The goal completions category
-   */
-  public async ensureGoalCompletionsCategoryExists(): Promise<Category> {
-    const GOAL_COMPLETIONS_CATEGORY_NAME = 'Savings withdrawals';
-    const GOAL_COMPLETIONS_CATEGORY_COLOR = '#10b981'; // Emerald green (same as Goals)
+  /** The predefined "Savings withdrawals" income category. */
+  public async ensureSavingsWithdrawalsCategory(): Promise<Category> {
+    return this.ensurePredefinedCategory('Savings withdrawals', 'income', ['Goal Completions']);
+  }
 
+  private async ensurePredefinedCategory(
+    name: string,
+    type: 'bill' | 'income',
+    oldNames: string[]
+  ): Promise<Category> {
+    const SAVINGS_COLOR = '#10b981'; // Emerald green
     try {
       const categories = await this.getAll();
-
-      // Look for existing goal completions category
-      const goalCompletionsCategory = categories.find(
-        (c) =>
-          (c.name === GOAL_COMPLETIONS_CATEGORY_NAME || c.name === 'Goal Completions') &&
-          c.type === 'income'
+      const existing = categories.find(
+        (c) => c.type === type && (c.name === name || oldNames.includes(c.name))
       );
-
-      if (goalCompletionsCategory) {
-        if (goalCompletionsCategory.name === 'Goal Completions') {
-          return (
-            (await this.update(goalCompletionsCategory.id, {
-              name: GOAL_COMPLETIONS_CATEGORY_NAME,
-            })) ?? goalCompletionsCategory
-          );
-        }
-        return goalCompletionsCategory;
+      if (existing) {
+        if (existing.name === name) return existing;
+        return (await this.update(existing.id, { name })) ?? existing;
       }
 
-      // Create the category - appears after other income categories
-      const incomeCategories = categories.filter((c) => c.type === 'income');
+      // Appears after the other categories of its type
+      const siblings = categories.filter((c) => c.type === type);
       const maxSortOrder =
-        incomeCategories.length > 0 ? Math.max(...incomeCategories.map((c) => c.sort_order)) : -1;
-
+        siblings.length > 0 ? Math.max(...siblings.map((c) => c.sort_order)) : -1;
       const now = new Date().toISOString();
-      const newCategory: Category = {
+      const created: Category = {
         id: crypto.randomUUID(),
-        name: GOAL_COMPLETIONS_CATEGORY_NAME,
-        type: 'income',
-        color: GOAL_COMPLETIONS_CATEGORY_COLOR,
+        name,
+        type,
+        color: SAVINGS_COLOR,
         sort_order: maxSortOrder + 1,
         is_predefined: true, // Cannot be deleted
         created_at: now,
         updated_at: now,
       };
-
-      categories.push(newCategory);
+      categories.push(created);
       await this.storage.writeJSON('data/entities/categories.json', categories);
-
-      console.log('[CategoriesService] Created Goal Completions category');
-      return newCategory;
+      console.log(`[CategoriesService] Created ${name} category`);
+      return created;
     } catch (error) {
-      console.error('[CategoriesService] Failed to ensure goal completions category:', error);
+      console.error(`[CategoriesService] Failed to ensure ${name} category:`, error);
       throw error;
     }
   }

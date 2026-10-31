@@ -280,7 +280,6 @@ describe('MonthsService - savings balances', () => {
             ...sampleMonthlyData,
             month: destinationMonth,
             savings_balances_start: start,
-            savings_contributions: { savings: 5000 },
             savings_balances_end: { savings: 125000 },
           },
           null,
@@ -303,7 +302,6 @@ describe('MonthsService - savings balances', () => {
         savings: 120000,
         investment: 450000,
       });
-      expect(result.monthlyData?.savings_contributions).toEqual({ savings: 5000 });
       expect(result.monthlyData?.savings_balances_end).toEqual({ savings: 125000 });
     });
 

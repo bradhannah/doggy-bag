@@ -1,5 +1,5 @@
 // Calendar Store
-// Manages calendar events aggregated from bills, incomes, goals, and todos
+// Manages calendar events aggregated from bills, incomes, and todos
 
 import { writable, derived } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
@@ -8,7 +8,7 @@ import { apiClient } from '$lib/api/client';
 // Types
 // ============================================================================
 
-export type CalendarEventType = 'bill' | 'income' | 'goal' | 'todo';
+export type CalendarEventType = 'bill' | 'income' | 'todo';
 
 export interface CalendarEvent {
   id: string;
@@ -27,7 +27,6 @@ export interface CalendarEvent {
 export interface CalendarSummary {
   bills: number;
   incomes: number;
-  goals: number;
   todos: number;
   total: number;
 }
@@ -53,7 +52,7 @@ type CalendarState = {
 const initialState: CalendarState = {
   month: '',
   events: [],
-  summary: { bills: 0, incomes: 0, goals: 0, todos: 0, total: 0 },
+  summary: { bills: 0, incomes: 0, todos: 0, total: 0 },
   loading: false,
   error: null,
 };
@@ -82,11 +81,6 @@ export const billEvents = derived(calendarEvents, (events) =>
 /** Income events */
 export const incomeEvents = derived(calendarEvents, (events) =>
   events.filter((e) => e.type === 'income')
-);
-
-/** Goal events */
-export const goalEvents = derived(calendarEvents, (events) =>
-  events.filter((e) => e.type === 'goal')
 );
 
 /** Todo events */
@@ -171,8 +165,6 @@ export function getEventTypeColor(type: CalendarEventType): string {
       return 'error';
     case 'income':
       return 'success';
-    case 'goal':
-      return 'accent';
     case 'todo':
       return 'purple';
     default:
@@ -189,8 +181,6 @@ export function getEventTypeLabel(type: CalendarEventType): string {
       return 'Bill';
     case 'income':
       return 'Income';
-    case 'goal':
-      return 'Goal';
     case 'todo':
       return 'Todo';
     default:

@@ -22,10 +22,6 @@
         // Insurance items open their claim; other bills/incomes open the month view
         goto(event.is_insurance ? `/insurance?claim=${event.source_id}` : `/month/${eventMonth}`);
         break;
-      case 'goal':
-        // Navigate to savings goals page
-        goto('/savings');
-        break;
       case 'todo':
         // Navigate to todos page
         goto('/todos');
@@ -46,7 +42,6 @@
   class="calendar-event"
   class:bill={event.type === 'bill'}
   class:income={event.type === 'income'}
-  class:goal={event.type === 'goal'}
   class:todo={event.type === 'todo'}
   class:closed={event.is_closed}
   class:overdue={event.is_overdue}
@@ -138,12 +133,6 @@
     border-left: 2px solid var(--success);
   }
 
-  .calendar-event.goal {
-    background: var(--accent-muted);
-    color: var(--accent);
-    border-left: 2px solid var(--accent);
-  }
-
   .calendar-event.todo {
     background: var(--purple-muted);
     color: var(--purple);
@@ -189,10 +178,6 @@
 
   .income .event-indicator {
     background: var(--success);
-  }
-
-  .goal .event-indicator {
-    background: var(--accent);
   }
 
   .todo .event-indicator {

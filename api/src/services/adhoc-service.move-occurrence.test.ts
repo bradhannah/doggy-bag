@@ -146,7 +146,6 @@ describe('AdhocService - move one open payment to the next month', () => {
       'todos',
       'insurance-claims',
       'insurance-plans',
-      'savings-goals',
     ]) {
       await writeFile(join(testDir, 'entities', `${entity}.json`), '[]');
     }

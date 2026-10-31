@@ -324,10 +324,10 @@ export class ValidationServiceImpl implements ValidationService {
       }
     }
 
-    // Validate type - must be 'bill', 'income', 'variable', or 'savings_goal'
+    // Validate type - must be 'bill', 'income', or 'variable'
     if (category.type !== undefined) {
-      if (!['bill', 'income', 'variable', 'savings_goal'].includes(category.type)) {
-        errors.push("type must be 'bill', 'income', 'variable', or 'savings_goal'");
+      if (!['bill', 'income', 'variable'].includes(category.type)) {
+        errors.push("type must be 'bill', 'income', or 'variable'");
       }
     }
 
@@ -363,7 +363,7 @@ export class ValidationServiceImpl implements ValidationService {
    * @returns true if valid
    */
   validateCategoryType(type: string): boolean {
-    return ['bill', 'income', 'variable', 'savings_goal'].includes(type);
+    return ['bill', 'income', 'variable'].includes(type);
   }
 
   validateID(id: string): boolean {

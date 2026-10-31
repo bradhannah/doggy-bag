@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { runWithDataAccess } from './data-access';
 import { StorageServiceImpl } from './storage';
 import { MonthsServiceImpl } from './months-service';
-import { SavingsGoalsServiceImpl } from './savings-goals-service';
+import { BillsServiceImpl } from './bills-service';
 
 describe('API data isolation', () => {
   let directory: string;
@@ -36,32 +36,33 @@ describe('API data isolation', () => {
     await Promise.all(
       Array.from({ length: 12 }, (_, index) =>
         runWithDataAccess(() =>
-          service.updateSavingsBalances('2026-10', undefined, undefined, {
-            [`account-${index}`]: index,
-          })
+          service.updateSavingsBalances('2026-10', undefined, { [`account-${index}`]: index })
         )
       )
     );
     expect(
-      Object.keys((await service.getMonthlyData('2026-10'))!.savings_contributions!)
+      Object.keys((await service.getMonthlyData('2026-10'))!.savings_balances_end!)
     ).toHaveLength(12);
   });
 
   test('a swallowed corrupt-file read cannot overwrite existing bytes', async () => {
-    const path = join(directory, 'entities', 'savings-goals.json');
+    const path = join(directory, 'entities', 'bills.json');
     const damaged = '[{"id":"existing"';
     await writeFile(path, damaged);
     await expect(
       runWithDataAccess(() =>
-        new SavingsGoalsServiceImpl().create({
-          name: 'New goal',
-          status: 'saving',
-          linked_account_id: crypto.randomUUID(),
+        new BillsServiceImpl().create({
+          name: 'New bill',
+          amount: 1000,
+          billing_period: 'monthly',
+          day_of_month: 1,
+          category_id: crypto.randomUUID(),
+          payment_source_id: crypto.randomUUID(),
         })
       )
     ).rejects.toThrow('Unable to read saved data');
     expect(await readFile(path, 'utf8')).toBe(damaged);
-    await expect(runWithDataAccess(() => new SavingsGoalsServiceImpl().getAll())).rejects.toThrow(
+    await expect(runWithDataAccess(() => new BillsServiceImpl().getAll())).rejects.toThrow(
       'Unable to read saved data'
     );
     // A failed request releases the queue for subsequent operations.

@@ -5,12 +5,11 @@ import { ValidationServiceImpl } from './validation';
 import { preserveSourceHistory } from './source-history';
 import type { StorageService } from './storage';
 import type { ValidationService } from './validation';
-import type { Bill, SavingsGoal, ValidationResult } from '../types';
+import type { Bill, ValidationResult } from '../types';
 
 export interface BillsService {
   getAll(): Promise<Bill[]>;
   getById(id: string): Promise<Bill | null>;
-  getByGoalId(goalId: string): Promise<Bill[]>;
   create(data: Omit<Bill, 'id' | 'created_at' | 'updated_at' | 'is_active'>): Promise<Bill>;
   update(
     id: string,
@@ -32,14 +31,7 @@ export class BillsServiceImpl implements BillsService {
 
   public async getAll(): Promise<Bill[]> {
     try {
-      const bills = (await this.storage.readJSON<Bill[]>('data/entities/bills.json')) || [];
-      const goals =
-        (await this.storage.readJSON<SavingsGoal[]>('data/entities/savings-goals.json')) || [];
-      const statuses = new Map(goals.map((goal) => [goal.id, goal.status]));
-      return bills.map((bill) => ({
-        ...bill,
-        goal_status: bill.goal_id ? statuses.get(bill.goal_id) : undefined,
-      }));
+      return (await this.storage.readJSON<Bill[]>('data/entities/bills.json')) || [];
     } catch (error) {
       console.error('[BillsService] Failed to load bills:', error);
       throw error;
@@ -53,21 +45,6 @@ export class BillsServiceImpl implements BillsService {
     } catch (error) {
       console.error('[BillsService] Failed to get bill:', error);
       return null;
-    }
-  }
-
-  /**
-   * Get all bills linked to a specific savings goal
-   * @param goalId - The ID of the savings goal
-   * @returns Array of bills linked to the goal
-   */
-  public async getByGoalId(goalId: string): Promise<Bill[]> {
-    try {
-      const bills = await this.getAll();
-      return bills.filter((bill) => bill.goal_id === goalId);
-    } catch (error) {
-      console.error('[BillsService] Failed to get bills by goal:', error);
-      return [];
     }
   }
 
@@ -121,13 +98,6 @@ export class BillsServiceImpl implements BillsService {
         ...updates,
         updated_at: now,
       };
-      // An explicit stop or reassignment supersedes the goal's automatic resume.
-      if (
-        (updates.is_active === false && !updates.paused_by_goal_id) ||
-        (updates.goal_id !== undefined && updates.goal_id !== bills[index].goal_id)
-      ) {
-        delete updatedBill.paused_by_goal_id;
-      }
 
       bills[index] = updatedBill;
       await this.storage.writeJSON('data/entities/bills.json', bills);

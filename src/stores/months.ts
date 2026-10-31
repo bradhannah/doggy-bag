@@ -17,7 +17,6 @@ export interface BillInstance {
   is_default: boolean;
   is_closed?: boolean;
   is_adhoc?: boolean;
-  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   // Insurance expected expense linking
   claim_id?: string; // Link to InsuranceClaim for expected expenses
   is_insurance_expense?: boolean; // True if auto-generated from expected insurance expense

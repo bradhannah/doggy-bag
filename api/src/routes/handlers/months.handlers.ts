@@ -654,12 +654,11 @@ export function createMonthsHandlerUpdateSavingsBalances() {
 
       const body = await request.json();
 
-      // Validate body structure: { start: {id: amount}, end: {id: amount}, contributions: {id: amount} }
+      // Validate body structure: { start: {id: amount}, end: {id: amount} }
       if (typeof body !== 'object' || body === null) {
         return new Response(
           JSON.stringify({
-            error:
-              'Request body must be an object with start, end, and/or contributions balance maps',
+            error: 'Request body must be an object with start and/or end balance maps',
           }),
           {
             headers: { 'Content-Type': 'application/json' },
@@ -668,13 +667,12 @@ export function createMonthsHandlerUpdateSavingsBalances() {
         );
       }
 
-      const { start, end, contributions } = body as {
+      const { start, end } = body as {
         start?: Record<string, number>;
         end?: Record<string, number | null>;
-        contributions?: Record<string, number>;
       };
 
-      for (const [name, values] of Object.entries({ start, end, contributions })) {
+      for (const [name, values] of Object.entries({ start, end })) {
         if (values === undefined) continue;
         if (
           !values ||
@@ -693,19 +691,13 @@ export function createMonthsHandlerUpdateSavingsBalances() {
         }
       }
 
-      const monthlyData = await monthsService.updateSavingsBalances(
-        month,
-        start,
-        end,
-        contributions
-      );
+      const monthlyData = await monthsService.updateSavingsBalances(month, start, end);
 
       return new Response(
         JSON.stringify({
           month,
           savings_balances_start: monthlyData.savings_balances_start,
           savings_balances_end: monthlyData.savings_balances_end,
-          savings_contributions: monthlyData.savings_contributions,
           message: 'Savings balances updated successfully',
         }),
         {

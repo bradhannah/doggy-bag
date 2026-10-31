@@ -8,14 +8,12 @@ export interface SavingsAccountSummary {
   end?: number;
   planned: number;
   recorded: number;
-  unbudgeted_legacy: number;
   entries: {
     id: string;
     kind: 'bill' | 'income';
     name: string;
     planned: number;
     recorded: number;
-    goal_id?: string;
   }[];
 }
 

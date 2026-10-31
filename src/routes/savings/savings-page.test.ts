@@ -27,7 +27,6 @@ describe('Savings balances', () => {
         end: 0,
         planned: 20000,
         recorded: 5000,
-        unbudgeted_legacy: 0,
         entries: [],
       },
     ],

@@ -362,10 +362,8 @@ describe('Bills Store', () => {
         expect(needsCategory?.bills.map((b) => b.name)).toContain('Orphan Bill');
       });
 
-      // Note: Bills with savings_goal type categories are tested via the mock setup.
       // The mock includes only 'bill' type categories, but the orphan detection uses
       // allValidCategoryIds which includes ALL category types. A more comprehensive
-      // test would require a dynamic mock that can include savings_goal categories.
     });
   });
 

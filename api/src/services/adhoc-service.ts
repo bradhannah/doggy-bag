@@ -46,15 +46,6 @@ export interface CreateAdhocIncomeRequest {
   date?: DateString;
 }
 
-export interface CreateGoalContributionRequest {
-  goal_id: string;
-  goal_name: string;
-  amount: number;
-  category_id: string;
-  payment_source_id: string;
-  date: DateString; // Today or earlier within current month
-}
-
 export interface UpdateAdhocRequest {
   name?: string;
   expected_amount?: number; // Changed from actual_amount
@@ -101,9 +92,6 @@ export interface AdhocService {
     instanceId: string,
     data: CopyToMonthRequest
   ): Promise<BillInstance>;
-
-  // Goal Contributions (one-time savings payments)
-  createGoalContribution(month: string, data: CreateGoalContributionRequest): Promise<BillInstance>;
 
   // Incomes
   createAdhocIncome(month: string, data: CreateAdhocIncomeRequest): Promise<IncomeInstance>;
@@ -386,7 +374,6 @@ export class AdhocServiceImpl implements AdhocService {
       day_of_month?: number;
       start_date?: string;
       savings_account_id?: string;
-      goal_id?: string;
     } = {
       name: data.name,
       amount: data.amount,
@@ -394,7 +381,6 @@ export class AdhocServiceImpl implements AdhocService {
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
     };
 
     // Add day_of_month for monthly billing (required by validation)
@@ -413,7 +399,6 @@ export class AdhocServiceImpl implements AdhocService {
       ...instance,
       bill_id: newBill.id,
       source_snapshot: structuredClone(newBill),
-      legacy_savings_account_id: undefined,
       // Keep is_adhoc: true as historical record
       updated_at: now,
     };
@@ -425,82 +410,6 @@ export class AdhocServiceImpl implements AdhocService {
       `[AdhocService] Converted ad-hoc bill "${instance.name}" to regular bill "${newBill.name}"`
     );
     return { bill: newBill, billInstance: updatedInstance };
-  }
-
-  // ========================================================================
-  // Goal Contributions (one-time savings payments)
-  // ========================================================================
-
-  public async createGoalContribution(
-    month: string,
-    data: CreateGoalContributionRequest
-  ): Promise<BillInstance> {
-    // Validate
-    if (!data.goal_id) {
-      throw new Error('Goal ID is required');
-    }
-    if (!data.goal_name) {
-      throw new Error('Goal name is required');
-    }
-    if (!data.amount || data.amount <= 0) {
-      throw new Error('Amount must be positive');
-    }
-    if (!data.category_id) {
-      throw new Error('Category ID is required');
-    }
-    if (!data.payment_source_id) {
-      throw new Error('Payment source ID is required');
-    }
-    if (!data.date) {
-      throw new Error('Date is required');
-    }
-
-    // Validate date is not in the future and is within the specified month
-    const today = getTodayLocalDateString();
-    if (data.date > today) {
-      throw new Error('Payment date cannot be in the future');
-    }
-    const dateMonth = data.date.substring(0, 7);
-    if (dateMonth !== month) {
-      throw new Error('Payment date must be within the specified month');
-    }
-
-    const monthData = await this.ensureMonthData(month);
-    const now = new Date().toISOString();
-
-    // In occurrence-only model, a goal contribution is a closed occurrence
-    // (closing = payment, so we create a closed occurrence with the contribution amount)
-    const occurrence = this.createBaseOccurrence(data.amount, data.date, true);
-    // Set payment source on the occurrence for tracking
-    occurrence.payment_source_id = data.payment_source_id;
-
-    const newInstance: BillInstance = {
-      id: crypto.randomUUID(),
-      bill_id: null,
-      month,
-      billing_period: 'monthly',
-      expected_amount: data.amount,
-      occurrences: [occurrence],
-      is_default: false,
-      is_closed: true,
-      is_adhoc: true,
-      goal_id: data.goal_id,
-      savings_account_id: data.payment_source_id,
-      name: `Payment: ${data.goal_name}`,
-      category_id: data.category_id,
-      payment_source_id: data.payment_source_id,
-      closed_date: data.date,
-      created_at: now,
-      updated_at: now,
-    };
-
-    monthData.bill_instances.push(newInstance);
-    await this.monthsService.saveMonthlyData(month, monthData);
-
-    console.log(
-      `[AdhocService] Created goal contribution for "${data.goal_name}" ($${data.amount / 100}) in ${month}`
-    );
-    return newInstance;
   }
 
   // ========================================================================
@@ -653,7 +562,6 @@ export class AdhocServiceImpl implements AdhocService {
       day_of_month?: number;
       start_date?: string;
       savings_account_id?: string;
-      goal_id?: string;
     } = {
       name: data.name,
       amount: data.amount,
@@ -661,7 +569,6 @@ export class AdhocServiceImpl implements AdhocService {
       payment_source_id: data.payment_source_id,
       category_id: data.category_id,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
     };
 
     // Add day_of_month for monthly billing (required by validation)
@@ -680,7 +587,6 @@ export class AdhocServiceImpl implements AdhocService {
       ...instance,
       income_id: newIncome.id,
       source_snapshot: structuredClone(newIncome),
-      legacy_savings_account_id: undefined,
       // Keep is_adhoc: true as historical record
       updated_at: now,
     };
@@ -764,7 +670,6 @@ export class AdhocServiceImpl implements AdhocService {
       is_adhoc: true,
       name: instance.name,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
       category_id: instance.category_id,
       payment_source_id: instance.payment_source_id,
       created_at: now,
@@ -841,7 +746,6 @@ export class AdhocServiceImpl implements AdhocService {
       is_adhoc: true,
       name: instance.name,
       savings_account_id: instance.savings_account_id,
-      goal_id: instance.goal_id,
       category_id: instance.category_id,
       payment_source_id: instance.payment_source_id,
       created_at: now,

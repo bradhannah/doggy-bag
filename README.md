@@ -42,7 +42,7 @@ It promotes active tracking of expenses and income, helping users stay on top of
 - Ad-hoc expenses for unexpected costs
 - Insurance claim tracking with document uploads and reimbursement status
 - Bill-paid tracking and expected reimbursement estimates on claims
-- Savings goals with optional targets and manual payment tracking
+- Savings accounts with planned and recorded transfers
 - Calendar view with integrated todos
 - Dark / Light / System theme support
 - Refreshed app icon and splash screen branding

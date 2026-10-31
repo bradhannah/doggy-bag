@@ -140,8 +140,8 @@
     >
     {#if account && summary.exists}
       <p class="hint">
-        Already planned in this budget: {formatCurrency(account.planned)}, including goal
-        contributions. This form adds a plan; use Budget to change an existing entry.
+        Already planned in this budget: {formatCurrency(account.planned)}. This form adds a plan;
+        use Budget to change an existing entry.
       </p>
     {/if}
     <p class="hint">

@@ -48,7 +48,6 @@ export interface BillInstanceDetailed {
   is_adhoc: boolean;
   is_payoff_bill: boolean; // True if auto-generated from pay_off_monthly payment source
   payoff_source_id?: string; // Reference to the payment source this payoff bill is for
-  goal_id?: string; // Link to SavingsGoal for ad-hoc contributions
   // Insurance expected expense linking
   claim_id?: string; // Link to InsuranceClaim for expected expenses
   is_insurance_expense?: boolean; // True if auto-generated from expected insurance expense

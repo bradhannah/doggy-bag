@@ -708,9 +708,7 @@ describe('ValidationService', () => {
         type: 'expense' as 'bill',
       });
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        "type must be 'bill', 'income', 'variable', or 'savings_goal'"
-      );
+      expect(result.errors).toContain("type must be 'bill', 'income', or 'variable'");
     });
 
     test('accepts variable type', () => {
@@ -770,7 +768,7 @@ describe('ValidationService', () => {
       expect(validation.validateCategoryType('bill')).toBe(true);
       expect(validation.validateCategoryType('income')).toBe(true);
       expect(validation.validateCategoryType('variable')).toBe(true);
-      expect(validation.validateCategoryType('savings_goal')).toBe(true);
+      expect(validation.validateCategoryType('savings_goal')).toBe(false);
     });
 
     test('rejects invalid types', () => {

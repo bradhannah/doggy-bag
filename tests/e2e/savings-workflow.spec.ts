@@ -1,9 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { verifyGoalLifecycle } from './goal-lifecycle';
-
-// These flows share the disposable API's account list and must not add required
-// balances while another flow is asserting its available-budget preview.
-test.describe.configure({ mode: 'serial' });
 
 test('a savings plan added after budget creation lands in that month and is reflected in Savings', async ({
   page,
@@ -69,8 +64,3 @@ test('a savings plan added after budget creation lands in that month and is refl
     recorded: 20000,
   });
 });
-
-test(
-  'goal pause/resume/completion preserve records and Budget fits laptop widths in both themes',
-  verifyGoalLifecycle
-);

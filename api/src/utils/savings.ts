@@ -23,20 +23,12 @@ export function isSpendingAccount(account: PaymentSource): boolean {
   );
 }
 
-// Older goal schedules stored their destination as payment_source_id. Resolve
-// that historical convention once, then keep an explicit destination on records.
+/** The savings account a budget entry moves money to or from, if any. */
 export function savingsAccountId(
   instance: BillInstance | IncomeInstance,
   source?: Bill | Income
 ): string | undefined {
-  const snapshot = instance.source_snapshot ?? source;
-  return (
-    instance.savings_account_id ??
-    snapshot?.savings_account_id ??
-    (instance.goal_id || snapshot?.goal_id
-      ? (instance.payment_source_id ?? snapshot?.payment_source_id)
-      : undefined)
-  );
+  return instance.savings_account_id ?? (instance.source_snapshot ?? source)?.savings_account_id;
 }
 
 export function annotateSavingsAccounts(data: MonthlyData, bills: Bill[], incomes: Income[]): void {
@@ -64,7 +56,6 @@ export interface SavingsEntry {
   name: string;
   planned: number;
   recorded: number;
-  goal_id?: string;
 }
 
 export function savingsEntries(data: MonthlyData, accountId: string): SavingsEntry[] {
@@ -81,33 +72,15 @@ export function savingsEntries(data: MonthlyData, accountId: string): SavingsEnt
         name: instance.name ?? instance.source_snapshot?.name ?? 'Savings transfer',
         planned: sign * instance.expected_amount,
         recorded: sign * sumClosedOccurrenceAmounts(instance.occurrences ?? []),
-        goal_id: instance.goal_id,
       });
     }
   }
   return entries;
 }
 
-export function remainingLegacySavings(target: number, covered: number): number {
-  return target >= 0 ? Math.max(0, target - covered) : Math.min(0, target - covered);
-}
-
-// Retire old hints only when the budget actually covers them. New source plans
-// which have not been applied to this month do not count as coverage.
-export function retireCoveredLegacySavings(data: MonthlyData): void {
-  for (const [accountId, target] of Object.entries(data.savings_contributions ?? {})) {
-    if (target === 0) continue;
-    const covered = savingsEntries(data, accountId).reduce((sum, entry) => sum + entry.planned, 0);
-    if (remainingLegacySavings(target, covered) === 0)
-      delete data.savings_contributions![accountId];
-  }
-}
-
 export function budgetSourceKey(instance: BillInstance | IncomeInstance): string | undefined {
   if ('bill_id' in instance && instance.bill_id) return `bill:${instance.bill_id}`;
   if ('income_id' in instance && instance.income_id) return `income:${instance.income_id}`;
-  if (instance.legacy_savings_account_id)
-    return `legacy-savings:${instance.legacy_savings_account_id}`;
   return undefined;
 }
 
@@ -115,7 +88,6 @@ export function excludeBudgetInstance(
   data: MonthlyData,
   instance: BillInstance | IncomeInstance
 ): void {
-  retireCoveredLegacySavings(data);
   const key = budgetSourceKey(instance);
   if (key)
     data.excluded_budget_sources = [...new Set([...(data.excluded_budget_sources ?? []), key])];

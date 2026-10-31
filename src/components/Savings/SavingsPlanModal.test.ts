@@ -22,7 +22,6 @@ describe('Savings planner', () => {
           is_investment: false,
           planned: 0,
           recorded: 0,
-          unbudgeted_legacy: 0,
           entries: [],
         },
       ],

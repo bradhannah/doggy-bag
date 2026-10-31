@@ -53,11 +53,7 @@ import {
   createIncomeInstance,
   createManualPaymentInstance,
 } from '../utils/monthly-instances';
-import {
-  annotateSavingsAccounts,
-  excludeBudgetInstance,
-  retireCoveredLegacySavings,
-} from '../utils/savings';
+import { annotateSavingsAccounts, excludeBudgetInstance } from '../utils/savings';
 
 export interface OccurrencePaymentDetails extends OccurrenceEdits {
   closed_date?: string;
@@ -97,8 +93,7 @@ export interface MonthsService {
   updateSavingsBalances(
     month: string,
     start?: Record<string, number>,
-    end?: Record<string, number | null>,
-    contributions?: Record<string, number>
+    end?: Record<string, number | null>
   ): Promise<MonthlyData>;
   pushSavingsBalancesToNextMonth(
     month: string,
@@ -910,8 +905,7 @@ export class MonthsServiceImpl implements MonthsService {
   public async updateSavingsBalances(
     month: string,
     start?: Record<string, number>,
-    end?: Record<string, number | null>,
-    contributions?: Record<string, number>
+    end?: Record<string, number | null>
   ): Promise<MonthlyData> {
     try {
       const data = await this.getMonthlyData(month);
@@ -935,14 +929,6 @@ export class MonthsServiceImpl implements MonthsService {
           if (amount === null) delete data.savings_balances_end[accountId];
           else data.savings_balances_end[accountId] = amount;
         }
-      }
-      if (contributions !== undefined) {
-        // Legacy clients may still write planning hints. Review budget updates
-        // imports the uncovered amount into linked budget entries.
-        data.savings_contributions = {
-          ...(data.savings_contributions || {}),
-          ...contributions,
-        };
       }
       data.updated_at = now;
 
@@ -1000,7 +986,6 @@ export class MonthsServiceImpl implements MonthsService {
   ): Promise<void> {
     try {
       if (data.is_read_only && !bypassLock) throw new ReadOnlyError(month);
-      if (!data.is_read_only) retireCoveredLegacySavings(data);
       // Filter out virtual entries before saving - they are generated on-the-fly from insurance claims
       // and should never be persisted to the JSON file
       const dataToSave: MonthlyData = {

@@ -43,7 +43,7 @@
     class:size-medium={$calendarSize === 'medium'}
     class:size-large={$calendarSize === 'large'}
   >
-    <PageHeader title="Calendar" subtitle="Bills, income, goals and todos by day.">
+    <PageHeader title="Calendar" subtitle="Bills, income and todos by day.">
       <button
         slot="actions"
         type="button"
