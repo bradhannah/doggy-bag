@@ -107,7 +107,8 @@ export interface MonthsService {
     requiresConfirmation: boolean;
     monthlyData?: MonthlyData;
   }>;
-  saveMonthlyData(month: string, data: MonthlyData): Promise<void>;
+  /** `bypassLock` lets the one sanctioned exception (lock toggling, moving an item out) write a locked month. */
+  saveMonthlyData(month: string, data: MonthlyData, bypassLock?: boolean): Promise<void>;
 
   // Month management
   monthExists(month: string): Promise<boolean>;
@@ -1025,10 +1026,10 @@ export class MonthsServiceImpl implements MonthsService {
   public async saveMonthlyData(
     month: string,
     data: MonthlyData,
-    changingLock = false
+    bypassLock = false
   ): Promise<void> {
     try {
-      if (data.is_read_only && !changingLock) throw new ReadOnlyError(month);
+      if (data.is_read_only && !bypassLock) throw new ReadOnlyError(month);
       if (!data.is_read_only) retireCoveredLegacySavings(data);
       // Filter out virtual entries before saving - they are generated on-the-fly from insurance claims
       // and should never be persisted to the JSON file

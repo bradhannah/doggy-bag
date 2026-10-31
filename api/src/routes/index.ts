@@ -121,6 +121,8 @@ import {
   createAdhocIncomeHandlerDELETE,
   createMakeRegularIncomeHandler,
   createCopyIncomeToMonthHandler,
+  createMoveBillOccurrenceToMonthHandler,
+  createMoveIncomeOccurrenceToMonthHandler,
 } from './handlers/adhoc.handlers';
 
 import {
@@ -804,6 +806,14 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
   },
   // Occurrence routes must come before other bill instance routes
   {
+    path: '/api/months/bills/occurrences/move-to-next-month',
+    definition: {
+      method: 'POST',
+      handler: createMoveBillOccurrenceToMonthHandler(),
+      hasPathParam: true,
+    },
+  },
+  {
     path: '/api/months/bills/occurrences/close',
     definition: { method: 'POST', handler: createBillOccurrenceHandlerClose(), hasPathParam: true },
   },
@@ -870,6 +880,14 @@ export const routes: Array<{ path: string; definition: RouteDefinition }> = [
 
   // Income instances
   // Occurrence routes must come before other income instance routes
+  {
+    path: '/api/months/incomes/occurrences/move-to-next-month',
+    definition: {
+      method: 'POST',
+      handler: createMoveIncomeOccurrenceToMonthHandler(),
+      hasPathParam: true,
+    },
+  },
   {
     path: '/api/months/incomes/occurrences/close',
     definition: {

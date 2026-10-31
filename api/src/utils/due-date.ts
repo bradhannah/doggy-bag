@@ -132,3 +132,9 @@ export function isDueSoon(dueDate: string | undefined, days: number = 3): boolea
 
   return diffDays >= 0 && diffDays <= days;
 }
+
+/** The month after `month` (YYYY-MM). */
+export function getNextMonth(month: string): string {
+  const [year, m] = month.split('-').map(Number);
+  return m === 12 ? `${year + 1}-01` : `${year}-${String(m + 1).padStart(2, '0')}`;
+}

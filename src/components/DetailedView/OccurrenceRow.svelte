@@ -19,6 +19,7 @@
   import { paymentSources } from '../../stores/payment-sources';
   import { getInsuranceLineDisplay } from '$lib/insurance/budget-line-status';
   import { updateSubmission } from '../../stores/insurance-claims';
+  import { getNextMonth, formatMonthDisplay } from '../../stores/ui';
 
   export let occurrence: Occurrence;
   export let month: string;
@@ -48,6 +49,7 @@
   let dateInputEl: HTMLInputElement | null = null;
   let dateEditError = '';
   let showDeleteConfirm = false;
+  let showMoveConfirm = false;
   let showEditCloseModal = false;
   let editMode: 'record' | 'plan' = 'record';
   let showCopyMoveModal = false;
@@ -270,6 +272,38 @@
   // Determine if copy/move to next month is available
   // Available for ad-hoc instances that are not protected
   $: canCopyToMonth = !readOnly && !isProtected && instanceIsAdhoc;
+
+  // Any open payment can be carried forward, even out of a locked month: moving
+  // unfinished business on is part of closing a month, so the lock does not apply.
+  $: canMoveToNextMonth = !isProtected && !occurrence.is_closed;
+  $: nextMonth = getNextMonth(month);
+  $: nextMonthLabel = formatMonthDisplay(nextMonth);
+  $: moveMessage =
+    instanceIsAdhoc || occurrence.is_adhoc
+      ? `Move this payment to ${nextMonthLabel}? It will be removed from this month.`
+      : `Move this payment to ${nextMonthLabel}? This month will show it as skipped ($0) with a note.`;
+
+  function handleMoveFromMenu() {
+    closeOverflowMenu();
+    showMoveConfirm = true;
+  }
+
+  async function handleMoveToNextMonth() {
+    if (saving) return;
+    saving = true;
+    showMoveConfirm = false;
+    try {
+      const result = (await apiClient.post(`${apiBase}/move-to-next-month`, {})) as {
+        message?: string;
+      };
+      success(result?.message ?? `Moved to ${nextMonthLabel}`);
+      dispatch('updated');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to move');
+    } finally {
+      saving = false;
+    }
+  }
 
   // Copy/Move to next month
   function handleCopyToMonth() {
@@ -496,7 +530,7 @@
         </button>
       {/if}
 
-      {#if !readOnly && ((!isProtected && !occurrence.is_closed) || canCopyToMonth || canDelete)}
+      {#if canMoveToNextMonth || (!readOnly && ((!isProtected && !occurrence.is_closed) || canCopyToMonth || canDelete))}
         <div class="overflow-menu-container" bind:this={overflowMenuRef}>
           <button
             class="icon-btn"
@@ -517,7 +551,7 @@
 
           {#if showOverflowMenu}
             <div class="overflow-menu" role="menu" style={menuStyle}>
-              {#if !occurrence.is_closed && !isProtected}
+              {#if !readOnly && !occurrence.is_closed && !isProtected}
                 <button class="overflow-menu-item" on:click={handleViewDetails} role="menuitem">
                   <svg
                     width="14"
@@ -534,6 +568,25 @@
                     <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
                   </svg>
                   Edit plan
+                </button>
+              {/if}
+              {#if canMoveToNextMonth}
+                <button class="overflow-menu-item" on:click={handleMoveFromMenu} role="menuitem">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14" />
+                    <path d="M13 6l6 6-6 6" />
+                  </svg>
+                  Move to next month…
                 </button>
               {/if}
               {#if canCopyToMonth}
@@ -615,6 +668,17 @@
   {itemName}
   on:close={handleCopyMoveModalClose}
   on:completed={handleCopyMoveCompleted}
+/>
+
+<!-- Move to next month confirmation -->
+<ConfirmDialog
+  open={showMoveConfirm}
+  title="Move to {nextMonthLabel}"
+  message={moveMessage}
+  confirmText="Move"
+  confirmStyle="primary"
+  on:confirm={handleMoveToNextMonth}
+  on:cancel={() => (showMoveConfirm = false)}
 />
 
 <!-- Delete Confirmation Dialog -->

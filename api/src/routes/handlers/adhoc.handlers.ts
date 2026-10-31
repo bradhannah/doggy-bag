@@ -9,7 +9,14 @@ import type {
   MakeRegularRequest,
   CopyToMonthRequest,
 } from '../../services/adhoc-service';
-import { formatErrorForUser, NotFoundError, ValidationError } from '../../utils/errors';
+import {
+  formatErrorForUser,
+  getErrorStatus,
+  NotFoundError,
+  ValidationError,
+} from '../../utils/errors';
+import { getNextMonth } from '../../utils/due-date';
+import { formatMonthString } from '../../utils/formatters';
 import { checkReadOnly } from './shared';
 
 const adhocService = new AdhocServiceImpl();
@@ -838,4 +845,79 @@ export function createCopyIncomeToMonthHandler() {
       );
     }
   };
+}
+
+// ============================================================================
+// Move one open payment to the next month (allowed from a locked month)
+// ============================================================================
+
+const MOVE_PATH =
+  /\/api\/months\/(\d{4}-\d{2})\/(bills|incomes)\/([^/]+)\/occurrences\/([^/]+)\/move-to-next-month$/;
+
+function createMoveOccurrenceHandler(kind: 'bills' | 'incomes') {
+  return async (request: Request) => {
+    try {
+      const match = new URL(request.url).pathname.match(MOVE_PATH);
+      if (!match || match[2] !== kind) {
+        return new Response(
+          JSON.stringify({
+            error: `Invalid URL. Expected /api/months/YYYY-MM/${kind}/:instanceId/occurrences/:occurrenceId/move-to-next-month`,
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      const [, month, , instanceId, occurrenceId] = match;
+      const body = (await request.json().catch(() => ({}))) as { target_month?: string };
+      const targetMonth = body.target_month ?? getNextMonth(month);
+      if (!/^\d{4}-\d{2}$/.test(targetMonth)) {
+        return new Response(JSON.stringify({ error: 'target_month must be YYYY-MM' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // The source month may be locked (that is the point); the destination may not.
+      const readOnlyResponse = await checkReadOnly(targetMonth);
+      if (readOnlyResponse) return readOnlyResponse;
+
+      const result =
+        kind === 'bills'
+          ? await adhocService.moveBillOccurrenceToMonth(
+              month,
+              instanceId,
+              occurrenceId,
+              targetMonth
+            )
+          : await adhocService.moveIncomeOccurrenceToMonth(
+              month,
+              instanceId,
+              occurrenceId,
+              targetMonth
+            );
+
+      return new Response(
+        JSON.stringify({
+          ...result,
+          message: `Moved "${result.instance.name}" to ${formatMonthString(targetMonth)}`,
+        }),
+        { status: 201, headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error(`[AdhocHandler] Move ${kind} occurrence error:`, error);
+      return new Response(JSON.stringify({ error: formatErrorForUser(error) }), {
+        status: getErrorStatus(error),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  };
+}
+
+/** POST /api/months/:month/bills/:instanceId/occurrences/:occurrenceId/move-to-next-month */
+export function createMoveBillOccurrenceToMonthHandler() {
+  return createMoveOccurrenceHandler('bills');
+}
+
+/** POST /api/months/:month/incomes/:instanceId/occurrences/:occurrenceId/move-to-next-month */
+export function createMoveIncomeOccurrenceToMonthHandler() {
+  return createMoveOccurrenceHandler('incomes');
 }
