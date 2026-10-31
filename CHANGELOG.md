@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-31
+
 ### Added
 
 - **Move to next month** on any open bill or income payment (row menu). The next month gets an ad-hoc copy named after the source month, e.g. "Rent (Oct)". An ad-hoc payment is removed from its month; a recurring one is recorded as skipped ($0) with a "Moved to …" note. This is the one change a locked month allows, so unfinished items can be carried out of a closed month.
